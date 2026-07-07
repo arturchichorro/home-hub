@@ -1,5 +1,13 @@
 {
     "name": "@home-hub/api",
     "private": true,
-    "type": "module"
-  }
+    "type": "module",
+    "dependencies": {
+        "@hono/node-server": "^2.0.8",
+        "hono": "^4.12.28"
+    },
+    "devDependencies": {
+        "@types/node": "^26.1.0",
+        "tsx": "^4.23.0"
+    }
+}
