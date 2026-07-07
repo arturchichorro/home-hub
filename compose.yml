@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: home-hub-postgres
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: home_hub
+      POSTGRES_PASSWORD: home_hub
+      POSTGRES_DB: home_hub
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_wal_senders=10"
+      - "-c"
+      - "max_replication_slots=10"
+    volumes:
+      - home_hub_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U home_hub -d home_hub"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  home_hub_postgres_data:

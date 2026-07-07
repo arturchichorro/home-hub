@@ -22,9 +22,9 @@ teaches us something new.
 - [x] Add validated API runtime configuration
 - [x] Use validated config for the API port
 - [x] Load local root `.env` for development
-- [ ] Run PostgreSQL locally with logical replication
-- [ ] Define the initial Drizzle schema
-- [ ] Generate, inspect, and apply the first committed SQL migration
+- [x] Run PostgreSQL locally with logical replication
+- [x] Define the initial Drizzle schema
+- [x] Generate, inspect, and apply the first committed SQL migration
 - [ ] Complete the Phase 2 checkpoint and commit
 
 ## Phase 3: normalization

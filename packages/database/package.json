@@ -1,5 +1,20 @@
 {
-    "name": "@home-hub/database",
-    "private": true,
-    "type": "module"
+  "name": "@home-hub/database",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "drizzle-kit generate --config drizzle.config.ts",
+    "migrate": "drizzle-kit migrate --config drizzle.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "@types/pg": "^8.20.0",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10"
   }
+}
