@@ -6,19 +6,21 @@ teaches us something new.
 
 ## Phase 1: workspace and static web page
 
-- [ ] Create the pnpm workspace and root TypeScript configuration
-- [ ] Create `apps/web` with React and Vite
-- [ ] Render a static page
-- [ ] Create `apps/api` with Hono on Node.js
-- [ ] Expose and verify `GET /health`
-- [ ] Create the initial `packages/database` and `packages/shared` boundaries
-- [ ] Verify formatting, type-checking, development servers, and builds
-- [ ] Explain the Phase 1 checkpoint in my own words
-- [ ] Commit Phase 1
+- [x] Create the pnpm workspace and root TypeScript configuration
+- [x] Create `apps/web` with React and Vite
+- [x] Render a static page
+- [x] Create `apps/api` with Hono on Node.js
+- [x] Expose and verify `GET /health`
+- [x] Create the initial `packages/database` and `packages/shared` boundaries
+- [x] Verify type-checking, development servers, and builds
+- [x] Explain the Phase 1 checkpoint in my own words
+- [x] Commit Phase 1
 
 ## Phase 2: configuration and PostgreSQL
 
-- [ ] Add validated local configuration and `.env.example`
+- [ ] Add root `.env.example`
+- [ ] Add validated API runtime configuration
+- [ ] Use validated config for the API port
 - [ ] Run PostgreSQL locally with logical replication
 - [ ] Define the initial Drizzle schema
 - [ ] Generate, inspect, and apply the first committed SQL migration
