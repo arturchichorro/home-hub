@@ -1,0 +1,5 @@
+{
+    "name": "@home-hub/database",
+    "private": true,
+    "type": "module"
+  }

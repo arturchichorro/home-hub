@@ -1,0 +1,6 @@
+{
+    "name": "home-hub",
+    "private": true,
+    "type": "module",
+    "packageManager": "pnpm@10.0.0"
+  }

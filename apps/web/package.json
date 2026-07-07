@@ -1,0 +1,5 @@
+{
+    "name": "@home-hub/web",
+    "private": true,
+    "type": "module"
+  }

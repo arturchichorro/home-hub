@@ -1,0 +1,5 @@
+{
+    "name": "@home-hub/shared",
+    "private": true,
+    "type": "module"
+  }
