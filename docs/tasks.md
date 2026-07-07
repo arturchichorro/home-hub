@@ -18,9 +18,10 @@ teaches us something new.
 
 ## Phase 2: configuration and PostgreSQL
 
-- [ ] Add root `.env.example`
-- [ ] Add validated API runtime configuration
-- [ ] Use validated config for the API port
+- [x] Add root `.env.example`
+- [x] Add validated API runtime configuration
+- [x] Use validated config for the API port
+- [x] Load local root `.env` for development
 - [ ] Run PostgreSQL locally with logical replication
 - [ ] Define the initial Drizzle schema
 - [ ] Generate, inspect, and apply the first committed SQL migration
