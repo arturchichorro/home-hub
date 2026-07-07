@@ -29,9 +29,9 @@ teaches us something new.
 
 ## Phase 3: normalization
 
-- [ ] Implement and test username normalization
-- [ ] Implement and test item-name normalization
-- [ ] Complete the Phase 3 checkpoint and commit
+- [x] Implement and test username normalization
+- [x] Implement and test item-name normalization
+- [x] Complete the Phase 3 checkpoint and commit
 
 ## Phase 4: authentication
 
