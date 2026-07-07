@@ -2,5 +2,8 @@
     "name": "home-hub",
     "private": true,
     "type": "module",
-    "packageManager": "pnpm@10.0.0"
-  }
+    "packageManager": "pnpm@10.0.0",
+    "devDependencies": {
+        "typescript": "^6.0.3"
+    }
+}
