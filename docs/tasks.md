@@ -25,7 +25,7 @@ teaches us something new.
 - [x] Run PostgreSQL locally with logical replication
 - [x] Define the initial Drizzle schema
 - [x] Generate, inspect, and apply the first committed SQL migration
-- [ ] Complete the Phase 2 checkpoint and commit
+- [x] Complete the Phase 2 checkpoint and commit
 
 ## Phase 3: normalization
 
