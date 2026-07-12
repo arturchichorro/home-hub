@@ -113,9 +113,9 @@ Use one root `.env` for local development and commit only `.env.example`. Vite m
 Typical values are:
 
 - `DATABASE_URL`
-- `ZERO_JWT_SECRET`
+- `API_PORT`
+- `API_JWT_SECRET`
 - `WEB_ORIGIN`
-- `PORT`
 - `R2_ENDPOINT`
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`

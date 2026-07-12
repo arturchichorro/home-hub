@@ -21,6 +21,8 @@ The access JWT contains only necessary claims:
 - `iat` and `exp`;
 - `jti`: unique token ID.
 
+JWTs are signed and verified by the API using Node's standard `crypto` APIs, not a third-party JWT library. The implementation must be intentionally small: support only the selected signing algorithm, reject unexpected algorithms, verify issuer and audience, check `iat` and `exp`, require `sub` and `jti`, and compare signatures with constant-time comparison. Do not write custom cryptographic primitives.
+
 Do not place passwords, household membership, roles, or other mutable authorization state in the JWT. Membership is checked against PostgreSQL so changes take effect without waiting for a token to expire.
 
 ## Refresh tokens

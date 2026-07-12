@@ -32,10 +32,11 @@ erDiagram
 
 - `id`
 - `username`: normalized, unique
+- `email`: normalized, unique
 - `password_hash`
 - `created_at`, `updated_at`
 
-Username normalization uses trimming, Unicode NFKC normalization, and case folding before uniqueness checks.
+Username and email normalization happen before uniqueness checks. Username normalization uses trimming, Unicode NFKC normalization, whitespace folding, and case folding. Email normalization initially uses trimming, Unicode NFKC normalization, and case folding.
 
 ### `refresh_tokens`
 

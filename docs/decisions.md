@@ -36,6 +36,8 @@ TypeScript types disappear at runtime. Zod schemas validate untrusted HTTP bodie
 
 After password verification, the API issues a short-lived signed JWT access token. API and Zero requests send it as `Authorization: Bearer <token>`. This works consistently for the browser and a future native client.
 
+Implement the JWT signing and verification path directly with Node's standard `crypto` APIs rather than adding a JWT library. This is for learning and must remain deliberately narrow: support only the chosen algorithm, verify the algorithm/header explicitly, verify issuer, audience, expiry, and required claims, and use constant-time signature comparison. Do not implement cryptographic primitives manually.
+
 A long-lived JWT would be difficult to revoke, so continuity uses a separate high-entropy opaque refresh token. Only its SHA-256 hash is stored. Refresh tokens rotate whenever used and can be revoked on logout, password change, or suspected reuse.
 
 The web client keeps its access token in memory and its refresh token in a `Secure`, `HttpOnly`, `SameSite=Lax` cookie. A native client keeps the refresh token in platform secure storage. Neither client stores passwords.
