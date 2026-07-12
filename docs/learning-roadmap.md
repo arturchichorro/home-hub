@@ -91,3 +91,5 @@ Checkpoint: run formatting, linting, type-checking, tests, and production builds
 5. Ask the guiding agent to review and explain problems, not to replace your implementation.
 6. Run the checks and inspect the result directly.
 7. Summarize what you learned in your own words before continuing.
+
+The learner applies database migrations and creates commits manually. The guiding agent may inspect generated SQL and database state, but should not run migration commands or commit changes unless explicitly asked for that specific action.

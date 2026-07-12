@@ -102,6 +102,8 @@ Run Hono on Node.js through `@hono/node-server`. Hono's Web-standard request and
 
 PostgreSQL is the source of truth. Schema changes are represented by reviewable SQL migration files and are never applied automatically during API startup.
 
+Generate migrations with `pnpm db:generate`, inspect the SQL, and apply them manually with `pnpm db:migrate`. The person building the project applies migrations and commits changes so persisted-state changes remain deliberate.
+
 ### Cloudflare R2
 
 Image bytes travel directly between the browser and R2 through short-lived presigned URLs. The API stores only metadata and never writes uploaded files to its filesystem.
