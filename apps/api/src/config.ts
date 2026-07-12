@@ -31,6 +31,14 @@ const configSchema = z.object({
       return port;
     }),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  API_JWT_SECRET: z
+    .string()
+    .min(32, "API_JWT_SECRET must be at least 32 characters"),
+  SIGNUP_ACCESS_CODE: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => (value ? value : undefined)),
 });
 
 export const config = configSchema.parse(process.env);

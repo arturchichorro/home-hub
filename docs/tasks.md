@@ -35,6 +35,8 @@ teaches us something new.
 
 ## Phase 4: authentication
 
+- [x] Add auth environment configuration
+- [x] Add `users.updated_at` and `refresh_tokens`
 - [ ] Implement signup and login with Argon2id
 - [ ] Issue and verify short-lived access JWTs
 - [ ] Implement opaque refresh-token rotation, reuse detection, and revocation

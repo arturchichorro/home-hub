@@ -8,6 +8,13 @@
       "when": 1783437738195,
       "tag": "0000_typical_black_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783853043674,
+      "tag": "0001_premium_nightmare",
+      "breakpoints": true
     }
   ]
 }
