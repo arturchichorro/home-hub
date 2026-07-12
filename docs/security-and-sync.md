@@ -25,6 +25,10 @@ JWTs are signed and verified by the API using Node's standard `crypto` APIs, not
 
 Do not place passwords, household membership, roles, or other mutable authorization state in the JWT. Membership is checked against PostgreSQL so changes take effect without waiting for a token to expire.
 
+## Signup gate
+
+Signup is not open by default. The API reads a server-side `SIGNUP_ACCESS_CODE`; if it is missing or empty, signup is disabled. When it is configured, signup requests must include the matching access code. This code is an enrollment gate only: it is not a user password, is not stored in PostgreSQL, is not placed in JWTs, and is never returned to clients.
+
 ## Refresh tokens
 
 Refresh tokens provide continuity and revocation:

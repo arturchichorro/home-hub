@@ -42,6 +42,8 @@ A long-lived JWT would be difficult to revoke, so continuity uses a separate hig
 
 The web client keeps its access token in memory and its refresh token in a `Secure`, `HttpOnly`, `SameSite=Lax` cookie. A native client keeps the refresh token in platform secure storage. Neither client stores passwords.
 
+Signup is gated by a server-side `SIGNUP_ACCESS_CODE` until household invites exist. Missing or empty `SIGNUP_ACCESS_CODE` means signup is disabled. The code is not stored in PostgreSQL, is not returned to clients, and is not a replacement for account passwords.
+
 ## Argon2id for passwords
 
 Passwords require a deliberately expensive password-hashing algorithm rather than ordinary encryption or a fast general-purpose hash. Argon2id is the selected algorithm.
