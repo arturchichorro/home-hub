@@ -211,6 +211,16 @@ describe("verifyAccessToken", () => {
     ).toThrow();
   });
 
+  it("throws if the token was issued in the future", () => {
+    const token = signJwtParts({
+      header: { typ: "JWT", alg: "HS256" },
+      payload: validPayload({ iat: issuedAt + 1 }),
+      secret,
+    });
+
+    expect(() => verifyAccessToken({ token, secret, now })).toThrow();
+  });
+
   it("throws for an invalid token format", () => {
     expect(() =>
       verifyAccessToken({

@@ -154,7 +154,7 @@ export function verifyAccessToken(input: {
 
   const now = secondsSinceEpoch(input.now ?? new Date());
 
-  if (claims.exp <= now) {
+  if (claims.iat > now || claims.exp <= now) {
     throw new Error("Invalid access token");
   }
 
