@@ -1,11 +1,7 @@
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
 
+import { app } from "./app";
 import { config } from "./config";
-
-const app = new Hono();
-
-app.get("/health", (c) => c.json({ ok: true }));
 
 serve(
   {
