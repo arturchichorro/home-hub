@@ -42,7 +42,7 @@ Refresh tokens provide continuity and revocation:
 5. If a revoked token is used again, revoke the token family because it may have been stolen.
 6. Revoke the user's refresh tokens on logout or password change.
 
-The web client keeps the access JWT in memory and receives the refresh token in an `HttpOnly`, `SameSite=Lax`, `Path=/auth` cookie. Set `Secure` in production only. It silently refreshes after a page reload. Do not put either token in `localStorage`.
+The web client keeps the access JWT in memory and receives the refresh token in an `HttpOnly`, `SameSite=Lax`, `Path=/auth` cookie named `home_hub_refresh`. Set `Secure` in production only. It silently refreshes after a page reload. Do not put either token in `localStorage`.
 
 A future mobile client stores its refresh token using platform secure storage and keeps the access JWT in memory. The refresh endpoint must support a native-safe token transport without weakening the web cookie path.
 

@@ -43,6 +43,7 @@ teaches us something new.
 - [x] Add the exported Drizzle database-client boundary
 - [x] Define signup validation and session-cookie policy
 - [x] Implement and test signup service logic
+- [x] Wire and test `POST /auth/signup`
 - [ ] Implement signup and login with Argon2id
 - [ ] Issue access JWTs from authenticated endpoints
 - [ ] Implement opaque refresh-token rotation, reuse detection, and revocation
