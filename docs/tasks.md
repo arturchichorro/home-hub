@@ -37,8 +37,13 @@ teaches us something new.
 
 - [x] Add auth environment configuration
 - [x] Add `users.updated_at` and `refresh_tokens`
+- [x] Implement and test Argon2id password helpers
+- [x] Implement and test access-JWT signing and verification
+- [x] Implement and test opaque refresh-token generation and hashing
+- [x] Add the exported Drizzle database-client boundary
+- [x] Define signup validation and session-cookie policy
 - [ ] Implement signup and login with Argon2id
-- [ ] Issue and verify short-lived access JWTs
+- [ ] Issue access JWTs from authenticated endpoints
 - [ ] Implement opaque refresh-token rotation, reuse detection, and revocation
 - [ ] Implement refresh, logout, bearer authentication, and `/auth/me`
 - [ ] Complete the Phase 4 checkpoint and commit

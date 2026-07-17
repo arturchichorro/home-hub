@@ -40,9 +40,11 @@ Implement the JWT signing and verification path directly with Node's standard `c
 
 A long-lived JWT would be difficult to revoke, so continuity uses a separate high-entropy opaque refresh token. Only its SHA-256 hash is stored. Refresh tokens rotate whenever used and can be revoked on logout, password change, or suspected reuse.
 
-The web client keeps its access token in memory and its refresh token in a `Secure`, `HttpOnly`, `SameSite=Lax` cookie. A native client keeps the refresh token in platform secure storage. Neither client stores passwords.
+The web client keeps its access token in memory and its refresh token in an `HttpOnly`, `SameSite=Lax`, `Path=/auth` cookie, using `Secure` in production only. A native client keeps the refresh token in platform secure storage. Neither client stores passwords.
 
-Signup is gated by a server-side `SIGNUP_ACCESS_CODE` until household invites exist. Missing or empty `SIGNUP_ACCESS_CODE` means signup is disabled. The code is not stored in PostgreSQL, is not returned to clients, and is not a replacement for account passwords.
+Signup is gated by a server-side `SIGNUP_ACCESS_CODE` until household invites exist. Missing or empty `SIGNUP_ACCESS_CODE` means signup is disabled. The code is not stored in PostgreSQL, is not returned to clients, and is not a replacement for account passwords. Its comparison is timing-safe; a disabled signup or an invalid code receives the same generic `403` response.
+
+Signup normalizes usernames using the shared username rule and requires a normalized length of 3–32 characters. It normalizes email addresses by trimming and lowercasing before the database uniqueness check. Passwords are never normalized; they must be 12–128 characters. Refresh tokens expire after 30 days. Web refresh cookies use `HttpOnly`, `SameSite=Lax`, `Path=/auth`, and `Secure` only in production.
 
 ## Argon2id for passwords
 

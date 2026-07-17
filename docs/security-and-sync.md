@@ -11,7 +11,7 @@ JWT authentication does not replace password hashing. During signup and login, h
 After successful login, issue:
 
 - a short-lived signed access JWT, initially around 10 minutes;
-- a high-entropy opaque refresh token with a longer expiry.
+- a high-entropy opaque refresh token that expires after 30 days.
 
 The access JWT contains only necessary claims:
 
@@ -27,7 +27,9 @@ Do not place passwords, household membership, roles, or other mutable authorizat
 
 ## Signup gate
 
-Signup is not open by default. The API reads a server-side `SIGNUP_ACCESS_CODE`; if it is missing or empty, signup is disabled. When it is configured, signup requests must include the matching access code. This code is an enrollment gate only: it is not a user password, is not stored in PostgreSQL, is not placed in JWTs, and is never returned to clients.
+Signup is not open by default. The API reads a server-side `SIGNUP_ACCESS_CODE`; if it is missing or empty, signup is disabled. When it is configured, signup requests must include the matching access code. Compare it in constant time and return the same generic `403` response when signup is disabled or the code is wrong. This code is an enrollment gate only: it is not a user password, is not stored in PostgreSQL, is not placed in JWTs, and is never returned to clients.
+
+Signup normalizes usernames using the shared username rule and requires a normalized length of 3–32 characters. It normalizes emails with `trim().toLowerCase()` before uniqueness checks. Passwords are never trimmed or normalized and must be 12–128 characters. A duplicate username or email receives `409`.
 
 ## Refresh tokens
 
@@ -40,7 +42,7 @@ Refresh tokens provide continuity and revocation:
 5. If a revoked token is used again, revoke the token family because it may have been stolen.
 6. Revoke the user's refresh tokens on logout or password change.
 
-The web client keeps the access JWT in memory and receives the refresh token in a `Secure` production, `HttpOnly`, `SameSite=Lax` cookie. It silently refreshes after a page reload. Do not put either token in `localStorage`.
+The web client keeps the access JWT in memory and receives the refresh token in an `HttpOnly`, `SameSite=Lax`, `Path=/auth` cookie. Set `Secure` in production only. It silently refreshes after a page reload. Do not put either token in `localStorage`.
 
 A future mobile client stores its refresh token using platform secure storage and keeps the access JWT in memory. The refresh endpoint must support a native-safe token transport without weakening the web cookie path.
 
