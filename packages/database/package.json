@@ -2,6 +2,10 @@
   "name": "@home-hub/database",
   "private": true,
   "type": "module",
+  "exports": {
+    "./client": "./src/client.ts",
+    "./schema": "./src/schema.ts"
+  },
   "scripts": {
     "generate": "drizzle-kit generate --config drizzle.config.ts",
     "migrate": "drizzle-kit migrate --config drizzle.config.ts",

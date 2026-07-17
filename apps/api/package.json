@@ -8,6 +8,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@home-hub/database": "workspace:*",
     "@hono/node-server": "^2.0.8",
     "argon2": "^0.44.0",
     "dotenv": "^17.4.2",

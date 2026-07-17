@@ -20,6 +20,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@home-hub/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@hono/node-server':
         specifier: ^2.0.8
         version: 2.0.8(hono@4.12.28)
