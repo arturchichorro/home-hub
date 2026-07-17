@@ -42,6 +42,7 @@ teaches us something new.
 - [x] Implement and test opaque refresh-token generation and hashing
 - [x] Add the exported Drizzle database-client boundary
 - [x] Define signup validation and session-cookie policy
+- [x] Implement and test signup service logic
 - [ ] Implement signup and login with Argon2id
 - [ ] Issue access JWTs from authenticated endpoints
 - [ ] Implement opaque refresh-token rotation, reuse detection, and revocation

@@ -12,3 +12,5 @@ export const signupRequestSchema = z
     accessCode: z.string().trim().min(1),
   })
   .strict();
+
+export type SignupRequest = z.infer<typeof signupRequestSchema>;
