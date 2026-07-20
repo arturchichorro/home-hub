@@ -14,3 +14,12 @@ export const signupRequestSchema = z
   .strict();
 
 export type SignupRequest = z.infer<typeof signupRequestSchema>;
+
+export const loginRequestSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().pipe(z.email()),
+    password: z.string().max(128),
+  })
+  .strict();
+
+export type LoginRequest = z.infer<typeof loginRequestSchema>;

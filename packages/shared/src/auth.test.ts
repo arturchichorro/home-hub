@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { signupRequestSchema } from "./auth";
+import { loginRequestSchema, signupRequestSchema } from "./auth";
 
 const validSignup = {
   username: "  Artur   Chichorro  ",
   email: "  ARTUR@EXAMPLE.COM  ",
   password: "  a password with spaces  ",
   accessCode: "  household-code  ",
+};
+
+const validLogin = {
+  email: "  ARTUR@EXAMPLE.COM  ",
+  password: "  a password with spaces  ",
 };
 
 describe("signupRequestSchema", () => {
@@ -62,5 +67,55 @@ describe("signupRequestSchema", () => {
         unexpected: "value",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("loginRequestSchema", () => {
+  it("normalizes the email", () => {
+    expect(loginRequestSchema.parse(validLogin).email).toBe(
+      "artur@example.com",
+    );
+  });
+
+  it("preserves password exactly", () => {
+    expect(loginRequestSchema.parse(validLogin).password).toBe(
+      "  a password with spaces  ",
+    );
+  });
+
+  it("rejects invalid emails", () => {
+    expect(
+      loginRequestSchema.safeParse({
+        ...validLogin,
+        email: "not-an-email",
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    123,
+    "a".repeat(129),
+  ])("rejects non string or oversized passwords", (password) => {
+    expect(
+      loginRequestSchema.safeParse({ ...validLogin, password }).success,
+    ).toBe(false);
+  });
+
+  it("rejects unknown fields", () => {
+    expect(
+      loginRequestSchema.safeParse({
+        ...validLogin,
+        unexpected: "value",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("allows an empty password to reach credential verification", () => {
+    expect(
+      loginRequestSchema.safeParse({
+        ...validLogin,
+        password: "",
+      }).success,
+    ).toBe(true);
   });
 });
