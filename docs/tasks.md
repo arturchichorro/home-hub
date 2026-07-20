@@ -44,6 +44,7 @@ teaches us something new.
 - [x] Define signup validation and session-cookie policy
 - [x] Implement and test signup service logic
 - [x] Wire and test `POST /auth/signup`
+- [x] Define login credentials and failure policy
 - [ ] Implement signup and login with Argon2id
 - [ ] Issue access JWTs from authenticated endpoints
 - [ ] Implement opaque refresh-token rotation, reuse detection, and revocation

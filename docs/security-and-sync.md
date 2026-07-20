@@ -31,6 +31,8 @@ Signup is not open by default. The API reads a server-side `SIGNUP_ACCESS_CODE`;
 
 Signup normalizes usernames using the shared username rule and requires a normalized length of 3–32 characters. It normalizes emails with `trim().toLowerCase()` before uniqueness checks. Passwords are never trimmed or normalized and must be 12–128 characters. A duplicate username or email receives `409`.
 
+Login accepts email and password only. Normalize the email with `trim().toLowerCase()` and do not normalize the password. Return the same generic `401` response when the email is unknown or the password is wrong.
+
 ## Refresh tokens
 
 Refresh tokens provide continuity and revocation:
