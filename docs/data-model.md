@@ -45,10 +45,10 @@ Username and email normalization happen before uniqueness checks. Username norma
 - `user_id`
 - `expires_at`
 - `revoked_at`, nullable
-- `replaced_by_id`, nullable
+- `replaced_by_id`, nullable self-reference to `refresh_tokens.id`
 - `created_at`, `updated_at`
 
-The raw refresh token is never stored. Short-lived access JWTs are not stored as rows; they expire naturally. Refresh-token rows provide revocation, reuse detection, logout, and password-change invalidation.
+The raw refresh token is never stored. Short-lived access JWTs are not stored as rows; they expire naturally. Each signup or login starts an independent forward-linked refresh-token chain. Replacements inherit the initial token's expiry. These rows provide rotation, reuse detection, current-session logout, and password-change invalidation.
 
 ### `households`
 

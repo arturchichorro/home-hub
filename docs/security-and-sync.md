@@ -41,10 +41,14 @@ Refresh tokens provide continuity and revocation:
 
 1. Generate a high-entropy random token.
 2. Store only its SHA-256 hash in `refresh_tokens`.
-3. Rotate it every time it is exchanged for a new access JWT.
-4. Mark the previous row revoked and link it to its replacement.
-5. If a revoked token is used again, revoke the token family because it may have been stolen.
-6. Revoke the user's refresh tokens on logout or password change.
+3. Treat each signup or login as an independent session represented by a forward-linked token chain.
+4. Rotate the token transactionally every time it is exchanged for a new access JWT, locking the presented row to serialize concurrent use.
+5. Give the replacement the same `expires_at` value as the presented token so rotation never extends the session beyond its original 30-day lifetime.
+6. Mark the previous row revoked and link it to its replacement.
+7. If a revoked token is used again, revoke the active descendants in that session chain because the token may have been stolen.
+8. Revoke the current session on logout. Revoke all of the user's sessions on password change or an explicit “log out everywhere” operation.
+
+`POST /auth/refresh` returns only a new access token in JSON. The replacement refresh token remains inaccessible to browser JavaScript and is sent only in the refresh cookie. A missing, unknown, expired, or revoked token receives the same generic `401` response, and the API clears the cookie.
 
 The web client keeps the access JWT in memory and receives the refresh token in an `HttpOnly`, `SameSite=Lax`, `Path=/auth` cookie named `home_hub_refresh`. Set `Secure` in production only. It silently refreshes after a page reload. Do not put either token in `localStorage`.
 
