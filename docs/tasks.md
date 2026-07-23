@@ -45,8 +45,9 @@ teaches us something new.
 - [x] Implement and test signup service logic
 - [x] Wire and test `POST /auth/signup`
 - [x] Define login credentials and failure policy
-- [ ] Implement signup and login with Argon2id
-- [ ] Issue access JWTs from authenticated endpoints
+- [x] Implement signup and login services with Argon2id
+- [ ] Wire and test `POST /auth/login`
+- [x] Issue access JWTs from signup and login services
 - [ ] Implement opaque refresh-token rotation, reuse detection, and revocation
 - [ ] Implement refresh, logout, bearer authentication, and `/auth/me`
 - [ ] Complete the Phase 4 checkpoint and commit

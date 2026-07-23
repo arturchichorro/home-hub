@@ -33,6 +33,8 @@ Signup normalizes usernames using the shared username rule and requires a normal
 
 Login accepts email and password only. Normalize the email with `trim().toLowerCase()` and do not normalize the password. Return the same generic `401` response when the email is unknown or the password is wrong.
 
+Login performs one Argon2id verification even when the email is unknown, using a dummy password hash, to reduce timing differences that could otherwise reveal whether an account exists.
+
 ## Refresh tokens
 
 Refresh tokens provide continuity and revocation:
