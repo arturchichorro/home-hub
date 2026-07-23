@@ -2,6 +2,7 @@ import { createDbClient } from "@home-hub/database/client";
 import { serve } from "@hono/node-server";
 
 import { createApp } from "./app";
+import { createLoginService } from "./auth/login";
 import { createSignupService } from "./auth/signup";
 import { config } from "./config";
 
@@ -13,8 +14,14 @@ const signup = createSignupService({
   signupAccessCode: config.SIGNUP_ACCESS_CODE,
 });
 
+const login = createLoginService({
+  db,
+  jwtSecret: config.API_JWT_SECRET,
+});
+
 const app = createApp({
   signup,
+  login,
   isProduction: config.NODE_ENV === "production",
 });
 

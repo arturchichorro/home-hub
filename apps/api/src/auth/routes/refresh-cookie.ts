@@ -1,0 +1,19 @@
+import type { Context } from "hono";
+import { setCookie } from "hono/cookie";
+
+export const refreshTokenCookieName = "home_hub_refresh";
+const refreshTokenMaxAgeSeconds = 30 * 24 * 60 * 60;
+
+export function setRefreshTokenCookie(
+  c: Context,
+  refreshToken: string,
+  isProduction: boolean,
+) {
+  setCookie(c, refreshTokenCookieName, refreshToken, {
+    httpOnly: true,
+    sameSite: "Lax",
+    path: "/auth",
+    secure: isProduction,
+    maxAge: refreshTokenMaxAgeSeconds,
+  });
+}

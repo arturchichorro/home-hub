@@ -46,7 +46,7 @@ teaches us something new.
 - [x] Wire and test `POST /auth/signup`
 - [x] Define login credentials and failure policy
 - [x] Implement signup and login services with Argon2id
-- [ ] Wire and test `POST /auth/login`
+- [x] Wire and test `POST /auth/login`
 - [x] Issue access JWTs from signup and login services
 - [ ] Implement opaque refresh-token rotation, reuse detection, and revocation
 - [ ] Implement refresh, logout, bearer authentication, and `/auth/me`

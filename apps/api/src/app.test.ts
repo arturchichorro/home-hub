@@ -6,6 +6,7 @@ describe("app", () => {
   it("returns a successful health response", async () => {
     const app = createApp({
       signup: async () => ({ kind: "forbidden" }),
+      login: async () => ({ kind: "invalid_credentials" }),
       isProduction: false,
     });
 

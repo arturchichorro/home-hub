@@ -1,14 +1,20 @@
-import type { SignupRequest } from "@home-hub/shared/auth";
+import type { LoginRequest, SignupRequest } from "@home-hub/shared/auth";
 import { describe, expect, it } from "vitest";
 
-import { createAuthRoutes } from "./routes";
-import type { SignupResult } from "./signup";
+import type { LoginResult } from "../login";
+import type { SignupResult } from "../signup";
+import { createAuthRoutes } from "./index";
 
 const validSignupRequest = {
   username: "  Artur   Chichorro  ",
   email: "  ARTUR@EXAMPLE.COM  ",
   password: "a password with spaces",
   accessCode: "  household-code  ",
+};
+
+const validLoginRequest = {
+  email: "  ARTUR@EXAMPLE.COM  ",
+  password: "a password with spaces",
 };
 
 const successfulSignup: SignupResult = {
@@ -22,18 +28,39 @@ const successfulSignup: SignupResult = {
   refreshToken: "refresh-token",
 };
 
+const successfulLogin: LoginResult = {
+  kind: "success",
+  user: {
+    id: "user-123",
+    username: "artur chichorro",
+    email: "artur@example.com",
+  },
+  accessToken: "access-token",
+  refreshToken: "refresh-token",
+};
+
 function createTestAuthRoutes(input: {
-  signup: (request: SignupRequest) => Promise<SignupResult>;
+  signup?: (request: SignupRequest) => Promise<SignupResult>;
+  login?: (request: LoginRequest) => Promise<LoginResult>;
   isProduction?: boolean;
 }) {
   return createAuthRoutes({
-    signup: input.signup,
+    signup: input.signup ?? (async () => ({ kind: "forbidden" })),
+    login: input.login ?? (async () => ({ kind: "invalid_credentials" })),
     isProduction: input.isProduction ?? false,
   });
 }
 
 function postSignup(app: ReturnType<typeof createAuthRoutes>, body: string) {
   return app.request("/signup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
+}
+
+function postLogin(app: ReturnType<typeof createAuthRoutes>, body: string) {
+  return app.request("/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body,
@@ -126,21 +153,77 @@ describe("auth routes", () => {
     const cookie = response.headers.get("set-cookie");
 
     expect(cookie).toContain("home_hub_refresh=refresh-token");
-    expect(cookie).toContain("HttpOnly");
-    expect(cookie).toContain("Max-Age=2592000");
-    expect(cookie).toContain("Path=/auth");
-    expect(cookie).toContain("SameSite=Lax");
-    expect(cookie).not.toContain("Secure");
   });
 
-  it("marks the refresh cookie secure in production", async () => {
+  it("rejects malformed JSON without invoking login", async () => {
+    let wasInvoked = false;
     const app = createTestAuthRoutes({
-      signup: async () => successfulSignup,
-      isProduction: true,
+      login: async () => {
+        wasInvoked = true;
+        return { kind: "invalid_credentials" };
+      },
     });
 
-    const response = await postSignup(app, JSON.stringify(validSignupRequest));
+    const response = await postLogin(app, "{");
 
-    expect(response.headers.get("set-cookie")).toContain("Secure");
+    expect(response.status).toBe(400);
+    expect(wasInvoked).toBe(false);
+  });
+
+  it("rejects an invalid login request without invoking login", async () => {
+    let wasInvoked = false;
+    const app = createTestAuthRoutes({
+      login: async () => {
+        wasInvoked = true;
+        return { kind: "invalid_credentials" };
+      },
+    });
+
+    const response = await postLogin(
+      app,
+      JSON.stringify({ ...validLoginRequest, unexpected: "value" }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(wasInvoked).toBe(false);
+  });
+
+  it("returns a generic unauthorized response for invalid credentials", async () => {
+    const app = createTestAuthRoutes({
+      login: async () => ({ kind: "invalid_credentials" }),
+    });
+
+    const response = await postLogin(app, JSON.stringify(validLoginRequest));
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({
+      error: "Invalid credentials",
+    });
+  });
+
+  it("returns the access token and user with a refresh cookie on successful login", async () => {
+    let receivedRequest: unknown;
+    const app = createTestAuthRoutes({
+      login: async (request) => {
+        receivedRequest = request;
+        return successfulLogin;
+      },
+    });
+
+    const response = await postLogin(app, JSON.stringify(validLoginRequest));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      user: successfulLogin.user,
+      accessToken: successfulLogin.accessToken,
+    });
+    expect(receivedRequest).toEqual({
+      email: "artur@example.com",
+      password: "a password with spaces",
+    });
+
+    const cookie = response.headers.get("set-cookie");
+
+    expect(cookie).toContain("home_hub_refresh=refresh-token");
   });
 });

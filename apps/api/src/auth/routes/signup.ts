@@ -1,11 +1,8 @@
 import { type SignupRequest, signupRequestSchema } from "@home-hub/shared/auth";
 import type { Context } from "hono";
-import { setCookie } from "hono/cookie";
 
-import type { SignupResult } from "./signup";
-
-const refreshTokenCookieName = "home_hub_refresh";
-const refreshTokenMaxAgeSeconds = 30 * 24 * 60 * 60;
+import type { SignupResult } from "../signup";
+import { setRefreshTokenCookie } from "./refresh-cookie";
 
 export type CreateSignupRouteInput = {
   signup: (request: SignupRequest) => Promise<SignupResult>;
@@ -34,13 +31,7 @@ export function createSignupRoute({
       return c.json({ error: "Username or email already exists" }, 409);
     }
 
-    setCookie(c, refreshTokenCookieName, result.refreshToken, {
-      httpOnly: true,
-      sameSite: "Lax",
-      path: "/auth",
-      secure: isProduction,
-      maxAge: refreshTokenMaxAgeSeconds,
-    });
+    setRefreshTokenCookie(c, result.refreshToken, isProduction);
 
     return c.json(
       {
