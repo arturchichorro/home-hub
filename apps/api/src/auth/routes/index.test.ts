@@ -2,6 +2,7 @@ import type { LoginRequest, SignupRequest } from "@home-hub/shared/auth";
 import { describe, expect, it } from "vitest";
 
 import type { LoginResult } from "../login";
+import type { RefreshResult } from "../refresh";
 import type { SignupResult } from "../signup";
 import { createAuthRoutes } from "./index";
 
@@ -39,14 +40,22 @@ const successfulLogin: LoginResult = {
   refreshToken: "refresh-token",
 };
 
+const successfulRefresh: RefreshResult = {
+  kind: "success",
+  accessToken: "replacement-access-token",
+  refreshToken: "replacement-refresh-token",
+};
+
 function createTestAuthRoutes(input: {
   signup?: (request: SignupRequest) => Promise<SignupResult>;
   login?: (request: LoginRequest) => Promise<LoginResult>;
+  refresh?: (rawRefreshToken: string) => Promise<RefreshResult>;
   isProduction?: boolean;
 }) {
   return createAuthRoutes({
     signup: input.signup ?? (async () => ({ kind: "forbidden" })),
     login: input.login ?? (async () => ({ kind: "invalid_credentials" })),
+    refresh: input.refresh ?? (async () => ({ kind: "invalid_token" })),
     isProduction: input.isProduction ?? false,
   });
 }
@@ -64,6 +73,18 @@ function postLogin(app: ReturnType<typeof createAuthRoutes>, body: string) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body,
+  });
+}
+
+function postRefresh(
+  app: ReturnType<typeof createAuthRoutes>,
+  refreshToken?: string,
+) {
+  return app.request("/refresh", {
+    method: "POST",
+    ...(refreshToken
+      ? { headers: { Cookie: `home_hub_refresh=${refreshToken}` } }
+      : {}),
   });
 }
 
@@ -225,5 +246,64 @@ describe("auth routes", () => {
     const cookie = response.headers.get("set-cookie");
 
     expect(cookie).toContain("home_hub_refresh=refresh-token");
+  });
+
+  it("rejects a missing refresh cookie without invoking refresh", async () => {
+    let wasInvoked = false;
+    const app = createTestAuthRoutes({
+      refresh: async () => {
+        wasInvoked = true;
+        return { kind: "invalid_token" };
+      },
+    });
+
+    const response = await postRefresh(app);
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({
+      error: "Invalid refresh token",
+    });
+    expect(wasInvoked).toBe(false);
+    expect(response.headers.get("set-cookie")).toContain("home_hub_refresh=;");
+  });
+
+  it("clears the cookie and returns a generic response for an invalid refresh token", async () => {
+    let receivedRefreshToken: string | undefined;
+    const app = createTestAuthRoutes({
+      refresh: async (rawRefreshToken) => {
+        receivedRefreshToken = rawRefreshToken;
+        return { kind: "invalid_token" };
+      },
+    });
+
+    const response = await postRefresh(app, "invalid-refresh-token");
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({
+      error: "Invalid refresh token",
+    });
+    expect(receivedRefreshToken).toBe("invalid-refresh-token");
+    expect(response.headers.get("set-cookie")).toContain("home_hub_refresh=;");
+  });
+
+  it("returns a new access token and replaces the refresh cookie", async () => {
+    let receivedRefreshToken: string | undefined;
+    const app = createTestAuthRoutes({
+      refresh: async (rawRefreshToken) => {
+        receivedRefreshToken = rawRefreshToken;
+        return successfulRefresh;
+      },
+    });
+
+    const response = await postRefresh(app, "current-refresh-token");
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      accessToken: successfulRefresh.accessToken,
+    });
+    expect(receivedRefreshToken).toBe("current-refresh-token");
+    expect(response.headers.get("set-cookie")).toContain(
+      "home_hub_refresh=replacement-refresh-token",
+    );
   });
 });

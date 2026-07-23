@@ -49,7 +49,8 @@ teaches us something new.
 - [x] Wire and test `POST /auth/login`
 - [x] Issue access JWTs from signup and login services
 - [x] Implement opaque refresh-token rotation, reuse detection, and revocation
-- [ ] Implement refresh, logout, bearer authentication, and `/auth/me`
+- [x] Wire and test `POST /auth/refresh`
+- [ ] Implement logout, bearer authentication, and `/auth/me`
 - [ ] Complete the Phase 4 checkpoint and commit
 
 ## Phase 5: households

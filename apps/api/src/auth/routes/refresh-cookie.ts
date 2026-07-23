@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { setCookie } from "hono/cookie";
+import { deleteCookie, setCookie } from "hono/cookie";
 
 export const refreshTokenCookieName = "home_hub_refresh";
 const refreshTokenMaxAgeSeconds = 30 * 24 * 60 * 60;
@@ -15,5 +15,12 @@ export function setRefreshTokenCookie(
     path: "/auth",
     secure: isProduction,
     maxAge: refreshTokenMaxAgeSeconds,
+  });
+}
+
+export function clearRefreshTokenCookie(c: Context, isProduction: boolean) {
+  deleteCookie(c, refreshTokenCookieName, {
+    path: "/auth",
+    secure: isProduction,
   });
 }

@@ -7,6 +7,7 @@ describe("app", () => {
     const app = createApp({
       signup: async () => ({ kind: "forbidden" }),
       login: async () => ({ kind: "invalid_credentials" }),
+      refresh: async () => ({ kind: "invalid_token" }),
       isProduction: false,
     });
 
