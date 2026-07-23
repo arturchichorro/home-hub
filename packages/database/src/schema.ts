@@ -1,4 +1,11 @@
-import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  type AnyPgColumn,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey(),
@@ -23,7 +30,9 @@ export const refreshTokens = pgTable(
       .references(() => users.id),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
-    replacedById: uuid("replaced_by_id"),
+    replacedById: uuid("replaced_by_id").references(
+      (): AnyPgColumn => refreshTokens.id,
+    ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

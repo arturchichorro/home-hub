@@ -15,6 +15,13 @@
       "when": 1783853043674,
       "tag": "0001_premium_nightmare",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784818276089,
+      "tag": "0002_tranquil_paper_doll",
+      "breakpoints": true
     }
   ]
 }
