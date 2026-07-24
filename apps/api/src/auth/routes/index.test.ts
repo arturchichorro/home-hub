@@ -50,12 +50,14 @@ function createTestAuthRoutes(input: {
   signup?: (request: SignupRequest) => Promise<SignupResult>;
   login?: (request: LoginRequest) => Promise<LoginResult>;
   refresh?: (rawRefreshToken: string) => Promise<RefreshResult>;
+  logout?: (rawRefreshToken: string) => Promise<void>;
   isProduction?: boolean;
 }) {
   return createAuthRoutes({
     signup: input.signup ?? (async () => ({ kind: "forbidden" })),
     login: input.login ?? (async () => ({ kind: "invalid_credentials" })),
     refresh: input.refresh ?? (async () => ({ kind: "invalid_token" })),
+    logout: input.logout ?? (async () => undefined),
     isProduction: input.isProduction ?? false,
   });
 }
@@ -81,6 +83,18 @@ function postRefresh(
   refreshToken?: string,
 ) {
   return app.request("/refresh", {
+    method: "POST",
+    ...(refreshToken
+      ? { headers: { Cookie: `home_hub_refresh=${refreshToken}` } }
+      : {}),
+  });
+}
+
+function postLogout(
+  app: ReturnType<typeof createAuthRoutes>,
+  refreshToken?: string,
+) {
+  return app.request("/logout", {
     method: "POST",
     ...(refreshToken
       ? { headers: { Cookie: `home_hub_refresh=${refreshToken}` } }
@@ -305,5 +319,37 @@ describe("auth routes", () => {
     expect(response.headers.get("set-cookie")).toContain(
       "home_hub_refresh=replacement-refresh-token",
     );
+  });
+
+  it("clears the cookie and succeeds when logout has no refresh token", async () => {
+    let wasInvoked = false;
+    const app = createTestAuthRoutes({
+      logout: async () => {
+        wasInvoked = true;
+      },
+    });
+
+    const response = await postLogout(app);
+
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
+    expect(wasInvoked).toBe(false);
+    expect(response.headers.get("set-cookie")).toContain("home_hub_refresh=;");
+  });
+
+  it("revokes the presented session and clears its cookie", async () => {
+    let receivedRefreshToken: string | undefined;
+    const app = createTestAuthRoutes({
+      logout: async (rawRefreshToken) => {
+        receivedRefreshToken = rawRefreshToken;
+      },
+    });
+
+    const response = await postLogout(app, "current-refresh-token");
+
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
+    expect(receivedRefreshToken).toBe("current-refresh-token");
+    expect(response.headers.get("set-cookie")).toContain("home_hub_refresh=;");
   });
 });

@@ -51,7 +51,7 @@ teaches us something new.
 - [x] Implement opaque refresh-token rotation, reuse detection, and revocation
 - [x] Wire and test `POST /auth/refresh`
 - [x] Implement and test current-session logout service
-- [ ] Wire and test `POST /auth/logout`
+- [x] Wire and test `POST /auth/logout`
 - [ ] Implement bearer authentication and `/auth/me`
 - [ ] Complete the Phase 4 checkpoint and commit
 

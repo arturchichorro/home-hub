@@ -8,6 +8,7 @@ describe("app", () => {
       signup: async () => ({ kind: "forbidden" }),
       login: async () => ({ kind: "invalid_credentials" }),
       refresh: async () => ({ kind: "invalid_token" }),
+      logout: async () => undefined,
       isProduction: false,
     });
 

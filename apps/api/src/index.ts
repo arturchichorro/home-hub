@@ -3,6 +3,7 @@ import { serve } from "@hono/node-server";
 
 import { createApp } from "./app";
 import { createLoginService } from "./auth/login";
+import { createLogoutService } from "./auth/logout";
 import { createRefreshService } from "./auth/refresh";
 import { createSignupService } from "./auth/signup";
 import { config } from "./config";
@@ -25,10 +26,13 @@ const refresh = createRefreshService({
   jwtSecret: config.API_JWT_SECRET,
 });
 
+const logout = createLogoutService({ db });
+
 const app = createApp({
   signup,
   login,
   refresh,
+  logout,
   isProduction: config.NODE_ENV === "production",
 });
 
