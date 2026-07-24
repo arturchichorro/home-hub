@@ -52,6 +52,8 @@ Signup normalizes usernames using the shared username rule and requires a normal
 
 Login accepts normalized email and password only; usernames remain display identities rather than alternate login identifiers. An unknown email and an incorrect password receive the same generic `401` response so the API does not reveal whether an email has an account.
 
+Protected API routes verify the access JWT and place its `sub` claim into a typed request context as the trusted user ID. Endpoints still query PostgreSQL for mutable account and authorization state. If a structurally valid access token refers to a user that no longer exists, treat it as `401 Unauthorized` rather than revealing account lifecycle through `404`.
+
 ## Argon2id for passwords
 
 Passwords require a deliberately expensive password-hashing algorithm rather than ordinary encryption or a fast general-purpose hash. Argon2id is the selected algorithm.

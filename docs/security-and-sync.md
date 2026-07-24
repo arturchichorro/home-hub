@@ -25,6 +25,8 @@ JWTs are signed and verified by the API using Node's standard `crypto` APIs, not
 
 Do not place passwords, household membership, roles, or other mutable authorization state in the JWT. Membership is checked against PostgreSQL so changes take effect without waiting for a token to expire.
 
+Protected routes read the access JWT from `Authorization: Bearer <token>`, verify it, and place its `sub` claim into a typed request context. Database-backed endpoints still load mutable user state from PostgreSQL. A validly signed token whose user no longer exists receives the same generic `401 Unauthorized` response as other authentication failures.
+
 ## Signup gate
 
 Signup is not open by default. The API reads a server-side `SIGNUP_ACCESS_CODE`; if it is missing or empty, signup is disabled. When it is configured, signup requests must include the matching access code. Compare it in constant time and return the same generic `403` response when signup is disabled or the code is wrong. This code is an enrollment gate only: it is not a user password, is not stored in PostgreSQL, is not placed in JWTs, and is never returned to clients.
