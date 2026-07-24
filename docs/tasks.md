@@ -52,7 +52,8 @@ teaches us something new.
 - [x] Wire and test `POST /auth/refresh`
 - [x] Implement and test current-session logout service
 - [x] Wire and test `POST /auth/logout`
-- [ ] Implement bearer authentication and `/auth/me`
+- [x] Implement and test bearer authentication middleware
+- [ ] Implement and test `GET /auth/me`
 - [ ] Complete the Phase 4 checkpoint and commit
 
 ## Phase 5: households
