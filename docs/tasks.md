@@ -53,7 +53,7 @@ teaches us something new.
 - [x] Implement and test current-session logout service
 - [x] Wire and test `POST /auth/logout`
 - [x] Implement and test bearer authentication middleware
-- [ ] Implement and test `GET /auth/me`
+- [x] Implement and test `GET /auth/me`
 - [ ] Complete the Phase 4 checkpoint and commit
 
 ## Phase 5: households

@@ -9,6 +9,8 @@ describe("app", () => {
       login: async () => ({ kind: "invalid_credentials" }),
       refresh: async () => ({ kind: "invalid_token" }),
       logout: async () => undefined,
+      getMe: async () => ({ kind: "not_found" }),
+      jwtSecret: "test-jwt-secret",
       isProduction: false,
     });
 

@@ -1,7 +1,9 @@
 import type { LoginRequest, SignupRequest } from "@home-hub/shared/auth";
 import { describe, expect, it } from "vitest";
 
+import { signAccessToken } from "../access-token";
 import type { LoginResult } from "../login";
+import type { MeResult } from "../me";
 import type { RefreshResult } from "../refresh";
 import type { SignupResult } from "../signup";
 import { createAuthRoutes } from "./index";
@@ -46,11 +48,19 @@ const successfulRefresh: RefreshResult = {
   refreshToken: "replacement-refresh-token",
 };
 
+const jwtSecret = "test-jwt-secret";
+const authenticatedUser = {
+  id: "user-123",
+  username: "artur chichorro",
+  email: "artur@example.com",
+};
+
 function createTestAuthRoutes(input: {
   signup?: (request: SignupRequest) => Promise<SignupResult>;
   login?: (request: LoginRequest) => Promise<LoginResult>;
   refresh?: (rawRefreshToken: string) => Promise<RefreshResult>;
   logout?: (rawRefreshToken: string) => Promise<void>;
+  getMe?: (userId: string) => Promise<MeResult>;
   isProduction?: boolean;
 }) {
   return createAuthRoutes({
@@ -58,6 +68,8 @@ function createTestAuthRoutes(input: {
     login: input.login ?? (async () => ({ kind: "invalid_credentials" })),
     refresh: input.refresh ?? (async () => ({ kind: "invalid_token" })),
     logout: input.logout ?? (async () => undefined),
+    getMe: input.getMe ?? (async () => ({ kind: "not_found" })),
+    jwtSecret,
     isProduction: input.isProduction ?? false,
   });
 }
@@ -98,6 +110,14 @@ function postLogout(
     method: "POST",
     ...(refreshToken
       ? { headers: { Cookie: `home_hub_refresh=${refreshToken}` } }
+      : {}),
+  });
+}
+
+function getMe(app: ReturnType<typeof createAuthRoutes>, accessToken?: string) {
+  return app.request("/me", {
+    ...(accessToken
+      ? { headers: { Authorization: `Bearer ${accessToken}` } }
       : {}),
   });
 }
@@ -351,5 +371,62 @@ describe("auth routes", () => {
     expect(await response.text()).toBe("");
     expect(receivedRefreshToken).toBe("current-refresh-token");
     expect(response.headers.get("set-cookie")).toContain("home_hub_refresh=;");
+  });
+
+  it("protects the current-user route with bearer authentication", async () => {
+    let wasInvoked = false;
+    const app = createTestAuthRoutes({
+      getMe: async () => {
+        wasInvoked = true;
+        return { kind: "not_found" };
+      },
+    });
+
+    const response = await getMe(app);
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
+    expect(response.headers.get("www-authenticate")).toBe("Bearer");
+    expect(wasInvoked).toBe(false);
+  });
+
+  it("passes the verified JWT subject to the current-user service", async () => {
+    let receivedUserId: string | undefined;
+    const app = createTestAuthRoutes({
+      getMe: async (userId) => {
+        receivedUserId = userId;
+        return { kind: "success", user: authenticatedUser };
+      },
+    });
+    const accessToken = signAccessToken({
+      userId: authenticatedUser.id,
+      jwtId: "jwt-123",
+      secret: jwtSecret,
+    });
+
+    const response = await getMe(app, accessToken);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      user: authenticatedUser,
+    });
+    expect(receivedUserId).toBe(authenticatedUser.id);
+  });
+
+  it("returns unauthorized when the JWT subject no longer exists", async () => {
+    const app = createTestAuthRoutes({
+      getMe: async () => ({ kind: "not_found" }),
+    });
+    const accessToken = signAccessToken({
+      userId: authenticatedUser.id,
+      jwtId: "jwt-123",
+      secret: jwtSecret,
+    });
+
+    const response = await getMe(app, accessToken);
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
+    expect(response.headers.get("www-authenticate")).toBe("Bearer");
   });
 });

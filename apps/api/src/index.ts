@@ -4,6 +4,7 @@ import { serve } from "@hono/node-server";
 import { createApp } from "./app";
 import { createLoginService } from "./auth/login";
 import { createLogoutService } from "./auth/logout";
+import { createMeService } from "./auth/me";
 import { createRefreshService } from "./auth/refresh";
 import { createSignupService } from "./auth/signup";
 import { config } from "./config";
@@ -27,12 +28,15 @@ const refresh = createRefreshService({
 });
 
 const logout = createLogoutService({ db });
+const getMe = createMeService({ db });
 
 const app = createApp({
   signup,
   login,
   refresh,
   logout,
+  getMe,
+  jwtSecret: config.API_JWT_SECRET,
   isProduction: config.NODE_ENV === "production",
 });
 
