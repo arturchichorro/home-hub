@@ -54,7 +54,8 @@ teaches us something new.
 - [x] Wire and test `POST /auth/logout`
 - [x] Implement and test bearer authentication middleware
 - [x] Implement and test `GET /auth/me`
-- [ ] Complete the Phase 4 checkpoint and commit
+- [x] Complete the Phase 4 checkpoint
+- [x] Commit Phase 4
 
 ## Phase 5: households
 
