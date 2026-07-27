@@ -68,7 +68,7 @@ teaches us something new.
 
 ## Phase 6: invites and isolation
 
-- [ ] Define and migrate the household-invite schema
+- [x] Define and migrate the household-invite schema
 - [ ] Implement owner-authorized invite creation and revocation
 - [ ] Implement transactional invite acceptance
 - [ ] Test expiry, single use, and cross-household isolation
