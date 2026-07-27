@@ -68,7 +68,9 @@ teaches us something new.
 
 ## Phase 6: invites and isolation
 
-- [ ] Implement secure household invites and transactional acceptance
+- [ ] Define and migrate the household-invite schema
+- [ ] Implement owner-authorized invite creation and revocation
+- [ ] Implement transactional invite acceptance
 - [ ] Test expiry, single use, and cross-household isolation
 - [ ] Complete the Phase 6 checkpoint and commit
 

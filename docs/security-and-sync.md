@@ -62,6 +62,26 @@ Pass the current access JWT to Zero's `auth` option. Zero forwards it to the que
 
 The API derives the user from the verified JWT and never from query or mutation arguments.
 
+## Household invitations
+
+Only a current household owner may create or revoke an invitation. Check that
+role in PostgreSQL rather than trusting a role or household claim supplied by
+the browser or access JWT.
+
+Invitation tokens are 32 random bytes encoded as base64url. Treat the raw token
+as a bearer credential: return it only at creation and store only its SHA-256
+hash. Initial invitations expire after seven days.
+
+Acceptance requires an authenticated account. Lock the matching invitation row
+inside a transaction, reject inactive invitations generically, insert a
+`member` membership, and mark the invitation accepted in the same transaction.
+An already-existing member receives a conflict response and does not consume
+the invitation. Row locking and single-use state ensure concurrent acceptance
+has at most one winner.
+
+Household invitations do not replace `SIGNUP_ACCESS_CODE` as the initial account
+enrollment gate.
+
 For self-hosting, Rocicorp does not issue an API key. In production, configure a strong `ZERO_ADMIN_PASSWORD`. Optional `ZERO_QUERY_API_KEY` and `ZERO_MUTATE_API_KEY` values can authenticate calls from `zero-cache` to the API, but they complement rather than replace user authentication.
 
 ## Query authorization

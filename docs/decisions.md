@@ -38,6 +38,24 @@ cross-module behavior is expressed through narrow operations such as adding a
 recipe's ingredients to the shopping list. Do not add a generic module table,
 plugin system, event bus, or per-module permissions without a concrete need.
 
+## Household invitations
+
+Only the household owner may create or revoke invitations. An invitation is a
+bearer credential rather than an email-bound record: generate 32 random bytes,
+return the raw base64url token only when creating the invite, and store only its
+SHA-256 hash.
+
+Invitations expire after seven days and require an already-authenticated
+account for acceptance. `SIGNUP_ACCESS_CODE` remains the account-enrollment gate
+for now. Unknown, expired, revoked, and previously accepted tokens receive the
+same generic invalid-invite response.
+
+Acceptance locks the invite and transactionally creates a `member` membership
+while setting `accepted_at`, so concurrent acceptance has at most one winner.
+An existing household member receives a conflict response without consuming
+the invitation. The initial model does not store `accepted_by_user_id`; the
+created membership records who joined.
+
 ## Hono on Node.js for explicit HTTP boundaries
 
 Hono handles authentication, online commands, Zero endpoints, health checks, and R2 signing. It is small, uses Web-standard `Request` and `Response` objects, and runs on Node.js through `@hono/node-server`. This makes the boundary easy to learn and matches Zero's server APIs without adapting Express request objects into Fetch requests.
