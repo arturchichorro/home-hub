@@ -8,6 +8,7 @@ import { createMeService } from "./auth/me";
 import { createRefreshService } from "./auth/refresh";
 import { createSignupService } from "./auth/signup";
 import { config } from "./config";
+import { createHouseholdService } from "./households/create";
 
 const { db } = createDbClient(config.DATABASE_URL);
 
@@ -29,6 +30,7 @@ const refresh = createRefreshService({
 
 const logout = createLogoutService({ db });
 const getMe = createMeService({ db });
+const createHousehold = createHouseholdService({ db });
 
 const app = createApp({
   signup,
@@ -36,6 +38,7 @@ const app = createApp({
   refresh,
   logout,
   getMe,
+  createHousehold,
   jwtSecret: config.API_JWT_SECRET,
   isProduction: config.NODE_ENV === "production",
 });

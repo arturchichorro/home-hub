@@ -4,6 +4,7 @@
   "type": "module",
   "exports": {
     "./auth": "./src/auth.ts",
+    "./households": "./src/households.ts",
     "./normalization": "./src/normalization.ts"
   },
   "scripts": {

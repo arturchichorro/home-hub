@@ -60,7 +60,7 @@ teaches us something new.
 ## Phase 5: households
 
 - [x] Define and migrate the household and membership schema
-- [ ] Create households and owner memberships transactionally
+- [x] Create households and owner memberships transactionally
 - [ ] List households for the authenticated user
 - [ ] Prove rollback behavior
 - [ ] Complete the Phase 5 checkpoint and commit

@@ -56,7 +56,8 @@ The raw refresh token is never stored. Short-lived access JWTs are not stored as
 - `name`
 - `created_at`, `updated_at`
 
-Household names are display labels and do not need to be unique.
+Household names are trimmed display labels of 1–100 characters and do not need
+to be unique.
 
 ### `household_members`
 
