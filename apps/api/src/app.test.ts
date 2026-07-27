@@ -12,6 +12,7 @@ describe("app", () => {
       logout: async () => undefined,
       getMe: async () => ({ kind: "not_found" }),
       createHousehold: async () => ({ kind: "unauthorized" }),
+      listHouseholds: async () => ({ kind: "unauthorized" }),
       jwtSecret: "test-jwt-secret",
       isProduction: false,
     });
@@ -39,6 +40,7 @@ describe("app", () => {
       logout: async () => undefined,
       getMe: async () => ({ kind: "not_found" }),
       createHousehold,
+      listHouseholds: async () => ({ kind: "unauthorized" }),
       jwtSecret,
       isProduction: false,
     });
