@@ -64,7 +64,7 @@ teaches us something new.
 - [x] List households for the authenticated user
 - [x] Prove rollback behavior
 - [x] Complete the Phase 5 checkpoint
-- [ ] Commit Phase 5
+- [x] Commit Phase 5
 
 ## Phase 6: invites and isolation
 
