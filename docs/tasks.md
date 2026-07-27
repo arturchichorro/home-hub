@@ -62,8 +62,9 @@ teaches us something new.
 - [x] Define and migrate the household and membership schema
 - [x] Create households and owner memberships transactionally
 - [x] List households for the authenticated user
-- [ ] Prove rollback behavior
-- [ ] Complete the Phase 5 checkpoint and commit
+- [x] Prove rollback behavior
+- [x] Complete the Phase 5 checkpoint
+- [ ] Commit Phase 5
 
 ## Phase 6: invites and isolation
 
