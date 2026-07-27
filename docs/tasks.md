@@ -59,7 +59,7 @@ teaches us something new.
 
 ## Phase 5: households
 
-- [ ] Define and migrate the household and membership schema
+- [x] Define and migrate the household and membership schema
 - [ ] Create households and owner memberships transactionally
 - [ ] List households for the authenticated user
 - [ ] Prove rollback behavior

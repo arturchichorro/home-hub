@@ -1,9 +1,12 @@
+import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   index,
+  pgEnum,
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -41,4 +44,50 @@ export const refreshTokens = pgTable(
       .defaultNow(),
   },
   (table) => [index("refresh_tokens_user_id_idx").on(table.userId)],
+);
+
+export const householdMemberRoleEnum = pgEnum("household_member_role", [
+  "owner",
+  "member",
+]);
+
+export const households = pgTable("households", {
+  id: uuid("id").primaryKey(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const householdMembers = pgTable(
+  "household_members",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    role: householdMemberRoleEnum().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("household_members_household_id_user_id_idx").on(
+      table.householdId,
+      table.userId,
+    ),
+    uniqueIndex("household_members_one_owner_idx")
+      .on(table.householdId)
+      .where(sql`${table.role} = 'owner'`),
+    index("household_members_user_id_idx").on(table.userId),
+  ],
 );
