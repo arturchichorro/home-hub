@@ -91,3 +91,30 @@ export const householdMembers = pgTable(
     index("household_members_user_id_idx").on(table.userId),
   ],
 );
+
+export const householdInvites = pgTable(
+  "household_invites",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    creatorId: uuid("creator_id")
+      .notNull()
+      .references(() => users.id),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("household_invites_token_hash_idx").on(table.tokenHash),
+    index("household_invites_household_id_idx").on(table.householdId),
+  ],
+);
