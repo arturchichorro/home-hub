@@ -63,6 +63,22 @@ The browser application owns rendering, forms, navigation, and presentation of c
 
 It does not contain authoritative authorization logic. Disabling a button is user experience, not security.
 
+## Household and module boundaries
+
+The household is the tenancy, collaboration, and authorization boundary. A
+user may belong to multiple households, and every household-owned row is
+authorized through current membership in PostgreSQL.
+
+Shopping, Recipes, and French Vocabulary are built-in feature modules rather
+than dynamically installed plugins. Each module owns its feature-specific
+tables and behavior. All implemented modules are available to every household
+member initially; do not add a module registry or per-module permissions.
+
+Cross-module behavior is implemented as an explicit application operation. For
+example, adding recipe ingredients to the shopping list connects Recipes and
+Shopping through the shared item catalog without creating a generic event
+system or coupling unrelated module internals.
+
 ### Future mobile application
 
 A future `apps/mobile` can use Expo and React Native without changing the API or database architecture. It will consume the same Zod contracts, domain helpers, Zero schema, named queries, and custom mutators from `packages/shared`. Platform-specific screens, navigation, secure token storage, and native persistence remain inside `apps/mobile`.

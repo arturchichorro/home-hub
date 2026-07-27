@@ -56,6 +56,8 @@ The raw refresh token is never stored. Short-lived access JWTs are not stored as
 - `name`
 - `created_at`, `updated_at`
 
+Household names are display labels and do not need to be unique.
+
 ### `household_members`
 
 - `id`
@@ -64,7 +66,12 @@ The raw refresh token is never stored. Short-lived access JWTs are not stored as
 - `role`: `owner | member`
 - `created_at`, `updated_at`
 
-Enforce a unique household/user pair.
+Use `id` as the primary key and enforce a unique household/user pair.
+
+Each household has exactly one owner. Enforce at most one owner with a partial
+unique index on `household_id` for rows whose role is `owner`; household
+creation and future ownership-transfer operations must transactionally ensure
+that an owner always exists.
 
 ### `household_invites`
 
@@ -137,6 +144,7 @@ Object keys are server-controlled and independent of public hostnames.
 ## Transactional invariants
 
 - Creating a household and its owner membership is one transaction.
+- A household has exactly one owner.
 - Accepting an invite and creating membership is one transaction.
 - Every household operation checks membership inside the same transaction as its write.
 - A shopping row may reference only an item from the same household.

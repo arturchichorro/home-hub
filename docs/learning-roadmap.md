@@ -70,13 +70,22 @@ Expand the proven patterns to shopping status transitions, catalog editing, reci
 
 Checkpoint: test referenced-row tenancy and simple last-write conflict behavior.
 
-## Phase 12: R2 images
+## Phase 12: simple French vocabulary module
+
+Apply the established household authorization and synchronization patterns to
+a small shared French vocabulary collection. Keep its schema and interactions
+independent from Shopping and Recipes.
+
+Checkpoint: explain which parts reuse household infrastructure and which parts
+remain owned by the Vocabulary module.
+
+## Phase 13: R2 images
 
 Implement upload authorization, direct browser upload, confirmation, signed reads, deletion, content-type validation, and size limits.
 
 Checkpoint: use browser network tools to prove image bytes go directly to R2 and credentials never reach the browser.
 
-## Phase 13: hardening and optional shell caching
+## Phase 14: hardening and optional shell caching
 
 Add readiness checks, graceful shutdown, consistent error envelopes, missing integration tests, and documentation corrections. Only then decide whether an offline-loadable application shell justifies adding a service worker.
 

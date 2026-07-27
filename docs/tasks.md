@@ -59,6 +59,7 @@ teaches us something new.
 
 ## Phase 5: households
 
+- [ ] Define and migrate the household and membership schema
 - [ ] Create households and owner memberships transactionally
 - [ ] List households for the authenticated user
 - [ ] Prove rollback behavior
@@ -106,7 +107,7 @@ teaches us something new.
 
 - [ ] Implement authorized direct uploads and confirmation
 - [ ] Implement signed reads, deletion, type validation, and size limits
-- [ ] Complete the Phase 12 checkpoint and commit
+- [ ] Complete the Phase 13 checkpoint and commit
 
 ## Phase 13: hardening
 
@@ -116,3 +117,9 @@ teaches us something new.
 - [ ] Decide whether application-shell caching is justified
 - [ ] Verify a clean-checkout setup and production builds
 - [ ] Complete the final checkpoint and commit
+
+## Phase 14: French vocabulary
+
+- [ ] Define the smallest useful shared vocabulary model
+- [ ] Apply established household authorization and synchronization patterns
+- [ ] Complete the Phase 12 checkpoint and commit

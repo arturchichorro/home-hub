@@ -22,6 +22,22 @@ Use Zero directly in feature code while learning it. Introduce small helpers onl
 
 The domain has relational invariants and transactional authorization requirements. PostgreSQL provides constraints and transactions; Drizzle provides typed queries while keeping SQL migrations visible and reviewable.
 
+## Households and built-in modules
+
+The household is the collaboration and authorization boundary. Users may
+belong to multiple households, households have no product-level member limit,
+and household names are not unique.
+
+Each household has exactly one owner. `household_members` has its own stable
+primary key and separately enforces uniqueness on `(household_id, user_id)`.
+The initial roles are only `owner` and `member`.
+
+Shopping, Recipes, and French Vocabulary are built-in modules. They remain
+mostly encapsulated, all are available to every household member, and
+cross-module behavior is expressed through narrow operations such as adding a
+recipe's ingredients to the shopping list. Do not add a generic module table,
+plugin system, event bus, or per-module permissions without a concrete need.
+
 ## Hono on Node.js for explicit HTTP boundaries
 
 Hono handles authentication, online commands, Zero endpoints, health checks, and R2 signing. It is small, uses Web-standard `Request` and `Response` objects, and runs on Node.js through `@hono/node-server`. This makes the boundary easy to learn and matches Zero's server APIs without adapting Express request objects into Fetch requests.
@@ -75,3 +91,11 @@ Use Vitest for pure domain behavior and service/API integration. Verify the two-
 ## Defer the service worker
 
 Zero’s cached application data and an offline-loadable application shell are separate concerns. First understand and verify Zero cache behavior. Add a service worker only later if reloading the compiled app without network access remains a product requirement.
+
+## Git-versioned living documentation
+
+The files in `docs/` describe the current system and change alongside relevant
+implementation decisions. Git history and commit diffs provide document
+versioning; do not create copied `v2` documents or maintain manual version
+numbers. When an important decision is reversed, update the current documents
+and record what the new decision supersedes.
