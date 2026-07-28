@@ -17,6 +17,9 @@
 | Database access and migrations | Drizzle ORM with committed SQL migrations         |
 | Password hashing               | Argon2id                                          |
 | Image storage                  | Cloudflare R2 through its S3-compatible API       |
+| TLS and reverse proxy          | Caddy                                             |
+| Initial production host        | Single OVHcloud Brussels VPS                      |
+| Production process topology    | Docker Compose on one Linux host                  |
 | Unit and API testing           | Vitest and focused HTTP/service tests             |
 | Formatting and linting         | Biome                                             |
 
@@ -142,7 +145,34 @@ Typical values are:
 - `R2_BUCKET`
 - `VITE_ZERO_CACHE_URL`
 
-Production deployment is intentionally deferred. A development Compose file for PostgreSQL and a single-node `zero-cache` is appropriate.
+Production implementation is deferred, but its initial target is decided: a
+single OVHcloud VPS in Brussels running Caddy, the Hono API, `zero-cache`, and
+PostgreSQL through Docker Compose. See `docs/deployment.md`.
+
+## Production topology
+
+```mermaid
+flowchart LR
+  Client["Browser on phone or laptop"] -->|"HTTPS"| Caddy
+  Caddy -->|"static SPA files"| Web["React/Vite build"]
+  Caddy -->|"HTTP API"| API["Hono API"]
+  Caddy -->|"Zero WebSocket and HTTP"| Zero["zero-cache"]
+  Zero -->|"private query and mutate calls"| API
+  API -->|"private connection"| PG["PostgreSQL"]
+  PG -->|"logical replication"| Zero
+  Client -->|"presigned upload or read"| R2["Cloudflare R2"]
+```
+
+Caddy is the only public application entry point. It terminates HTTPS, serves
+the compiled SPA with an `index.html` fallback, and reverse-proxies API and
+Zero traffic. PostgreSQL and the containers' direct API and Zero ports remain
+private to the Compose network.
+
+The exact public hostnames or path prefixes are chosen when production routing
+is implemented. That choice must be made together with the refresh-cookie
+path, CORS policy, `WEB_ORIGIN`, and `VITE_ZERO_CACHE_URL`; do not add a path
+prefix that prevents the existing `/auth` refresh cookie from reaching the
+authentication routes.
 
 ## Application-shell caching
 

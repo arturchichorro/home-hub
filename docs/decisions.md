@@ -111,6 +111,28 @@ JWT and Argon2id solve different problems: Argon2id protects the password at res
 
 The API should authorize uploads, not proxy image bytes. Presigned direct uploads keep the API stateless and avoid filesystem storage.
 
+## Portable single-node production deployment
+
+The initial production target is one OVHcloud VPS in Brussels. Caddy, the Hono
+API, self-hosted `zero-cache`, and PostgreSQL run through Docker Compose on the
+same Linux host. Caddy serves the compiled React/Vite SPA, terminates HTTPS,
+and proxies API and Zero WebSocket traffic. Only Caddy is publicly exposed;
+service-to-service connections remain on the Compose network.
+
+Confirm Docker Engine and Compose compatibility for the exact Brussels product
+before purchase. If that offering cannot run the workload, use another
+European location or provider without changing the topology.
+
+This deliberately favors a small, understandable deployment over an
+orchestrator or managed platform. The application remains portable by keeping
+state in PostgreSQL and R2, configuration in environment variables, and
+infrastructure in ordinary container images and Compose configuration.
+
+The future Raspberry Pi 16 GB with SSD is a possible replacement host rather
+than a separate architecture. Before moving, verify ARM64 support for every
+container and native Node dependency, adequate SSD I/O for PostgreSQL and
+Zero's SQLite replica, and reliable HTTPS ingress from the home network.
+
 ## Plain UI first
 
 Install Tailwind for basic layout, but use native forms and simple components. Do not add shadcn/ui, a design system, or a form library until a concrete interaction requires one.

@@ -95,9 +95,15 @@ Checkpoint: use browser network tools to prove image bytes go directly to R2 and
 
 ## Phase 14: hardening and optional shell caching
 
-Add readiness checks, graceful shutdown, consistent error envelopes, missing integration tests, and documentation corrections. Only then decide whether an offline-loadable application shell justifies adding a service worker.
+Add readiness checks, graceful shutdown, consistent error envelopes, missing
+integration tests, and documentation corrections. Build and rehearse the
+single-node Caddy/Docker Compose deployment, PostgreSQL backup and restore, and
+Zero replica rebuild. Only then decide whether an offline-loadable application
+shell justifies adding a service worker.
 
-Checkpoint: run formatting, linting, type-checking, tests, and production builds from a clean checkout, then follow the setup documentation exactly.
+Checkpoint: run formatting, linting, type-checking, tests, and production
+builds from a clean checkout, then follow the setup and deployment
+documentation exactly and complete a restore rehearsal.
 
 ## Working rhythm for every phase
 

@@ -85,6 +85,25 @@ enrollment gate.
 
 For self-hosting, Rocicorp does not issue an API key. In production, configure a strong `ZERO_ADMIN_PASSWORD`. Optional `ZERO_QUERY_API_KEY` and `ZERO_MUTATE_API_KEY` values can authenticate calls from `zero-cache` to the API, but they complement rather than replace user authentication.
 
+## Production network and recovery boundary
+
+Caddy is the only public application service and exposes HTTPS on ports 80 and
+443. Do not publish PostgreSQL, the API container's direct port, the
+`zero-cache` direct port, or Zero's replication-manager interface to the
+internet. Caddy proxies the public API and Zero client traffic, including
+WebSocket upgrades, to the private Compose network.
+
+PostgreSQL remains the source of truth and requires automated, encrypted,
+off-host backups plus periodic restore tests. Back up the complete database,
+including Zero-owned schemas, rather than only the application's `public`
+schema. Preserve production secrets separately from database backups and the
+Git repository.
+
+The `zero-cache` SQLite replica may be stored on a named volume for faster
+restarts, but it is not the authoritative backup. If it is absent after a host
+migration, Zero rebuilds it from PostgreSQL. Cloudflare R2 objects are external
+to both PostgreSQL and VPS backups and need their own retention policy.
+
 ## Query authorization
 
 Define named Zero queries in shared TypeScript. At the API query endpoint:

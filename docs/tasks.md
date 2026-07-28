@@ -119,6 +119,8 @@ teaches us something new.
 - [ ] Add readiness, graceful shutdown, and consistent errors
 - [ ] Fill important integration-test gaps
 - [ ] Reconcile the documentation with the implemented system
+- [ ] Build and rehearse the Caddy/Docker Compose production deployment
+- [ ] Verify PostgreSQL restore and Zero replica rebuild procedures
 - [ ] Decide whether application-shell caching is justified
 - [ ] Verify a clean-checkout setup and production builds
 - [ ] Complete the final checkpoint and commit
