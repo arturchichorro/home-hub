@@ -9,6 +9,7 @@ import { createRefreshService } from "./auth/refresh";
 import { createSignupService } from "./auth/signup";
 import { config } from "./config";
 import { createHouseholdService } from "./households/create";
+import { createHouseholdInviteService } from "./households/create-invite";
 import { createListHouseholdsService } from "./households/list";
 
 const { db } = createDbClient(config.DATABASE_URL);
@@ -32,6 +33,7 @@ const refresh = createRefreshService({
 const logout = createLogoutService({ db });
 const getMe = createMeService({ db });
 const createHousehold = createHouseholdService({ db });
+const createHouseholdInvite = createHouseholdInviteService({ db });
 const listHouseholds = createListHouseholdsService({ db });
 
 const app = createApp({
@@ -41,6 +43,7 @@ const app = createApp({
   logout,
   getMe,
   createHousehold,
+  createHouseholdInvite,
   listHouseholds,
   jwtSecret: config.API_JWT_SECRET,
   isProduction: config.NODE_ENV === "production",
