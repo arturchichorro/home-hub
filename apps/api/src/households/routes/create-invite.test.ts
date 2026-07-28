@@ -27,6 +27,7 @@ function createTestRoutes(
   }),
 ) {
   return createHouseholdRoutes({
+    acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
     createHousehold: async () => ({ kind: "unauthorized" }),
     createHouseholdInvite,
     listHouseholds: async () => ({ kind: "unauthorized" }),

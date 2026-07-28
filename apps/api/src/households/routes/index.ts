@@ -1,6 +1,10 @@
 import { Hono } from "hono";
 
 import { type AuthEnv, createBearerAuth } from "../../auth/bearer-auth";
+import {
+  type AcceptHouseholdInviteRouteInput,
+  createAcceptHouseholdInviteRoute,
+} from "./accept-invite";
 import { type CreateHouseholdRouteInput, createHouseholdRoute } from "./create";
 import {
   type CreateHouseholdInviteRouteInput,
@@ -11,7 +15,8 @@ import {
   createListHouseholdsRoute,
 } from "./list";
 
-export type CreateHouseholdRoutesInput = CreateHouseholdRouteInput &
+export type CreateHouseholdRoutesInput = AcceptHouseholdInviteRouteInput &
+  CreateHouseholdRouteInput &
   CreateHouseholdInviteRouteInput &
   CreateListHouseholdsRouteInput & {
     jwtSecret: string;
@@ -34,6 +39,11 @@ export function createHouseholdRoutes(input: CreateHouseholdRoutesInput) {
     "/:householdId/invites",
     createBearerAuth(input.jwtSecret),
     createHouseholdInviteRoute(input),
+  );
+  householdRoutes.post(
+    "/invites/accept",
+    createBearerAuth(input.jwtSecret),
+    createAcceptHouseholdInviteRoute(input),
   );
 
   return householdRoutes;

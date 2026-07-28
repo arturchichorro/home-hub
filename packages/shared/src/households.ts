@@ -9,3 +9,13 @@ export const createHouseholdRequestSchema = z
 export type CreateHouseholdRequest = z.infer<
   typeof createHouseholdRequestSchema
 >;
+
+export const acceptHouseholdInviteRequestSchema = z
+  .object({
+    token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+  })
+  .strict();
+
+export type AcceptHouseholdInviteRequest = z.infer<
+  typeof acceptHouseholdInviteRequestSchema
+>;

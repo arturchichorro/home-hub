@@ -70,8 +70,8 @@ teaches us something new.
 
 - [x] Define and migrate the household-invite schema
 - [x] Implement owner-authorized invite creation
-- [ ] Implement transactional invite acceptance
-- [ ] Test expiry, single use, and cross-household isolation
+- [x] Implement transactional invite acceptance
+- [x] Test expiry, single use, and cross-household isolation
 - [ ] Complete the Phase 6 checkpoint and commit
 
 ## Phase 7: online shopping slice

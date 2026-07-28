@@ -8,6 +8,7 @@ import { createMeService } from "./auth/me";
 import { createRefreshService } from "./auth/refresh";
 import { createSignupService } from "./auth/signup";
 import { config } from "./config";
+import { createAcceptHouseholdInviteService } from "./households/accept-invite";
 import { createHouseholdService } from "./households/create";
 import { createHouseholdInviteService } from "./households/create-invite";
 import { createListHouseholdsService } from "./households/list";
@@ -32,11 +33,13 @@ const refresh = createRefreshService({
 
 const logout = createLogoutService({ db });
 const getMe = createMeService({ db });
+const acceptHouseholdInvite = createAcceptHouseholdInviteService({ db });
 const createHousehold = createHouseholdService({ db });
 const createHouseholdInvite = createHouseholdInviteService({ db });
 const listHouseholds = createListHouseholdsService({ db });
 
 const app = createApp({
+  acceptHouseholdInvite,
   signup,
   login,
   refresh,

@@ -22,6 +22,7 @@ function createTestRoutes(
   ) => Promise<CreateHouseholdResult> = async () => ({ kind: "unauthorized" }),
 ) {
   return createHouseholdRoutes({
+    acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
     createHousehold,
     createHouseholdInvite: async () => ({ kind: "forbidden" }),
     listHouseholds: async () => ({ kind: "unauthorized" }),

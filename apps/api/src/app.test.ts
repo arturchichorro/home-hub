@@ -6,6 +6,7 @@ import { signAccessToken } from "./auth/access-token";
 describe("app", () => {
   it("returns a successful health response", async () => {
     const app = createApp({
+      acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
       signup: async () => ({ kind: "forbidden" }),
       login: async () => ({ kind: "invalid_credentials" }),
       refresh: async () => ({ kind: "invalid_token" }),
@@ -35,6 +36,7 @@ describe("app", () => {
     }));
     const jwtSecret = "test-jwt-secret";
     const app = createApp({
+      acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
       signup: async () => ({ kind: "forbidden" }),
       login: async () => ({ kind: "invalid_credentials" }),
       refresh: async () => ({ kind: "invalid_token" }),
