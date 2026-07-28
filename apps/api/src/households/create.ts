@@ -4,10 +4,6 @@ import { householdMembers, households } from "@home-hub/database/schema";
 
 type Database = ReturnType<typeof createDbClient>["db"];
 
-type CreateHouseholdServiceInput = {
-  db: Database;
-};
-
 export type CreateHouseholdInput = {
   userId: string;
   name: string;
@@ -17,12 +13,12 @@ export type CreateHouseholdResult =
   | { kind: "unauthorized" }
   | { kind: "success"; household: { id: string; name: string } };
 
-export function createHouseholdService(input: CreateHouseholdServiceInput) {
+export function createHouseholdService({ db }: { db: Database }) {
   return async function createHousehold({
     userId,
     name,
   }: CreateHouseholdInput): Promise<CreateHouseholdResult> {
-    return input.db.transaction(async (tx) => {
+    return db.transaction(async (tx) => {
       const user = await tx.query.users.findFirst({
         columns: { id: true },
         where: (users, { eq }) => eq(users.id, userId),
