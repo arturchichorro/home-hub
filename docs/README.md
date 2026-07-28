@@ -51,3 +51,7 @@ pnpm --filter @home-hub/web build
 ## Todo
 
 - [ ] separate concerns (db, methods, etc)
+
+## Notes
+
+- household invite revokation is not implemented (but there's a column in household_invites for it, revoked_at)

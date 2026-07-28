@@ -85,10 +85,11 @@ that an owner always exists.
 - `revoked_at`, nullable
 - `created_at`, `updated_at`
 
-Invite tokens are opaque, stored only as hashes, single-use, expiring, and revocable.
-Only the owner may create or revoke them. Initial invites expire after seven
-days and may be accepted only by an authenticated user. An existing member
-cannot consume an invite.
+Invite tokens are opaque, stored only as hashes, single-use, and expiring. Only
+the owner may create them. Initial invites expire after seven days and may be
+accepted only by an authenticated user. An existing member cannot consume an
+invite. `revoked_at` is reserved for a future revocation feature; no initial
+operation sets it.
 
 Enforce a unique `token_hash` and index `household_id`. Invite acceptance locks
 the invite and transactionally creates a `member` membership while setting

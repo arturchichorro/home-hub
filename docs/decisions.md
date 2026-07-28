@@ -40,10 +40,11 @@ plugin system, event bus, or per-module permissions without a concrete need.
 
 ## Household invitations
 
-Only the household owner may create or revoke invitations. An invitation is a
-bearer credential rather than an email-bound record: generate 32 random bytes,
-return the raw base64url token only when creating the invite, and store only its
-SHA-256 hash.
+Only the household owner may create invitations. An invitation is a bearer
+credential rather than an email-bound record: generate 32 random bytes, return
+the raw base64url token only when creating the invite, and store only its
+SHA-256 hash. Invite revocation is deferred; the nullable `revoked_at` column is
+reserved for that possible future behavior.
 
 Invitations expire after seven days and require an already-authenticated
 account for acceptance. `SIGNUP_ACCESS_CODE` remains the account-enrollment gate

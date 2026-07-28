@@ -64,9 +64,10 @@ The API derives the user from the verified JWT and never from query or mutation 
 
 ## Household invitations
 
-Only a current household owner may create or revoke an invitation. Check that
-role in PostgreSQL rather than trusting a role or household claim supplied by
-the browser or access JWT.
+Only a current household owner may create an invitation. Check that role in
+PostgreSQL rather than trusting a role or household claim supplied by the
+browser or access JWT. Invite revocation is deferred; no initial operation sets
+`revoked_at`.
 
 Invitation tokens are 32 random bytes encoded as base64url. Treat the raw token
 as a bearer credential: return it only at creation and store only its SHA-256
