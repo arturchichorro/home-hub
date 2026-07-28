@@ -101,8 +101,10 @@ the invite and transactionally creates a `member` membership while setting
 - `status`: `active | crossed | archived`
 - `created_at`, `updated_at`
 
-Normalize shopping-item names with trimming, Unicode NFKC normalization,
-whitespace folding, and case folding. Enforce uniqueness on
+Store `name` as a display value after Unicode NFKC normalization, whitespace
+folding, and trimming while preserving casing. It must contain 1–100
+characters after cleaning. Derive `normalized_name` from that display value by
+lowercasing it, and enforce uniqueness on
 `(household_id, normalized_name)`.
 
 Use explicit status transitions rather than deletion for normal shopping-list

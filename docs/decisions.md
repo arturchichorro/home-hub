@@ -45,6 +45,11 @@ inserts or reactivates the corresponding normalized shopping rows. A shared
 catalog would be reconsidered only if the product later needs shared item
 identity or metadata across modules.
 
+A shopping item's display name is Unicode NFKC-normalized, whitespace-folded,
+trimmed, and limited to 1–100 characters while preserving casing. Its separate
+normalized name is lowercased for per-household uniqueness and duplicate
+reactivation.
+
 ## Household invitations
 
 Only the household owner may create invitations. An invitation is a bearer

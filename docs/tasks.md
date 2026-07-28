@@ -76,7 +76,7 @@ teaches us something new.
 
 ## Phase 7: online shopping slice
 
-- [ ] Define and migrate the shopping-item schema
+- [x] Define and migrate the shopping-item schema
 - [ ] Implement shopping-list operations against PostgreSQL
 - [ ] Enforce normalization, tenancy, duplicate reactivation, and status transitions
 - [ ] Complete the Phase 7 checkpoint and commit
