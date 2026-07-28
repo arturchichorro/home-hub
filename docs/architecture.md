@@ -76,8 +76,9 @@ member initially; do not add a module registry or per-module permissions.
 
 Cross-module behavior is implemented as an explicit application operation. For
 example, adding recipe ingredients to the shopping list connects Recipes and
-Shopping through the shared item catalog without creating a generic event
-system or coupling unrelated module internals.
+Shopping by copying ingredient names and inserting or reactivating normalized
+shopping rows. There is no shared item catalog: each module owns its records,
+and the explicit operation is the integration boundary.
 
 ### Future mobile application
 

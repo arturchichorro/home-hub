@@ -38,6 +38,13 @@ cross-module behavior is expressed through narrow operations such as adding a
 recipe's ingredients to the shopping list. Do not add a generic module table,
 plugin system, event bus, or per-module permissions without a concrete need.
 
+Shopping and Recipes do not share a canonical `items` table. Shopping rows own
+their names and normalized names; recipe ingredient rows own their ingredient
+names. Adding recipe ingredients to the shopping list copies those names and
+inserts or reactivates the corresponding normalized shopping rows. A shared
+catalog would be reconsidered only if the product later needs shared item
+identity or metadata across modules.
+
 ## Household invitations
 
 Only the household owner may create invitations. An invitation is a bearer

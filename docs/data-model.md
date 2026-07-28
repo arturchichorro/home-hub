@@ -17,12 +17,9 @@ erDiagram
   users ||--o{ household_members : joins
   households ||--o{ household_members : contains
   households ||--o{ household_invites : issues
-  households ||--o{ items : catalogs
   households ||--o{ shopping_items : owns
-  items ||--o{ shopping_items : describes
   households ||--o{ recipes : owns
   recipes ||--o{ recipe_items : contains
-  items ||--o{ recipe_items : describes
   recipes ||--o{ recipe_images : illustrates
 ```
 
@@ -95,26 +92,23 @@ Enforce a unique `token_hash` and index `household_id`. Invite acceptance locks
 the invite and transactionally creates a `member` membership while setting
 `accepted_at`.
 
-### `items`
+### `shopping_items`
 
 - `id`
 - `household_id`
 - `name`
 - `normalized_name`
-- `kind`: `ingredient | non_ingredient`
-- `created_at`, `updated_at`
-
-Normalize item names with trimming, Unicode NFKC normalization, whitespace folding, and case folding. Enforce uniqueness on `(household_id, normalized_name)`.
-
-### `shopping_items`
-
-- `id`
-- `household_id`
-- `item_id`
 - `status`: `active | crossed | archived`
 - `created_at`, `updated_at`
 
-Use explicit status transitions rather than deletion for normal shopping-list behavior.
+Normalize shopping-item names with trimming, Unicode NFKC normalization,
+whitespace folding, and case folding. Enforce uniqueness on
+`(household_id, normalized_name)`.
+
+Use explicit status transitions rather than deletion for normal shopping-list
+behavior. Crossing an active row sets it to `crossed`; a crossed row may return
+to `active` or become `archived`. Re-adding a crossed or archived name
+reactivates the existing row rather than inserting a duplicate.
 
 ### `recipes`
 
@@ -129,7 +123,7 @@ Use explicit status transitions rather than deletion for normal shopping-list be
 - `id`
 - `household_id`
 - `recipe_id`
-- `item_id`
+- `name`
 - `quantity`: text
 - `unit`: text
 - `note`: text
@@ -156,7 +150,10 @@ Object keys are server-controlled and independent of public hostnames.
 - A household has exactly one owner.
 - Accepting an invite and creating membership is one transaction.
 - Every household operation checks membership inside the same transaction as its write.
-- A shopping row may reference only an item from the same household.
-- A recipe ingredient may reference only a recipe and item from the same household.
+- Concurrent duplicate shopping-item names resolve through the normalized-name
+  constraint; adding an existing name deliberately reactivates its canonical
+  shopping row.
+- A recipe ingredient may reference only a recipe from the same household.
+- Adding recipe ingredients to Shopping verifies household access and
+  inserts or reactivates the normalized shopping rows in one transaction.
 - Recipe image metadata may reference only a recipe from the same household.
-- Concurrent duplicate item names must resolve through the normalized-name constraint with an explicit error or a deliberate canonical-row remapping strategy.

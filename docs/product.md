@@ -14,7 +14,7 @@ another household.
 
 Home Hub is organized into small built-in modules:
 
-- Shopping provides a shared item catalog and one active shopping list.
+- Shopping provides one shared shopping list.
 - Recipes provides shared recipes and their ingredients.
 - French vocabulary provides a simple shared collection for learning words and
   expressions.
@@ -30,12 +30,13 @@ There are no per-module roles or permissions.
 
 Modules remain mostly independent and interact through explicit operations
 when the product requires it. For example, adding a recipe's ingredients to the
-shopping list is a deliberate operation between Recipes and Shopping through
-their shared item catalog.
+shopping list is a deliberate operation that copies the ingredient names into
+Shopping and inserts or reactivates the corresponding shopping rows.
 
 Do not add a general event system or allow modules to reach arbitrarily into
-one another's internals. Introduce a shared concept only after at least two
-modules genuinely need the same domain entity.
+one another's internals. Shopping items and recipe ingredients are separate
+domain records. Introduce a shared entity only when concrete behavior requires
+shared identity or metadata rather than merely copying values.
 
 ## Initial household rules
 

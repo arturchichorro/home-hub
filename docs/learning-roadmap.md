@@ -18,7 +18,8 @@ Checkpoint: inspect the migration and database directly. Explain the difference 
 
 ## Phase 3: normalization as a pure domain rule
 
-Implement username and item-name normalization in `packages/shared`, with focused unit tests before connecting it to HTTP or PostgreSQL.
+Implement username and shopping-item-name normalization in `packages/shared`,
+with focused unit tests before connecting it to HTTP or PostgreSQL.
 
 Checkpoint: explain why normalization must happen before uniqueness checks and why PostgreSQL still needs a unique constraint.
 
@@ -42,7 +43,9 @@ Checkpoint: explain why authentication middleware alone cannot enforce household
 
 ## Phase 7: one online shopping vertical slice
 
-Before Zero, implement the item and shopping service operations against PostgreSQL. Exercise catalog normalization, same-household references, status changes, and duplicate-name behavior.
+Before Zero, implement shopping-list operations against PostgreSQL. Exercise
+shopping-item normalization, household authorization, explicit status changes,
+and duplicate-name reactivation.
 
 Checkpoint: demonstrate one complete request from validated JSON through a transaction to a database constraint.
 
@@ -54,7 +57,10 @@ Checkpoint: use two browser contexts to show the same server-written shopping da
 
 ## Phase 9: one custom optimistic mutator
 
-Implement a single shopping mutation on the client and server. Validate arguments, bind the verified user ID in Zero’s request handler, check membership transactionally, and verify the item belongs to the household.
+Implement a single shopping mutation on the client and server. Validate
+arguments, bind the verified user ID in Zero’s request handler, check
+membership transactionally, and ensure any targeted shopping row belongs to
+the household.
 
 Checkpoint: slow the network and observe the optimistic result followed by authoritative convergence. Attempt a forged household ID and confirm server rejection.
 
@@ -66,7 +72,9 @@ Checkpoint: describe the difference between `connecting` and `disconnected`, and
 
 ## Phase 11: complete shopping and recipes
 
-Expand the proven patterns to shopping status transitions, catalog editing, recipes, and ordered recipe ingredient rows. Keep mutations small and explicit.
+Expand the proven patterns to shopping status transitions, shopping-item
+editing, recipes, ordered recipe ingredient rows, and the explicit operation
+that adds recipe ingredients to Shopping. Keep mutations small and explicit.
 
 Checkpoint: test referenced-row tenancy and simple last-write conflict behavior.
 

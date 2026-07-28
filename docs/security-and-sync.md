@@ -107,7 +107,8 @@ Shared mutators provide the optimistic client behavior. Server execution adds au
 2. Pass the verified user ID to Zero’s mutation request handler.
 3. Validate mutation arguments at runtime.
 4. Check membership for the supplied household inside the mutation transaction.
-5. Verify referenced item, recipe, and image rows belong to the same household.
+5. Verify targeted shopping rows and referenced recipe and image rows belong to
+   the same household.
 6. Execute the operation idempotently.
 7. Return errors that do not reveal whether a foreign row exists.
 
@@ -117,7 +118,8 @@ Synced mutators must never change authentication records, household ownership, m
 
 ### Connected
 
-Allow optimistic mutations for catalog items, shopping rows, recipes, recipe ingredient rows, and confirmed image metadata.
+Allow optimistic mutations for shopping rows, recipes, recipe ingredient rows,
+and confirmed image metadata.
 
 ### Connecting
 
@@ -136,7 +138,9 @@ Zero may queue writes during a short interruption. This is acceptable, but it is
 - Scalar values use the last write accepted by PostgreSQL.
 - Independently created rows survive because they have stable client-generated IDs.
 - Status transitions set an explicit target status and are idempotent.
-- Concurrent duplicate catalog items are resolved using normalized-name uniqueness; never silently create duplicates.
+- Concurrent duplicate shopping-item names are resolved using normalized-name
+  uniqueness. Adding an existing name targets and reactivates the canonical
+  shopping row rather than creating a duplicate.
 
 ## R2 upload security
 

@@ -76,8 +76,9 @@ teaches us something new.
 
 ## Phase 7: online shopping slice
 
-- [ ] Implement catalog and shopping operations against PostgreSQL
-- [ ] Enforce normalization, tenancy, references, and status transitions
+- [ ] Define and migrate the shopping-item schema
+- [ ] Implement shopping-list operations against PostgreSQL
+- [ ] Enforce normalization, tenancy, duplicate reactivation, and status transitions
 - [ ] Complete the Phase 7 checkpoint and commit
 
 ## Phase 8: read-only Zero synchronization
@@ -101,8 +102,9 @@ teaches us something new.
 
 ## Phase 11: shopping and recipes
 
-- [ ] Complete shopping status and catalog operations
+- [ ] Complete shopping status and item-editing operations
 - [ ] Implement recipes and ordered recipe ingredients
+- [ ] Add the explicit recipe-ingredients-to-shopping operation
 - [ ] Test tenancy and basic conflict behavior
 - [ ] Complete the Phase 11 checkpoint and commit
 
