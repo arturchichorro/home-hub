@@ -118,3 +118,34 @@ export const householdInvites = pgTable(
     index("household_invites_household_id_idx").on(table.householdId),
   ],
 );
+
+export const shoppingItemStatusEnum = pgEnum("shopping_item_status", [
+  "active",
+  "crossed",
+  "archived",
+]);
+
+export const shoppingItems = pgTable(
+  "shopping_items",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    status: shoppingItemStatusEnum().notNull().default("active"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("shopping_items_household_id_normalized_name_idx").on(
+      table.householdId,
+      table.normalizedName,
+    ),
+  ],
+);
