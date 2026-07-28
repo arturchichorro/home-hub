@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeItemName, normalizeUsername } from "./normalization";
+import {
+  cleanShoppingItemName,
+  normalizeShoppingItemName,
+  normalizeUsername,
+} from "./normalization";
 
 describe("normalizeUsername", () => {
   it("trims leading and trailing whitespace", () => {
@@ -16,16 +20,39 @@ describe("normalizeUsername", () => {
   });
 });
 
-describe("normalizeItemName", () => {
+describe("cleanShoppingItemName", () => {
   it("trims leading and trailing whitespace", () => {
-    expect(normalizeItemName("  milk  ")).toBe("milk");
+    expect(cleanShoppingItemName("  milk  ")).toBe("milk");
   });
 
-  it("lowercases uppercase letters", () => {
-    expect(normalizeItemName("Whole Milk")).toBe("whole milk");
+  it("preserves letter case", () => {
+    expect(cleanShoppingItemName("Whole Milk")).toBe("Whole Milk");
   });
 
   it("collapses repeated internal whitespace", () => {
-    expect(normalizeItemName("whole   milk")).toBe("whole milk");
+    expect(cleanShoppingItemName("whole   milk")).toBe("whole milk");
+  });
+
+  it("applies Unicode NFKC normalization", () => {
+    expect(cleanShoppingItemName("ﬁ")).toBe("fi");
+    expect(cleanShoppingItemName("ｍｉｌｋ")).toBe("milk");
+  });
+});
+
+describe("normalizeShoppingItemName", () => {
+  it("trims leading and trailing whitespace", () => {
+    expect(normalizeShoppingItemName("  milk  ")).toBe("milk");
+  });
+
+  it("lowercases uppercase letters", () => {
+    expect(normalizeShoppingItemName("Whole Milk")).toBe("whole milk");
+  });
+
+  it("collapses repeated internal whitespace", () => {
+    expect(normalizeShoppingItemName("whole   milk")).toBe("whole milk");
+  });
+
+  it("applies Unicode NFKC normalization before lowercasing", () => {
+    expect(normalizeShoppingItemName("Ｆｕｌｌ")).toBe("full");
   });
 });

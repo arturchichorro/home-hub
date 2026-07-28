@@ -5,7 +5,8 @@
   "exports": {
     "./auth": "./src/auth.ts",
     "./households": "./src/households.ts",
-    "./normalization": "./src/normalization.ts"
+    "./normalization": "./src/normalization.ts",
+    "./shopping": "./src/shopping.ts"
   },
   "scripts": {
     "test": "vitest run",
