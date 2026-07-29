@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { createShoppingItemRequestSchema } from "./shopping";
+import {
+  createShoppingItemRequestSchema,
+  setShoppingItemStatusRequestSchema,
+} from "./shopping";
 
 describe("createShoppingItemRequestSchema", () => {
   it("returns a cleaned display name", () => {
@@ -35,6 +38,40 @@ describe("createShoppingItemRequestSchema", () => {
     expect(
       createShoppingItemRequestSchema.safeParse({
         name: "milk",
+        unexpected: "value",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("setShoppingItemStatusRequestSchema", () => {
+  it.each([
+    "active",
+    "crossed",
+    "archived",
+  ] as const)("accepts the %s status", (status) => {
+    expect(setShoppingItemStatusRequestSchema.parse({ status })).toEqual({
+      status,
+    });
+  });
+
+  it("rejects an unknown status", () => {
+    expect(
+      setShoppingItemStatusRequestSchema.safeParse({ status: "deleted" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects a missing status", () => {
+    expect(setShoppingItemStatusRequestSchema.safeParse({}).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects extra properties", () => {
+    expect(
+      setShoppingItemStatusRequestSchema.safeParse({
+        status: "active",
         unexpected: "value",
       }).success,
     ).toBe(false);

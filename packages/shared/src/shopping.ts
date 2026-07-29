@@ -13,3 +13,19 @@ export const createShoppingItemRequestSchema = z
 export type CreateShoppingItemRequest = z.infer<
   typeof createShoppingItemRequestSchema
 >;
+
+export const shoppingItemStatusSchema = z.enum([
+  "active",
+  "crossed",
+  "archived",
+]);
+
+export const setShoppingItemStatusRequestSchema = z
+  .object({
+    status: shoppingItemStatusSchema,
+  })
+  .strict();
+
+export type SetShoppingItemStatusRequest = z.infer<
+  typeof setShoppingItemStatusRequestSchema
+>;
