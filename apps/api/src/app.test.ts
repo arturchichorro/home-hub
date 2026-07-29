@@ -7,6 +7,7 @@ describe("app", () => {
   it("returns a successful health response", async () => {
     const app = createApp({
       acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
+      addShoppingItem: async () => ({ kind: "forbidden" }),
       signup: async () => ({ kind: "forbidden" }),
       login: async () => ({ kind: "invalid_credentials" }),
       refresh: async () => ({ kind: "invalid_token" }),
@@ -37,6 +38,7 @@ describe("app", () => {
     const jwtSecret = "test-jwt-secret";
     const app = createApp({
       acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
+      addShoppingItem: async () => ({ kind: "forbidden" }),
       signup: async () => ({ kind: "forbidden" }),
       login: async () => ({ kind: "invalid_credentials" }),
       refresh: async () => ({ kind: "invalid_token" }),
@@ -66,5 +68,59 @@ describe("app", () => {
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toEqual({ household });
     expect(createHousehold).toHaveBeenCalledOnce();
+  });
+
+  it("mounts shopping item addition under its household", async () => {
+    const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+    const item = {
+      id: "8d46a4c4-4845-4a6d-a937-139633ae1bb9",
+      householdId,
+      name: "Milk",
+      status: "active" as const,
+    };
+    const addShoppingItem = vi.fn(async () => ({
+      kind: "success" as const,
+      item,
+    }));
+    const jwtSecret = "test-jwt-secret";
+    const app = createApp({
+      acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
+      addShoppingItem,
+      signup: async () => ({ kind: "forbidden" }),
+      login: async () => ({ kind: "invalid_credentials" }),
+      refresh: async () => ({ kind: "invalid_token" }),
+      logout: async () => undefined,
+      getMe: async () => ({ kind: "not_found" }),
+      createHousehold: async () => ({ kind: "unauthorized" }),
+      createHouseholdInvite: async () => ({ kind: "forbidden" }),
+      listHouseholds: async () => ({ kind: "unauthorized" }),
+      jwtSecret,
+      isProduction: false,
+    });
+    const accessToken = signAccessToken({
+      userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
+      jwtId: "49ef297e-ed36-44b0-913f-0ef66e81887d",
+      secret: jwtSecret,
+    });
+
+    const response = await app.request(
+      `/households/${householdId}/shopping-items`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: "Milk" }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ item });
+    expect(addShoppingItem).toHaveBeenCalledWith({
+      userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
+      householdId,
+      name: "Milk",
+    });
   });
 });
