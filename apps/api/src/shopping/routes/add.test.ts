@@ -28,6 +28,7 @@ function createTestRoutes(
     "/:householdId/shopping",
     createShoppingRoutes({
       addShoppingItem,
+      setShoppingItemStatus: async () => ({ kind: "forbidden" }),
       jwtSecret,
     }),
   );

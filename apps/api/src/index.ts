@@ -13,6 +13,7 @@ import { createHouseholdService } from "./households/create";
 import { createHouseholdInviteService } from "./households/create-invite";
 import { createListHouseholdsService } from "./households/list";
 import { createAddShoppingItemService } from "./shopping/add";
+import { createSetShoppingItemStatusService } from "./shopping/set-status";
 
 const { db } = createDbClient(config.DATABASE_URL);
 
@@ -39,10 +40,12 @@ const createHousehold = createHouseholdService({ db });
 const createHouseholdInvite = createHouseholdInviteService({ db });
 const listHouseholds = createListHouseholdsService({ db });
 const addShoppingItem = createAddShoppingItemService({ db });
+const setShoppingItemStatus = createSetShoppingItemStatusService({ db });
 
 const app = createApp({
   acceptHouseholdInvite,
   addShoppingItem,
+  setShoppingItemStatus,
   signup,
   login,
   refresh,
