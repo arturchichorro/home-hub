@@ -52,6 +52,7 @@ pnpm --filter @home-hub/web build
 - [ ] separate concerns (db, methods, etc)
 - [ ] criar cenas de docs separadas por features (uma para shopping items, outra para recipes, outra para learn french, etc)
 - [ ] adicionar quantidades a shopping list items
+- [ ] adicionar feature de transformar recipes em cenas que posso adicionar à shopping list
 
 ## Notes
 

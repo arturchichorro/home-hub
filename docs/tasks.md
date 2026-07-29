@@ -107,7 +107,7 @@ teaches us something new.
 
 - [ ] Complete shopping status and item-editing operations
 - [ ] Implement recipes and ordered recipe ingredients
-- [ ] Add the explicit recipe-ingredients-to-shopping operation
+- [ ] Add the explicit recipe-ingredients-to-shopping operation -> can skip for now
 - [ ] Test tenancy and basic conflict behavior
 - [ ] Complete the Phase 11 checkpoint and commit
 
