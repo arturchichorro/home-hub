@@ -82,7 +82,7 @@ teaches us something new.
 - [x] Verify the add-item HTTP flow against PostgreSQL
 - [x] Implement and verify an explicit shopping-item status transition
 - [x] Complete the Phase 7 checkpoint
-- [ ] Commit the Phase 7 work
+- [x] Commit the Phase 7 work
 
 ## Phase 8: read-only Zero synchronization
 
