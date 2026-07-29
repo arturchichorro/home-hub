@@ -156,7 +156,8 @@ Zero may queue writes during a short interruption. This is acceptable, but it is
 
 - Scalar values use the last write accepted by PostgreSQL.
 - Independently created rows survive because they have stable client-generated IDs.
-- Status transitions set an explicit target status and are idempotent.
+- Status transitions set an explicit target status, allow movement between any
+  valid statuses, and are idempotent when the target is already current.
 - Concurrent duplicate shopping-item names are resolved using normalized-name
   uniqueness. Adding an existing name targets and reactivates the canonical
   shopping row rather than creating a duplicate.

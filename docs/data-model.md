@@ -108,9 +108,9 @@ lowercasing it, and enforce uniqueness on
 `(household_id, normalized_name)`.
 
 Use explicit status transitions rather than deletion for normal shopping-list
-behavior. Crossing an active row sets it to `crossed`; a crossed row may return
-to `active` or become `archived`. Re-adding a crossed or archived name
-reactivates the existing row rather than inserting a duplicate.
+behavior. Any status may be changed to any other valid status; setting the
+current status again is an idempotent no-op. Re-adding a crossed or archived
+name reactivates the existing row rather than inserting a duplicate.
 
 ### `recipes`
 
