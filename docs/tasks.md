@@ -81,7 +81,8 @@ teaches us something new.
 - [x] Enforce normalization and atomic duplicate-name reactivation
 - [x] Verify the add-item HTTP flow against PostgreSQL
 - [x] Implement and verify an explicit shopping-item status transition
-- [ ] Complete the Phase 7 checkpoint and commit
+- [x] Complete the Phase 7 checkpoint
+- [ ] Commit the Phase 7 work
 
 ## Phase 8: read-only Zero synchronization
 
