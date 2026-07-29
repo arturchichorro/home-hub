@@ -77,8 +77,10 @@ teaches us something new.
 ## Phase 7: online shopping slice
 
 - [x] Define and migrate the shopping-item schema
-- [ ] Implement shopping-list operations against PostgreSQL
-- [ ] Enforce normalization, tenancy, duplicate reactivation, and status transitions
+- [x] Implement authenticated, household-authorized item addition
+- [x] Enforce normalization and atomic duplicate-name reactivation
+- [x] Verify the add-item HTTP flow against PostgreSQL
+- [ ] Implement and verify an explicit shopping-item status transition
 - [ ] Complete the Phase 7 checkpoint and commit
 
 ## Phase 8: read-only Zero synchronization
