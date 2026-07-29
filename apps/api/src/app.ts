@@ -20,7 +20,7 @@ export function createApp(input: CreateAppInput) {
   app.get("/health", (c) => c.json({ ok: true }));
   app.route("/auth", createAuthRoutes(input));
   app.route("/households", createHouseholdRoutes(input));
-  app.route("/households", createShoppingRoutes(input));
+  app.route("/households/:householdId/shopping", createShoppingRoutes(input));
 
   return app;
 }

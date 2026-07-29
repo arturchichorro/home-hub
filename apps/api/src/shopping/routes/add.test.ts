@@ -1,3 +1,4 @@
+import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 
 import { signAccessToken } from "../../auth/access-token";
@@ -21,19 +22,26 @@ function createTestRoutes(
     input: AddShoppingItemInput,
   ) => Promise<AddShoppingItemResult> = async () => ({ kind: "forbidden" }),
 ) {
-  return createShoppingRoutes({
-    addShoppingItem,
-    jwtSecret,
-  });
+  const app = new Hono();
+
+  app.route(
+    "/:householdId/shopping",
+    createShoppingRoutes({
+      addShoppingItem,
+      jwtSecret,
+    }),
+  );
+
+  return app;
 }
 
 function postShoppingItem(input: {
-  app: ReturnType<typeof createShoppingRoutes>;
+  app: ReturnType<typeof createTestRoutes>;
   householdId: string;
   body: string;
   accessToken?: string;
 }) {
-  return input.app.request(`/${input.householdId}/shopping-items`, {
+  return input.app.request(`/${input.householdId}/shopping/items`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

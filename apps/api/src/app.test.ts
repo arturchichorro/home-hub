@@ -104,7 +104,7 @@ describe("app", () => {
     });
 
     const response = await app.request(
-      `/households/${householdId}/shopping-items`,
+      `/households/${householdId}/shopping/items`,
       {
         method: "POST",
         headers: {

@@ -14,7 +14,7 @@ export function createShoppingRoutes(input: CreateShoppingRoutesInput) {
   const shoppingRoutes = new Hono<AuthEnv>();
 
   shoppingRoutes.post(
-    "/:householdId/shopping-items",
+    "/items",
     createBearerAuth(input.jwtSecret),
     createAddShoppingItemRoute(input),
   );
