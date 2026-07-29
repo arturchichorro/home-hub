@@ -50,6 +50,7 @@ pnpm --filter @home-hub/web build
 ## Todo
 
 - [ ] separate concerns (db, methods, etc)
+- [ ] criar cenas de docs separadas por features (uma para shopping items, outra para recipes, outra para learn french, etc)
 
 ## Notes
 
