@@ -11,6 +11,7 @@
     "@home-hub/database": "workspace:*",
     "@home-hub/shared": "workspace:*",
     "@hono/node-server": "^2.0.8",
+    "@rocicorp/zero": "1.8.0",
     "argon2": "^0.44.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",

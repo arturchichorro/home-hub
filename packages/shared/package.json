@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@rocicorp/zero": "1.8.0",
     "zod": "^4.4.3"
   }
 }

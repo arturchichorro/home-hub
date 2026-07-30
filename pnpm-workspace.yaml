@@ -2,5 +2,7 @@ packages:
   - "apps/*"
   - "packages/*"
 allowBuilds:
+  '@rocicorp/zero-sqlite3': true
   argon2: true
   esbuild: true
+  protobufjs: false
