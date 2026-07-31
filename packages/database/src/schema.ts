@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   index,
@@ -149,3 +149,25 @@ export const shoppingItems = pgTable(
     ),
   ],
 );
+
+export const householdsRelations = relations(households, ({ many }) => ({
+  members: many(householdMembers),
+  shoppingItems: many(shoppingItems),
+}));
+
+export const householdMembersRelations = relations(
+  householdMembers,
+  ({ one }) => ({
+    household: one(households, {
+      fields: [householdMembers.householdId],
+      references: [households.id],
+    }),
+  }),
+);
+
+export const shoppingItemsRelations = relations(shoppingItems, ({ one }) => ({
+  household: one(households, {
+    fields: [shoppingItems.householdId],
+    references: [households.id],
+  }),
+}));

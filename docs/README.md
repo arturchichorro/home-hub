@@ -47,6 +47,12 @@ pnpm --filter @home-hub/web typecheck
 pnpm --filter @home-hub/web build
 ```
 
+### Biome
+
+```sh
+pnpm biome lint --write path/to/file.ts
+```
+
 ## Todo
 
 - [ ] separate concerns (db, methods, etc)
