@@ -24,6 +24,38 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+  zero-cache:
+    image: rocicorp/zero:1.8.0
+    container_name: home-hub-zero-cache
+    restart: unless-stopped
+    stop_grace_period: 10m
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4848:4848"
+    environment:
+      ZERO_UPSTREAM_DB: postgres://home_hub:home_hub@postgres:5432/home_hub
+      ZERO_CVR_DB: postgres://home_hub:home_hub@postgres:5432/home_hub
+      ZERO_CHANGE_DB: postgres://home_hub:home_hub@postgres:5432/home_hub
+      ZERO_REPLICA_FILE: /data/replica.db
+      ZERO_ADMIN_PASSWORD: ${ZERO_ADMIN_PASSWORD}
+      ZERO_APP_ID: home_hub
+      ZERO_APP_PUBLICATIONS: home_hub_zero
+      ZERO_QUERY_URL: http://host.docker.internal:3000/zero/query
+      ZERO_ENABLE_CRUD_MUTATIONS: "false"
+      ZERO_NUM_SYNC_WORKERS: "1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - home_hub_zero_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4848/keepalive"]
+      interval: 5s
+      timeout: 5s
+      start_period: 10m
+      retries: 10
 
 volumes:
   home_hub_postgres_data:
+  home_hub_zero_data:
