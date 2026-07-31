@@ -6,7 +6,10 @@
     "./auth": "./src/auth.ts",
     "./households": "./src/households.ts",
     "./normalization": "./src/normalization.ts",
-    "./shopping": "./src/shopping.ts"
+    "./shopping": "./src/shopping.ts",
+    "./zero/context": "./src/zero/context.ts",
+    "./zero/queries": "./src/zero/queries.ts",
+    "./zero/schema": "./src/zero/schema.gen.ts"
   },
   "scripts": {
     "test": "vitest run",
