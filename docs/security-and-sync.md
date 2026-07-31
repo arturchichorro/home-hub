@@ -116,6 +116,14 @@ Define named Zero queries in shared TypeScript. At the API query endpoint:
 
 Every query returning household-owned data must constrain results through `household_members`. Do not accept a household ID and merely assume it is authorized.
 
+Zero uses a custom PostgreSQL publication named `home_hub_zero` as a coarse
+replication allowlist. Initially it publishes only `households`,
+`household_members`, and `shopping_items`. It excludes `users`,
+`refresh_tokens`, and `household_invites`, so password hashes, email addresses,
+refresh-token hashes, and invite-token hashes do not enter the Zero replica.
+Publishing a table does not authorize client access; named queries must still
+apply authenticated, household-scoped row authorization.
+
 ## Mutation authorization
 
 Use current custom Zero mutators, not legacy CRUD mutators. Disable legacy CRUD mutation support in both the Zero schema and `zero-cache`.

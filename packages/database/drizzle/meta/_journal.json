@@ -43,6 +43,13 @@
       "when": 1785255746689,
       "tag": "0005_adorable_scream",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785485131511,
+      "tag": "0006_zero_publication",
+      "breakpoints": true
     }
   ]
 }
