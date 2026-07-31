@@ -9,10 +9,12 @@ import {
   type CreateShoppingRoutesInput,
   createShoppingRoutes,
 } from "./shopping/routes";
+import { type CreateZeroRoutesInput, createZeroRoutes } from "./zero/routes";
 
 export type CreateAppInput = CreateAuthRoutesInput &
   CreateHouseholdRoutesInput &
-  CreateShoppingRoutesInput;
+  CreateShoppingRoutesInput &
+  CreateZeroRoutesInput;
 
 export function createApp(input: CreateAppInput) {
   const app = new Hono();
@@ -21,6 +23,7 @@ export function createApp(input: CreateAppInput) {
   app.route("/auth", createAuthRoutes(input));
   app.route("/households", createHouseholdRoutes(input));
   app.route("/households/:householdId/shopping", createShoppingRoutes(input));
+  app.route("/zero", createZeroRoutes(input));
 
   return app;
 }
