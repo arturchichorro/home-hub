@@ -94,23 +94,26 @@ describe("accept household invite route", () => {
     { token: "a".repeat(42) },
     { token: "a".repeat(44) },
     { token, unexpected: true },
-  ])("rejects an invalid request without invoking the service: %o", async (body) => {
-    const acceptHouseholdInvite = vi.fn(
-      async (): Promise<AcceptHouseholdInviteResult> => ({
-        kind: "invalid_invite",
-      }),
-    );
-    const app = createTestRoutes(acceptHouseholdInvite);
+  ])(
+    "rejects an invalid request without invoking the service: %o",
+    async (body) => {
+      const acceptHouseholdInvite = vi.fn(
+        async (): Promise<AcceptHouseholdInviteResult> => ({
+          kind: "invalid_invite",
+        }),
+      );
+      const app = createTestRoutes(acceptHouseholdInvite);
 
-    const response = await postAcceptInvite({
-      app,
-      body: JSON.stringify(body),
-      accessToken: createAccessToken(),
-    });
+      const response = await postAcceptInvite({
+        app,
+        body: JSON.stringify(body),
+        accessToken: createAccessToken(),
+      });
 
-    expect(response.status).toBe(400);
-    expect(acceptHouseholdInvite).not.toHaveBeenCalled();
-  });
+      expect(response.status).toBe(400);
+      expect(acceptHouseholdInvite).not.toHaveBeenCalled();
+    },
+  );
 
   it("passes the authenticated user and raw token to the service", async () => {
     const membership = {

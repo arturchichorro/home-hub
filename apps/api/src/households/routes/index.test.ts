@@ -89,25 +89,26 @@ describe("household routes", () => {
     { name: "   " },
     { name: "a".repeat(101) },
     { name: "Home", unexpected: true },
-  ] satisfies Array<
-    CreateHouseholdRequest | Record<string, unknown>
-  >)("rejects an invalid request without invoking the service: %o", async (body) => {
-    const createHousehold = vi.fn(
-      async (): Promise<CreateHouseholdResult> => ({
-        kind: "unauthorized",
-      }),
-    );
-    const app = createTestRoutes(createHousehold);
+  ] satisfies Array<CreateHouseholdRequest | Record<string, unknown>>)(
+    "rejects an invalid request without invoking the service: %o",
+    async (body) => {
+      const createHousehold = vi.fn(
+        async (): Promise<CreateHouseholdResult> => ({
+          kind: "unauthorized",
+        }),
+      );
+      const app = createTestRoutes(createHousehold);
 
-    const response = await postHousehold({
-      app,
-      body: JSON.stringify(body),
-      accessToken: createAccessToken(),
-    });
+      const response = await postHousehold({
+        app,
+        body: JSON.stringify(body),
+        accessToken: createAccessToken(),
+      });
 
-    expect(response.status).toBe(400);
-    expect(createHousehold).not.toHaveBeenCalled();
-  });
+      expect(response.status).toBe(400);
+      expect(createHousehold).not.toHaveBeenCalled();
+    },
+  );
 
   it("passes the authenticated user and trimmed name to the service", async () => {
     let receivedInput: CreateHouseholdInput | undefined;

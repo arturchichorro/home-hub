@@ -88,25 +88,28 @@ describe("set shopping item status route", () => {
   it.each([
     ["invalid household ID", "not-a-uuid", itemId],
     ["invalid item ID", householdId, "not-a-uuid"],
-  ])("rejects an %s without invoking the service", async (_, household, item) => {
-    const setShoppingItemStatus = vi.fn(
-      async (): Promise<SetShoppingItemStatusResult> => ({
-        kind: "forbidden",
-      }),
-    );
-    const app = createTestRoutes(setShoppingItemStatus);
+  ])(
+    "rejects an %s without invoking the service",
+    async (_, household, item) => {
+      const setShoppingItemStatus = vi.fn(
+        async (): Promise<SetShoppingItemStatusResult> => ({
+          kind: "forbidden",
+        }),
+      );
+      const app = createTestRoutes(setShoppingItemStatus);
 
-    const response = await patchShoppingItemStatus({
-      app,
-      householdId: household,
-      itemId: item,
-      body: JSON.stringify({ status: "crossed" }),
-      accessToken: createAccessToken(),
-    });
+      const response = await patchShoppingItemStatus({
+        app,
+        householdId: household,
+        itemId: item,
+        body: JSON.stringify({ status: "crossed" }),
+        accessToken: createAccessToken(),
+      });
 
-    expect(response.status).toBe(400);
-    expect(setShoppingItemStatus).not.toHaveBeenCalled();
-  });
+      expect(response.status).toBe(400);
+      expect(setShoppingItemStatus).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     ["malformed JSON", "{"],

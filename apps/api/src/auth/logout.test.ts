@@ -93,24 +93,24 @@ describe("logout service", () => {
     expect(updates).toHaveLength(0);
   });
 
-  it.each([
-    pastExpiry,
-    now,
-  ])("is an idempotent no-op for a token expiring at %s", async (expiresAt) => {
-    const { db, updates } = createFakeDatabase([
-      {
-        id: "token-1",
-        expiresAt,
-        revokedAt: null,
-        replacedById: null,
-      },
-    ]);
-    const logout = createLogoutService({ db });
+  it.each([pastExpiry, now])(
+    "is an idempotent no-op for a token expiring at %s",
+    async (expiresAt) => {
+      const { db, updates } = createFakeDatabase([
+        {
+          id: "token-1",
+          expiresAt,
+          revokedAt: null,
+          replacedById: null,
+        },
+      ]);
+      const logout = createLogoutService({ db });
 
-    await expect(logout(rawRefreshToken)).resolves.toBeUndefined();
+      await expect(logout(rawRefreshToken)).resolves.toBeUndefined();
 
-    expect(updates).toHaveLength(0);
-  });
+      expect(updates).toHaveLength(0);
+    },
+  );
 
   it("revokes an active token without inspecting another session", async () => {
     const storedToken = {

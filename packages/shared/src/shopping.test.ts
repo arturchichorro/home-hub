@@ -45,15 +45,14 @@ describe("createShoppingItemRequestSchema", () => {
 });
 
 describe("setShoppingItemStatusRequestSchema", () => {
-  it.each([
-    "active",
-    "crossed",
-    "archived",
-  ] as const)("accepts the %s status", (status) => {
-    expect(setShoppingItemStatusRequestSchema.parse({ status })).toEqual({
-      status,
-    });
-  });
+  it.each(["active", "crossed", "archived"] as const)(
+    "accepts the %s status",
+    (status) => {
+      expect(setShoppingItemStatusRequestSchema.parse({ status })).toEqual({
+        status,
+      });
+    },
+  );
 
   it("rejects an unknown status", () => {
     expect(

@@ -46,22 +46,20 @@ describe("bearer authentication", () => {
     vi.useRealTimers();
   });
 
-  it.each([
-    undefined,
-    "Basic credentials",
-    "Bearer",
-    "Bearer token extra",
-  ])("rejects a missing or malformed authorization value: %s", async (value) => {
-    const app = createProtectedApp();
+  it.each([undefined, "Basic credentials", "Bearer", "Bearer token extra"])(
+    "rejects a missing or malformed authorization value: %s",
+    async (value) => {
+      const app = createProtectedApp();
 
-    const response = await app.request("/", {
-      ...(value ? { headers: { Authorization: value } } : {}),
-    });
+      const response = await app.request("/", {
+        ...(value ? { headers: { Authorization: value } } : {}),
+      });
 
-    expect(response.status).toBe(401);
-    await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
-    expect(response.headers.get("www-authenticate")).toBe("Bearer");
-  });
+      expect(response.status).toBe(401);
+      await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
+      expect(response.headers.get("www-authenticate")).toBe("Bearer");
+    },
+  );
 
   it("rejects a token signed with another secret", async () => {
     const app = createProtectedApp();
