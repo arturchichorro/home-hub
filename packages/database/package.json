@@ -9,6 +9,7 @@
   "scripts": {
     "generate": "drizzle-kit generate --config drizzle.config.ts",
     "migrate": "drizzle-kit migrate --config drizzle.config.ts",
+    "zero:generate": "drizzle-zero generate --config drizzle-zero.config.ts --output ../shared/src/zero/schema.gen.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
