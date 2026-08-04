@@ -13,8 +13,6 @@ function App() {
 
   return (
     <main>
-      <h1>Home Hub</h1>
-
       <form onSubmit={handleSubmit}>
         <label htmlFor="household-id">Household ID</label>
         <input
