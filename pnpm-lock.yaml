@@ -57,6 +57,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@home-hub/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@rocicorp/zero':
         specifier: 1.8.0
         version: 1.8.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(pg@8.22.0)(postgres@3.4.7))(pg@8.22.0)(react@19.2.7)

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { loginRequestSchema, signupRequestSchema } from "./auth";
+import {
+  loginRequestSchema,
+  loginResponseSchema,
+  meResponseSchema,
+  refreshResponseSchema,
+  signupRequestSchema,
+} from "./auth";
 
 const validSignup = {
   username: "  Artur   Chichorro  ",
@@ -117,5 +123,38 @@ describe("loginRequestSchema", () => {
         password: "",
       }).success,
     ).toBe(true);
+  });
+});
+
+describe("authentication response schemas", () => {
+  const user = {
+    id: "9f8a6942-f721-499d-957d-7bb3ed1158db",
+    username: "artur",
+    email: "artur@example.com",
+  };
+
+  it("accepts valid login, refresh, and current-user responses", () => {
+    expect(
+      loginResponseSchema.parse({ user, accessToken: "access-token" }),
+    ).toEqual({ user, accessToken: "access-token" });
+    expect(
+      refreshResponseSchema.parse({ accessToken: "access-token" }),
+    ).toEqual({ accessToken: "access-token" });
+    expect(meResponseSchema.parse({ user })).toEqual({ user });
+  });
+
+  it("rejects malformed authentication data", () => {
+    expect(
+      loginResponseSchema.safeParse({
+        user: { ...user, id: "not-a-uuid" },
+        accessToken: "access-token",
+      }).success,
+    ).toBe(false);
+    expect(refreshResponseSchema.safeParse({ accessToken: "" }).success).toBe(
+      false,
+    );
+    expect(meResponseSchema.safeParse({ user, unexpected: true }).success).toBe(
+      false,
+    );
   });
 });

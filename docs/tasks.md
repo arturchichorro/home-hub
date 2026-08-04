@@ -87,7 +87,7 @@ teaches us something new.
 ## Phase 8: read-only Zero synchronization
 
 - [x] Add the Zero schema and self-hosted `zero-cache`
-- [ ] Add JWT-authenticated named queries and the API query endpoint
+- [x] Add JWT-authenticated named queries and the API query endpoint
 - [ ] Demonstrate synchronized reads in two browser contexts
 - [ ] Complete the Phase 8 checkpoint and commit
 
