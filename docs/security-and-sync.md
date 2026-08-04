@@ -114,6 +114,12 @@ Define named Zero queries in shared TypeScript. At the API query endpoint:
 4. transform it with a relationship filter requiring household membership;
 5. pass the verified user ID to Zero’s current request handler API.
 
+The named-query function produces a ZQL abstract syntax tree (AST): a
+structured, serializable representation of the requested table, filters,
+relationships, and ordering. It is data describing a query rather than SQL
+text. The API builds this transformation with the trusted user ID, and
+`zero-cache` uses it to determine which rows that client may synchronize.
+
 Every query returning household-owned data must constrain results through `household_members`. Do not accept a household ID and merely assume it is authorized.
 
 Zero uses a custom PostgreSQL publication named `home_hub_zero` as a coarse
