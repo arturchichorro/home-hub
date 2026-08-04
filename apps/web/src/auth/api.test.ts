@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { restoreSession } from "./api";
+import { login, restoreSession } from "./api";
 
 const user = {
   id: "9f8a6942-f721-499d-957d-7bb3ed1158db",
@@ -89,5 +89,84 @@ describe("restoreSession", () => {
       );
 
     await expect(restoreSession()).rejects.toThrow();
+  });
+});
+
+describe("login", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("normalizes credentials and returns the authenticated session", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ user, accessToken: "access-token" }),
+    );
+
+    await expect(
+      login({
+        email: "  ARTUR@EXAMPLE.COM  ",
+        password: "  password with spaces  ",
+      }),
+    ).resolves.toEqual({
+      kind: "success",
+      session: { user, accessToken: "access-token" },
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith("/auth/login", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: "artur@example.com",
+        password: "  password with spaces  ",
+      }),
+    });
+  });
+
+  it("reports invalid credentials without exposing server details", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ error: "Invalid credentials" }, { status: 401 }),
+    );
+
+    await expect(
+      login({ email: "artur@example.com", password: "wrong" }),
+    ).resolves.toEqual({ kind: "invalid_credentials" });
+  });
+
+  it("throws when login fails unexpectedly", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ error: "Unavailable" }, { status: 503 }),
+    );
+
+    await expect(
+      login({ email: "artur@example.com", password: "password" }),
+    ).rejects.toThrow("Failed to login");
+  });
+
+  it("rejects malformed login response data", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        user: { ...user, id: "not-a-uuid" },
+        accessToken: "access-token",
+      }),
+    );
+
+    await expect(
+      login({ email: "artur@example.com", password: "password" }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects invalid credentials before making a request", async () => {
+    await expect(
+      login({ email: "not-an-email", password: "password" }),
+    ).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

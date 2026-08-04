@@ -1,6 +1,7 @@
 import { useState } from "react";
 import App from "./App";
 import type { Session } from "./auth/api";
+import { LoginForm } from "./auth/login-form";
 import { HomeHubZeroProvider } from "./zero/provider";
 
 type RootProps = {
@@ -8,13 +9,14 @@ type RootProps = {
 };
 
 export function Root({ initialSession }: RootProps) {
-  const [session] = useState(initialSession);
+  const [session, setSession] = useState(initialSession);
 
   if (!session) {
     return (
       <main>
         <h1>Home Hub</h1>
         <p>You are not signed in.</p>
+        <LoginForm onAuthenticated={setSession} />
       </main>
     );
   }
