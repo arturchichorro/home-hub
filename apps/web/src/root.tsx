@@ -14,7 +14,6 @@ export function Root({ initialSession }: RootProps) {
   if (!session) {
     return (
       <main>
-        <h1>Home Hub</h1>
         <p>You are not signed in.</p>
         <LoginForm onAuthenticated={setSession} />
       </main>
