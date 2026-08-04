@@ -88,8 +88,8 @@ teaches us something new.
 
 - [x] Add the Zero schema and self-hosted `zero-cache`
 - [x] Add JWT-authenticated named queries and the API query endpoint
-- [ ] Demonstrate synchronized reads in two browser contexts
-- [ ] Complete the Phase 8 checkpoint and commit
+- [x] Demonstrate synchronized reads in two browser contexts
+- [x] Complete the Phase 8 checkpoint and commit
 
 ## Phase 9: optimistic mutation
 
