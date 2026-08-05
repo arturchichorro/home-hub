@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createShoppingItemRequestSchema,
+  setShoppingItemStatusMutationSchema,
   setShoppingItemStatusRequestSchema,
 } from "./shopping";
 
@@ -72,6 +73,61 @@ describe("setShoppingItemStatusRequestSchema", () => {
       setShoppingItemStatusRequestSchema.safeParse({
         status: "active",
         unexpected: "value",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("setShoppingItemStatusMutationSchema", () => {
+  const input = {
+    householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
+    itemId: "8d46a4c4-4845-4a6d-a937-139633ae1bb9",
+    status: "crossed" as const,
+    optimisticUpdatedAt: 1_786_000_000_000,
+  };
+
+  it("accepts a complete mutation input", () => {
+    expect(setShoppingItemStatusMutationSchema.parse(input)).toEqual(input);
+  });
+
+  it.each(["householdId", "itemId"] as const)(
+    "rejects an invalid %s",
+    (field) => {
+      expect(
+        setShoppingItemStatusMutationSchema.safeParse({
+          ...input,
+          [field]: "not-a-uuid",
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it("rejects an unknown status", () => {
+    expect(
+      setShoppingItemStatusMutationSchema.safeParse({
+        ...input,
+        status: "deleted",
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([-1, 1.5])(
+    "rejects the invalid optimistic timestamp %s",
+    (optimisticUpdatedAt) => {
+      expect(
+        setShoppingItemStatusMutationSchema.safeParse({
+          ...input,
+          optimisticUpdatedAt,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it("rejects extra properties", () => {
+    expect(
+      setShoppingItemStatusMutationSchema.safeParse({
+        ...input,
+        userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
       }).success,
     ).toBe(false);
   });

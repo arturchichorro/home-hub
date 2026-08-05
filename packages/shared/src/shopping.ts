@@ -29,3 +29,16 @@ export const setShoppingItemStatusRequestSchema = z
 export type SetShoppingItemStatusRequest = z.infer<
   typeof setShoppingItemStatusRequestSchema
 >;
+
+export const setShoppingItemStatusMutationSchema = z
+  .object({
+    householdId: z.uuid(),
+    itemId: z.uuid(),
+    status: shoppingItemStatusSchema,
+    optimisticUpdatedAt: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export type SetShoppingItemStatusMutationInput = z.infer<
+  typeof setShoppingItemStatusMutationSchema
+>;
