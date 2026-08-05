@@ -8,6 +8,7 @@
     "./normalization": "./src/normalization.ts",
     "./shopping": "./src/shopping.ts",
     "./zero/context": "./src/zero/context.ts",
+    "./zero/mutators": "./src/zero/mutators.ts",
     "./zero/queries": "./src/zero/queries.ts",
     "./zero/schema": "./src/zero/schema.gen.ts"
   },
