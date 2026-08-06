@@ -15,11 +15,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function createMutationTestProvider() {
-  const results: unknown[] = [
-    { id: "membership-id" },
-    { id: itemId, householdId },
-  ];
+function createMutationTestProvider({
+  membershipExists = true,
+}: {
+  membershipExists?: boolean;
+} = {}) {
+  const results: unknown[] = membershipExists
+    ? [{ id: "membership-id" }, { id: itemId, householdId }]
+    : [undefined];
   const run = vi.fn(async () => results.shift());
   const update = vi.fn(async () => undefined);
   const serverTransaction = {
@@ -76,6 +79,35 @@ function createQueryRequest(input?: { name?: string; householdId?: string }) {
       },
     ],
   ];
+}
+
+function createMutationRequest(input?: {
+  householdId?: string;
+  itemId?: string;
+}) {
+  return {
+    clientGroupID: "test-client-group",
+    mutations: [
+      {
+        type: "custom",
+        id: 1,
+        clientID: "test-client",
+        name: "shopping.setStatus",
+        args: [
+          {
+            householdId: input?.householdId ?? householdId,
+            itemId: input?.itemId ?? itemId,
+            status: "crossed",
+            optimisticUpdatedAt: 1_786_000_000_000,
+          },
+        ],
+        timestamp: 1_786_000_000_000,
+      },
+    ],
+    pushVersion: 1,
+    timestamp: 1_786_000_000_000,
+    requestID: "test-request",
+  };
 }
 
 function postQuery(input: {
@@ -216,29 +248,7 @@ describe("Zero routes", () => {
         Authorization: `Bearer ${createAccessToken()}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        clientGroupID: "test-client-group",
-        mutations: [
-          {
-            type: "custom",
-            id: 1,
-            clientID: "test-client",
-            name: "shopping.setStatus",
-            args: [
-              {
-                householdId,
-                itemId,
-                status: "crossed",
-                optimisticUpdatedAt: 1_786_000_000_000,
-              },
-            ],
-            timestamp: 1_786_000_000_000,
-          },
-        ],
-        pushVersion: 1,
-        timestamp: 1_786_000_000_000,
-        requestID: "test-request",
-      }),
+      body: JSON.stringify(createMutationRequest()),
     });
 
     expect(response.status).toBe(200);
@@ -258,5 +268,40 @@ describe("Zero routes", () => {
       status: "crossed",
       updatedAt: authoritativeUpdatedAt,
     });
+  });
+
+  it("rejects a forged household ID without updating the item", async () => {
+    const forgedHouseholdId = "4972e6d6-802f-4c62-a904-91fb9025dba7";
+    const { dbProvider, update } = createMutationTestProvider({
+      membershipExists: false,
+    });
+    const app = createZeroRoutes({ dbProvider, jwtSecret });
+
+    const response = await app.request("/mutate?schema=zero_0&appID=home-hub", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${createAccessToken()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(
+        createMutationRequest({ householdId: forgedHouseholdId }),
+      ),
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      kind: "MutateResponse",
+      userID: userId,
+      mutations: [
+        {
+          id: { clientID: "test-client", id: 1 },
+          result: {
+            error: "app",
+            message: "Shopping item status change not allowed",
+          },
+        },
+      ],
+    });
+    expect(update).not.toHaveBeenCalled();
   });
 });
