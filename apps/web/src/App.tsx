@@ -1,6 +1,7 @@
 import { type SubmitEvent, useState } from "react";
 
 import { ShoppingList } from "./shopping/shopping-list";
+import { ZeroConnectionStatus } from "./zero/connection-status";
 
 function App() {
   const [householdIdInput, setHouseholdIdInput] = useState("");
@@ -13,6 +14,8 @@ function App() {
 
   return (
     <main>
+      <ZeroConnectionStatus />
+
       <form onSubmit={handleSubmit}>
         <label htmlFor="household-id">Household ID</label>
         <input
