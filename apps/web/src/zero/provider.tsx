@@ -1,4 +1,5 @@
 import type { ZeroAuthContext } from "@home-hub/shared/zero/context";
+import { mutators } from "@home-hub/shared/zero/mutators";
 import { schema } from "@home-hub/shared/zero/schema";
 import { ZeroProvider } from "@rocicorp/zero/react";
 import type { ReactNode } from "react";
@@ -29,6 +30,7 @@ export function HomeHubZeroProvider({
       userID={userId}
       auth={accessToken}
       context={context}
+      mutators={mutators}
     >
       {children}
     </ZeroProvider>
