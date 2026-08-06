@@ -2,7 +2,10 @@
 
 ## General rules
 
-- Generate UUIDv7 identifiers in the client for rows created optimistically.
+- Generate UUIDv4 identifiers in the client for rows created optimistically.
+  Use the platform cryptographic UUID generator rather than adding an ID
+  library solely for time ordering; explicit timestamps determine display
+  order.
 - Store timestamps in UTC using PostgreSQL `timestamptz`.
 - Give every synchronized household-owned row a direct `household_id`, even when it is reachable through another foreign key.
 - Use independent IDs for recipe ingredient and image rows so concurrent edits address stable records.
