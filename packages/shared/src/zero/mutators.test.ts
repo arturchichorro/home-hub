@@ -10,11 +10,18 @@ const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const itemId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const optimisticUpdatedAt = 1_786_000_000_000;
 
-const args = {
+const setStatusArgs = {
   householdId,
   itemId,
   status: "crossed" as const,
   optimisticUpdatedAt,
+};
+
+const addArgs = {
+  householdId,
+  itemId,
+  name: "Whole Milk",
+  optimisticTimestamp: optimisticUpdatedAt,
 };
 
 const ctx: ZeroAuthContext = { userId };
@@ -36,20 +43,21 @@ function createFakeTransaction({
     queries.push(query);
     return pendingResults.shift();
   });
+  const insert = vi.fn(async () => undefined);
   const update = vi.fn(async () => undefined);
 
   const transaction = {
     clientID: "client-id",
     location,
     mutate: {
-      shoppingItems: { update },
+      shoppingItems: { insert, update },
     },
     mutationID: 1,
     reason: location === "server" ? "authoritative" : "optimistic",
     run,
   } as unknown as Transaction<Schema>;
 
-  return { queries, transaction, update };
+  return { insert, queries, transaction, update };
 }
 
 describe("shopping.setStatus mutator", () => {
@@ -63,7 +71,11 @@ describe("shopping.setStatus mutator", () => {
       results: [{ id: itemId, householdId }],
     });
 
-    await mutators.shopping.setStatus.fn({ args, ctx, tx: transaction });
+    await mutators.shopping.setStatus.fn({
+      args: setStatusArgs,
+      ctx,
+      tx: transaction,
+    });
 
     expect(queries).toHaveLength(1);
     expect(update).toHaveBeenCalledWith({
@@ -81,7 +93,11 @@ describe("shopping.setStatus mutator", () => {
       results: [{ id: "membership-id" }, { id: itemId, householdId }],
     });
 
-    await mutators.shopping.setStatus.fn({ args, ctx, tx: transaction });
+    await mutators.shopping.setStatus.fn({
+      args: setStatusArgs,
+      ctx,
+      tx: transaction,
+    });
 
     expect(queries).toHaveLength(2);
     expect(update).toHaveBeenCalledWith({
@@ -98,7 +114,11 @@ describe("shopping.setStatus mutator", () => {
     });
 
     await expect(
-      mutators.shopping.setStatus.fn({ args, ctx, tx: transaction }),
+      mutators.shopping.setStatus.fn({
+        args: setStatusArgs,
+        ctx,
+        tx: transaction,
+      }),
     ).rejects.toThrow("Shopping item status change not allowed");
 
     expect(queries).toHaveLength(1);
@@ -112,9 +132,103 @@ describe("shopping.setStatus mutator", () => {
     });
 
     await expect(
-      mutators.shopping.setStatus.fn({ args, ctx, tx: transaction }),
+      mutators.shopping.setStatus.fn({
+        args: setStatusArgs,
+        ctx,
+        tx: transaction,
+      }),
     ).rejects.toThrow("Shopping item status change not allowed");
 
     expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe("shopping.add mutator", () => {
+  it("is registered with a stable name", () => {
+    expect(mutators.shopping.add.mutatorName).toBe("shopping.add");
+  });
+
+  it("optimistically inserts a normalized active item", async () => {
+    const { insert, queries, transaction, update } = createFakeTransaction({
+      location: "client",
+      results: [undefined],
+    });
+
+    await mutators.shopping.add.fn({ args: addArgs, ctx, tx: transaction });
+
+    expect(queries).toHaveLength(1);
+    expect(insert).toHaveBeenCalledWith({
+      id: itemId,
+      householdId,
+      name: "Whole Milk",
+      normalizedName: "whole milk",
+      status: "active",
+      createdAt: optimisticUpdatedAt,
+      updatedAt: optimisticUpdatedAt,
+    });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("reactivates the existing canonical item instead of inserting the proposed ID", async () => {
+    const existingItemId = "9c090146-f84a-4d11-9ca3-629ac70ffc15";
+    const { insert, queries, transaction, update } = createFakeTransaction({
+      location: "client",
+      results: [
+        {
+          id: existingItemId,
+          householdId,
+          name: "WHOLE MILK",
+          normalizedName: "whole milk",
+          status: "crossed",
+        },
+      ],
+    });
+
+    await mutators.shopping.add.fn({ args: addArgs, ctx, tx: transaction });
+
+    expect(queries).toHaveLength(1);
+    expect(update).toHaveBeenCalledWith({
+      id: existingItemId,
+      status: "active",
+      updatedAt: optimisticUpdatedAt,
+    });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a server mutation before looking up or writing an item when membership is missing", async () => {
+    const { insert, queries, transaction, update } = createFakeTransaction({
+      location: "server",
+      results: [undefined],
+    });
+
+    await expect(
+      mutators.shopping.add.fn({ args: addArgs, ctx, tx: transaction }),
+    ).rejects.toThrow("Shopping item addition not allowed");
+
+    expect(queries).toHaveLength(1);
+    expect(insert).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("authorizes membership and uses server time for a new item", async () => {
+    const authoritativeTimestamp = 1_786_000_001_000;
+    vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
+    const { insert, queries, transaction } = createFakeTransaction({
+      location: "server",
+      results: [{ id: "membership-id" }, undefined],
+    });
+
+    await mutators.shopping.add.fn({ args: addArgs, ctx, tx: transaction });
+
+    expect(queries).toHaveLength(2);
+    expect(insert).toHaveBeenCalledWith({
+      id: itemId,
+      householdId,
+      name: "Whole Milk",
+      normalizedName: "whole milk",
+      status: "active",
+      createdAt: authoritativeTimestamp,
+      updatedAt: authoritativeTimestamp,
+    });
   });
 });
