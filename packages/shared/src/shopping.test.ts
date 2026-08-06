@@ -1,10 +1,68 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  addShoppingItemMutationSchema,
   createShoppingItemRequestSchema,
   setShoppingItemStatusMutationSchema,
   setShoppingItemStatusRequestSchema,
 } from "./shopping";
+
+describe("addShoppingItemMutationSchema", () => {
+  const input = {
+    itemId: "8d46a4c4-4845-4a6d-a937-139633ae1bb9",
+    householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
+    name: "Whole Milk",
+    optimisticTimestamp: 1_786_000_000_000,
+  };
+
+  it("accepts a complete input and cleans the display name", () => {
+    expect(
+      addShoppingItemMutationSchema.parse({
+        ...input,
+        name: "  Ｗｈｏｌｅ   Milk  ",
+      }),
+    ).toEqual(input);
+  });
+
+  it.each(["itemId", "householdId"] as const)(
+    "rejects an invalid %s",
+    (field) => {
+      expect(
+        addShoppingItemMutationSchema.safeParse({
+          ...input,
+          [field]: "not-a-uuid",
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each(["   ", "a".repeat(101)])("rejects the invalid name %j", (name) => {
+    expect(
+      addShoppingItemMutationSchema.safeParse({ ...input, name }).success,
+    ).toBe(false);
+  });
+
+  it.each([-1, 1.5])(
+    "rejects the invalid optimistic timestamp %s",
+    (optimisticTimestamp) => {
+      expect(
+        addShoppingItemMutationSchema.safeParse({
+          ...input,
+          optimisticTimestamp,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it("rejects extra properties", () => {
+    expect(
+      addShoppingItemMutationSchema.safeParse({
+        ...input,
+        userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
+      }).success,
+    ).toBe(false);
+  });
+});
 
 describe("createShoppingItemRequestSchema", () => {
   it("returns a cleaned display name", () => {

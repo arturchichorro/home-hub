@@ -1,12 +1,14 @@
 import * as z from "zod";
 import { cleanShoppingItemName } from "./normalization";
 
+const shoppingItemNameSchema = z
+  .string()
+  .transform(cleanShoppingItemName)
+  .pipe(z.string().min(1).max(100));
+
 export const createShoppingItemRequestSchema = z
   .object({
-    name: z
-      .string()
-      .transform(cleanShoppingItemName)
-      .pipe(z.string().min(1).max(100)),
+    name: shoppingItemNameSchema,
   })
   .strict();
 
@@ -41,4 +43,17 @@ export const setShoppingItemStatusMutationSchema = z
 
 export type SetShoppingItemStatusMutationInput = z.infer<
   typeof setShoppingItemStatusMutationSchema
+>;
+
+export const addShoppingItemMutationSchema = z
+  .object({
+    itemId: z.uuid(),
+    householdId: z.uuid(),
+    name: shoppingItemNameSchema,
+    optimisticTimestamp: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export type AddShoppingItemMutationInput = z.infer<
+  typeof addShoppingItemMutationSchema
 >;
