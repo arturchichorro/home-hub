@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import type { TransactionProviderHooks } from "@rocicorp/zero/server";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { signAccessToken } from "../../auth/access-token";
 import type { ZeroDbProvider } from "../db-provider";
@@ -7,7 +8,50 @@ import { createZeroRoutes } from "./index";
 const jwtSecret = "test-jwt-secret";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+const itemId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const dbProvider = {} as ZeroDbProvider;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+function createMutationTestProvider() {
+  const results: unknown[] = [
+    { id: "membership-id" },
+    { id: itemId, householdId },
+  ];
+  const run = vi.fn(async () => results.shift());
+  const update = vi.fn(async () => undefined);
+  const serverTransaction = {
+    clientID: "test-client",
+    location: "server",
+    mutate: {
+      shoppingItems: { update },
+    },
+    mutationID: 1,
+    reason: "authoritative",
+    run,
+  };
+  const hooks: TransactionProviderHooks = {
+    updateClientMutationID: vi.fn(async () => ({ lastMutationID: 1 })),
+    writeMutationResult: vi.fn(async () => undefined),
+    deleteMutationResults: vi.fn(async () => undefined),
+  };
+  const transaction = vi.fn(
+    async (
+      callback: (
+        tx: typeof serverTransaction,
+        transactionHooks: TransactionProviderHooks,
+      ) => unknown | Promise<unknown>,
+    ) => callback(serverTransaction, hooks),
+  );
+
+  return {
+    dbProvider: { transaction } as unknown as ZeroDbProvider,
+    transaction,
+    update,
+  };
+}
 
 function createAccessToken() {
   return signAccessToken({
@@ -51,7 +95,7 @@ function postQuery(input: {
   });
 }
 
-describe("Zero query routes", () => {
+describe("Zero routes", () => {
   it("rejects an unauthenticated request", async () => {
     const app = createZeroRoutes({ dbProvider, jwtSecret });
 
@@ -158,5 +202,61 @@ describe("Zero query routes", () => {
     expect(response.status).toBe(401);
     expect(response.headers.get("WWW-Authenticate")).toBe("Bearer");
     await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
+  });
+
+  it("executes an authenticated custom mutation and returns a Zero response", async () => {
+    const authoritativeUpdatedAt = 1_786_000_001_000;
+    vi.spyOn(Date, "now").mockReturnValue(authoritativeUpdatedAt);
+    const { dbProvider, transaction, update } = createMutationTestProvider();
+    const app = createZeroRoutes({ dbProvider, jwtSecret });
+
+    const response = await app.request("/mutate?schema=zero_0&appID=home-hub", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${createAccessToken()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        clientGroupID: "test-client-group",
+        mutations: [
+          {
+            type: "custom",
+            id: 1,
+            clientID: "test-client",
+            name: "shopping.setStatus",
+            args: [
+              {
+                householdId,
+                itemId,
+                status: "crossed",
+                optimisticUpdatedAt: 1_786_000_000_000,
+              },
+            ],
+            timestamp: 1_786_000_000_000,
+          },
+        ],
+        pushVersion: 1,
+        timestamp: 1_786_000_000_000,
+        requestID: "test-request",
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      kind: "MutateResponse",
+      userID: userId,
+      mutations: [
+        {
+          id: { clientID: "test-client", id: 1 },
+          result: {},
+        },
+      ],
+    });
+    expect(transaction).toHaveBeenCalledOnce();
+    expect(update).toHaveBeenCalledWith({
+      id: itemId,
+      status: "crossed",
+      updatedAt: authoritativeUpdatedAt,
+    });
   });
 });
