@@ -14,8 +14,10 @@ import { createHouseholdInviteService } from "./households/create-invite";
 import { createListHouseholdsService } from "./households/list";
 import { createAddShoppingItemService } from "./shopping/add";
 import { createSetShoppingItemStatusService } from "./shopping/set-status";
+import { createZeroDbProvider } from "./zero/db-provider";
 
 const { db } = createDbClient(config.DATABASE_URL);
+const dbProvider = createZeroDbProvider({ db });
 
 const signup = createSignupService({
   db,
@@ -54,6 +56,7 @@ const app = createApp({
   createHousehold,
   createHouseholdInvite,
   listHouseholds,
+  dbProvider,
   jwtSecret: config.API_JWT_SECRET,
   isProduction: config.NODE_ENV === "production",
 });

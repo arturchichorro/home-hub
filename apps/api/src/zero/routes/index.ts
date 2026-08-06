@@ -1,9 +1,13 @@
 import { Hono } from "hono";
 
 import { type AuthEnv, createBearerAuth } from "../../auth/bearer-auth";
+import {
+  type CreateZeroMutateRouteInput,
+  createZeroMutateRoute,
+} from "./mutate";
 import { createZeroQueryRoute } from "./query";
 
-export type CreateZeroRoutesInput = {
+export type CreateZeroRoutesInput = CreateZeroMutateRouteInput & {
   jwtSecret: string;
 };
 
@@ -14,6 +18,12 @@ export function createZeroRoutes(input: CreateZeroRoutesInput) {
     "/query",
     createBearerAuth(input.jwtSecret),
     createZeroQueryRoute(),
+  );
+
+  zeroRoutes.post(
+    "/mutate",
+    createBearerAuth(input.jwtSecret),
+    createZeroMutateRoute(input),
   );
 
   return zeroRoutes;

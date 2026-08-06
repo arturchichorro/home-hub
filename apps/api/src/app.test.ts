@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createApp } from "./app";
 import { signAccessToken } from "./auth/access-token";
+import type { ZeroDbProvider } from "./zero/db-provider";
+
+const dbProvider = {} as ZeroDbProvider;
 
 describe("app", () => {
   it("returns a successful health response", async () => {
@@ -17,6 +20,7 @@ describe("app", () => {
       createHousehold: async () => ({ kind: "unauthorized" }),
       createHouseholdInvite: async () => ({ kind: "forbidden" }),
       listHouseholds: async () => ({ kind: "unauthorized" }),
+      dbProvider,
       jwtSecret: "test-jwt-secret",
       isProduction: false,
     });
@@ -49,6 +53,7 @@ describe("app", () => {
       createHousehold,
       createHouseholdInvite: async () => ({ kind: "forbidden" }),
       listHouseholds: async () => ({ kind: "unauthorized" }),
+      dbProvider,
       jwtSecret,
       isProduction: false,
     });
@@ -97,6 +102,7 @@ describe("app", () => {
       createHousehold: async () => ({ kind: "unauthorized" }),
       createHouseholdInvite: async () => ({ kind: "forbidden" }),
       listHouseholds: async () => ({ kind: "unauthorized" }),
+      dbProvider,
       jwtSecret,
       isProduction: false,
     });

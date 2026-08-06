@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { signAccessToken } from "../../auth/access-token";
+import type { ZeroDbProvider } from "../db-provider";
 import { createZeroRoutes } from "./index";
 
 const jwtSecret = "test-jwt-secret";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+const dbProvider = {} as ZeroDbProvider;
 
 function createAccessToken() {
   return signAccessToken({
@@ -51,7 +53,7 @@ function postQuery(input: {
 
 describe("Zero query routes", () => {
   it("rejects an unauthenticated request", async () => {
-    const app = createZeroRoutes({ jwtSecret });
+    const app = createZeroRoutes({ dbProvider, jwtSecret });
 
     const response = await postQuery({
       app,
@@ -64,7 +66,7 @@ describe("Zero query routes", () => {
   });
 
   it("returns an authorized query transformation", async () => {
-    const app = createZeroRoutes({ jwtSecret });
+    const app = createZeroRoutes({ dbProvider, jwtSecret });
 
     const response = await postQuery({
       app,
@@ -97,7 +99,7 @@ describe("Zero query routes", () => {
   });
 
   it("returns an application error for an invalid household ID", async () => {
-    const app = createZeroRoutes({ jwtSecret });
+    const app = createZeroRoutes({ dbProvider, jwtSecret });
 
     const response = await postQuery({
       app,
@@ -121,7 +123,7 @@ describe("Zero query routes", () => {
   });
 
   it("returns an application error for an unknown query", async () => {
-    const app = createZeroRoutes({ jwtSecret });
+    const app = createZeroRoutes({ dbProvider, jwtSecret });
 
     const response = await postQuery({
       app,
@@ -142,5 +144,19 @@ describe("Zero query routes", () => {
         },
       ],
     });
+  });
+
+  it("rejects an unauthenticated mutation request before using the database provider", async () => {
+    const app = createZeroRoutes({ dbProvider, jwtSecret });
+
+    const response = await app.request("/mutate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("WWW-Authenticate")).toBe("Bearer");
+    await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
   });
 });
