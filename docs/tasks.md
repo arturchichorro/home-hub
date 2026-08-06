@@ -100,9 +100,10 @@ teaches us something new.
 
 ## Phase 10: connection-state UX
 
-- [ ] Display Zero connection state and gate writes appropriately
-- [ ] Preserve cached reads and unsaved form text while disconnected
-- [ ] Complete the Phase 10 checkpoint and commit
+- [x] Display Zero connection state and gate writes appropriately
+- [x] Preserve cached reads and unsaved form text while disconnected
+- [x] Complete the Phase 10 checkpoint
+- [ ] Commit the Phase 10 work
 
 ## Phase 11: shopping and recipes
 

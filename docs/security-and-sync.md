@@ -166,13 +166,17 @@ and confirmed image metadata.
 
 Zero may queue writes during a short interruption. This is acceptable, but it is not durable long-term offline editing.
 
-### Disconnected, error, or needs-auth
+### Disconnected, error, needs-auth, or closed
 
 - Continue rendering cached query results.
 - Disable mutation controls.
 - Show the current connection state clearly.
 - Preserve unsaved form text in component state.
 - Do not create a custom offline-write queue.
+
+Connection-state changes do not remount the application, so controlled form
+state remains intact. A full page reload still resets unsaved component state;
+only previously synchronized Zero rows persist in the local cache.
 
 ## Conflict policy
 
