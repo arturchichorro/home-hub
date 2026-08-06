@@ -9,7 +9,8 @@
 | Language                       | TypeScript with strict checking                   |
 | Web application                | React with Vite, rendered entirely in the browser |
 | Routing                        | TanStack Router                                   |
-| Basic styling                  | Tailwind CSS                                      |
+| Web component library          | Internal package built on Base UI and Tailwind    |
+| Future native UI library       | Internal package using React Native primitives    |
 | Runtime validation             | Zod                                               |
 | Local data and synchronization | Rocicorp Zero                                     |
 | HTTP API                       | Hono running on Node.js                           |
@@ -32,18 +33,23 @@ Use current stable package versions when implementation begins and pin the `zero
 home-hub/
 ├── apps/
 │   ├── api/                 Hono application and Zero endpoints
-│   └── web/                 React/Vite application
+│   └── web/                 React/Vite application and feature composition
 │   # mobile/                Reserved for a future Expo/React Native application
 ├── packages/
 │   ├── database/            Drizzle schema, database client, SQL migrations
 │   └── shared/              Zod contracts, domain helpers, Zero schema/queries/mutators
+│   # ui-web/                Added in the web component-library phase
+│   # ui-native/             Reserved for the future React Native application
 ├── docs/
 ├── package.json
 ├── pnpm-workspace.yaml
 └── tsconfig.base.json
 ```
 
-Do not introduce a task orchestrator or generic `config`, `domain`, `contracts`, or `sync` packages. A package should exist only when it has a real boundary and multiple consumers.
+Do not introduce a task orchestrator or generic `config`, `domain`, `contracts`,
+or `sync` packages. A package should exist only when it has a concrete boundary
+and a focused consumer; multiple consumers alone are not a reason to create a
+generic abstraction.
 
 ## Runtime boundaries
 
@@ -65,6 +71,18 @@ flowchart LR
 The browser application owns rendering, forms, navigation, and presentation of connection state. It reads synchronized application data through Zero queries and performs connected optimistic changes through custom Zero mutators.
 
 It does not contain authoritative authorization logic. Disabling a button is user experience, not security.
+
+Reusable React DOM primitives live in `packages/ui-web`; feature-specific web
+components remain in `apps/web`. `ui-web` composes the unstyled components from
+`@base-ui/react` and owns its CSS-variable tokens and Tailwind integration.
+
+A future `packages/ui-native` implements the same documented design language
+and component vocabulary with React Native primitives and native token values.
+There is no separate design-token package. The web and native libraries share
+documented names and intent, but their implementations remain platform-specific
+because DOM and native styling, interaction, and accessibility behavior are not
+interchangeable. Base UI is a web foundation and is not a dependency of
+`ui-native`.
 
 ## Household and module boundaries
 

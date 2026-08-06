@@ -128,14 +128,48 @@ orchestrator or managed platform. The application remains portable by keeping
 state in PostgreSQL and R2, configuration in environment variables, and
 infrastructure in ordinary container images and Compose configuration.
 
-The future Raspberry Pi 16 GB with SSD is a possible replacement host rather
-than a separate architecture. Before moving, verify ARM64 support for every
-container and native Node dependency, adequate SSD I/O for PostgreSQL and
-Zero's SQLite replica, and reliable HTTPS ingress from the home network.
+The Raspberry Pi 16 GB with SSD is the planned second production host rather
+than a separate architecture. Deploy and operate the system on the VPS first,
+then migrate only after verifying ARM64 support for every container and native
+Node dependency, adequate SSD I/O for PostgreSQL and Zero's SQLite replica, and
+reliable HTTPS ingress from the home network. Keep the VPS available during a
+documented rollback window.
 
-## Plain UI first
+## Platform-aware UI libraries, with Base UI on the web
 
-Install Tailwind for basic layout, but use native forms and simple components. Do not add shadcn/ui, a design system, or a form library until a concrete interaction requires one.
+The initial plain UI was intentional while the application established its
+data, authorization, and synchronization boundaries. The implemented screens
+now provide enough concrete interaction states to define a small design system
+before adding French Vocabulary.
+
+Reusable React DOM primitives live in `@home-hub/ui-web`, which is built on the
+unstyled `@base-ui/react` components. Base UI provides the web interaction,
+composition, keyboard, focus, and ARIA foundation. `ui-web` owns the product's
+component API, CSS-variable tokens, and Tailwind styling.
+
+A future `@home-hub/ui-native` package will implement equivalent components
+with React Native primitives. Base UI targets browsers and relies on web
+platform behavior, so it is not a suitable foundation for the native package.
+Sharing documented visual intent, semantic token names, and component
+vocabulary is valuable; forcing HTML, CSS, ARIA, and native controls through a
+single universal implementation is not.
+
+There is no separate design-token library. The design-system documentation is
+the shared specification, and each UI package owns its platform representation
+of those values. If maintaining the two representations becomes a demonstrated
+source of drift, automation can be reconsidered without requiring a public
+token package.
+
+Feature-specific composition remains inside its application. These internal
+packages create explicit platform boundaries and make the future mobile path
+visible, even while the web application is their first consumer.
+
+Begin with buttons, form fields, panels, inline alerts, and status indicators,
+plus the states the existing application actually needs. Use native HTML
+semantics and accessible interaction behavior. Do not add shadcn/ui, a form
+library, Storybook, or a large catalogue of speculative components. Do not
+create `@home-hub/ui-native` until React Native work begins. Reconsider the
+other choices only when repeated needs justify their cost.
 
 ## Testing without browser automation initially
 

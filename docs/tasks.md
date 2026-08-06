@@ -117,21 +117,67 @@ teaches us something new.
 
 - [ ] Implement authorized direct uploads and confirmation
 - [ ] Implement signed reads, deletion, type validation, and size limits
+- [ ] Complete the Phase 12 checkpoint and commit
+
+## Phase 13: design-system definition
+
+- [ ] Audit the existing screens, interaction states, and repeated UI patterns
+- [ ] Define the product's visual principles and accessibility baseline
+- [ ] Define semantic tokens for color, typography, spacing, radii, shadows, and motion
+- [ ] Define responsive layout rules and breakpoints
+- [ ] Document shared token names and how each UI package maps them to its platform
+- [ ] Document that Base UI is the behavioral foundation for web, not React Native
+- [ ] Document component anatomy, variants, states, and usage guidance
 - [ ] Complete the Phase 13 checkpoint and commit
 
-## Phase 13: hardening
+## Phase 14: Base UI web component library
+
+- [ ] Create the internal `@home-hub/ui-web` package for React DOM components
+- [ ] Install Base UI as the unstyled accessible behavioral foundation for `ui-web`
+- [ ] Implement web design tokens as CSS variables owned by `ui-web`
+- [ ] Configure Tailwind to consume the `ui-web` semantic CSS variables
+- [ ] Implement the first reusable primitives for buttons, fields, panels, alerts, and status indicators
+- [ ] Add a lightweight development gallery for visual and interaction-state review
+- [ ] Adopt the primitives in authentication, household selection, connection state, and Shopping
+- [ ] Verify keyboard navigation, visible focus, labels, error states, disabled states, and responsive layout
+- [ ] Reserve `@home-hub/ui-native` for a future native implementation of the same documented design language
+- [ ] Complete the Phase 14 checkpoint and commit
+
+## Phase 15: French vocabulary
+
+- [ ] Define the smallest useful shared vocabulary model
+- [ ] Apply established household authorization and synchronization patterns
+- [ ] Build the vocabulary interface from the shared UI primitives
+- [ ] Complete the Phase 15 checkpoint and commit
+
+## Phase 16: production readiness and hardening
 
 - [ ] Add readiness, graceful shutdown, and consistent errors
 - [ ] Fill important integration-test gaps
 - [ ] Reconcile the documentation with the implemented system
-- [ ] Build and rehearse the Caddy/Docker Compose production deployment
 - [ ] Verify PostgreSQL restore and Zero replica rebuild procedures
 - [ ] Decide whether application-shell caching is justified
 - [ ] Verify a clean-checkout setup and production builds
-- [ ] Complete the final checkpoint and commit
+- [ ] Complete the Phase 16 checkpoint and commit
 
-## Phase 14: French vocabulary
+## Phase 17: deploy to an online VPS
 
-- [ ] Define the smallest useful shared vocabulary model
-- [ ] Apply established household authorization and synchronization patterns
-- [ ] Complete the Phase 12 checkpoint and commit
+- [ ] Confirm the VPS, ARM architecture, operating system, domain, and public routing
+- [ ] Build the production images and Caddy/Docker Compose configuration
+- [ ] Configure production secrets, firewall rules, TLS, and private service networking
+- [ ] Configure automated encrypted PostgreSQL backups outside the VPS
+- [ ] Deploy the web application, API, `zero-cache`, PostgreSQL, and Caddy
+- [ ] Verify authentication, synchronization, R2 access, health checks, restart behavior, and rollback
+- [ ] Complete a production restore rehearsal and document routine operations
+- [ ] Complete the Phase 17 checkpoint and commit
+
+## Phase 18: deploy to and migrate onto the Raspberry Pi
+
+- [ ] Verify ARM64 images and native dependencies for the complete production stack
+- [ ] Validate SSD performance and durability, cooling, power protection, and available capacity
+- [ ] Establish reliable HTTPS ingress despite dynamic IP, port-forwarding, or CGNAT constraints
+- [ ] Rehearse a full restore and Zero replica rebuild on the Raspberry Pi before cutover
+- [ ] Plan a maintenance window, final backup, DNS cutover, and VPS rollback window
+- [ ] Migrate PostgreSQL and secrets, rebuild Zero, and switch production traffic
+- [ ] Verify the full production journey and monitor stability before retiring the VPS
+- [ ] Complete the Phase 18 final checkpoint and commit

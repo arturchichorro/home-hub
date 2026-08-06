@@ -78,32 +78,106 @@ that adds recipe ingredients to Shopping. Keep mutations small and explicit.
 
 Checkpoint: test referenced-row tenancy and simple last-write conflict behavior.
 
-## Phase 12: simple French vocabulary module
-
-Apply the established household authorization and synchronization patterns to
-a small shared French vocabulary collection. Keep its schema and interactions
-independent from Shopping and Recipes.
-
-Checkpoint: explain which parts reuse household infrastructure and which parts
-remain owned by the Vocabulary module.
-
-## Phase 13: R2 images
+## Phase 12: R2 images
 
 Implement upload authorization, direct browser upload, confirmation, signed reads, deletion, content-type validation, and size limits.
 
 Checkpoint: use browser network tools to prove image bytes go directly to R2 and credentials never reach the browser.
 
-## Phase 14: hardening and optional shell caching
+## Phase 13: define the design system
+
+Audit the existing authentication, household, connection-state, Shopping, and
+Recipes interfaces before choosing abstractions. Define the product's visual
+principles, accessibility baseline, and semantic tokens for color, typography,
+spacing, radii, shadows, and motion. Define responsive layout rules and
+breakpoints alongside them. Document the anatomy, variants, states, and intended
+use of the first components. Document stable semantic token names and how each
+platform-specific UI package maps the shared design intent to its own styling,
+interaction, and accessibility behavior. Do not create a separate token
+package.
+
+Keep this phase primarily documentary: it should establish coherent rules and
+show representative interface examples before reusable components constrain
+the implementation.
+
+Checkpoint: explain how a semantic token differs from a raw value, show how a
+documented token maps to web CSS and a future native value, and walk through the
+keyboard, focus, error, loading, disabled, empty, and disconnected states of
+one form.
+
+## Phase 14: implement the Base UI web component library
+
+Create the internal `@home-hub/ui-web` package on top of `@base-ui/react`. Base
+UI supplies unstyled web behavior, composition, focus management, keyboard
+interaction, and ARIA foundations; `ui-web` owns the product styling, component
+API, and CSS-variable tokens. Configure Tailwind to consume those variables.
+Start with only the React DOM primitives already required by the application:
+buttons, form fields, panels, inline alerts, and status indicators. Add a
+lightweight development gallery that renders their variants and interaction
+states without introducing Storybook or another application framework.
+
+Adopt those primitives in authentication, household selection, connection
+state, and Shopping. Keep feature-specific composition in each feature folder;
+do not turn the UI package into a second domain layer. Reserve
+`@home-hub/ui-native` for a future mobile phase. It should follow the same
+documented design language and component vocabulary, but use React Native
+primitives because Base UI targets the web platform.
+
+Checkpoint: review the gallery and migrated screens at narrow and wide widths,
+then navigate them using only a keyboard and verify visible focus, labels,
+errors, loading, disabled, and disconnected states.
+
+## Phase 15: simple French vocabulary module
+
+Apply the established household authorization and synchronization patterns to
+a small shared French vocabulary collection. Keep its schema and interactions
+independent from Shopping and Recipes, and build its interface from the shared
+UI primitives rather than creating feature-local substitutes.
+
+Checkpoint: explain which parts reuse household infrastructure and UI
+foundations and which parts remain owned by the Vocabulary module.
+
+## Phase 16: production readiness and optional shell caching
 
 Add readiness checks, graceful shutdown, consistent error envelopes, missing
-integration tests, and documentation corrections. Build and rehearse the
-single-node Caddy/Docker Compose deployment, PostgreSQL backup and restore, and
-Zero replica rebuild. Only then decide whether an offline-loadable application
-shell justifies adding a service worker.
+integration tests, accessibility checks for the shared UI primitives, and
+documentation corrections. Rehearse PostgreSQL backup and restore and Zero
+replica rebuild locally. Only then decide whether an offline-loadable
+application shell justifies adding a service worker.
 
 Checkpoint: run formatting, linting, type-checking, tests, and production
-builds from a clean checkout, then follow the setup and deployment
-documentation exactly and complete a restore rehearsal.
+builds from a clean checkout, follow the setup documentation exactly, and
+complete a restore rehearsal.
+
+## Phase 17: deploy to an online VPS
+
+Provision the first production host on an online VPS. Build the production
+images and Caddy/Docker Compose topology, choose the domain and routing, keep
+database and internal service ports private, configure TLS and secrets, and
+send automated encrypted PostgreSQL backups outside the VPS. Deploy the web
+application, API, `zero-cache`, PostgreSQL, and Caddy as one understandable
+single-host system.
+
+Checkpoint: verify authentication, synchronized reads and writes, R2 access,
+health checks, container and host restarts, backup restoration, and the written
+rollback procedure against the real VPS.
+
+## Phase 18: deploy to and migrate onto the Raspberry Pi
+
+Treat the Raspberry Pi as a deliberate second production host, not as an
+untested replacement. Verify every ARM64 image and native dependency, SSD and
+power characteristics, cooling, capacity, and reliable inbound HTTPS through
+the home network. Restore a recent production backup and rebuild Zero on the Pi
+before scheduling the final cutover.
+
+During the migration, take a controlled final backup, transfer production
+secrets securely, restore PostgreSQL, allow Zero to rebuild, switch DNS, and
+verify the full user journey. Keep the VPS available for a documented rollback
+window until the Pi has demonstrated stable operation.
+
+Checkpoint: perform the cutover and a rollback rehearsal, confirm backup and
+restore automation on the Pi, and record the operational differences between
+the hosted VPS and the home-hosted system.
 
 ## Working rhythm for every phase
 

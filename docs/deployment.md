@@ -1,8 +1,14 @@
 # Deployment
 
-## Target
+## Deployment sequence
 
-The initial production deployment is one OVHcloud VPS in Brussels. It runs a
+Production is introduced in two deliberate stages:
+
+1. deploy and operate the application on an online VPS;
+2. validate a Raspberry Pi as a production host, then migrate with a tested
+   rollback path.
+
+The first production deployment is one OVHcloud VPS in Brussels. It runs a
 single Docker Compose project containing:
 
 - Caddy;
@@ -13,8 +19,9 @@ single Docker Compose project containing:
 
 Cloudflare R2 remains external and stores recipe image bytes.
 
-This is a target architecture, not current implementation work. Build it during
-the hardening phase after the application and Zero data flow are understood.
+This is a target architecture, not current implementation work. Prepare it
+during Phase 16 and deploy it during Phase 17 after the application and Zero
+data flow are understood.
 Before purchasing the host, confirm that the selected Brussels VPS offering
 supports installing Docker Engine and running this Compose workload. If it
 does not, choose another European location or provider without changing the
@@ -58,7 +65,17 @@ so a database backup does not contain image bytes.
 - Define an independent retention policy for R2 objects.
 - Do not treat a Docker volume or same-host VPS snapshot as the only backup.
 
-## Moving to the Raspberry Pi
+## Phase 17: online VPS
+
+The VPS is the first real production environment. Before launch, define the
+domain and routing, production secrets, host firewall, off-host encrypted
+backups, restore and rollback procedures, and routine upgrade process. Verify
+the application after both container restarts and a host reboot.
+
+Do not treat the VPS as a disposable rehearsal: it remains the rollback target
+while the Raspberry Pi is being proven.
+
+## Phase 18: moving to the Raspberry Pi
 
 The future Raspberry Pi 16 GB with SSD can use the same topology if it passes an
 operational compatibility check:
@@ -69,11 +86,17 @@ operational compatibility check:
    adequate for PostgreSQL and the Zero SQLite replica.
 3. Provide reliable inbound HTTPS through DNS and the home network; account for
    dynamic addressing, port forwarding, or CGNAT.
-4. Stop writes or perform a controlled final backup.
-5. Restore the complete PostgreSQL database and production secrets.
-6. Start `zero-cache` and allow its replica to rebuild before serving clients.
-7. Repoint DNS and verify API health, Zero synchronization, authentication, and
+4. Restore a recent backup on the Pi and rebuild Zero as a rehearsal before the
+   production cutover.
+5. Define a maintenance window, DNS plan, acceptable downtime, and conditions
+   for switching traffic back to the VPS.
+6. Stop writes or perform a controlled final backup.
+7. Restore the complete PostgreSQL database and production secrets.
+8. Start `zero-cache` and allow its replica to rebuild before serving clients.
+9. Repoint DNS and verify API health, Zero synchronization, authentication, and
    R2 access.
+10. Keep the VPS intact for the documented rollback window and retire it only
+    after the Pi has demonstrated stable operation.
 
 The Zero replica does not need to be copied for correctness, although preserving
 or backing it up may reduce migration downtime. PostgreSQL and R2 remain the
