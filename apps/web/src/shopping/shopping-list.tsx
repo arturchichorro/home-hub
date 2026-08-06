@@ -1,6 +1,6 @@
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
-import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useConnectionState, useQuery, useZero } from "@rocicorp/zero/react";
 
 type ShoppingListProps = {
   householdId: string;
@@ -8,6 +8,11 @@ type ShoppingListProps = {
 
 export function ShoppingList({ householdId }: ShoppingListProps) {
   const zero = useZero();
+  const connectionState = useConnectionState();
+
+  const canWrite =
+    connectionState.name === "connected" ||
+    connectionState.name === "connecting";
 
   const [items, result] = useQuery(
     queries.shopping.byHousehold({ householdId }),
@@ -35,6 +40,7 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
             {item.name} — {item.status}{" "}
             <button
               type="button"
+              disabled={!canWrite}
               onClick={() => {
                 zero.mutate(
                   mutators.shopping.setStatus({
