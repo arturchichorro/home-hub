@@ -145,6 +145,14 @@ Shared mutators provide the optimistic client behavior. Server execution adds au
 6. Execute the operation idempotently.
 7. Return errors that do not reveal whether a foreign row exists.
 
+The first implemented mutator changes a shopping item's status. Its client run
+uses a client timestamp only to present the optimistic result immediately. Its
+server run repeats the membership and item-household checks inside the database
+transaction and replaces that timestamp with server time. PostgreSQL remains
+the source of truth; if the authoritative run rejects the mutation, Zero
+removes or rebases the speculative client result as it reconciles with server
+state.
+
 Synced mutators must never change authentication records, household ownership, membership, roles, or invites. Those remain online-only API commands.
 
 ## Connectivity policy
