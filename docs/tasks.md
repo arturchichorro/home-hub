@@ -96,7 +96,7 @@ teaches us something new.
 - [x] Implement one authorized custom shopping mutator
 - [x] Verify optimistic behavior, convergence, and forged-ID rejection
 - [x] Complete the Phase 9 checkpoint
-- [ ] Commit the Phase 9 work
+- [x] Commit the Phase 9 work
 
 ## Phase 10: connection-state UX
 
