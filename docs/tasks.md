@@ -103,7 +103,7 @@ teaches us something new.
 - [x] Display Zero connection state and gate writes appropriately
 - [x] Preserve cached reads and unsaved form text while disconnected
 - [x] Complete the Phase 10 checkpoint
-- [ ] Commit the Phase 10 work
+- [x] Commit the Phase 10 work
 
 ## Phase 11: shopping and recipes
 
