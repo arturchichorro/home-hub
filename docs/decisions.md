@@ -147,12 +147,24 @@ unstyled `@base-ui/react` components. Base UI provides the web interaction,
 composition, keyboard, focus, and ARIA foundation. `ui-web` owns the product's
 component API, CSS-variable tokens, and Tailwind styling.
 
-A future `@home-hub/ui-native` package will implement equivalent components
-with React Native primitives. Base UI targets browsers and relies on web
-platform behavior, so it is not a suitable foundation for the native package.
-Sharing documented visual intent, semantic token names, and component
-vocabulary is valuable; forcing HTML, CSS, ARIA, and native controls through a
-single universal implementation is not.
+A future `@home-hub/ui-native` package will implement equivalent components on
+top of Expo UI. Expo UI exposes real SwiftUI components on iOS and Jetpack
+Compose components on Android, which fits the planned Expo application and
+allows controls to follow native platform conventions. Base UI remains the web
+foundation and is not a dependency of the native package.
+
+Application features import `@home-hub/ui-native`, not Expo UI directly. The
+wrapper owns Home Hub's component names, styling decisions, and native token
+values while preserving intentional platform differences. Prefer Expo UI's
+universal API for common components and use its platform-specific APIs only
+when the different native behavior is part of the product decision.
+
+Expo UI is tied to the Expo SDK release, so confirm its current API and required
+component coverage when native implementation starts. Fill small gaps with
+ordinary React Native components inside `ui-native`; do not add an overlapping
+primitive library by default. Test critical interactions with VoiceOver and
+TalkBack on real devices; native components do not replace application-level
+accessibility verification.
 
 There is no separate design-token library. The design-system documentation is
 the shared specification, and each UI package owns its platform representation
@@ -168,8 +180,8 @@ Begin with buttons, form fields, panels, inline alerts, and status indicators,
 plus the states the existing application actually needs. Use native HTML
 semantics and accessible interaction behavior. Do not add shadcn/ui, a form
 library, Storybook, or a large catalogue of speculative components. Do not
-create `@home-hub/ui-native` until React Native work begins. Reconsider the
-other choices only when repeated needs justify their cost.
+create `@home-hub/ui-native` or install Expo UI until React Native work begins.
+Reconsider the other choices only when repeated needs justify their cost.
 
 ## Testing without browser automation initially
 

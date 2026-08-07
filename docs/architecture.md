@@ -10,7 +10,7 @@
 | Web application                | React with Vite, rendered entirely in the browser |
 | Routing                        | TanStack Router                                   |
 | Web component library          | Internal package built on Base UI and Tailwind    |
-| Future native UI library       | Internal package using React Native primitives    |
+| Future native UI library       | Internal package built on Expo UI                 |
 | Runtime validation             | Zod                                               |
 | Local data and synchronization | Rocicorp Zero                                     |
 | HTTP API                       | Hono running on Node.js                           |
@@ -77,12 +77,22 @@ components remain in `apps/web`. `ui-web` composes the unstyled components from
 `@base-ui/react` and owns its CSS-variable tokens and Tailwind integration.
 
 A future `packages/ui-native` implements the same documented design language
-and component vocabulary with React Native primitives and native token values.
-There is no separate design-token package. The web and native libraries share
-documented names and intent, but their implementations remain platform-specific
-because DOM and native styling, interaction, and accessibility behavior are not
-interchangeable. Base UI is a web foundation and is not a dependency of
-`ui-native`.
+and component vocabulary on top of Expo UI. It wraps Expo UI's SwiftUI and
+Jetpack Compose components and owns native token values. There is no separate
+design-token package. The web and native libraries share documented names and
+intent, but their implementations remain platform-specific because DOM and
+native styling, interaction, and accessibility behavior are not
+interchangeable. Base UI is the web foundation; Expo UI is the native
+foundation.
+
+Feature code in `apps/mobile` imports Home Hub components from `ui-native`
+rather than importing Expo UI directly. Prefer Expo UI's universal components
+for shared controls and its platform-specific components where native
+conventions should differ. If Expo UI lacks a simple building block, use an
+ordinary React Native component inside `ui-native`; do not add another primitive
+library by default. Confirm the exact API and component coverage against the
+chosen Expo SDK when native implementation begins, and verify behavior with
+VoiceOver and TalkBack.
 
 ## Household and module boundaries
 

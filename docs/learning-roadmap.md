@@ -120,8 +120,16 @@ Adopt those primitives in authentication, household selection, connection
 state, and Shopping. Keep feature-specific composition in each feature folder;
 do not turn the UI package into a second domain layer. Reserve
 `@home-hub/ui-native` for a future mobile phase. It should follow the same
-documented design language and component vocabulary, but use React Native
-primitives because Base UI targets the web platform.
+documented design language and component vocabulary while wrapping Expo UI's
+SwiftUI and Jetpack Compose components behind a Home Hub-owned API.
+
+When native implementation begins, confirm the Expo UI API available in the
+chosen Expo SDK and the exact component coverage the application needs. Prefer
+Expo UI's universal components for shared controls, use its platform-specific
+components when the native convention is intentional, and fill genuine gaps
+with ordinary React Native components rather than adding a second primitive
+library by default. Verify important behavior with VoiceOver and TalkBack on
+real devices.
 
 Checkpoint: review the gallery and migrated screens at narrow and wide widths,
 then navigate them using only a keyboard and verify visible focus, labels,

@@ -126,7 +126,7 @@ teaches us something new.
 - [ ] Define semantic tokens for color, typography, spacing, radii, shadows, and motion
 - [ ] Define responsive layout rules and breakpoints
 - [ ] Document shared token names and how each UI package maps them to its platform
-- [ ] Document that Base UI is the behavioral foundation for web, not React Native
+- [ ] Document Base UI for web and Expo UI for the future React Native library
 - [ ] Document component anatomy, variants, states, and usage guidance
 - [ ] Complete the Phase 13 checkpoint and commit
 
@@ -140,7 +140,7 @@ teaches us something new.
 - [ ] Add a lightweight development gallery for visual and interaction-state review
 - [ ] Adopt the primitives in authentication, household selection, connection state, and Shopping
 - [ ] Verify keyboard navigation, visible focus, labels, error states, disabled states, and responsive layout
-- [ ] Reserve `@home-hub/ui-native` for a future native implementation of the same documented design language
+- [ ] Reserve `@home-hub/ui-native`, built on Expo UI, for a future native implementation of the same documented design language
 - [ ] Complete the Phase 14 checkpoint and commit
 
 ## Phase 15: French vocabulary

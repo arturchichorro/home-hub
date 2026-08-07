@@ -25,7 +25,7 @@ no generic module registry or generic user-defined data model.
 
 The modules share one documented visual language and a small set of accessible,
 platform-specific UI primitives. The web library builds on Base UI; the future
-native library uses React Native primitives. Those foundations standardize
+native library builds on Expo UI. Those foundations standardize
 presentation and interaction without pretending web and native rendering or
 accessibility behavior is identical, owning module behavior, or becoming a
 generic domain abstraction.
