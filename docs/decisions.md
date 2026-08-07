@@ -50,6 +50,12 @@ trimmed, and limited to 1–100 characters while preserving casing. Its separate
 normalized name is lowercased for per-household uniqueness and duplicate
 reactivation.
 
+Recipe ingredient rows are named `recipe_ingredients`, not generic recipe
+items. Recipes also keep one `recipe_cook_logs` row per cooking event with a
+user-supplied timestamp and optional comment. Initial cooking logs do not store
+cook or recorder attribution. Ingredient positions are nonnegative and may
+collide; row ID is the deterministic tiebreaker.
+
 ## Household invitations
 
 Only the household owner may create invitations. An invitation is a bearer

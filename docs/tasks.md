@@ -108,7 +108,7 @@ teaches us something new.
 ## Phase 11: shopping and recipes
 
 - [x] Complete shopping creation and status operations; skip renaming for v1
-- [ ] Implement recipes and ordered recipe ingredients
+- [ ] Implement recipes, ordered recipe ingredients, and cooking logs
 - [ ] Add the explicit recipe-ingredients-to-shopping operation (deferred)
 - [ ] Test tenancy and basic conflict behavior
 - [ ] Complete the Phase 11 checkpoint and commit

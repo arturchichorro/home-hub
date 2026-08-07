@@ -72,8 +72,10 @@ Checkpoint: describe the difference between `connecting` and `disconnected`, and
 
 ## Phase 11: complete shopping and recipes
 
-Expand the proven patterns to shopping status transitions, recipes, ordered recipe ingredient rows, and the explicit operation
-that adds recipe ingredients to Shopping. Keep mutations small and explicit.
+Expand the proven patterns to shopping creation and status transitions,
+recipes, ordered recipe ingredient rows, and recipe cooking logs.
+Shopping-item renaming and the explicit operation that adds recipe ingredients
+to Shopping are deferred. Keep mutations small and explicit.
 
 Checkpoint: test referenced-row tenancy and simple last-write conflict behavior.
 

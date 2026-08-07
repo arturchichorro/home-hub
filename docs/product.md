@@ -15,7 +15,8 @@ another household.
 Home Hub is organized into small built-in modules:
 
 - Shopping provides one shared shopping list.
-- Recipes provides shared recipes and their ingredients.
+- Recipes provides shared recipes, their ingredients, and a history of when
+  each recipe was cooked.
 - French vocabulary provides a simple shared collection for learning words and
   expressions.
 

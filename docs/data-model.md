@@ -8,7 +8,7 @@
   order.
 - Store timestamps in UTC using PostgreSQL `timestamptz`.
 - Give every synchronized household-owned row a direct `household_id`, even when it is reachable through another foreign key.
-- Use independent IDs for recipe ingredient and image rows so concurrent edits address stable records.
+- Use independent IDs for recipe ingredient, cooking-log, and image rows so concurrent edits address stable records.
 - Enforce invariants in PostgreSQL as well as in application code.
 - Do not migrate legacy data; this is a fresh data model.
 
@@ -22,7 +22,8 @@ erDiagram
   households ||--o{ household_invites : issues
   households ||--o{ shopping_items : owns
   households ||--o{ recipes : owns
-  recipes ||--o{ recipe_items : contains
+  recipes ||--o{ recipe_ingredients : contains
+  recipes ||--o{ recipe_cook_logs : records
   recipes ||--o{ recipe_images : illustrates
 ```
 
@@ -123,19 +124,37 @@ name reactivates the existing row rather than inserting a duplicate.
 - `description`
 - `created_at`, `updated_at`
 
-### `recipe_items`
+Recipe titles do not need to be unique within a household. Store `description`
+as nullable text.
+
+### `recipe_ingredients`
 
 - `id`
 - `household_id`
 - `recipe_id`
 - `name`
-- `quantity`: text
-- `unit`: text
-- `note`: text
+- `quantity`: nullable text
+- `unit`: nullable text
+- `note`: nullable text
 - `position`: integer
 - `created_at`, `updated_at`
 
-Quantity remains text so values such as `½`, `2–3`, and `to taste` are representable.
+Quantity remains text so values such as `½`, `2–3`, and `to taste` are
+representable. Position must be nonnegative. Positions are indexed but not
+unique; order equal positions by row ID for deterministic display.
+
+### `recipe_cook_logs`
+
+- `id`
+- `household_id`
+- `recipe_id`
+- `cooked_at`: timestamp with time zone
+- `comment`: nullable text
+- `created_at`, `updated_at`
+
+Each row represents one cooking event. Multiple events may have the same
+`cooked_at` value. Initial logs do not attribute who cooked or recorded the
+event.
 
 ### `recipe_images`
 
@@ -159,6 +178,7 @@ Object keys are server-controlled and independent of public hostnames.
   constraint; adding an existing name deliberately reactivates its canonical
   shopping row.
 - A recipe ingredient may reference only a recipe from the same household.
+- A recipe cooking log may reference only a recipe from the same household.
 - Adding recipe ingredients to Shopping verifies household access and
   inserts or reactivates the normalized shopping rows in one transaction.
 - Recipe image metadata may reference only a recipe from the same household.
