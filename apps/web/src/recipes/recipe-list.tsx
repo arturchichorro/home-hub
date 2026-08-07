@@ -1,5 +1,6 @@
 import { queries } from "@home-hub/shared/zero/queries";
 import { useQuery } from "@rocicorp/zero/react";
+import { CreateRecipeForm } from "./create-recipe-form";
 
 type RecipeListProps = {
   householdId: string;
@@ -20,6 +21,7 @@ export function RecipeList({ householdId }: RecipeListProps) {
 
   return (
     <>
+      <CreateRecipeForm householdId={householdId} />
       {recipes.length === 0 ? (
         <p>There are no recipes yet.</p>
       ) : (
