@@ -100,16 +100,28 @@ The household is the tenancy, collaboration, and authorization boundary. A
 user may belong to multiple households, and every household-owned row is
 authorized through current membership in PostgreSQL.
 
-Shopping, Recipes, and French Vocabulary are built-in feature modules rather
-than dynamically installed plugins. Each module owns its feature-specific
-tables and behavior. All implemented modules are available to every household
-member initially; do not add a module registry or per-module permissions.
+Shopping and Recipes are the initial built-in feature modules. French
+Vocabulary and possible future features such as household finance use the same
+module boundary when implemented. Modules are not dynamically installed
+plugins: application code owns a small catalogue of stable module keys.
+
+The stable keys and defaults live in `packages/shared` so the API, web client,
+and future mobile client agree on identifiers. Each client owns its own mapping
+from an enabled key to platform-specific navigation and screens; the catalogue
+does not contain executable plugins or generic feature implementations.
+
+Each household has an enabled setting for every implemented module. The owner
+configures that setting for the whole household; there are no per-member module
+permissions. Core household selection and management cannot be disabled.
+Disabling a module retains its data but blocks its interface and every
+server-side access path. A missing setting fails closed.
 
 Cross-module behavior is implemented as an explicit application operation. For
 example, adding recipe ingredients to the shopping list connects Recipes and
 Shopping by copying ingredient names and inserting or reactivating normalized
-shopping rows. There is no shared item catalog: each module owns its records,
-and the explicit operation is the integration boundary.
+shopping rows. Both modules must be enabled for that operation. There is no
+shared item catalog: each module owns its records, and the explicit operation
+is the integration boundary.
 
 ### Future mobile application
 
@@ -134,8 +146,9 @@ PostgreSQL must support logical replication, and the upstream connection must be
 The API owns:
 
 - account authentication, JWT issuance, and refresh-token rotation;
-- household and membership commands;
-- invite creation and acceptance;
+- household selection data, lifecycle, membership, and ownership commands;
+- invite creation, acceptance, and revocation;
+- owner-authorized household module configuration;
 - verification of Zero authentication tokens;
 - transformation of named Zero queries using trusted user context;
 - transactional execution and authorization of Zero mutations;

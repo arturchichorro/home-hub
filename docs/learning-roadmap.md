@@ -79,13 +79,51 @@ to Shopping are deferred. Keep mutations small and explicit.
 
 Checkpoint: test referenced-row tenancy and simple last-write conflict behavior.
 
-## Phase 12: R2 images
+## Phase 12: household lifecycle and management
+
+Turn the existing household and invitation foundations into a complete
+household-management experience before styling abstractions are introduced.
+Add an explicit current-household selection, owner settings, household rename,
+member and pending-invitation views, invitation revocation, member removal,
+member-initiated leaving, and transactional ownership transfer. Define and
+implement a deliberate deletion or archival policy rather than leaving the
+last-owner and retained-data behavior implicit.
+
+Keep ownership, membership, invitations, and destructive household operations
+as connected API commands. Return only the safe member profile fields needed by
+the management UI. If the current household becomes unavailable, select a
+valid fallback or return to the household chooser without leaking data from the
+previous household.
+
+Checkpoint: transfer ownership, remove or leave with each role, revoke an
+invite, and prove that the last-owner and cross-household protections hold.
+
+## Phase 13: configurable built-in modules
+
+Introduce a small code-owned catalogue of implemented modules in
+`packages/shared`, plus household-level module settings. Shopping and Recipes
+are enabled for existing households to preserve current behavior. A missing
+setting fails closed. Only
+the owner can toggle a module, and the result applies equally to every household
+member; this is feature configuration, not per-member authorization.
+
+Synchronize the enabled settings so navigation reacts for all members, but
+perform toggles through connected API commands. Disabling a module retains its
+rows while hiding its interface and blocking its queries, mutations, uploads,
+and cross-module operations. Re-enabling restores the existing data. Core
+household selection and management are not modules and cannot be disabled.
+
+Checkpoint: disable Shopping in one browser and observe navigation update in a
+second browser. Attempt its query and mutation directly and confirm server-side
+rejection, then re-enable it and recover the prior data.
+
+## Phase 14: R2 images
 
 Implement upload authorization, direct browser upload, confirmation, signed reads, deletion, content-type validation, and size limits.
 
 Checkpoint: use browser network tools to prove image bytes go directly to R2 and credentials never reach the browser.
 
-## Phase 13: define the design system
+## Phase 15: define the design system
 
 Audit the existing authentication, household, connection-state, Shopping, and
 Recipes interfaces before choosing abstractions. Define the product's visual
@@ -106,7 +144,7 @@ documented token maps to web CSS and a future native value, and walk through the
 keyboard, focus, error, loading, disabled, empty, and disconnected states of
 one form.
 
-## Phase 14: implement the Base UI web component library
+## Phase 16: implement the Base UI web component library
 
 Create the internal `@home-hub/ui-web` package on top of `@base-ui/react`. Base
 UI supplies unstyled web behavior, composition, focus management, keyboard
@@ -136,17 +174,7 @@ Checkpoint: review the gallery and migrated screens at narrow and wide widths,
 then navigate them using only a keyboard and verify visible focus, labels,
 errors, loading, disabled, and disconnected states.
 
-## Phase 15: simple French vocabulary module
-
-Apply the established household authorization and synchronization patterns to
-a small shared French vocabulary collection. Keep its schema and interactions
-independent from Shopping and Recipes, and build its interface from the shared
-UI primitives rather than creating feature-local substitutes.
-
-Checkpoint: explain which parts reuse household infrastructure and UI
-foundations and which parts remain owned by the Vocabulary module.
-
-## Phase 16: production readiness and optional shell caching
+## Phase 17: production readiness and optional shell caching
 
 Add readiness checks, graceful shutdown, consistent error envelopes, missing
 integration tests, accessibility checks for the shared UI primitives, and
@@ -158,7 +186,7 @@ Checkpoint: run formatting, linting, type-checking, tests, and production
 builds from a clean checkout, follow the setup documentation exactly, and
 complete a restore rehearsal.
 
-## Phase 17: deploy to an online VPS
+## Phase 18: deploy to an online VPS
 
 Provision the first production host on an online VPS. Build the production
 images and Caddy/Docker Compose topology, choose the domain and routing, keep
@@ -171,7 +199,7 @@ Checkpoint: verify authentication, synchronized reads and writes, R2 access,
 health checks, container and host restarts, backup restoration, and the written
 rollback procedure against the real VPS.
 
-## Phase 18: deploy to and migrate onto the Raspberry Pi
+## Phase 19: deploy to and migrate onto the Raspberry Pi
 
 Treat the Raspberry Pi as a deliberate second production host, not as an
 untested replacement. Verify every ARM64 image and native dependency, SSD and
@@ -187,6 +215,24 @@ window until the Pi has demonstrated stable operation.
 Checkpoint: perform the cutover and a rollback rehearsal, confirm backup and
 restore automation on the Pi, and record the operational differences between
 the hosted VPS and the home-hosted system.
+
+## Phase 20: French vocabulary as the first post-deployment module
+
+After the production system and module controls are proven, add a small shared
+French vocabulary collection. Register it in the built-in catalogue and make it
+disabled by default for both existing and new households. Keep its schema,
+queries, mutations, and interface independent from Shopping and Recipes, while
+reusing household membership, module-enabled checks, synchronization patterns,
+and shared UI primitives.
+
+Use this phase to document the repeatable path for future built-in modules,
+such as household finance: define a stable key, choose the new-household
+default, backfill existing household settings, enforce the enabled check on
+every server boundary, and keep feature data intact while disabled.
+
+Checkpoint: enable Vocabulary for one household, add and synchronize data,
+disable and re-enable it without data loss, and prove that another household
+cannot observe either its configuration or vocabulary rows.
 
 ## Working rhythm for every phase
 

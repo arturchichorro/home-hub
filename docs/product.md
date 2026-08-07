@@ -17,12 +17,14 @@ Home Hub is organized into small built-in modules:
 - Shopping provides one shared shopping list.
 - Recipes provides shared recipes, their ingredients, and a history of when
   each recipe was cooked.
-- French vocabulary provides a simple shared collection for learning words and
-  expressions.
+- French Vocabulary is a deferred module for learning words and expressions.
+- Further built-in modules, such as household finance, may be added when their
+  product boundaries are understood.
 
 Modules own their feature-specific tables, services, API or Zero operations,
 and user interface. They are not dynamically installed plugins, and there is
-no generic module registry or generic user-defined data model.
+no generic user-defined data model. A small code-owned catalogue gives each
+implemented module a stable key and explicit default state.
 
 The modules share one documented visual language and a small set of accessible,
 platform-specific UI primitives. The web library builds on Base UI; the future
@@ -31,8 +33,16 @@ presentation and interaction without pretending web and native rendering or
 accessibility behavior is identical, owning module behavior, or becoming a
 generic domain abstraction.
 
-All implemented modules are available to all members of a household initially.
-There are no per-module roles or permissions.
+Each household owner chooses which implemented modules are enabled for that
+household. The setting applies equally to every member; there are no per-module
+roles or per-member module permissions. Core household selection and management
+are always available and are not configurable modules.
+
+Disabling a module hides its navigation and blocks its server-side queries,
+mutations, uploads, and integrations. It does not delete the module's data.
+Re-enabling it restores access. Shopping and Recipes are enabled by default to
+preserve the initial product, while later modules default to disabled unless a
+specific product decision says otherwise.
 
 ## Cross-module behavior
 
@@ -51,14 +61,20 @@ shared identity or metadata rather than merely copying values.
 - Household names do not need to be unique.
 - Each household has exactly one owner.
 - Other household users are members.
+- Owners may rename the household, revoke invitations, remove members, transfer
+  ownership, and configure modules.
+- Members may leave a household.
+- Ownership transfer must be transactional, and no operation may leave a
+  household without exactly one owner.
 - A future administrator role may be considered if a real permission need
   appears, but it is not part of the initial model.
-- Membership and ownership changes are online-only API operations.
+- Membership, ownership, module configuration, and destructive household
+  changes are online-only API operations.
 
 ## Deliberate non-goals
 
 - dynamically installed or third-party modules;
-- per-module membership and permissions;
+- per-member module permissions;
 - a generic schema for arbitrary household data;
 - multiple shopping lists;
 - artificial limits on the number of household members;

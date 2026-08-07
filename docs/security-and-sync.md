@@ -64,10 +64,9 @@ The API derives the user from the verified JWT and never from query or mutation 
 
 ## Household invitations
 
-Only a current household owner may create an invitation. Check that role in
+Only a current household owner may create or revoke an invitation. Check that role in
 PostgreSQL rather than trusting a role or household claim supplied by the
-browser or access JWT. Invite revocation is deferred; no initial operation sets
-`revoked_at`.
+browser or access JWT.
 
 Invitation tokens are 32 random bytes encoded as base64url. Treat the raw token
 as a bearer credential: return it only at creation and store only its SHA-256
@@ -82,6 +81,27 @@ has at most one winner.
 
 Household invitations do not replace `SIGNUP_ACCESS_CODE` as the initial account
 enrollment gate.
+
+## Household management and module configuration
+
+Household selection is client navigation state, but every selected household
+must still be authorized independently. Member rosters, pending invites,
+renaming, invitation revocation, member removal, leaving, ownership transfer,
+module toggles, and deletion or archival are connected API operations. Return
+only the safe account fields required by the member-management interface.
+
+Only the owner may rename the household, revoke invitations, remove another
+member, transfer ownership, change module settings, or perform the chosen
+destructive household operation. A member may leave. Lock the affected
+membership rows during ownership transfer or removal so no race can produce
+zero or multiple owners.
+
+Module availability is mutable authorization state and does not belong in the
+JWT. A module-owned server operation must verify both current membership and an
+enabled `household_module_settings` row. Missing settings fail closed. These
+checks apply to ordinary API routes, named Zero queries, custom mutators, R2
+authorization, and cross-module operations. Hiding navigation is user
+experience, not enforcement.
 
 For self-hosting, Rocicorp does not issue an API key. In production, configure a strong `ZERO_ADMIN_PASSWORD`. Optional `ZERO_QUERY_API_KEY` and `ZERO_MUTATE_API_KEY` values can authenticate calls from `zero-cache` to the API, but they complement rather than replace user authentication.
 
@@ -111,7 +131,8 @@ Define named Zero queries in shared TypeScript. At the API query endpoint:
 1. Verify the forwarded access JWT.
 2. construct a trusted context containing the user ID;
 3. find the requested named query;
-4. transform it with a relationship filter requiring household membership;
+4. transform it with relationship filters requiring household membership and,
+   for module-owned data, an enabled module setting;
 5. pass the verified user ID to Zero’s current request handler API.
 
 The named-query function produces a ZQL abstract syntax tree (AST): a
@@ -120,11 +141,14 @@ relationships, and ordering. It is data describing a query rather than SQL
 text. The API builds this transformation with the trusted user ID, and
 `zero-cache` uses it to determine which rows that client may synchronize.
 
-Every query returning household-owned data must constrain results through `household_members`. Do not accept a household ID and merely assume it is authorized.
+Every query returning household-owned data must constrain results through
+`household_members`. Module-owned queries must also require the corresponding
+enabled setting. Do not accept a household ID and merely assume it is
+authorized.
 
 Zero uses a custom PostgreSQL publication named `home_hub_zero` as a coarse
 replication allowlist. Initially it publishes only `households`,
-`household_members`, and `shopping_items`. It excludes `users`,
+`household_members`, `household_module_settings`, and `shopping_items`. It excludes `users`,
 `refresh_tokens`, and `household_invites`, so password hashes, email addresses,
 refresh-token hashes, and invite-token hashes do not enter the Zero replica.
 Publishing a table does not authorize client access; named queries must still
@@ -139,7 +163,8 @@ Shared mutators provide the optimistic client behavior. Server execution adds au
 1. Verify the forwarded access JWT.
 2. Pass the verified user ID to Zero’s mutation request handler.
 3. Validate mutation arguments at runtime.
-4. Check membership for the supplied household inside the mutation transaction.
+4. Check membership and the relevant enabled module setting for the supplied
+   household inside the mutation transaction.
 5. Verify targeted shopping rows and referenced recipe and image rows belong to
    the same household.
 6. Execute the operation idempotently.
@@ -153,7 +178,9 @@ the source of truth; if the authoritative run rejects the mutation, Zero
 removes or rebases the speculative client result as it reconciles with server
 state.
 
-Synced mutators must never change authentication records, household ownership, membership, roles, or invites. Those remain online-only API commands.
+Synced mutators must never change authentication records, household ownership,
+membership, roles, invites, or module settings. Those remain online-only API
+commands.
 
 ## Connectivity policy
 

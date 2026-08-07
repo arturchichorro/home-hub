@@ -32,11 +32,24 @@ Each household has exactly one owner. `household_members` has its own stable
 primary key and separately enforces uniqueness on `(household_id, user_id)`.
 The initial roles are only `owner` and `member`.
 
-Shopping, Recipes, and French Vocabulary are built-in modules. They remain
-mostly encapsulated, all are available to every household member, and
-cross-module behavior is expressed through narrow operations such as adding a
-recipe's ingredients to the shopping list. Do not add a generic module table,
-plugin system, event bus, or per-module permissions without a concrete need.
+Shopping and Recipes are the initial built-in modules. French Vocabulary is
+deferred until after deployment, and future ideas such as household finance can
+follow the same boundary. Modules remain mostly encapsulated, and cross-module
+behavior is expressed through narrow operations such as adding a recipe's
+ingredients to the shopping list. Do not add a runtime plugin system, event
+bus, or generic user-defined schema.
+
+Application code owns a small catalogue of implemented module keys.
+`household_module_settings` stores whether each module is enabled for one
+household. Only the owner may change those settings, but the enabled set applies
+to every member; there are no per-member module permissions. Shopping and
+Recipes are initially enabled, later modules default to disabled, and missing
+settings fail closed.
+
+Disabling a module preserves its rows while blocking navigation, queries,
+mutations, uploads, and integrations. Re-enabling restores access. Core
+household selection, membership, ownership, and settings are not modules and
+cannot be disabled.
 
 Shopping and Recipes do not share a canonical `items` table. Shopping rows own
 their names and normalized names; recipe ingredient rows own their ingredient
@@ -64,11 +77,11 @@ are stored as `null`.
 
 ## Household invitations
 
-Only the household owner may create invitations. An invitation is a bearer
-credential rather than an email-bound record: generate 32 random bytes, return
-the raw base64url token only when creating the invite, and store only its
-SHA-256 hash. Invite revocation is deferred; the nullable `revoked_at` column is
-reserved for that possible future behavior.
+Only the household owner may create or revoke invitations. An invitation is a
+bearer credential rather than an email-bound record: generate 32 random bytes,
+return the raw base64url token only when creating the invite, and store only its
+SHA-256 hash. Revoking an unaccepted invite sets `revoked_at`; revoked invites
+receive the same generic invalid-invite response as unknown or expired tokens.
 
 Invitations expire after seven days and require an already-authenticated
 account for acceptance. `SIGNUP_ACCESS_CODE` remains the account-enrollment gate
@@ -150,9 +163,9 @@ documented rollback window.
 ## Platform-aware UI libraries, with Base UI on the web
 
 The initial plain UI was intentional while the application established its
-data, authorization, and synchronization boundaries. The implemented screens
-now provide enough concrete interaction states to define a small design system
-before adding French Vocabulary.
+data, authorization, synchronization, household-management, and module-setting
+boundaries. Those implemented screens provide enough concrete interaction
+states to define a small design system before production deployment.
 
 Reusable React DOM primitives live in `@home-hub/ui-web`, which is built on the
 unstyled `@base-ui/react` components. Base UI provides the web interaction,

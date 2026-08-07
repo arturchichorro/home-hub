@@ -20,6 +20,7 @@ erDiagram
   users ||--o{ household_members : joins
   households ||--o{ household_members : contains
   households ||--o{ household_invites : issues
+  households ||--o{ household_module_settings : configures
   households ||--o{ shopping_items : owns
   households ||--o{ recipes : owns
   recipes ||--o{ recipe_ingredients : contains
@@ -89,12 +90,29 @@ that an owner always exists.
 Invite tokens are opaque, stored only as hashes, single-use, and expiring. Only
 the owner may create them. Initial invites expire after seven days and may be
 accepted only by an authenticated user. An existing member cannot consume an
-invite. `revoked_at` is reserved for a future revocation feature; no initial
-operation sets it.
+invite. An owner may revoke an unaccepted invitation by setting `revoked_at`.
 
 Enforce a unique `token_hash` and index `household_id`. Invite acceptance locks
 the invite and transactionally creates a `member` membership while setting
 `accepted_at`.
+
+### `household_module_settings`
+
+- `household_id`
+- `module_key`: stable code-owned module identifier
+- `enabled`
+- `created_at`, `updated_at`
+
+Use `(household_id, module_key)` as the primary key. There is no database-backed
+plugin registry: `packages/shared` defines the supported keys and defaults, and
+each module addition includes an explicit migration. Household creation inserts
+a setting for every implemented module. A new module migration backfills every
+existing household with its chosen default; missing settings fail closed.
+
+Shopping and Recipes are initially enabled. Deferred modules such as French
+Vocabulary default to disabled. Disabling a module retains all of its rows.
+Core household and membership behavior has no module setting and cannot be
+disabled.
 
 ### `shopping_items`
 
@@ -175,13 +193,19 @@ Object keys are server-controlled and independent of public hostnames.
 
 - Creating a household and its owner membership is one transaction.
 - A household has exactly one owner.
+- Ownership transfer changes the old and new owner roles in one transaction.
 - Accepting an invite and creating membership is one transaction.
+- Removing or leaving a membership cannot remove the household's sole owner.
 - Every household operation checks membership inside the same transaction as its write.
+- Only the owner may change household module settings.
+- A module-owned query or write requires both membership and an enabled module
+  setting; a missing setting is treated as disabled.
 - Concurrent duplicate shopping-item names resolve through the normalized-name
   constraint; adding an existing name deliberately reactivates its canonical
   shopping row.
 - A recipe ingredient may reference only a recipe from the same household.
 - A recipe cooking log may reference only a recipe from the same household.
 - Adding recipe ingredients to Shopping verifies household access and
-  inserts or reactivates the normalized shopping rows in one transaction.
+  verifies both Recipes and Shopping are enabled, then inserts or reactivates
+  the normalized shopping rows in one transaction.
 - Recipe image metadata may reference only a recipe from the same household.

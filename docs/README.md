@@ -1,6 +1,7 @@
 # Home Hub
 
-Home Hub is a private application for people who share a household. Household members collaborate on:
+Home Hub is a private application for people who share a household. Each
+household enables the built-in modules it wants to use. Initial modules include:
 
 - a shared shopping list;
 - recipes and ordered recipe ingredients;
@@ -62,4 +63,5 @@ pnpm biome lint --write path/to/file.ts
 
 ## Notes
 
-- household invite revokation is not implemented (but there's a column in household_invites for it, revoked_at)
+- Household invitation revocation is planned as part of the household
+  management phase; the schema already contains `household_invites.revoked_at`.
