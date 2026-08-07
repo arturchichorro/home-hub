@@ -108,10 +108,10 @@ teaches us something new.
 ## Phase 11: shopping and recipes
 
 - [x] Complete shopping creation and status operations;
-- [ ] Implement recipes, ordered recipe ingredients, and cooking logs
-- [ ] Add the explicit recipe-ingredients-to-shopping operation (deferred)
-- [ ] Test tenancy and basic conflict behavior
-- [ ] Complete the Phase 11 checkpoint and commit
+- [x] Implement recipes, ordered recipe ingredients, and cooking logs
+- Deferred beyond Phase 11: add the explicit recipe-ingredients-to-shopping operation
+- [x] Test tenancy and basic conflict behavior
+- [x] Complete and commit the Phase 11 checkpoint
 
 ## Phase 12: household lifecycle and management
 

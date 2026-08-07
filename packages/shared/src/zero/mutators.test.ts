@@ -187,6 +187,44 @@ describe("shopping.setStatus mutator", () => {
 
     expect(update).not.toHaveBeenCalled();
   });
+
+  it("applies later authoritative status updates after earlier ones", async () => {
+    vi.spyOn(Date, "now")
+      .mockReturnValueOnce(1_786_000_001_000)
+      .mockReturnValueOnce(1_786_000_002_000);
+    const { queries, transaction, update } = createFakeTransaction({
+      location: "server",
+      results: [
+        { id: "membership-id" },
+        { id: itemId, householdId },
+        { id: "membership-id" },
+        { id: itemId, householdId },
+      ],
+    });
+
+    await mutators.shopping.setStatus.fn({
+      args: setStatusArgs,
+      ctx,
+      tx: transaction,
+    });
+    await mutators.shopping.setStatus.fn({
+      args: { ...setStatusArgs, status: "active" },
+      ctx,
+      tx: transaction,
+    });
+
+    expect(queries).toHaveLength(4);
+    expect(update).toHaveBeenNthCalledWith(1, {
+      id: itemId,
+      status: "crossed",
+      updatedAt: 1_786_000_001_000,
+    });
+    expect(update).toHaveBeenNthCalledWith(2, {
+      id: itemId,
+      status: "active",
+      updatedAt: 1_786_000_002_000,
+    });
+  });
 });
 
 describe("shopping.add mutator", () => {
