@@ -47,3 +47,7 @@ export function cleanRecipeIngredientUnit(value: string): string | null {
 export function cleanRecipeIngredientNote(value: string): string | null {
   return cleanNullableMultilineText(value);
 }
+
+export function cleanRecipeCookLogComment(value: string): string | null {
+  return cleanNullableMultilineText(value);
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  cleanRecipeCookLogComment,
   cleanRecipeDescription,
   cleanRecipeIngredientName,
   cleanRecipeIngredientNote,
@@ -45,6 +46,13 @@ describe("recipe text cleaning", () => {
     expect(cleanRecipeIngredientQuantity("  ")).toBeNull();
     expect(cleanRecipeIngredientUnit("  \n  ")).toBeNull();
     expect(cleanRecipeIngredientNote("  \n  ")).toBeNull();
+  });
+
+  it("cleans a cooking-log comment while preserving its lines", () => {
+    expect(cleanRecipeCookLogComment("  First try\n\nLess salt  ")).toBe(
+      "First try\n\nLess salt",
+    );
+    expect(cleanRecipeCookLogComment("  \n  ")).toBeNull();
   });
 });
 

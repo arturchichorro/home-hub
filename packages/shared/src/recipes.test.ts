@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createRecipeCookLogMutationSchema,
   createRecipeIngredientMutationSchema,
   createRecipeMutationSchema,
 } from "./recipes";
@@ -164,6 +165,79 @@ describe("createRecipeIngredientMutationSchema", () => {
     expect(
       createRecipeIngredientMutationSchema.safeParse({
         ...ingredientInput,
+        userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+const cookLogInput = {
+  cookLogId: "5944cb0d-931a-4723-b981-77eacb122314",
+  householdId: input.householdId,
+  recipeId: input.recipeId,
+  cookedAt: 1_785_999_000_000,
+  comment: "Made it less spicy.",
+  optimisticTimestamp: input.optimisticTimestamp,
+};
+
+describe("createRecipeCookLogMutationSchema", () => {
+  it("accepts a complete input and cleans its comment", () => {
+    expect(
+      createRecipeCookLogMutationSchema.parse({
+        ...cookLogInput,
+        comment: "  Made it less spicy.  ",
+      }),
+    ).toEqual(cookLogInput);
+  });
+
+  it.each([null, "  \n  "])("normalizes comment %j to null", (comment) => {
+    expect(
+      createRecipeCookLogMutationSchema.parse({
+        ...cookLogInput,
+        comment,
+      }).comment,
+    ).toBeNull();
+  });
+
+  it.each(["cookLogId", "householdId", "recipeId"] as const)(
+    "rejects an invalid %s",
+    (field) => {
+      expect(
+        createRecipeCookLogMutationSchema.safeParse({
+          ...cookLogInput,
+          [field]: "not-a-uuid",
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it("rejects a comment longer than 1,000 characters", () => {
+    expect(
+      createRecipeCookLogMutationSchema.safeParse({
+        ...cookLogInput,
+        comment: "a".repeat(1_001),
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ["cookedAt", -1],
+    ["cookedAt", 1.5],
+    ["optimisticTimestamp", -1],
+    ["optimisticTimestamp", 1.5],
+  ] as const)("rejects an invalid %s", (field, value) => {
+    expect(
+      createRecipeCookLogMutationSchema.safeParse({
+        ...cookLogInput,
+        [field]: value,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects extra properties", () => {
+    expect(
+      createRecipeCookLogMutationSchema.safeParse({
+        ...cookLogInput,
         userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
       }).success,
     ).toBe(false);

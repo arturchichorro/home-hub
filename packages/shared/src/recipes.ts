@@ -1,5 +1,6 @@
 import * as z from "zod";
 import {
+  cleanRecipeCookLogComment,
   cleanRecipeDescription,
   cleanRecipeIngredientName,
   cleanRecipeIngredientNote,
@@ -58,6 +59,13 @@ const recipeIngredientNoteSchema = z
   )
   .pipe(z.string().max(500).nullable());
 
+const recipeCookLogCommentSchema = z
+  .union([z.string(), z.null()])
+  .transform((value) =>
+    value === null ? null : cleanRecipeCookLogComment(value),
+  )
+  .pipe(z.string().max(1_000).nullable());
+
 export const createRecipeIngredientMutationSchema = z
   .object({
     ingredientId: z.uuid(),
@@ -74,4 +82,19 @@ export const createRecipeIngredientMutationSchema = z
 
 export type CreateRecipeIngredientMutationInput = z.infer<
   typeof createRecipeIngredientMutationSchema
+>;
+
+export const createRecipeCookLogMutationSchema = z
+  .object({
+    cookLogId: z.uuid(),
+    householdId: z.uuid(),
+    recipeId: z.uuid(),
+    cookedAt: z.number().int().nonnegative(),
+    comment: recipeCookLogCommentSchema,
+    optimisticTimestamp: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export type CreateRecipeCookLogMutationInput = z.infer<
+  typeof createRecipeCookLogMutationSchema
 >;
