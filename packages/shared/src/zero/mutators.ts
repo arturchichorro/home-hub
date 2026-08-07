@@ -1,6 +1,7 @@
 import { defineMutatorsWithType, defineMutatorWithType } from "@rocicorp/zero";
 import { normalizeShoppingItemName } from "../normalization";
 import {
+  createRecipeCookLogMutationSchema,
   createRecipeIngredientMutationSchema,
   createRecipeMutationSchema,
 } from "../recipes";
@@ -146,6 +147,41 @@ const addRecipeIngredient = defineHomeHubMutator(
   },
 );
 
+const addRecipeCookLog = defineHomeHubMutator(
+  createRecipeCookLogMutationSchema,
+  async ({ args, ctx, tx }) => {
+    await requireServerHouseholdMembership({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+    });
+
+    const recipe = await tx.run(
+      zql.recipes
+        .where("id", args.recipeId)
+        .where("householdId", args.householdId)
+        .one(),
+    );
+
+    if (!recipe) {
+      throw new Error("Recipe cooking log addition not allowed");
+    }
+
+    const timestamp =
+      tx.location === "server" ? Date.now() : args.optimisticTimestamp;
+
+    await tx.mutate.recipeCookLogs.insert({
+      id: args.cookLogId,
+      householdId: args.householdId,
+      recipeId: args.recipeId,
+      comment: args.comment,
+      cookedAt: args.cookedAt,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+  },
+);
+
 export const mutators = defineHomeHubMutators({
   shopping: {
     add: addShoppingItem,
@@ -154,5 +190,6 @@ export const mutators = defineHomeHubMutators({
   recipes: {
     create: createRecipe,
     addIngredient: addRecipeIngredient,
+    addCookLog: addRecipeCookLog,
   },
 });

@@ -10,6 +10,7 @@ const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const itemId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const recipeId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 const ingredientId = "5944cb0d-931a-4723-b981-77eacb122314";
+const cookLogId = "e467b00a-5f80-4c13-aa5b-d2e59996dd82";
 const optimisticUpdatedAt = 1_786_000_000_000;
 
 const setStatusArgs = {
@@ -46,6 +47,15 @@ const addRecipeIngredientArgs = {
   optimisticTimestamp: optimisticUpdatedAt,
 };
 
+const addRecipeCookLogArgs = {
+  cookLogId,
+  householdId,
+  recipeId,
+  cookedAt: 1_785_999_000_000,
+  comment: "Made it less spicy.",
+  optimisticTimestamp: optimisticUpdatedAt,
+};
+
 const ctx: ZeroAuthContext = { userId };
 
 afterEach(() => {
@@ -69,11 +79,13 @@ function createFakeTransaction({
   const update = vi.fn(async () => undefined);
   const recipeInsert = vi.fn(async () => undefined);
   const ingredientInsert = vi.fn(async () => undefined);
+  const cookLogInsert = vi.fn(async () => undefined);
 
   const transaction = {
     clientID: "client-id",
     location,
     mutate: {
+      recipeCookLogs: { insert: cookLogInsert },
       recipeIngredients: { insert: ingredientInsert },
       recipes: { insert: recipeInsert },
       shoppingItems: { insert, update },
@@ -84,6 +96,7 @@ function createFakeTransaction({
   } as unknown as Transaction<Schema>;
 
   return {
+    cookLogInsert,
     ingredientInsert,
     insert,
     queries,
@@ -432,6 +445,98 @@ describe("recipes.addIngredient mutator", () => {
       unit: "cups",
       note: "Add after blending.",
       position: 0,
+      createdAt: authoritativeTimestamp,
+      updatedAt: authoritativeTimestamp,
+    });
+  });
+});
+
+describe("recipes.addCookLog mutator", () => {
+  it("is registered with a stable name", () => {
+    expect(mutators.recipes.addCookLog.mutatorName).toBe("recipes.addCookLog");
+  });
+
+  it("optimistically records cooking for a cached household recipe", async () => {
+    const { cookLogInsert, queries, transaction } = createFakeTransaction({
+      location: "client",
+      results: [{ id: recipeId, householdId }],
+    });
+
+    await mutators.recipes.addCookLog.fn({
+      args: addRecipeCookLogArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(queries).toHaveLength(1);
+    expect(cookLogInsert).toHaveBeenCalledWith({
+      id: cookLogId,
+      householdId,
+      recipeId,
+      cookedAt: addRecipeCookLogArgs.cookedAt,
+      comment: "Made it less spicy.",
+      createdAt: optimisticUpdatedAt,
+      updatedAt: optimisticUpdatedAt,
+    });
+  });
+
+  it("rejects a server mutation before looking up the recipe when membership is missing", async () => {
+    const { cookLogInsert, queries, transaction } = createFakeTransaction({
+      location: "server",
+      results: [undefined],
+    });
+
+    await expect(
+      mutators.recipes.addCookLog.fn({
+        args: addRecipeCookLogArgs,
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Household mutation not allowed");
+
+    expect(queries).toHaveLength(1);
+    expect(cookLogInsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a recipe outside the supplied household", async () => {
+    const { cookLogInsert, queries, transaction } = createFakeTransaction({
+      location: "server",
+      results: [{ id: "membership-id" }, undefined],
+    });
+
+    await expect(
+      mutators.recipes.addCookLog.fn({
+        args: addRecipeCookLogArgs,
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Recipe cooking log addition not allowed");
+
+    expect(queries).toHaveLength(2);
+    expect(cookLogInsert).not.toHaveBeenCalled();
+  });
+
+  it("uses server metadata time without replacing when cooking happened", async () => {
+    const authoritativeTimestamp = 1_786_000_001_000;
+    vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
+    const { cookLogInsert, queries, transaction } = createFakeTransaction({
+      location: "server",
+      results: [{ id: "membership-id" }, { id: recipeId, householdId }],
+    });
+
+    await mutators.recipes.addCookLog.fn({
+      args: addRecipeCookLogArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(queries).toHaveLength(2);
+    expect(cookLogInsert).toHaveBeenCalledWith({
+      id: cookLogId,
+      householdId,
+      recipeId,
+      cookedAt: addRecipeCookLogArgs.cookedAt,
+      comment: "Made it less spicy.",
       createdAt: authoritativeTimestamp,
       updatedAt: authoritativeTimestamp,
     });
