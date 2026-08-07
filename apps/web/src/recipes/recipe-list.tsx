@@ -1,15 +1,23 @@
 import { queries } from "@home-hub/shared/zero/queries";
 import { useQuery } from "@rocicorp/zero/react";
+import { useState } from "react";
 import { CreateRecipeForm } from "./create-recipe-form";
+import { RecipeDetail } from "./recipe-detail";
 
 type RecipeListProps = {
   householdId: string;
 };
 
 export function RecipeList({ householdId }: RecipeListProps) {
+  const [selection, setSelection] = useState<{
+    householdId: string;
+    recipeId: string;
+  }>();
   const [recipes, result] = useQuery(
     queries.recipes.byHousehold({ householdId }),
   );
+  const selectedRecipeId =
+    selection?.householdId === householdId ? selection.recipeId : undefined;
 
   if (result.type === "unknown") {
     return <p>Loading recipe list…</p>;
@@ -27,10 +35,26 @@ export function RecipeList({ householdId }: RecipeListProps) {
       ) : (
         <ul>
           {recipes.map((recipe) => {
-            return <li key={recipe.id}>{recipe.title}</li>;
+            return (
+              <li key={recipe.id}>
+                <button
+                  type="button"
+                  aria-pressed={selectedRecipeId === recipe.id}
+                  onClick={() =>
+                    setSelection({ householdId, recipeId: recipe.id })
+                  }
+                >
+                  {recipe.title}
+                </button>
+              </li>
+            );
           })}
         </ul>
       )}
+
+      {selectedRecipeId ? (
+        <RecipeDetail householdId={householdId} recipeId={selectedRecipeId} />
+      ) : null}
     </>
   );
 }
