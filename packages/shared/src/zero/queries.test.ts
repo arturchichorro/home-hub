@@ -42,6 +42,50 @@ function membershipCondition() {
   };
 }
 
+function directMembershipCondition() {
+  return {
+    type: "correlatedSubquery",
+    op: "EXISTS",
+    related: {
+      subquery: {
+        table: "householdMembers",
+        where: equalsCondition("userId", userId),
+      },
+    },
+  };
+}
+
+describe("household queries", () => {
+  it("registers a stable name", () => {
+    expect(queries.households.mine.queryName).toBe("households.mine");
+  });
+
+  it("returns authorized households and only the current user's membership", () => {
+    const query = queries.households.mine.fn({
+      args: {},
+      ctx: { userId },
+    });
+
+    expect(getAst(query)).toMatchObject({
+      table: "households",
+      orderBy: [
+        ["name", "asc"],
+        ["id", "asc"],
+      ],
+      where: directMembershipCondition(),
+      related: [
+        {
+          subquery: {
+            alias: "members",
+            table: "householdMembers",
+            where: equalsCondition("userId", userId),
+          },
+        },
+      ],
+    });
+  });
+});
+
 describe("recipe queries", () => {
   it("registers stable names", () => {
     expect(queries.recipes.byHousehold.queryName).toBe("recipes.byHousehold");

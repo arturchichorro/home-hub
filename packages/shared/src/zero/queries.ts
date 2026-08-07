@@ -19,6 +19,14 @@ const recipeDetailArgsSchema = z
   })
   .strict();
 
+const myHouseholds = defineHomeHubQuery(z.object({}).strict(), ({ ctx }) =>
+  zql.households
+    .whereExists("members", (member) => member.where("userId", ctx.userId))
+    .related("members", (member) => member.where("userId", ctx.userId))
+    .orderBy("name", "asc")
+    .orderBy("id", "asc"),
+);
+
 const shoppingItemsByHousehold = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
@@ -67,6 +75,9 @@ const recipeDetail = defineHomeHubQuery(
 );
 
 export const queries = defineHomeHubQueries({
+  households: {
+    mine: myHouseholds,
+  },
   shopping: {
     byHousehold: shoppingItemsByHousehold,
   },
