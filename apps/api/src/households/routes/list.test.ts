@@ -27,6 +27,8 @@ function createTestRoutes(
     createHousehold: async () => ({ kind: "unauthorized" }),
     createHouseholdInvite: async () => ({ kind: "forbidden" }),
     listHouseholds,
+    listHouseholdInvites: async () => ({ kind: "forbidden" }),
+    listHouseholdMembers: async () => ({ kind: "forbidden" }),
     renameHousehold: async () => ({ kind: "forbidden" }),
     jwtSecret,
   });
