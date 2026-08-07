@@ -1,6 +1,8 @@
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
-import { useConnectionState, useQuery, useZero } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import { AddShoppingItemForm } from "./add-shopping-item-form";
 
 type ShoppingListProps = {
   householdId: string;
@@ -8,11 +10,7 @@ type ShoppingListProps = {
 
 export function ShoppingList({ householdId }: ShoppingListProps) {
   const zero = useZero();
-  const connectionState = useConnectionState();
-
-  const canWrite =
-    connectionState.name === "connected" ||
-    connectionState.name === "connecting";
+  const mutationEnabled = useZeroMutationEnabled();
 
   const [items, result] = useQuery(
     queries.shopping.byHousehold({ householdId }),
@@ -26,37 +24,41 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
     return <p role="alert">Unable to load the shopping list.</p>;
   }
 
-  if (items.length === 0) {
-    return <p>The shopping list is empty.</p>;
-  }
-
   return (
-    <ul>
-      {items.map((item) => {
-        const nextStatus = item.status === "active" ? "crossed" : "active";
+    <>
+      <AddShoppingItemForm householdId={householdId} />
 
-        return (
-          <li key={item.id}>
-            {item.name} — {item.status}{" "}
-            <button
-              type="button"
-              disabled={!canWrite}
-              onClick={() => {
-                zero.mutate(
-                  mutators.shopping.setStatus({
-                    householdId,
-                    itemId: item.id,
-                    status: nextStatus,
-                    optimisticUpdatedAt: Date.now(),
-                  }),
-                );
-              }}
-            >
-              {nextStatus === "crossed" ? "Cross" : "Reactivate"}
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+      {items.length === 0 ? (
+        <p>The shopping list is empty.</p>
+      ) : (
+        <ul>
+          {items.map((item) => {
+            const nextStatus = item.status === "active" ? "crossed" : "active";
+
+            return (
+              <li key={item.id}>
+                {item.name} — {item.status}{" "}
+                <button
+                  type="button"
+                  disabled={!mutationEnabled}
+                  onClick={() => {
+                    zero.mutate(
+                      mutators.shopping.setStatus({
+                        householdId,
+                        itemId: item.id,
+                        status: nextStatus,
+                        optimisticUpdatedAt: Date.now(),
+                      }),
+                    );
+                  }}
+                >
+                  {nextStatus === "crossed" ? "Cross" : "Reactivate"}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </>
   );
 }
