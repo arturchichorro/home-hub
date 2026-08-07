@@ -1,5 +1,6 @@
 import { queries } from "@home-hub/shared/zero/queries";
 import { useQuery } from "@rocicorp/zero/react";
+import { AddRecipeIngredientForm } from "./add-recipe-ingredient-form";
 
 type RecipeDetailProps = {
   householdId: string;
@@ -28,12 +29,24 @@ export function RecipeDetail({ householdId, recipeId }: RecipeDetailProps) {
     return <p role="alert">Recipe not found.</p>;
   }
 
+  const nextIngredientPosition =
+    recipe.ingredients.reduce(
+      (highestPosition, ingredient) =>
+        Math.max(highestPosition, ingredient.position),
+      -1,
+    ) + 1;
+
   return (
     <article>
       <h3>{recipe.title}</h3>
       {recipe.description ? <p>{recipe.description}</p> : null}
 
       <h4>Ingredients</h4>
+      <AddRecipeIngredientForm
+        householdId={householdId}
+        recipeId={recipeId}
+        position={nextIngredientPosition}
+      />
       {recipe.ingredients.length === 0 ? (
         <p>There are no ingredients yet.</p>
       ) : (
