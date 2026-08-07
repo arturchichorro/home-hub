@@ -297,7 +297,7 @@ describe("Zero routes", () => {
           id: { clientID: "test-client", id: 1 },
           result: {
             error: "app",
-            message: "Shopping item status change not allowed",
+            message: "Household mutation not allowed",
           },
         },
       ],
