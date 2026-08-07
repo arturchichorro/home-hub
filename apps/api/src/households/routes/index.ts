@@ -14,11 +14,16 @@ import {
   type CreateListHouseholdsRouteInput,
   createListHouseholdsRoute,
 } from "./list";
+import {
+  createRenameHouseholdRoute,
+  type RenameHouseholdRouteInput,
+} from "./rename";
 
 export type CreateHouseholdRoutesInput = AcceptHouseholdInviteRouteInput &
   CreateHouseholdRouteInput &
   CreateHouseholdInviteRouteInput &
-  CreateListHouseholdsRouteInput & {
+  CreateListHouseholdsRouteInput &
+  RenameHouseholdRouteInput & {
     jwtSecret: string;
   };
 
@@ -44,6 +49,11 @@ export function createHouseholdRoutes(input: CreateHouseholdRoutesInput) {
     "/invites/accept",
     createBearerAuth(input.jwtSecret),
     createAcceptHouseholdInviteRoute(input),
+  );
+  householdRoutes.patch(
+    "/:householdId",
+    createBearerAuth(input.jwtSecret),
+    createRenameHouseholdRoute(input),
   );
 
   return householdRoutes;

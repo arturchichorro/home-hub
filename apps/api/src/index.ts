@@ -12,6 +12,7 @@ import { createAcceptHouseholdInviteService } from "./households/accept-invite";
 import { createHouseholdService } from "./households/create";
 import { createHouseholdInviteService } from "./households/create-invite";
 import { createListHouseholdsService } from "./households/list";
+import { createRenameHouseholdService } from "./households/rename";
 import { createAddShoppingItemService } from "./shopping/add";
 import { createSetShoppingItemStatusService } from "./shopping/set-status";
 import { createZeroDbProvider } from "./zero/db-provider";
@@ -41,6 +42,7 @@ const acceptHouseholdInvite = createAcceptHouseholdInviteService({ db });
 const createHousehold = createHouseholdService({ db });
 const createHouseholdInvite = createHouseholdInviteService({ db });
 const listHouseholds = createListHouseholdsService({ db });
+const renameHousehold = createRenameHouseholdService({ db });
 const addShoppingItem = createAddShoppingItemService({ db });
 const setShoppingItemStatus = createSetShoppingItemStatusService({ db });
 
@@ -56,6 +58,7 @@ const app = createApp({
   createHousehold,
   createHouseholdInvite,
   listHouseholds,
+  renameHousehold,
   dbProvider,
   jwtSecret: config.API_JWT_SECRET,
   isProduction: config.NODE_ENV === "production",
