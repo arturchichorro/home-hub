@@ -1,5 +1,5 @@
 import { type SubmitEvent, useState } from "react";
-
+import { RecipeList } from "./recipes/recipe-list";
 import { ShoppingList } from "./shopping/shopping-list";
 import { ZeroConnectionStatus } from "./zero/connection-status";
 
@@ -25,10 +25,21 @@ function App() {
           value={householdIdInput}
           onChange={(event) => setHouseholdIdInput(event.target.value)}
         />
-        <button type="submit">Open shopping list</button>
+        <button type="submit">Open household</button>
       </form>
 
-      {householdId ? <ShoppingList householdId={householdId} /> : null}
+      {householdId && (
+        <>
+          <section>
+            <h2>Shopping List</h2>
+            <ShoppingList householdId={householdId} />
+          </section>
+          <section>
+            <h2>Recipes</h2>
+            <RecipeList householdId={householdId} />
+          </section>
+        </>
+      )}
     </main>
   );
 }
