@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   acceptHouseholdInviteRequestSchema,
   createHouseholdRequestSchema,
+  listHouseholdInvitesResponseSchema,
+  listHouseholdMembersResponseSchema,
   renameHouseholdRequestSchema,
 } from "./households";
 
@@ -43,5 +45,78 @@ describe("accept household invite request", () => {
     expect(acceptHouseholdInviteRequestSchema.safeParse(request).success).toBe(
       false,
     );
+  });
+});
+
+const member = {
+  id: "7dbb2304-955a-4d0b-9878-d39a42a38eb2",
+  username: "artur",
+  role: "owner" as const,
+  joinedAt: "2026-08-01T12:00:00.000Z",
+};
+
+describe("list household members response", () => {
+  it("accepts a safe member roster", () => {
+    expect(
+      listHouseholdMembersResponseSchema.parse({ members: [member] }),
+    ).toEqual({ members: [member] });
+  });
+
+  it.each([
+    { ...member, id: "not-a-uuid" },
+    { ...member, role: "admin" },
+    { ...member, joinedAt: "not-a-date" },
+    { ...member, email: "artur@example.com" },
+  ])("rejects an invalid or unsafe member: %o", (invalidMember) => {
+    expect(
+      listHouseholdMembersResponseSchema.safeParse({
+        members: [invalidMember],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects extra top-level fields", () => {
+    expect(
+      listHouseholdMembersResponseSchema.safeParse({
+        members: [member],
+        householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+const invite = {
+  id: "e467b00a-5f80-4c13-aa5b-d2e59996dd82",
+  createdAt: "2026-08-01T12:00:00.000Z",
+  expiresAt: "2026-08-08T12:00:00.000Z",
+};
+
+describe("list household invites response", () => {
+  it("accepts safe pending-invite metadata", () => {
+    expect(
+      listHouseholdInvitesResponseSchema.parse({ invites: [invite] }),
+    ).toEqual({ invites: [invite] });
+  });
+
+  it.each([
+    { ...invite, id: "not-a-uuid" },
+    { ...invite, createdAt: "not-a-date" },
+    { ...invite, expiresAt: "not-a-date" },
+    { ...invite, tokenHash: "secret" },
+  ])("rejects invalid or unsafe invite metadata: %o", (invalidInvite) => {
+    expect(
+      listHouseholdInvitesResponseSchema.safeParse({
+        invites: [invalidInvite],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects extra top-level fields", () => {
+    expect(
+      listHouseholdInvitesResponseSchema.safeParse({
+        invites: [invite],
+        token: "raw-token",
+      }).success,
+    ).toBe(false);
   });
 });
