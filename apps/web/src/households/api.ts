@@ -1,4 +1,25 @@
-import { renameHouseholdRequestSchema } from "@home-hub/shared/households";
+import {
+  type ListHouseholdInvitesResponse,
+  type ListHouseholdMembersResponse,
+  listHouseholdInvitesResponseSchema,
+  listHouseholdMembersResponseSchema,
+  renameHouseholdRequestSchema,
+} from "@home-hub/shared/households";
+
+export type HouseholdReadCommandInput = {
+  accessToken: string;
+  householdId: string;
+};
+
+export type ListHouseholdMembersCommandResult =
+  | { kind: "success"; members: ListHouseholdMembersResponse["members"] }
+  | { kind: "unauthorized" }
+  | { kind: "forbidden" };
+
+export type ListHouseholdInvitesCommandResult =
+  | { kind: "success"; invites: ListHouseholdInvitesResponse["invites"] }
+  | { kind: "unauthorized" }
+  | { kind: "forbidden" };
 
 export type RenameHouseholdCommandInput = {
   accessToken: string;
@@ -42,4 +63,68 @@ export async function renameHousehold({
   }
 
   return { kind: "success" };
+}
+
+export async function listHouseholdMembers({
+  accessToken,
+  householdId,
+}: HouseholdReadCommandInput): Promise<ListHouseholdMembersCommandResult> {
+  const response = await fetch(
+    `/households/${encodeURIComponent(householdId)}/members`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to list household members");
+  }
+
+  const { members } = listHouseholdMembersResponseSchema.parse(
+    await response.json(),
+  );
+
+  return { kind: "success", members };
+}
+
+export async function listHouseholdInvites({
+  accessToken,
+  householdId,
+}: HouseholdReadCommandInput): Promise<ListHouseholdInvitesCommandResult> {
+  const response = await fetch(
+    `/households/${encodeURIComponent(householdId)}/invites`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to list household invites");
+  }
+
+  const { invites } = listHouseholdInvitesResponseSchema.parse(
+    await response.json(),
+  );
+
+  return { kind: "success", invites };
 }
