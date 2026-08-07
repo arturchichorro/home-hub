@@ -9,6 +9,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -193,7 +194,7 @@ export const recipes = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex("recipes_household_id_id_idx").on(table.householdId, table.id),
+    unique("recipes_household_id_id_idx").on(table.householdId, table.id),
   ],
 );
 
