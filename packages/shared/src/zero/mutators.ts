@@ -1,6 +1,9 @@
 import { defineMutatorsWithType, defineMutatorWithType } from "@rocicorp/zero";
 import { normalizeShoppingItemName } from "../normalization";
-import { createRecipeMutationSchema } from "../recipes";
+import {
+  createRecipeIngredientMutationSchema,
+  createRecipeMutationSchema,
+} from "../recipes";
 import {
   addShoppingItemMutationSchema,
   setShoppingItemStatusMutationSchema,
@@ -105,6 +108,44 @@ const createRecipe = defineHomeHubMutator(
   },
 );
 
+const addRecipeIngredient = defineHomeHubMutator(
+  createRecipeIngredientMutationSchema,
+  async ({ args, ctx, tx }) => {
+    await requireServerHouseholdMembership({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+    });
+
+    const recipe = await tx.run(
+      zql.recipes
+        .where("id", args.recipeId)
+        .where("householdId", args.householdId)
+        .one(),
+    );
+
+    if (!recipe) {
+      throw new Error("Recipe ingredient addition not allowed");
+    }
+
+    const timestamp =
+      tx.location === "server" ? Date.now() : args.optimisticTimestamp;
+
+    await tx.mutate.recipeIngredients.insert({
+      id: args.ingredientId,
+      householdId: args.householdId,
+      recipeId: args.recipeId,
+      name: args.name,
+      quantity: args.quantity,
+      unit: args.unit,
+      note: args.note,
+      position: args.position,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+  },
+);
+
 export const mutators = defineHomeHubMutators({
   shopping: {
     add: addShoppingItem,
@@ -112,5 +153,6 @@ export const mutators = defineHomeHubMutators({
   },
   recipes: {
     create: createRecipe,
+    addIngredient: addRecipeIngredient,
   },
 });
