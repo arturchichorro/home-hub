@@ -1,5 +1,6 @@
 import { queries } from "@home-hub/shared/zero/queries";
 import { useQuery } from "@rocicorp/zero/react";
+import { AddRecipeCookLogForm } from "./add-recipe-cook-log-form";
 import { AddRecipeIngredientForm } from "./add-recipe-ingredient-form";
 
 type RecipeDetailProps = {
@@ -63,6 +64,7 @@ export function RecipeDetail({ householdId, recipeId }: RecipeDetailProps) {
       )}
 
       <h4>Cooking history</h4>
+      <AddRecipeCookLogForm householdId={householdId} recipeId={recipeId} />
       {recipe.cookLogs.length === 0 ? (
         <p>This recipe has not been cooked yet.</p>
       ) : (
