@@ -25,7 +25,7 @@ function App({ accessToken, onSessionExpired }: AppProps) {
       {householdId && (
         <>
           <section>
-            <h2>Household settings</h2>
+            <h2>Household management</h2>
             <HouseholdSettings
               accessToken={accessToken}
               householdId={householdId}

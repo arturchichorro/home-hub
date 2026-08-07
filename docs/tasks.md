@@ -118,7 +118,7 @@ teaches us something new.
 - [x] Define rules for renaming, ownership transfer, member removal, and leaving
 - [x] Add a household switcher with an explicit current-household route or state
 - [x] Build owner-only household settings and rename operations
-- [ ] List members and pending invitations without exposing private account fields
+- [x] List members and pending invitations without exposing private account fields
 - [ ] Implement invitation revocation, member removal, and member-initiated leaving
 - [ ] Implement transactional ownership transfer without allowing an ownerless household
 - [ ] Test role changes, last-owner protection, cross-household isolation, and active-household fallback

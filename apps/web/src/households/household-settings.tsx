@@ -1,5 +1,7 @@
 import { queries } from "@home-hub/shared/zero/queries";
 import { useQuery } from "@rocicorp/zero/react";
+import { HouseholdMemberList } from "./household-member-list";
+import { PendingInviteList } from "./pending-invite-list";
 import { RenameHouseholdForm } from "./rename-household-form";
 
 type HouseholdSettingsProps = {
@@ -33,17 +35,34 @@ export function HouseholdSettings({
 
   const membership = household.members[0];
 
-  if (membership?.role !== "owner") {
-    return <p>Only the household owner can change these settings.</p>;
-  }
-
   return (
-    <RenameHouseholdForm
-      key={household.id}
-      accessToken={accessToken}
-      householdId={household.id}
-      currentName={household.name}
-      onSessionExpired={onSessionExpired}
-    />
+    <>
+      <h3>Members</h3>
+      <HouseholdMemberList
+        accessToken={accessToken}
+        householdId={household.id}
+        onSessionExpired={onSessionExpired}
+      />
+
+      {membership?.role === "owner" ? (
+        <>
+          <h3>Owner settings</h3>
+          <RenameHouseholdForm
+            key={household.id}
+            accessToken={accessToken}
+            householdId={household.id}
+            currentName={household.name}
+            onSessionExpired={onSessionExpired}
+          />
+
+          <h3>Pending invitations</h3>
+          <PendingInviteList
+            accessToken={accessToken}
+            householdId={household.id}
+            onSessionExpired={onSessionExpired}
+          />
+        </>
+      ) : null}
+    </>
   );
 }
