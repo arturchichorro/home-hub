@@ -47,6 +47,14 @@ responses never expose token hashes or previously returned raw invite tokens.
 If the selected household becomes unavailable, the client returns to the
 household chooser rather than silently switching context.
 
+Every household member may view their household's member roster. Only the
+owner may list pending invitations. A pending invitation is unaccepted,
+unrevoked, and unexpired; its response contains only its ID, creation time, and
+expiry time. Because the raw bearer token is returned once and never stored,
+the application cannot redisplay an invitation link later. Member rosters and
+pending invitations use separate HTTP endpoints so their authorization rules
+remain explicit.
+
 Shopping and Recipes are the initial built-in modules. French Vocabulary is
 deferred until after deployment, and future ideas such as household finance can
 follow the same boundary. Modules remain mostly encapsulated, and cross-module

@@ -102,6 +102,13 @@ do not expose email addresses. Pending-invitation listings omit token hashes
 and raw tokens. Revocation returns the same generic result for records that
 must not be disclosed.
 
+Any current household member may list the roster. Only the current owner may
+list pending invitations, which are restricted to unaccepted, unrevoked, and
+unexpired rows and expose only invitation ID, creation time, and expiry time.
+Use separate member and invitation endpoints rather than broadening the roster
+endpoint to owner-only management data. The API cannot reconstruct or
+redisplay a raw invitation token because only its hash was persisted.
+
 Module availability is mutable authorization state and does not belong in the
 JWT. A module-owned server operation must verify both current membership and an
 enabled `household_module_settings` row. Missing settings fail closed. These
