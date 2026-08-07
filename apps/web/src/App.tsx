@@ -1,10 +1,16 @@
 import { useState } from "react";
+import { HouseholdSettings } from "./households/household-settings";
 import { HouseholdSwitcher } from "./households/household-switcher";
 import { RecipeList } from "./recipes/recipe-list";
 import { ShoppingList } from "./shopping/shopping-list";
 import { ZeroConnectionStatus } from "./zero/connection-status";
 
-function App() {
+type AppProps = {
+  accessToken: string;
+  onSessionExpired: () => void;
+};
+
+function App({ accessToken, onSessionExpired }: AppProps) {
   const [householdId, setHouseholdId] = useState<string>();
 
   return (
@@ -18,6 +24,14 @@ function App() {
 
       {householdId && (
         <>
+          <section>
+            <h2>Household settings</h2>
+            <HouseholdSettings
+              accessToken={accessToken}
+              householdId={householdId}
+              onSessionExpired={onSessionExpired}
+            />
+          </section>
           <section>
             <h2>Shopping List</h2>
             <ShoppingList householdId={householdId} />
