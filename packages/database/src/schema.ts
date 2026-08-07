@@ -1,7 +1,10 @@
 import { relations, sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
+  check,
+  foreignKey,
   index,
+  integer,
   pgEnum,
   pgTable,
   text,
@@ -171,3 +174,60 @@ export const shoppingItemsRelations = relations(shoppingItems, ({ one }) => ({
     references: [households.id],
   }),
 }));
+
+export const recipes = pgTable(
+  "recipes",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    title: text("title").notNull(),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("recipes_id_household_id_idx").on(table.id, table.householdId),
+  ],
+);
+
+export const recipeIngredients = pgTable("recipe_ingredients", {
+  id: uuid("id").primaryKey(),
+  householdId: uuid("household_id")
+    .notNull()
+    .references(() => households.id),
+  recipeId: uuid("recipe_id")
+    .notNull()
+    .references(() => recipes.id),
+  name: text("name").notNull(),
+  quantity: text("quantity"),
+  unit: text("unit"),
+  note: text("note"),
+  position: integer("position").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const recipeCookLogs = pgTable("recipe_cook_logs", {
+  id: uuid("id").primaryKey(),
+  householdId: uuid("household_id")
+    .notNull()
+    .references(() => households.id),
+  recipeId: uuid("recipe_id")
+    .notNull()
+    .references(() => recipes.id),
+  cookedAt: timestamp("cooked_at"),
+  comment: text("comment"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
