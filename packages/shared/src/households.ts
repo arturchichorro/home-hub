@@ -1,8 +1,10 @@
 import * as z from "zod";
 
+const householdNameSchema = z.string().trim().min(1).max(100);
+
 export const createHouseholdRequestSchema = z
   .object({
-    name: z.string().trim().min(1).max(100),
+    name: householdNameSchema,
   })
   .strict();
 
@@ -18,4 +20,14 @@ export const acceptHouseholdInviteRequestSchema = z
 
 export type AcceptHouseholdInviteRequest = z.infer<
   typeof acceptHouseholdInviteRequestSchema
+>;
+
+export const renameHouseholdRequestSchema = z
+  .object({
+    name: householdNameSchema,
+  })
+  .strict();
+
+export type RenameHouseholdRequest = z.infer<
+  typeof renameHouseholdRequestSchema
 >;

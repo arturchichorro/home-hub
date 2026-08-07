@@ -3,15 +3,15 @@ import { describe, expect, it } from "vitest";
 import {
   acceptHouseholdInviteRequestSchema,
   createHouseholdRequestSchema,
+  renameHouseholdRequestSchema,
 } from "./households";
 
-describe("create household request", () => {
+describe.each([
+  ["create household", createHouseholdRequestSchema],
+  ["rename household", renameHouseholdRequestSchema],
+] as const)("%s request", (_operation, schema) => {
   it("trims a valid household name", () => {
-    expect(
-      createHouseholdRequestSchema.parse({
-        name: "  Home  ",
-      }),
-    ).toEqual({ name: "Home" });
+    expect(schema.parse({ name: "  Home  " })).toEqual({ name: "Home" });
   });
 
   it.each([
@@ -20,7 +20,7 @@ describe("create household request", () => {
     { name: "a".repeat(101) },
     { name: "Home", unexpected: true },
   ])("rejects an invalid request: %o", (request) => {
-    expect(createHouseholdRequestSchema.safeParse(request).success).toBe(false);
+    expect(schema.safeParse(request).success).toBe(false);
   });
 });
 
