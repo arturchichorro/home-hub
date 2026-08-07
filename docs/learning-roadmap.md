@@ -85,9 +85,7 @@ Turn the existing household and invitation foundations into a complete
 household-management experience before styling abstractions are introduced.
 Add an explicit current-household selection, owner settings, household rename,
 member and pending-invitation views, invitation revocation, member removal,
-member-initiated leaving, and transactional ownership transfer. Define and
-implement a deliberate deletion or archival policy rather than leaving the
-last-owner and retained-data behavior implicit.
+member-initiated leaving, and transactional ownership transfer. 
 
 Keep ownership, membership, invitations, and destructive household operations
 as connected API commands. Return only the safe member profile fields needed by

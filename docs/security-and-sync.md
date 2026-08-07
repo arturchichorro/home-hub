@@ -87,14 +87,20 @@ enrollment gate.
 Household selection is client navigation state, but every selected household
 must still be authorized independently. Member rosters, pending invites,
 renaming, invitation revocation, member removal, leaving, ownership transfer,
-module toggles, and deletion or archival are connected API operations. Return
-only the safe account fields required by the member-management interface.
+and module toggles are connected API operations. Return only the safe account
+fields required by the member-management interface.
 
 Only the owner may rename the household, revoke invitations, remove another
-member, transfer ownership, change module settings, or perform the chosen
-destructive household operation. A member may leave. Lock the affected
-membership rows during ownership transfer or removal so no race can produce
-zero or multiple owners.
+member, transfer ownership, or change module settings. A member may leave. The
+owner may not leave or remove themselves while still owner. Ownership transfer
+may target only an existing member of the same household; lock the current and
+target membership rows, demote the current owner, and promote the target in one
+transaction so its committed state has exactly one owner.
+
+Member rosters return only membership ID, username, role, and join time; they
+do not expose email addresses. Pending-invitation listings omit token hashes
+and raw tokens. Revocation returns the same generic result for records that
+must not be disclosed.
 
 Module availability is mutable authorization state and does not belong in the
 JWT. A module-owned server operation must verify both current membership and an

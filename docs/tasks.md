@@ -115,13 +115,12 @@ teaches us something new.
 
 ## Phase 12: household lifecycle and management
 
-- [ ] Define rules for renaming, ownership transfer, member removal, leaving, and household deletion or archival
+- [x] Define rules for renaming, ownership transfer, member removal, and leaving
 - [ ] Add a household switcher with an explicit current-household route or state
 - [ ] Build owner-only household settings and rename operations
 - [ ] List members and pending invitations without exposing private account fields
 - [ ] Implement invitation revocation, member removal, and member-initiated leaving
 - [ ] Implement transactional ownership transfer without allowing an ownerless household
-- [ ] Implement the documented household deletion or archival policy with explicit confirmation
 - [ ] Test role changes, last-owner protection, cross-household isolation, and active-household fallback
 - [ ] Complete the Phase 12 checkpoint and commit
 

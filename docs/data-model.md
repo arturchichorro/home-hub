@@ -76,6 +76,11 @@ unique index on `household_id` for rows whose role is `owner`; household
 creation and future ownership-transfer operations must transactionally ensure
 that an owner always exists.
 
+Ownership may transfer only to another membership in the same household. The
+transaction demotes the current owner and promotes the target member before it
+commits. Members may leave and the owner may remove members, but the current
+owner membership cannot be removed directly.
+
 ### `household_invites`
 
 - `id`

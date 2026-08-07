@@ -32,6 +32,21 @@ Each household has exactly one owner. `household_members` has its own stable
 primary key and separately enforces uniqueness on `(household_id, user_id)`.
 The initial roles are only `owner` and `member`.
 
+## Household lifecycle
+
+Only the owner may rename a household, revoke its invitations, remove another
+member, or transfer ownership. A member may leave voluntarily. The current
+owner may neither leave nor remove themselves until ownership has been
+transferred to an existing member. Ownership transfer changes the old owner to
+`member` and the selected member to `owner` in one transaction, whose committed
+state must contain exactly one owner.
+
+Member-management responses expose only the membership ID, username, role,
+and join time. They do not expose member email addresses. Pending-invitation
+responses never expose token hashes or previously returned raw invite tokens.
+If the selected household becomes unavailable, the client returns to the
+household chooser rather than silently switching context.
+
 Shopping and Recipes are the initial built-in modules. French Vocabulary is
 deferred until after deployment, and future ideas such as household finance can
 follow the same boundary. Modules remain mostly encapsulated, and cross-module
