@@ -1,10 +1,28 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  cleanRecipeDescription,
+  cleanRecipeTitle,
   cleanShoppingItemName,
   normalizeShoppingItemName,
   normalizeUsername,
 } from "./normalization";
+
+describe("recipe text cleaning", () => {
+  it("cleans a recipe title as a casing-preserving single line", () => {
+    expect(cleanRecipeTitle("  Ｔｏｍａｔｏ   Soup  ")).toBe("Tomato Soup");
+  });
+
+  it("trims a description while preserving internal whitespace and lines", () => {
+    expect(cleanRecipeDescription("  First line\n\n  Second line  ")).toBe(
+      "First line\n\n  Second line",
+    );
+  });
+
+  it("stores an empty description as null", () => {
+    expect(cleanRecipeDescription("  \n  ")).toBeNull();
+  });
+});
 
 describe("normalizeUsername", () => {
   it("trims leading and trailing whitespace", () => {
