@@ -12,6 +12,13 @@ const householdIdArgsSchema = z
   })
   .strict();
 
+const recipeDetailArgsSchema = z
+  .object({
+    householdId: z.uuid(),
+    recipeId: z.uuid(),
+  })
+  .strict();
+
 const shoppingItemsByHousehold = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
@@ -39,11 +46,32 @@ const recipesByHousehold = defineHomeHubQuery(
       .orderBy("id", "asc"),
 );
 
+const recipeDetail = defineHomeHubQuery(
+  recipeDetailArgsSchema,
+  ({ args, ctx }) =>
+    zql.recipes
+      .where("householdId", args.householdId)
+      .where("id", args.recipeId)
+      .whereExists("household", (household) =>
+        household.whereExists("members", (member) =>
+          member.where("userId", ctx.userId),
+        ),
+      )
+      .related("ingredients", (ingredient) =>
+        ingredient.orderBy("position", "asc").orderBy("id", "asc"),
+      )
+      .related("cookLogs", (cookLog) =>
+        cookLog.orderBy("cookedAt", "desc").orderBy("id", "desc"),
+      )
+      .one(),
+);
+
 export const queries = defineHomeHubQueries({
   shopping: {
     byHousehold: shoppingItemsByHousehold,
   },
   recipes: {
     byHousehold: recipesByHousehold,
+    detail: recipeDetail,
   },
 });
