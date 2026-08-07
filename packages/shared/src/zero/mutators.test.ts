@@ -8,6 +8,7 @@ import type { Schema } from "./schema.gen";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const itemId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+const recipeId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 const optimisticUpdatedAt = 1_786_000_000_000;
 
 const setStatusArgs = {
@@ -21,6 +22,14 @@ const addArgs = {
   householdId,
   itemId,
   name: "Whole Milk",
+  optimisticTimestamp: optimisticUpdatedAt,
+};
+
+const createRecipeArgs = {
+  recipeId,
+  householdId,
+  title: "Tomato Soup",
+  description: "A simple soup.",
   optimisticTimestamp: optimisticUpdatedAt,
 };
 
@@ -45,11 +54,13 @@ function createFakeTransaction({
   });
   const insert = vi.fn(async () => undefined);
   const update = vi.fn(async () => undefined);
+  const recipeInsert = vi.fn(async () => undefined);
 
   const transaction = {
     clientID: "client-id",
     location,
     mutate: {
+      recipes: { insert: recipeInsert },
       shoppingItems: { insert, update },
     },
     mutationID: 1,
@@ -57,7 +68,7 @@ function createFakeTransaction({
     run,
   } as unknown as Transaction<Schema>;
 
-  return { insert, queries, transaction, update };
+  return { insert, queries, recipeInsert, transaction, update };
 }
 
 describe("shopping.setStatus mutator", () => {
@@ -119,7 +130,7 @@ describe("shopping.setStatus mutator", () => {
         ctx,
         tx: transaction,
       }),
-    ).rejects.toThrow("Shopping item status change not allowed");
+    ).rejects.toThrow("Household mutation not allowed");
 
     expect(queries).toHaveLength(1);
     expect(update).not.toHaveBeenCalled();
@@ -203,7 +214,7 @@ describe("shopping.add mutator", () => {
 
     await expect(
       mutators.shopping.add.fn({ args: addArgs, ctx, tx: transaction }),
-    ).rejects.toThrow("Shopping item addition not allowed");
+    ).rejects.toThrow("Household mutation not allowed");
 
     expect(queries).toHaveLength(1);
     expect(insert).not.toHaveBeenCalled();
@@ -227,6 +238,78 @@ describe("shopping.add mutator", () => {
       name: "Whole Milk",
       normalizedName: "whole milk",
       status: "active",
+      createdAt: authoritativeTimestamp,
+      updatedAt: authoritativeTimestamp,
+    });
+  });
+});
+
+describe("recipes.create mutator", () => {
+  it("is registered with a stable name", () => {
+    expect(mutators.recipes.create.mutatorName).toBe("recipes.create");
+  });
+
+  it("optimistically inserts a recipe using the client timestamp", async () => {
+    const { queries, recipeInsert, transaction } = createFakeTransaction({
+      location: "client",
+      results: [],
+    });
+
+    await mutators.recipes.create.fn({
+      args: createRecipeArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(queries).toHaveLength(0);
+    expect(recipeInsert).toHaveBeenCalledWith({
+      id: recipeId,
+      householdId,
+      title: "Tomato Soup",
+      description: "A simple soup.",
+      createdAt: optimisticUpdatedAt,
+      updatedAt: optimisticUpdatedAt,
+    });
+  });
+
+  it("rejects a server mutation without household membership", async () => {
+    const { queries, recipeInsert, transaction } = createFakeTransaction({
+      location: "server",
+      results: [undefined],
+    });
+
+    await expect(
+      mutators.recipes.create.fn({
+        args: createRecipeArgs,
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Household mutation not allowed");
+
+    expect(queries).toHaveLength(1);
+    expect(recipeInsert).not.toHaveBeenCalled();
+  });
+
+  it("authorizes membership and uses the server timestamp", async () => {
+    const authoritativeTimestamp = 1_786_000_001_000;
+    vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
+    const { queries, recipeInsert, transaction } = createFakeTransaction({
+      location: "server",
+      results: [{ id: "membership-id" }],
+    });
+
+    await mutators.recipes.create.fn({
+      args: createRecipeArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(queries).toHaveLength(1);
+    expect(recipeInsert).toHaveBeenCalledWith({
+      id: recipeId,
+      householdId,
+      title: "Tomato Soup",
+      description: "A simple soup.",
       createdAt: authoritativeTimestamp,
       updatedAt: authoritativeTimestamp,
     });

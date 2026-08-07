@@ -1,10 +1,12 @@
 import { defineMutatorsWithType, defineMutatorWithType } from "@rocicorp/zero";
 import { normalizeShoppingItemName } from "../normalization";
+import { createRecipeMutationSchema } from "../recipes";
 import {
   addShoppingItemMutationSchema,
   setShoppingItemStatusMutationSchema,
 } from "../shopping";
 import type { ZeroAuthContext } from "./context";
+import { requireServerHouseholdMembership } from "./mutation-authorization";
 import { type Schema, zql } from "./schema.gen";
 
 const defineHomeHubMutator = defineMutatorWithType<Schema, ZeroAuthContext>();
@@ -13,18 +15,11 @@ const defineHomeHubMutators = defineMutatorsWithType<Schema>();
 const setShoppingItemStatus = defineHomeHubMutator(
   setShoppingItemStatusMutationSchema,
   async ({ args, ctx, tx }) => {
-    if (tx.location === "server") {
-      const membership = await tx.run(
-        zql.householdMembers
-          .where("householdId", args.householdId)
-          .where("userId", ctx.userId)
-          .one(),
-      );
-
-      if (!membership) {
-        throw new Error("Shopping item status change not allowed");
-      }
-    }
+    await requireServerHouseholdMembership({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+    });
 
     const item = await tx.run(
       zql.shoppingItems
@@ -49,18 +44,11 @@ const setShoppingItemStatus = defineHomeHubMutator(
 const addShoppingItem = defineHomeHubMutator(
   addShoppingItemMutationSchema,
   async ({ args, ctx, tx }) => {
-    if (tx.location === "server") {
-      const membership = await tx.run(
-        zql.householdMembers
-          .where("householdId", args.householdId)
-          .where("userId", ctx.userId)
-          .one(),
-      );
-
-      if (!membership) {
-        throw new Error("Shopping item addition not allowed");
-      }
-    }
+    await requireServerHouseholdMembership({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+    });
 
     const normalizedName = normalizeShoppingItemName(args.name);
 
@@ -94,9 +82,35 @@ const addShoppingItem = defineHomeHubMutator(
   },
 );
 
+const createRecipe = defineHomeHubMutator(
+  createRecipeMutationSchema,
+  async ({ args, ctx, tx }) => {
+    await requireServerHouseholdMembership({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+    });
+
+    const timestamp =
+      tx.location === "server" ? Date.now() : args.optimisticTimestamp;
+
+    await tx.mutate.recipes.insert({
+      id: args.recipeId,
+      householdId: args.householdId,
+      title: args.title,
+      description: args.description,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+  },
+);
+
 export const mutators = defineHomeHubMutators({
   shopping: {
     add: addShoppingItem,
     setStatus: setShoppingItemStatus,
+  },
+  recipes: {
+    create: createRecipe,
   },
 });
