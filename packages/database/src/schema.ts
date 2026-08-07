@@ -155,6 +155,7 @@ export const shoppingItems = pgTable(
 
 export const householdsRelations = relations(households, ({ many }) => ({
   members: many(householdMembers),
+  recipes: many(recipes),
   shoppingItems: many(shoppingItems),
 }));
 
@@ -192,42 +193,105 @@ export const recipes = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex("recipes_id_household_id_idx").on(table.id, table.householdId),
+    uniqueIndex("recipes_household_id_id_idx").on(table.householdId, table.id),
   ],
 );
 
-export const recipeIngredients = pgTable("recipe_ingredients", {
-  id: uuid("id").primaryKey(),
-  householdId: uuid("household_id")
-    .notNull()
-    .references(() => households.id),
-  recipeId: uuid("recipe_id")
-    .notNull()
-    .references(() => recipes.id),
-  name: text("name").notNull(),
-  quantity: text("quantity"),
-  unit: text("unit"),
-  note: text("note"),
-  position: integer("position").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const recipeIngredients = pgTable(
+  "recipe_ingredients",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id").notNull(),
+    recipeId: uuid("recipe_id").notNull(),
+    name: text("name").notNull(),
+    quantity: text("quantity"),
+    unit: text("unit"),
+    note: text("note"),
+    position: integer("position").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.householdId, table.recipeId],
+      foreignColumns: [recipes.householdId, recipes.id],
+      name: "recipe_ingredients_household_recipe_fk",
+    }),
+    check(
+      "recipe_ingredients_position_nonnegative",
+      sql`${table.position} >= 0`,
+    ),
+    index("recipe_ingredients_recipe_id_position_id_idx").on(
+      table.recipeId,
+      table.position,
+      table.id,
+    ),
+  ],
+);
 
-export const recipeCookLogs = pgTable("recipe_cook_logs", {
-  id: uuid("id").primaryKey(),
-  householdId: uuid("household_id")
-    .notNull()
-    .references(() => households.id),
-  recipeId: uuid("recipe_id")
-    .notNull()
-    .references(() => recipes.id),
-  cookedAt: timestamp("cooked_at"),
-  comment: text("comment"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const recipeCookLogs = pgTable(
+  "recipe_cook_logs",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id").notNull(),
+    recipeId: uuid("recipe_id").notNull(),
+    cookedAt: timestamp("cooked_at", { withTimezone: true }).notNull(),
+    comment: text("comment"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.householdId, table.recipeId],
+      foreignColumns: [recipes.householdId, recipes.id],
+      name: "recipe_cook_logs_household_recipe_fk",
+    }),
+    index("recipe_cook_logs_recipe_id_cooked_at_id_idx").on(
+      table.recipeId,
+      table.cookedAt,
+      table.id,
+    ),
+  ],
+);
+
+export const recipesRelations = relations(recipes, ({ many, one }) => ({
+  household: one(households, {
+    fields: [recipes.householdId],
+    references: [households.id],
+  }),
+  ingredients: many(recipeIngredients),
+  cookLogs: many(recipeCookLogs),
+}));
+
+export const recipeIngredientsRelations = relations(
+  recipeIngredients,
+  ({ one }) => ({
+    household: one(households, {
+      fields: [recipeIngredients.householdId],
+      references: [households.id],
+    }),
+    recipe: one(recipes, {
+      fields: [recipeIngredients.householdId, recipeIngredients.recipeId],
+      references: [recipes.householdId, recipes.id],
+    }),
+  }),
+);
+
+export const recipeCookLogsRelations = relations(recipeCookLogs, ({ one }) => ({
+  household: one(households, {
+    fields: [recipeCookLogs.householdId],
+    references: [households.id],
+  }),
+  recipe: one(recipes, {
+    fields: [recipeCookLogs.householdId, recipeCookLogs.recipeId],
+    references: [recipes.householdId, recipes.id],
+  }),
+}));
