@@ -1,5 +1,12 @@
 import * as z from "zod";
-import { cleanRecipeDescription, cleanRecipeTitle } from "./normalization";
+import {
+  cleanRecipeDescription,
+  cleanRecipeIngredientName,
+  cleanRecipeIngredientNote,
+  cleanRecipeIngredientQuantity,
+  cleanRecipeIngredientUnit,
+  cleanRecipeTitle,
+} from "./normalization";
 
 const recipeTitleSchema = z
   .string()
@@ -23,4 +30,48 @@ export const createRecipeMutationSchema = z
 
 export type CreateRecipeMutationInput = z.infer<
   typeof createRecipeMutationSchema
+>;
+
+const recipeIngredientNameSchema = z
+  .string()
+  .transform(cleanRecipeIngredientName)
+  .pipe(z.string().min(1).max(150));
+
+const recipeIngredientQuantitySchema = z
+  .union([z.string(), z.null()])
+  .transform((value) =>
+    value === null ? null : cleanRecipeIngredientQuantity(value),
+  )
+  .pipe(z.string().max(50).nullable());
+
+const recipeIngredientUnitSchema = z
+  .union([z.string(), z.null()])
+  .transform((value) =>
+    value === null ? null : cleanRecipeIngredientUnit(value),
+  )
+  .pipe(z.string().max(50).nullable());
+
+const recipeIngredientNoteSchema = z
+  .union([z.string(), z.null()])
+  .transform((value) =>
+    value === null ? null : cleanRecipeIngredientNote(value),
+  )
+  .pipe(z.string().max(500).nullable());
+
+export const createRecipeIngredientMutationSchema = z
+  .object({
+    ingredientId: z.uuid(),
+    householdId: z.uuid(),
+    recipeId: z.uuid(),
+    name: recipeIngredientNameSchema,
+    quantity: recipeIngredientQuantitySchema,
+    unit: recipeIngredientUnitSchema,
+    note: recipeIngredientNoteSchema,
+    position: z.number().int().nonnegative(),
+    optimisticTimestamp: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export type CreateRecipeIngredientMutationInput = z.infer<
+  typeof createRecipeIngredientMutationSchema
 >;

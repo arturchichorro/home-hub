@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { createRecipeMutationSchema } from "./recipes";
+import {
+  createRecipeIngredientMutationSchema,
+  createRecipeMutationSchema,
+} from "./recipes";
 
 const input = {
   recipeId: "8d46a4c4-4845-4a6d-a937-139633ae1bb9",
@@ -73,6 +76,94 @@ describe("createRecipeMutationSchema", () => {
     expect(
       createRecipeMutationSchema.safeParse({
         ...input,
+        userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+const ingredientInput = {
+  ingredientId: "671874b1-df9d-4a91-8f3c-8055473e8aa2",
+  householdId: input.householdId,
+  recipeId: input.recipeId,
+  name: "Fresh Basil",
+  quantity: "1 1/2",
+  unit: "cups",
+  note: "Add after blending.",
+  position: 0,
+  optimisticTimestamp: input.optimisticTimestamp,
+};
+
+describe("createRecipeIngredientMutationSchema", () => {
+  it("accepts a complete input and cleans its text", () => {
+    expect(
+      createRecipeIngredientMutationSchema.parse({
+        ...ingredientInput,
+        name: "  Ｆｒｅｓｈ   Basil  ",
+        quantity: "  1   1/2  ",
+        unit: "  cups  ",
+        note: "  Add after blending.  ",
+      }),
+    ).toEqual(ingredientInput);
+  });
+
+  it.each(["quantity", "unit", "note"] as const)(
+    "normalizes an empty %s to null",
+    (field) => {
+      expect(
+        createRecipeIngredientMutationSchema.parse({
+          ...ingredientInput,
+          [field]: "  \n  ",
+        })[field],
+      ).toBeNull();
+    },
+  );
+
+  it.each(["ingredientId", "householdId", "recipeId"] as const)(
+    "rejects an invalid %s",
+    (field) => {
+      expect(
+        createRecipeIngredientMutationSchema.safeParse({
+          ...ingredientInput,
+          [field]: "not-a-uuid",
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    ["name", "   "],
+    ["name", "a".repeat(151)],
+    ["quantity", "a".repeat(51)],
+    ["unit", "a".repeat(51)],
+    ["note", "a".repeat(501)],
+  ] as const)("rejects an invalid %s", (field, value) => {
+    expect(
+      createRecipeIngredientMutationSchema.safeParse({
+        ...ingredientInput,
+        [field]: value,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ["position", -1],
+    ["position", 1.5],
+    ["optimisticTimestamp", -1],
+    ["optimisticTimestamp", 1.5],
+  ] as const)("rejects an invalid %s", (field, value) => {
+    expect(
+      createRecipeIngredientMutationSchema.safeParse({
+        ...ingredientInput,
+        [field]: value,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects extra properties", () => {
+    expect(
+      createRecipeIngredientMutationSchema.safeParse({
+        ...ingredientInput,
         userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
       }).success,
     ).toBe(false);

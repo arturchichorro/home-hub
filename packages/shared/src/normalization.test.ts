@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   cleanRecipeDescription,
+  cleanRecipeIngredientName,
+  cleanRecipeIngredientNote,
+  cleanRecipeIngredientQuantity,
+  cleanRecipeIngredientUnit,
   cleanRecipeTitle,
   cleanShoppingItemName,
   normalizeShoppingItemName,
@@ -21,6 +25,26 @@ describe("recipe text cleaning", () => {
 
   it("stores an empty description as null", () => {
     expect(cleanRecipeDescription("  \n  ")).toBeNull();
+  });
+
+  it("cleans ingredient single-line fields", () => {
+    expect(cleanRecipeIngredientName("  Ｆｒｅｓｈ   Basil  ")).toBe(
+      "Fresh Basil",
+    );
+    expect(cleanRecipeIngredientQuantity("  1   1/2  ")).toBe("1 1/2");
+    expect(cleanRecipeIngredientUnit("  cups  ")).toBe("cups");
+  });
+
+  it("preserves lines in ingredient notes", () => {
+    expect(cleanRecipeIngredientNote("  First line\n\nSecond line  ")).toBe(
+      "First line\n\nSecond line",
+    );
+  });
+
+  it("stores empty optional ingredient text as null", () => {
+    expect(cleanRecipeIngredientQuantity("  ")).toBeNull();
+    expect(cleanRecipeIngredientUnit("  \n  ")).toBeNull();
+    expect(cleanRecipeIngredientNote("  \n  ")).toBeNull();
   });
 });
 
