@@ -39,7 +39,7 @@ export function HouseholdSettings({
 
   return (
     <RenameHouseholdForm
-      key={`${household.id}:${household.name}`}
+      key={household.id}
       accessToken={accessToken}
       householdId={household.id}
       currentName={household.name}

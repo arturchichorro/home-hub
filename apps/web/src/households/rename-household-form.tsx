@@ -1,4 +1,4 @@
-import { type SubmitEvent, useState } from "react";
+import { type SubmitEvent, useEffect, useState } from "react";
 import { renameHousehold } from "./api";
 
 type RenameHouseholdFormProps = {
@@ -18,6 +18,10 @@ export function RenameHouseholdForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    setName(currentName);
+  }, [currentName]);
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,7 +69,10 @@ export function RenameHouseholdForm({
         required
         maxLength={100}
         value={name}
-        onChange={(event) => setName(event.target.value)}
+        onChange={(event) => {
+          setName(event.target.value);
+          setSuccess(false);
+        }}
       />
       <button type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Renaming…" : "Rename household"}
