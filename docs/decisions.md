@@ -56,6 +56,12 @@ user-supplied timestamp and optional comment. Initial cooking logs do not store
 cook or recorder attribution. Ingredient positions are nonnegative and may
 collide; row ID is the deterministic tiebreaker.
 
+Recipe titles are single-line display labels: Unicode NFKC-normalized,
+whitespace-folded, trimmed, casing-preserving, and limited to 1–150 characters.
+Descriptions are nullable, boundary-trimmed text limited to 5,000 characters;
+their internal spaces and line breaks are preserved, and empty descriptions
+are stored as `null`.
+
 ## Household invitations
 
 Only the household owner may create invitations. An invitation is a bearer

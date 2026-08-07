@@ -124,8 +124,11 @@ name reactivates the existing row rather than inserting a duplicate.
 - `description`
 - `created_at`, `updated_at`
 
-Recipe titles do not need to be unique within a household. Store `description`
-as nullable text.
+Recipe titles do not need to be unique within a household. Normalize titles
+with Unicode NFKC, fold whitespace, trim, preserve casing, and require 1–150
+characters. Store `description` as nullable text, trim its boundaries while
+preserving internal spaces and line breaks, limit it to 5,000 characters, and
+store an empty description as `null`.
 
 ### `recipe_ingredients`
 
