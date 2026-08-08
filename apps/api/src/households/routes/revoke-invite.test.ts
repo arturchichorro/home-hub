@@ -33,6 +33,7 @@ function createTestRoutes(
     listHouseholdInvites: async () => ({ kind: "forbidden" }),
     listHouseholdMembers: async () => ({ kind: "forbidden" }),
     renameHousehold: async () => ({ kind: "forbidden" }),
+    removeHouseholdMember: async () => ({ kind: "forbidden" }),
     revokeHouseholdInvite,
     jwtSecret,
   });

@@ -1,13 +1,11 @@
-import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 
 import { signAccessToken } from "../../auth/access-token";
-import { type AuthEnv, createBearerAuth } from "../../auth/bearer-auth";
 import type {
   RemoveHouseholdMemberInput,
   RemoveHouseholdMemberResult,
 } from "../remove-member";
-import { createRemoveHouseholdMemberRoute } from "./remove-member";
+import { createHouseholdRoutes } from "./index";
 
 const jwtSecret = "test-jwt-secret";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
@@ -27,13 +25,18 @@ function createTestRoute(
     input: RemoveHouseholdMemberInput,
   ) => Promise<RemoveHouseholdMemberResult>,
 ) {
-  const app = new Hono<AuthEnv>();
-  app.delete(
-    "/:householdId/members/:membershipId",
-    createBearerAuth(jwtSecret),
-    createRemoveHouseholdMemberRoute({ removeHouseholdMember }),
-  );
-  return app;
+  return createHouseholdRoutes({
+    acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
+    createHousehold: async () => ({ kind: "unauthorized" }),
+    createHouseholdInvite: async () => ({ kind: "forbidden" }),
+    listHouseholds: async () => ({ kind: "unauthorized" }),
+    listHouseholdInvites: async () => ({ kind: "forbidden" }),
+    listHouseholdMembers: async () => ({ kind: "forbidden" }),
+    removeHouseholdMember,
+    renameHousehold: async () => ({ kind: "forbidden" }),
+    revokeHouseholdInvite: async () => ({ kind: "forbidden" }),
+    jwtSecret,
+  });
 }
 
 function deleteMember(input: {
