@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { createDbClient } from "@home-hub/database/client";
-import { householdMembers, households } from "@home-hub/database/schema";
+import {
+  householdMembers,
+  householdModuleSettings,
+  households,
+} from "@home-hub/database/schema";
+import { householdModuleCatalog } from "@home-hub/shared/modules";
 
 type Database = ReturnType<typeof createDbClient>["db"];
 
@@ -42,6 +47,14 @@ export function createHouseholdService({ db }: { db: Database }) {
         userId,
         role: "owner",
       });
+
+      await tx.insert(householdModuleSettings).values(
+        householdModuleCatalog.map((module) => ({
+          householdId,
+          moduleKey: module.key,
+          enabled: module.defaultEnabled,
+        })),
+      );
 
       return {
         kind: "success",

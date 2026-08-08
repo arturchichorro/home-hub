@@ -1,5 +1,9 @@
 import type { createDbClient } from "@home-hub/database/client";
-import { householdMembers, households } from "@home-hub/database/schema";
+import {
+  householdMembers,
+  householdModuleSettings,
+  households,
+} from "@home-hub/database/schema";
 import { describe, expect, it, vi } from "vitest";
 
 import { createHouseholdService } from "./create";
@@ -11,9 +15,11 @@ type Database = ReturnType<typeof createDbClient>["db"];
 function createFakeDatabase({
   userExists = true,
   failMembershipInsert = false,
+  failModuleSettingsInsert = false,
 }: {
   userExists?: boolean;
   failMembershipInsert?: boolean;
+  failModuleSettingsInsert?: boolean;
 } = {}) {
   const inserted: Array<{ table: unknown; values: unknown }> = [];
   const findUser = vi.fn(async () => (userExists ? { id: userId } : undefined));
@@ -30,6 +36,10 @@ function createFakeDatabase({
 
         if (table === householdMembers && failMembershipInsert) {
           throw new Error("membership insert failed");
+        }
+
+        if (table === householdModuleSettings && failModuleSettingsInsert) {
+          throw new Error("module settings insert failed");
         }
       },
     }),
@@ -68,7 +78,7 @@ describe("create household service", () => {
       columns: { id: true },
       where: expect.any(Function),
     });
-    expect(inserted).toHaveLength(2);
+    expect(inserted).toHaveLength(3);
     expect(inserted[0]).toEqual({
       table: households,
       values: {
@@ -84,6 +94,21 @@ describe("create household service", () => {
         userId,
         role: "owner",
       },
+    });
+    expect(inserted[2]).toEqual({
+      table: householdModuleSettings,
+      values: [
+        {
+          householdId: result.household.id,
+          moduleKey: "shopping",
+          enabled: true,
+        },
+        {
+          householdId: result.household.id,
+          moduleKey: "recipes",
+          enabled: true,
+        },
+      ],
     });
     expect(result.household).toEqual({
       id: expect.any(String),
@@ -125,6 +150,27 @@ describe("create household service", () => {
     expect(inserted.map(({ table }) => table)).toEqual([
       households,
       householdMembers,
+    ]);
+  });
+
+  it("propagates a module-settings insert failure from the transaction", async () => {
+    const { db, inserted, transaction } = createFakeDatabase({
+      failModuleSettingsInsert: true,
+    });
+    const createHousehold = createHouseholdService({ db });
+
+    await expect(
+      createHousehold({
+        userId,
+        name: "Home",
+      }),
+    ).rejects.toThrow("module settings insert failed");
+
+    expect(transaction).toHaveBeenCalledOnce();
+    expect(inserted.map(({ table }) => table)).toEqual([
+      households,
+      householdMembers,
+      householdModuleSettings,
     ]);
   });
 });

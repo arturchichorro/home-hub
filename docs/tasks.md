@@ -132,6 +132,7 @@ teaches us something new.
 - [x] Define the shared code-owned module catalogue and stable keys for Shopping and Recipes
 - [x] Add and migrate household module settings with explicit defaults
 - [x] Backfill Shopping and Recipes as enabled for existing households
+- [x] Initialize every new household from the shared module catalogue
 - [ ] Add owner-only operations to enable or disable a module for the whole household
 - [ ] Synchronize enabled-module settings so navigation updates for every member
 - [ ] Enforce enabled-module checks in API commands, Zero queries, Zero mutators, uploads, and cross-module operations
