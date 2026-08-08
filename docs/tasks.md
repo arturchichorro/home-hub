@@ -129,7 +129,7 @@ teaches us something new.
 
 ## Phase 13: configurable built-in modules
 
-- [ ] Define the shared code-owned module catalogue and stable keys for Shopping and Recipes
+- [x] Define the shared code-owned module catalogue and stable keys for Shopping and Recipes
 - [ ] Add and migrate household module settings with explicit defaults
 - [ ] Backfill Shopping and Recipes as enabled for existing households
 - [ ] Add owner-only operations to enable or disable a module for the whole household

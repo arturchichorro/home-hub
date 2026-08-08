@@ -5,6 +5,7 @@
   "exports": {
     "./auth": "./src/auth.ts",
     "./households": "./src/households.ts",
+    "./modules": "./src/modules.ts",
     "./normalization": "./src/normalization.ts",
     "./shopping": "./src/shopping.ts",
     "./recipes": "./src/recipes.ts",
