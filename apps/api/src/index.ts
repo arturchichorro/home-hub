@@ -11,6 +11,7 @@ import { config } from "./config";
 import { createAcceptHouseholdInviteService } from "./households/accept-invite";
 import { createHouseholdService } from "./households/create";
 import { createHouseholdInviteService } from "./households/create-invite";
+import { createLeaveHouseholdService } from "./households/leave";
 import { createListHouseholdsService } from "./households/list";
 import { createListHouseholdInvitesService } from "./households/list-invites";
 import { createListHouseholdMembersService } from "./households/list-members";
@@ -48,6 +49,7 @@ const createHouseholdInvite = createHouseholdInviteService({ db });
 const listHouseholds = createListHouseholdsService({ db });
 const listHouseholdInvites = createListHouseholdInvitesService({ db });
 const listHouseholdMembers = createListHouseholdMembersService({ db });
+const leaveHousehold = createLeaveHouseholdService({ db });
 const renameHousehold = createRenameHouseholdService({ db });
 const revokeHouseholdInvite = createRevokeHouseholdInviteService({ db });
 const addShoppingItem = createAddShoppingItemService({ db });
@@ -68,6 +70,7 @@ const app = createApp({
   listHouseholds,
   listHouseholdInvites,
   listHouseholdMembers,
+  leaveHousehold,
   renameHousehold,
   revokeHouseholdInvite,
   removeHouseholdMember,

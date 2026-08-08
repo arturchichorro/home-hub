@@ -11,6 +11,10 @@ import {
   createHouseholdInviteRoute,
 } from "./create-invite";
 import {
+  createLeaveHouseholdRoute,
+  type LeaveHouseholdRouteInput,
+} from "./leave";
+import {
   type CreateListHouseholdsRouteInput,
   createListHouseholdsRoute,
 } from "./list";
@@ -39,6 +43,7 @@ export type CreateHouseholdRoutesInput = AcceptHouseholdInviteRouteInput &
   CreateHouseholdRouteInput &
   CreateHouseholdInviteRouteInput &
   CreateListHouseholdsRouteInput &
+  LeaveHouseholdRouteInput &
   ListHouseholdInvitesRouteInput &
   ListHouseholdMembersRouteInput &
   RenameHouseholdRouteInput &
@@ -64,6 +69,11 @@ export function createHouseholdRoutes(input: CreateHouseholdRoutesInput) {
     "/",
     createBearerAuth(input.jwtSecret),
     createListHouseholdsRoute(input),
+  );
+  householdRoutes.delete(
+    "/:householdId/membership",
+    createBearerAuth(input.jwtSecret),
+    createLeaveHouseholdRoute(input),
   );
   householdRoutes.get(
     "/:householdId/members",

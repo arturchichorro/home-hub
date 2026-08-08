@@ -112,6 +112,12 @@ member. It locks the caller's owner membership as authorization evidence, then
 locks and deletes a target membership scoped to the same household. The owner
 membership cannot be removed through this operation.
 
+`DELETE /households/:householdId/membership` removes the authenticated user's
+own membership. The API derives the user ID from the access token, locks that
+membership for update, and rejects an owner until ownership has been
+transferred. After success, the client clears that household as its active
+selection rather than silently selecting another household.
+
 Any current household member may list the roster. Only the current owner may
 list pending invitations, which are restricted to unaccepted, unrevoked, and
 unexpired rows and expose only invitation ID, creation time, and expiry time.

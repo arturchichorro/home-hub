@@ -1,6 +1,7 @@
 import { queries } from "@home-hub/shared/zero/queries";
 import { useQuery } from "@rocicorp/zero/react";
 import { HouseholdMemberList } from "./household-member-list";
+import { LeaveHouseholdControl } from "./leave-household-control";
 import { PendingInviteList } from "./pending-invite-list";
 import { RenameHouseholdForm } from "./rename-household-form";
 
@@ -8,12 +9,14 @@ type HouseholdSettingsProps = {
   accessToken: string;
   householdId: string;
   onSessionExpired: () => void;
+  onLeftHousehold: () => void;
 };
 
 export function HouseholdSettings({
   accessToken,
   householdId,
   onSessionExpired,
+  onLeftHousehold,
 }: HouseholdSettingsProps) {
   const [households, result] = useQuery(queries.households.mine({}));
 
@@ -44,6 +47,15 @@ export function HouseholdSettings({
         householdId={household.id}
         onSessionExpired={onSessionExpired}
         canRemoveMembers={isOwner}
+      />
+
+      <h3>Membership</h3>
+      <LeaveHouseholdControl
+        accessToken={accessToken}
+        householdId={household.id}
+        isOwner={isOwner}
+        onLeftHousehold={onLeftHousehold}
+        onSessionExpired={onSessionExpired}
       />
 
       {isOwner ? (

@@ -29,6 +29,7 @@ function App({ accessToken, onSessionExpired }: AppProps) {
             <HouseholdSettings
               accessToken={accessToken}
               householdId={householdId}
+              onLeftHousehold={() => setHouseholdId(undefined)}
               onSessionExpired={onSessionExpired}
             />
           </section>

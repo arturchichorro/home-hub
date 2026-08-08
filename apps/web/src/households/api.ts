@@ -52,6 +52,12 @@ export type RemoveHouseholdMemberCommandResult =
   | { kind: "forbidden" }
   | { kind: "invalid_member" };
 
+export type LeaveHouseholdCommandResult =
+  | { kind: "success" }
+  | { kind: "unauthorized" }
+  | { kind: "forbidden" }
+  | { kind: "owner_must_transfer" };
+
 export async function renameHousehold({
   accessToken,
   householdId,
@@ -212,6 +218,39 @@ export async function removeHouseholdMember({
 
   if (!response.ok) {
     throw new Error("Failed to remove household member");
+  }
+
+  return { kind: "success" };
+}
+
+export async function leaveHousehold({
+  accessToken,
+  householdId,
+}: HouseholdReadCommandInput): Promise<LeaveHouseholdCommandResult> {
+  const response = await fetch(
+    `/households/${encodeURIComponent(householdId)}/membership`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (response.status === 409) {
+    return { kind: "owner_must_transfer" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to leave household");
   }
 
   return { kind: "success" };

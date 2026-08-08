@@ -28,6 +28,7 @@ function createTestRoutes(
     listHouseholds: async () => ({ kind: "unauthorized" }),
     listHouseholdInvites: async () => ({ kind: "forbidden" }),
     listHouseholdMembers: async () => ({ kind: "forbidden" }),
+    leaveHousehold: async () => ({ kind: "forbidden" }),
     renameHousehold: async () => ({ kind: "forbidden" }),
     revokeHouseholdInvite: async () => ({ kind: "forbidden" }),
     removeHouseholdMember: async () => ({ kind: "forbidden" }),
