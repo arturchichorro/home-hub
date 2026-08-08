@@ -136,9 +136,10 @@ teaches us something new.
 - [x] Add owner-only operations to enable or disable a module for the whole household
 - [x] Synchronize enabled-module settings so navigation updates for every member
 - [x] Enforce enabled-module checks in current API commands, Zero queries, and Zero mutators; require the same checks when uploads and cross-module operations are introduced
-- [ ] Preserve module data while disabled and restore access when re-enabled
-- [ ] Test forged access, concurrent toggles, cross-module operations, and household isolation
-- [ ] Complete the Phase 13 checkpoint and commit
+- [x] Preserve module data while disabled and restore access when re-enabled
+- [x] Test forged access, concurrent toggles, and household isolation; cross-module operations remain unavailable and must enforce both modules when introduced
+- [x] Complete the Phase 13 checkpoint
+- [x] Commit the completed Phase 13 checkpoint
 
 ## Phase 14: R2 images
 
