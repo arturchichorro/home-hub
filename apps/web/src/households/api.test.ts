@@ -7,6 +7,7 @@ import {
   removeHouseholdMember,
   renameHousehold,
   revokeHouseholdInvite,
+  setHouseholdModuleEnabled,
   transferHouseholdOwnership,
 } from "./api";
 
@@ -16,6 +17,61 @@ const fetchMock = vi.fn<typeof fetch>();
 beforeEach(() => {
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
+});
+
+describe("setHouseholdModuleEnabled", () => {
+  it("sends the authenticated toggle command", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ setting: { moduleKey: "shopping", enabled: false } }),
+    );
+    await expect(
+      setHouseholdModuleEnabled({
+        accessToken: "access-token",
+        householdId,
+        moduleKey: "shopping",
+        enabled: false,
+      }),
+    ).resolves.toEqual({ kind: "success" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/households/${householdId}/modules/shopping`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: "Bearer access-token",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ enabled: false }),
+      },
+    );
+  });
+
+  it.each([
+    [401, "unauthorized"],
+    [403, "forbidden"],
+    [409, "module_not_configured"],
+  ] as const)("maps %s", async (status, kind) => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status }));
+    await expect(
+      setHouseholdModuleEnabled({
+        accessToken: "token",
+        householdId,
+        moduleKey: "recipes",
+        enabled: true,
+      }),
+    ).resolves.toEqual({ kind });
+  });
+
+  it("throws for an unexpected failure", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
+    await expect(
+      setHouseholdModuleEnabled({
+        accessToken: "token",
+        householdId,
+        moduleKey: "recipes",
+        enabled: true,
+      }),
+    ).rejects.toThrow("Failed to update household module");
+  });
 });
 
 afterEach(() => {

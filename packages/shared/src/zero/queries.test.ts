@@ -164,3 +164,24 @@ describe("recipe queries", () => {
     });
   });
 });
+
+describe("module settings queries", () => {
+  it("scopes settings to an authorized household", () => {
+    const query = queries.modules.byHousehold.fn({
+      args: { householdId },
+      ctx: { userId },
+    });
+
+    expect(getAst(query)).toMatchObject({
+      table: "householdModuleSettings",
+      orderBy: [["moduleKey", "asc"]],
+      where: {
+        type: "and",
+        conditions: [
+          equalsCondition("householdId", householdId),
+          membershipCondition(),
+        ],
+      },
+    });
+  });
+});

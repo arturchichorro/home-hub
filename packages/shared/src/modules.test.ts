@@ -4,6 +4,7 @@ import {
   householdModuleCatalog,
   householdModuleKeySchema,
   householdModuleKeys,
+  setHouseholdModuleEnabledRequestSchema,
 } from "./modules";
 
 describe("household module catalogue", () => {
@@ -38,4 +39,24 @@ describe("household module catalogue", () => {
       expect(householdModuleKeySchema.safeParse(key).success).toBe(false);
     },
   );
+});
+
+describe("set household module enabled request", () => {
+  it.each([true, false])("accepts enabled=%s", (enabled) => {
+    expect(setHouseholdModuleEnabledRequestSchema.parse({ enabled })).toEqual({
+      enabled,
+    });
+  });
+
+  it.each([
+    {},
+    { enabled: "true" },
+    { enabled: 1 },
+    { enabled: null },
+    { enabled: true, unexpected: true },
+  ])("rejects an invalid request: %o", (request) => {
+    expect(
+      setHouseholdModuleEnabledRequestSchema.safeParse(request).success,
+    ).toBe(false);
+  });
 });

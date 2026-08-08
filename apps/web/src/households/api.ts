@@ -6,6 +6,10 @@ import {
   renameHouseholdRequestSchema,
   transferHouseholdOwnershipRequestSchema,
 } from "@home-hub/shared/households";
+import {
+  type HouseholdModuleKey,
+  setHouseholdModuleEnabledRequestSchema,
+} from "@home-hub/shared/modules";
 
 export type HouseholdReadCommandInput = {
   accessToken: string;
@@ -69,6 +73,18 @@ export type TransferHouseholdOwnershipCommandResult =
   | { kind: "unauthorized" }
   | { kind: "forbidden" }
   | { kind: "invalid_member" };
+
+export type SetHouseholdModuleEnabledCommandInput =
+  HouseholdReadCommandInput & {
+    moduleKey: HouseholdModuleKey;
+    enabled: boolean;
+  };
+
+export type SetHouseholdModuleEnabledCommandResult =
+  | { kind: "success" }
+  | { kind: "unauthorized" }
+  | { kind: "forbidden" }
+  | { kind: "module_not_configured" };
 
 export async function renameHousehold({
   accessToken,
@@ -304,5 +320,30 @@ export async function transferHouseholdOwnership({
     throw new Error("Failed to transfer household ownership");
   }
 
+  return { kind: "success" };
+}
+
+export async function setHouseholdModuleEnabled({
+  accessToken,
+  householdId,
+  moduleKey,
+  enabled,
+}: SetHouseholdModuleEnabledCommandInput): Promise<SetHouseholdModuleEnabledCommandResult> {
+  const body = setHouseholdModuleEnabledRequestSchema.parse({ enabled });
+  const response = await fetch(
+    `/households/${encodeURIComponent(householdId)}/modules/${encodeURIComponent(moduleKey)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    },
+  );
+  if (response.status === 401) return { kind: "unauthorized" };
+  if (response.status === 403) return { kind: "forbidden" };
+  if (response.status === 409) return { kind: "module_not_configured" };
+  if (!response.ok) throw new Error("Failed to update household module");
   return { kind: "success" };
 }

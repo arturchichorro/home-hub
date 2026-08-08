@@ -16,3 +16,13 @@ export const householdModuleCatalog = [
   { key: "shopping", label: "Shopping", defaultEnabled: true },
   { key: "recipes", label: "Recipes", defaultEnabled: true },
 ] as const satisfies readonly HouseholdModuleDefinition[];
+
+export const setHouseholdModuleEnabledRequestSchema = z
+  .object({
+    enabled: z.boolean(),
+  })
+  .strict();
+
+export type SetHouseholdModuleEnabledRequest = z.infer<
+  typeof setHouseholdModuleEnabledRequestSchema
+>;

@@ -18,6 +18,13 @@ export default drizzleZeroConfig(drizzleSchema, {
       createdAt: true,
       updatedAt: true,
     },
+    householdModuleSettings: {
+      householdId: true,
+      moduleKey: true,
+      enabled: true,
+      createdAt: true,
+      updatedAt: true,
+    },
     shoppingItems: {
       id: true,
       householdId: true,

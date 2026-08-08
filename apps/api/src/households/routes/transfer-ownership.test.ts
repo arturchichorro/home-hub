@@ -37,6 +37,7 @@ function createTestRoutes(
     renameHousehold: async () => ({ kind: "forbidden" }),
     revokeHouseholdInvite: async () => ({ kind: "forbidden" }),
     transferHouseholdOwnership,
+    setHouseholdModuleEnabled: async () => ({ kind: "forbidden" }),
     jwtSecret,
   });
 }

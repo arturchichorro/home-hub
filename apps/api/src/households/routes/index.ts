@@ -39,6 +39,10 @@ import {
   type RevokeHouseholdInviteRouteInput,
 } from "./revoke-invite";
 import {
+  createSetHouseholdModuleEnabledRoute,
+  type SetHouseholdModuleEnabledRouteInput,
+} from "./set-module-enabled";
+import {
   createTransferHouseholdOwnershipRoute,
   type TransferHouseholdOwnershipRouteInput,
 } from "./transfer-ownership";
@@ -53,6 +57,7 @@ export type CreateHouseholdRoutesInput = AcceptHouseholdInviteRouteInput &
   RenameHouseholdRouteInput &
   RevokeHouseholdInviteRouteInput &
   TransferHouseholdOwnershipRouteInput &
+  SetHouseholdModuleEnabledRouteInput &
   RemoveHouseholdMemberRouteInput & {
     jwtSecret: string;
   };
@@ -109,6 +114,11 @@ export function createHouseholdRoutes(input: CreateHouseholdRoutesInput) {
     "/:householdId/ownership",
     createBearerAuth(input.jwtSecret),
     createTransferHouseholdOwnershipRoute(input),
+  );
+  householdRoutes.patch(
+    "/:householdId/modules/:moduleKey",
+    createBearerAuth(input.jwtSecret),
+    createSetHouseholdModuleEnabledRoute(input),
   );
   householdRoutes.delete(
     "/:householdId/members/:membershipId",

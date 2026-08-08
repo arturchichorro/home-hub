@@ -3,6 +3,7 @@ import { useQuery } from "@rocicorp/zero/react";
 import { useEffect, useState } from "react";
 import { HouseholdMemberList } from "./household-member-list";
 import { LeaveHouseholdControl } from "./leave-household-control";
+import { ModuleSettings } from "./module-settings";
 import { PendingInviteList } from "./pending-invite-list";
 import { RenameHouseholdForm } from "./rename-household-form";
 
@@ -79,6 +80,13 @@ export function HouseholdSettings({
             accessToken={accessToken}
             householdId={household.id}
             currentName={household.name}
+            onSessionExpired={onSessionExpired}
+          />
+
+          <h3>Modules</h3>
+          <ModuleSettings
+            accessToken={accessToken}
+            householdId={household.id}
             onSessionExpired={onSessionExpired}
           />
 

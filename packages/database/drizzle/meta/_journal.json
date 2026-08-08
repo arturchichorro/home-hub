@@ -71,6 +71,13 @@
       "when": 1786228599341,
       "tag": "0009_quiet_deathstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786229435979,
+      "tag": "0010_add_module_settings_to_zero",
+      "breakpoints": true
     }
   ]
 }
