@@ -123,8 +123,9 @@ teaches us something new.
 - [x] Implement owner-authorized member removal through the API and web UI
 - [x] Implement member-initiated leaving with owner protection
 - [x] Implement transactional ownership transfer without allowing an ownerless household
-- [ ] Test role changes, last-owner protection, cross-household isolation, and active-household fallback
-- [ ] Complete the Phase 12 checkpoint and commit
+- [x] Test role changes, last-owner protection, cross-household isolation, and active-household fallback
+- [x] Complete the Phase 12 checkpoint
+- [x] Commit the completed Phase 12 checkpoint
 
 ## Phase 13: configurable built-in modules
 
