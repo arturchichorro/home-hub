@@ -42,6 +42,16 @@ export type RevokeHouseholdInviteCommandResult =
   | { kind: "forbidden" }
   | { kind: "invalid_invite" };
 
+export type RemoveHouseholdMemberCommandInput = HouseholdReadCommandInput & {
+  membershipId: string;
+};
+
+export type RemoveHouseholdMemberCommandResult =
+  | { kind: "success" }
+  | { kind: "unauthorized" }
+  | { kind: "forbidden" }
+  | { kind: "invalid_member" };
+
 export async function renameHousehold({
   accessToken,
   householdId,
@@ -168,6 +178,40 @@ export async function revokeHouseholdInvite({
 
   if (!response.ok) {
     throw new Error("Failed to revoke household invite");
+  }
+
+  return { kind: "success" };
+}
+
+export async function removeHouseholdMember({
+  accessToken,
+  householdId,
+  membershipId,
+}: RemoveHouseholdMemberCommandInput): Promise<RemoveHouseholdMemberCommandResult> {
+  const response = await fetch(
+    `/households/${encodeURIComponent(householdId)}/members/${encodeURIComponent(membershipId)}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (response.status === 404) {
+    return { kind: "invalid_member" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to remove household member");
   }
 
   return { kind: "success" };

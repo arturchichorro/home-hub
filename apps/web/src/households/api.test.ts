@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   listHouseholdInvites,
   listHouseholdMembers,
+  removeHouseholdMember,
   renameHousehold,
   revokeHouseholdInvite,
 } from "./api";
@@ -247,5 +248,59 @@ describe("revokeHouseholdInvite", () => {
         inviteId,
       }),
     ).rejects.toThrow("Failed to revoke household invite");
+  });
+});
+
+describe("removeHouseholdMember", () => {
+  const membershipId = "7dbb2304-955a-4d0b-9878-d39a42a38eb2";
+
+  it("sends an authenticated delete command", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await expect(
+      removeHouseholdMember({
+        accessToken: "access-token",
+        householdId,
+        membershipId,
+      }),
+    ).resolves.toEqual({ kind: "success" });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/households/${householdId}/members/${membershipId}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: "Bearer access-token" },
+      },
+    );
+  });
+
+  it.each([
+    [401, "unauthorized"],
+    [403, "forbidden"],
+    [404, "invalid_member"],
+  ] as const)("maps status %s to %s", async (status, kind) => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ error: "Rejected" }, { status }),
+    );
+
+    await expect(
+      removeHouseholdMember({
+        accessToken: "access-token",
+        householdId,
+        membershipId,
+      }),
+    ).resolves.toEqual({ kind });
+  });
+
+  it("throws for an unexpected server failure", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
+
+    await expect(
+      removeHouseholdMember({
+        accessToken: "access-token",
+        householdId,
+        membershipId,
+      }),
+    ).rejects.toThrow("Failed to remove household member");
   });
 });
