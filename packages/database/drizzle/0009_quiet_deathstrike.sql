@@ -8,3 +8,19 @@ CREATE TABLE "household_module_settings" (
 );
 --> statement-breakpoint
 ALTER TABLE "household_module_settings" ADD CONSTRAINT "household_module_settings_household_id_households_id_fk" FOREIGN KEY ("household_id") REFERENCES "public"."households"("id") ON DELETE no action ON UPDATE no action;
+--> statement-breakpoint
+INSERT INTO "household_module_settings" (
+  "household_id",
+  "module_key",
+  "enabled"
+)
+SELECT
+  "households"."id",
+  "module"."module_key",
+  "module"."enabled"
+FROM "households"
+CROSS JOIN (
+  VALUES
+    ('shopping', true),
+    ('recipes', true)
+) AS "module" ("module_key", "enabled");
