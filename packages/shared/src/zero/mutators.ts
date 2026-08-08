@@ -10,7 +10,7 @@ import {
   setShoppingItemStatusMutationSchema,
 } from "../shopping";
 import type { ZeroAuthContext } from "./context";
-import { requireServerHouseholdMembership } from "./mutation-authorization";
+import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
 import { type Schema, zql } from "./schema.gen";
 
 const defineHomeHubMutator = defineMutatorWithType<Schema, ZeroAuthContext>();
@@ -19,10 +19,11 @@ const defineHomeHubMutators = defineMutatorsWithType<Schema>();
 const setShoppingItemStatus = defineHomeHubMutator(
   setShoppingItemStatusMutationSchema,
   async ({ args, ctx, tx }) => {
-    await requireServerHouseholdMembership({
+    await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      moduleKey: "shopping",
     });
 
     const item = await tx.run(
@@ -48,10 +49,11 @@ const setShoppingItemStatus = defineHomeHubMutator(
 const addShoppingItem = defineHomeHubMutator(
   addShoppingItemMutationSchema,
   async ({ args, ctx, tx }) => {
-    await requireServerHouseholdMembership({
+    await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      moduleKey: "shopping",
     });
 
     const normalizedName = normalizeShoppingItemName(args.name);
@@ -89,10 +91,11 @@ const addShoppingItem = defineHomeHubMutator(
 const createRecipe = defineHomeHubMutator(
   createRecipeMutationSchema,
   async ({ args, ctx, tx }) => {
-    await requireServerHouseholdMembership({
+    await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      moduleKey: "recipes",
     });
 
     const timestamp =
@@ -112,10 +115,11 @@ const createRecipe = defineHomeHubMutator(
 const addRecipeIngredient = defineHomeHubMutator(
   createRecipeIngredientMutationSchema,
   async ({ args, ctx, tx }) => {
-    await requireServerHouseholdMembership({
+    await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      moduleKey: "recipes",
     });
 
     const recipe = await tx.run(
@@ -150,10 +154,11 @@ const addRecipeIngredient = defineHomeHubMutator(
 const addRecipeCookLog = defineHomeHubMutator(
   createRecipeCookLogMutationSchema,
   async ({ args, ctx, tx }) => {
-    await requireServerHouseholdMembership({
+    await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      moduleKey: "recipes",
     });
 
     const recipe = await tx.run(

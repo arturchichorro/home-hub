@@ -136,7 +136,11 @@ describe("shopping.setStatus mutator", () => {
     vi.spyOn(Date, "now").mockReturnValue(authoritativeUpdatedAt);
     const { queries, transaction, update } = createFakeTransaction({
       location: "server",
-      results: [{ id: "membership-id" }, { id: itemId, householdId }],
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "shopping", enabled: true },
+        { id: itemId, householdId },
+      ],
     });
 
     await mutators.shopping.setStatus.fn({
@@ -145,7 +149,7 @@ describe("shopping.setStatus mutator", () => {
       tx: transaction,
     });
 
-    expect(queries).toHaveLength(2);
+    expect(queries).toHaveLength(3);
     expect(update).toHaveBeenCalledWith({
       id: itemId,
       status: "crossed",
@@ -165,7 +169,7 @@ describe("shopping.setStatus mutator", () => {
         ctx,
         tx: transaction,
       }),
-    ).rejects.toThrow("Household mutation not allowed");
+    ).rejects.toThrow("Household module mutation not allowed");
 
     expect(queries).toHaveLength(1);
     expect(update).not.toHaveBeenCalled();
@@ -174,7 +178,11 @@ describe("shopping.setStatus mutator", () => {
   it("rejects an item outside the supplied household", async () => {
     const { transaction, update } = createFakeTransaction({
       location: "server",
-      results: [{ id: "membership-id" }, undefined],
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "shopping", enabled: true },
+        undefined,
+      ],
     });
 
     await expect(
@@ -196,8 +204,10 @@ describe("shopping.setStatus mutator", () => {
       location: "server",
       results: [
         { id: "membership-id" },
+        { householdId, moduleKey: "shopping", enabled: true },
         { id: itemId, householdId },
         { id: "membership-id" },
+        { householdId, moduleKey: "shopping", enabled: true },
         { id: itemId, householdId },
       ],
     });
@@ -213,7 +223,7 @@ describe("shopping.setStatus mutator", () => {
       tx: transaction,
     });
 
-    expect(queries).toHaveLength(4);
+    expect(queries).toHaveLength(6);
     expect(update).toHaveBeenNthCalledWith(1, {
       id: itemId,
       status: "crossed",
@@ -287,9 +297,24 @@ describe("shopping.add mutator", () => {
 
     await expect(
       mutators.shopping.add.fn({ args: addArgs, ctx, tx: transaction }),
-    ).rejects.toThrow("Household mutation not allowed");
+    ).rejects.toThrow("Household module mutation not allowed");
 
     expect(queries).toHaveLength(1);
+    expect(insert).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("rejects a server mutation when the shopping module is not enabled", async () => {
+    const { insert, queries, transaction, update } = createFakeTransaction({
+      location: "server",
+      results: [{ id: "membership-id" }, undefined],
+    });
+
+    await expect(
+      mutators.shopping.add.fn({ args: addArgs, ctx, tx: transaction }),
+    ).rejects.toThrow("Household module mutation not allowed");
+
+    expect(queries).toHaveLength(2);
     expect(insert).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
   });
@@ -299,12 +324,16 @@ describe("shopping.add mutator", () => {
     vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
     const { insert, queries, transaction } = createFakeTransaction({
       location: "server",
-      results: [{ id: "membership-id" }, undefined],
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "shopping", enabled: true },
+        undefined,
+      ],
     });
 
     await mutators.shopping.add.fn({ args: addArgs, ctx, tx: transaction });
 
-    expect(queries).toHaveLength(2);
+    expect(queries).toHaveLength(3);
     expect(insert).toHaveBeenCalledWith({
       id: itemId,
       householdId,
@@ -357,9 +386,27 @@ describe("recipes.create mutator", () => {
         ctx,
         tx: transaction,
       }),
-    ).rejects.toThrow("Household mutation not allowed");
+    ).rejects.toThrow("Household module mutation not allowed");
 
     expect(queries).toHaveLength(1);
+    expect(recipeInsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a server mutation when the recipes module is not enabled", async () => {
+    const { queries, recipeInsert, transaction } = createFakeTransaction({
+      location: "server",
+      results: [{ id: "membership-id" }, undefined],
+    });
+
+    await expect(
+      mutators.recipes.create.fn({
+        args: createRecipeArgs,
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Household module mutation not allowed");
+
+    expect(queries).toHaveLength(2);
     expect(recipeInsert).not.toHaveBeenCalled();
   });
 
@@ -368,7 +415,10 @@ describe("recipes.create mutator", () => {
     vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
     const { queries, recipeInsert, transaction } = createFakeTransaction({
       location: "server",
-      results: [{ id: "membership-id" }],
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+      ],
     });
 
     await mutators.recipes.create.fn({
@@ -377,7 +427,7 @@ describe("recipes.create mutator", () => {
       tx: transaction,
     });
 
-    expect(queries).toHaveLength(1);
+    expect(queries).toHaveLength(2);
     expect(recipeInsert).toHaveBeenCalledWith({
       id: recipeId,
       householdId,
@@ -435,7 +485,7 @@ describe("recipes.addIngredient mutator", () => {
         ctx,
         tx: transaction,
       }),
-    ).rejects.toThrow("Household mutation not allowed");
+    ).rejects.toThrow("Household module mutation not allowed");
 
     expect(queries).toHaveLength(1);
     expect(ingredientInsert).not.toHaveBeenCalled();
@@ -444,7 +494,11 @@ describe("recipes.addIngredient mutator", () => {
   it("rejects a recipe outside the supplied household", async () => {
     const { ingredientInsert, queries, transaction } = createFakeTransaction({
       location: "server",
-      results: [{ id: "membership-id" }, undefined],
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+        undefined,
+      ],
     });
 
     await expect(
@@ -455,7 +509,7 @@ describe("recipes.addIngredient mutator", () => {
       }),
     ).rejects.toThrow("Recipe ingredient addition not allowed");
 
-    expect(queries).toHaveLength(2);
+    expect(queries).toHaveLength(3);
     expect(ingredientInsert).not.toHaveBeenCalled();
   });
 
@@ -464,7 +518,11 @@ describe("recipes.addIngredient mutator", () => {
     vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
     const { ingredientInsert, queries, transaction } = createFakeTransaction({
       location: "server",
-      results: [{ id: "membership-id" }, { id: recipeId, householdId }],
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+        { id: recipeId, householdId },
+      ],
     });
 
     await mutators.recipes.addIngredient.fn({
@@ -473,7 +531,7 @@ describe("recipes.addIngredient mutator", () => {
       tx: transaction,
     });
 
-    expect(queries).toHaveLength(2);
+    expect(queries).toHaveLength(3);
     expect(ingredientInsert).toHaveBeenCalledWith({
       id: ingredientId,
       householdId,
@@ -530,7 +588,7 @@ describe("recipes.addCookLog mutator", () => {
         ctx,
         tx: transaction,
       }),
-    ).rejects.toThrow("Household mutation not allowed");
+    ).rejects.toThrow("Household module mutation not allowed");
 
     expect(queries).toHaveLength(1);
     expect(cookLogInsert).not.toHaveBeenCalled();
@@ -539,7 +597,11 @@ describe("recipes.addCookLog mutator", () => {
   it("rejects a recipe outside the supplied household", async () => {
     const { cookLogInsert, queries, transaction } = createFakeTransaction({
       location: "server",
-      results: [{ id: "membership-id" }, undefined],
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+        undefined,
+      ],
     });
 
     await expect(
@@ -550,7 +612,7 @@ describe("recipes.addCookLog mutator", () => {
       }),
     ).rejects.toThrow("Recipe cooking log addition not allowed");
 
-    expect(queries).toHaveLength(2);
+    expect(queries).toHaveLength(3);
     expect(cookLogInsert).not.toHaveBeenCalled();
   });
 
@@ -559,7 +621,11 @@ describe("recipes.addCookLog mutator", () => {
     vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
     const { cookLogInsert, queries, transaction } = createFakeTransaction({
       location: "server",
-      results: [{ id: "membership-id" }, { id: recipeId, householdId }],
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+        { id: recipeId, householdId },
+      ],
     });
 
     await mutators.recipes.addCookLog.fn({
@@ -568,7 +634,7 @@ describe("recipes.addCookLog mutator", () => {
       tx: transaction,
     });
 
-    expect(queries).toHaveLength(2);
+    expect(queries).toHaveLength(3);
     expect(cookLogInsert).toHaveBeenCalledWith({
       id: cookLogId,
       householdId,
