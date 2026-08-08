@@ -1,12 +1,14 @@
 import { relations, sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
+  boolean,
   check,
   foreignKey,
   index,
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -156,6 +158,7 @@ export const shoppingItems = pgTable(
 
 export const householdsRelations = relations(households, ({ many }) => ({
   members: many(householdMembers),
+  moduleSettings: many(householdModuleSettings),
   recipes: many(recipes),
   shoppingItems: many(shoppingItems),
 }));
@@ -296,3 +299,36 @@ export const recipeCookLogsRelations = relations(recipeCookLogs, ({ one }) => ({
     references: [recipes.householdId, recipes.id],
   }),
 }));
+
+export const householdModuleSettings = pgTable(
+  "household_module_settings",
+  {
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    moduleKey: text("module_key").notNull(),
+    enabled: boolean("enabled").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.householdId, table.moduleKey],
+      name: "household_module_settings_household_id_module_key_pk",
+    }),
+  ],
+);
+
+export const householdModuleSettingsRelations = relations(
+  householdModuleSettings,
+  ({ one }) => ({
+    household: one(households, {
+      fields: [householdModuleSettings.householdId],
+      references: [households.id],
+    }),
+  }),
+);
