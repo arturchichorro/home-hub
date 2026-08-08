@@ -7,6 +7,7 @@ import {
   removeHouseholdMember,
   renameHousehold,
   revokeHouseholdInvite,
+  transferHouseholdOwnership,
 } from "./api";
 
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
@@ -343,5 +344,74 @@ describe("leaveHousehold", () => {
     await expect(
       leaveHousehold({ accessToken: "access-token", householdId }),
     ).rejects.toThrow("Failed to leave household");
+  });
+});
+
+describe("transferHouseholdOwnership", () => {
+  const membershipId = "7dbb2304-955a-4d0b-9878-d39a42a38eb2";
+
+  it("validates and sends the authenticated transfer command", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await expect(
+      transferHouseholdOwnership({
+        accessToken: "access-token",
+        householdId,
+        membershipId,
+      }),
+    ).resolves.toEqual({ kind: "success" });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/households/${householdId}/ownership`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: "Bearer access-token",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ membershipId }),
+      },
+    );
+  });
+
+  it.each([
+    [401, "unauthorized"],
+    [403, "forbidden"],
+    [404, "invalid_member"],
+  ] as const)("maps status %s to %s", async (status, kind) => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ error: "Rejected" }, { status }),
+    );
+
+    await expect(
+      transferHouseholdOwnership({
+        accessToken: "access-token",
+        householdId,
+        membershipId,
+      }),
+    ).resolves.toEqual({ kind });
+  });
+
+  it("rejects an invalid membership id before making a request", async () => {
+    await expect(
+      transferHouseholdOwnership({
+        accessToken: "access-token",
+        householdId,
+        membershipId: "invalid-member",
+      }),
+    ).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("throws for an unexpected server failure", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
+
+    await expect(
+      transferHouseholdOwnership({
+        accessToken: "access-token",
+        householdId,
+        membershipId,
+      }),
+    ).rejects.toThrow("Failed to transfer household ownership");
   });
 });

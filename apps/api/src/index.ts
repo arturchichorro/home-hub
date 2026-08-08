@@ -18,6 +18,7 @@ import { createListHouseholdMembersService } from "./households/list-members";
 import { createRemoveHouseholdMemberService } from "./households/remove-member";
 import { createRenameHouseholdService } from "./households/rename";
 import { createRevokeHouseholdInviteService } from "./households/revoke-invite";
+import { createTransferHouseholdOwnershipService } from "./households/transfer-ownership";
 import { createAddShoppingItemService } from "./shopping/add";
 import { createSetShoppingItemStatusService } from "./shopping/set-status";
 import { createZeroDbProvider } from "./zero/db-provider";
@@ -55,6 +56,9 @@ const revokeHouseholdInvite = createRevokeHouseholdInviteService({ db });
 const addShoppingItem = createAddShoppingItemService({ db });
 const setShoppingItemStatus = createSetShoppingItemStatusService({ db });
 const removeHouseholdMember = createRemoveHouseholdMemberService({ db });
+const transferHouseholdOwnership = createTransferHouseholdOwnershipService({
+  db,
+});
 
 const app = createApp({
   acceptHouseholdInvite,
@@ -74,6 +78,7 @@ const app = createApp({
   renameHousehold,
   revokeHouseholdInvite,
   removeHouseholdMember,
+  transferHouseholdOwnership,
   dbProvider,
   jwtSecret: config.API_JWT_SECRET,
   isProduction: config.NODE_ENV === "production",

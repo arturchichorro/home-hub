@@ -4,6 +4,7 @@ import {
   listHouseholdInvitesResponseSchema,
   listHouseholdMembersResponseSchema,
   renameHouseholdRequestSchema,
+  transferHouseholdOwnershipRequestSchema,
 } from "@home-hub/shared/households";
 
 export type HouseholdReadCommandInput = {
@@ -57,6 +58,17 @@ export type LeaveHouseholdCommandResult =
   | { kind: "unauthorized" }
   | { kind: "forbidden" }
   | { kind: "owner_must_transfer" };
+
+export type TransferHouseholdOwnershipCommandInput =
+  HouseholdReadCommandInput & {
+    membershipId: string;
+  };
+
+export type TransferHouseholdOwnershipCommandResult =
+  | { kind: "success" }
+  | { kind: "unauthorized" }
+  | { kind: "forbidden" }
+  | { kind: "invalid_member" };
 
 export async function renameHousehold({
   accessToken,
@@ -251,6 +263,45 @@ export async function leaveHousehold({
 
   if (!response.ok) {
     throw new Error("Failed to leave household");
+  }
+
+  return { kind: "success" };
+}
+
+export async function transferHouseholdOwnership({
+  accessToken,
+  householdId,
+  membershipId,
+}: TransferHouseholdOwnershipCommandInput): Promise<TransferHouseholdOwnershipCommandResult> {
+  const request = transferHouseholdOwnershipRequestSchema.parse({
+    membershipId,
+  });
+  const response = await fetch(
+    `/households/${encodeURIComponent(householdId)}/ownership`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    },
+  );
+
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (response.status === 404) {
+    return { kind: "invalid_member" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to transfer household ownership");
   }
 
   return { kind: "success" };

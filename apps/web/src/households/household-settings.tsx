@@ -1,5 +1,6 @@
 import { queries } from "@home-hub/shared/zero/queries";
 import { useQuery } from "@rocicorp/zero/react";
+import { useEffect, useState } from "react";
 import { HouseholdMemberList } from "./household-member-list";
 import { LeaveHouseholdControl } from "./leave-household-control";
 import { PendingInviteList } from "./pending-invite-list";
@@ -19,6 +20,18 @@ export function HouseholdSettings({
   onLeftHousehold,
 }: HouseholdSettingsProps) {
   const [households, result] = useQuery(queries.households.mine({}));
+  const [locallyTransferredHouseholdId, setLocallyTransferredHouseholdId] =
+    useState<string>();
+  const household = households.find(
+    (candidate) => candidate.id === householdId,
+  );
+  const membership = household?.members[0];
+
+  useEffect(() => {
+    if (membership?.role !== "owner") {
+      setLocallyTransferredHouseholdId(undefined);
+    }
+  }, [membership?.role]);
 
   if (result.type === "unknown") {
     return <p>Loading household settings…</p>;
@@ -28,16 +41,13 @@ export function HouseholdSettings({
     return <p role="alert">Unable to load household settings.</p>;
   }
 
-  const household = households.find(
-    (candidate) => candidate.id === householdId,
-  );
-
   if (!household) {
     return null;
   }
 
-  const membership = household.members[0];
-  const isOwner = membership?.role === "owner";
+  const isOwner =
+    membership?.role === "owner" &&
+    locallyTransferredHouseholdId !== household.id;
 
   return (
     <>
@@ -46,7 +56,10 @@ export function HouseholdSettings({
         accessToken={accessToken}
         householdId={household.id}
         onSessionExpired={onSessionExpired}
-        canRemoveMembers={isOwner}
+        canManageMembers={isOwner}
+        onOwnershipTransferred={() =>
+          setLocallyTransferredHouseholdId(household.id)
+        }
       />
 
       <h3>Membership</h3>

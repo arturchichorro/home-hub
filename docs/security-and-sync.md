@@ -118,6 +118,13 @@ membership for update, and rejects an owner until ownership has been
 transferred. After success, the client clears that household as its active
 selection rather than silently selecting another household.
 
+`PATCH /households/:householdId/ownership` transfers ownership to the existing
+member identified by the validated request body. The transaction locks the
+current owner first and the target member second, demotes the current owner,
+then promotes the target. Both updates are guarded by their expected roles;
+any failure rolls back the whole transaction, so an ownerless intermediate
+state is never committed or visible to another transaction.
+
 Any current household member may list the roster. Only the current owner may
 list pending invitations, which are restricted to unaccepted, unrevoked, and
 unexpired rows and expose only invitation ID, creation time, and expiry time.

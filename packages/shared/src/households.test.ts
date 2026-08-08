@@ -6,6 +6,7 @@ import {
   listHouseholdInvitesResponseSchema,
   listHouseholdMembersResponseSchema,
   renameHouseholdRequestSchema,
+  transferHouseholdOwnershipRequestSchema,
 } from "./households";
 
 describe.each([
@@ -45,6 +46,26 @@ describe("accept household invite request", () => {
     expect(acceptHouseholdInviteRequestSchema.safeParse(request).success).toBe(
       false,
     );
+  });
+});
+
+describe("transfer household ownership request", () => {
+  const membershipId = "7dbb2304-955a-4d0b-9878-d39a42a38eb2";
+
+  it("accepts a target membership id", () => {
+    expect(
+      transferHouseholdOwnershipRequestSchema.parse({ membershipId }),
+    ).toEqual({ membershipId });
+  });
+
+  it.each([
+    { membershipId: "not-a-uuid" },
+    { membershipId, unexpected: true },
+    {},
+  ])("rejects an invalid request: %o", (request) => {
+    expect(
+      transferHouseholdOwnershipRequestSchema.safeParse(request).success,
+    ).toBe(false);
   });
 });
 

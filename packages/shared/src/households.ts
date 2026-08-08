@@ -32,6 +32,16 @@ export type RenameHouseholdRequest = z.infer<
   typeof renameHouseholdRequestSchema
 >;
 
+export const transferHouseholdOwnershipRequestSchema = z
+  .object({
+    membershipId: z.uuid(),
+  })
+  .strict();
+
+export type TransferHouseholdOwnershipRequest = z.infer<
+  typeof transferHouseholdOwnershipRequestSchema
+>;
+
 const householdMemberSummarySchema = z
   .object({
     id: z.uuid(),

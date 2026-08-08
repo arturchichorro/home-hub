@@ -1,12 +1,17 @@
 import type { ListHouseholdMembersResponse } from "@home-hub/shared/households";
 import { useEffect, useState } from "react";
-import { listHouseholdMembers, removeHouseholdMember } from "./api";
+import {
+  listHouseholdMembers,
+  removeHouseholdMember,
+  transferHouseholdOwnership,
+} from "./api";
 
 type HouseholdMemberListProps = {
   accessToken: string;
   householdId: string;
   onSessionExpired: () => void;
-  canRemoveMembers: boolean;
+  canManageMembers: boolean;
+  onOwnershipTransferred: () => void;
 };
 
 type HouseholdMember = ListHouseholdMembersResponse["members"][number];
@@ -24,19 +29,24 @@ export function HouseholdMemberList({
   accessToken,
   householdId,
   onSessionExpired,
-  canRemoveMembers,
+  canManageMembers,
+  onOwnershipTransferred,
 }: HouseholdMemberListProps) {
   const [state, setState] = useState<MemberListState>({ status: "loading" });
   const [removingMembershipId, setRemovingMembershipId] = useState<
     string | null
   >(null);
-  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [transferringMembershipId, setTransferringMembershipId] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     let active = true;
     setState({ status: "loading" });
     setRemovingMembershipId(null);
-    setRemoveError(null);
+    setActionError(null);
+    setTransferringMembershipId(null);
 
     void listHouseholdMembers({ accessToken, householdId })
       .then((result) => {
@@ -75,7 +85,7 @@ export function HouseholdMemberList({
 
   async function handleRemove(membershipId: string) {
     setRemovingMembershipId(membershipId);
-    setRemoveError(null);
+    setActionError(null);
 
     try {
       const result = await removeHouseholdMember({
@@ -90,7 +100,7 @@ export function HouseholdMemberList({
       }
 
       if (result.kind === "forbidden") {
-        setRemoveError("You are no longer allowed to remove members.");
+        setActionError("You are no longer allowed to remove members.");
         return;
       }
 
@@ -107,9 +117,62 @@ export function HouseholdMemberList({
         );
       }
     } catch {
-      setRemoveError("Unable to remove the household member.");
+      setActionError("Unable to remove the household member.");
     } finally {
       setRemovingMembershipId(null);
+    }
+  }
+
+  async function handleTransfer(member: HouseholdMember) {
+    const confirmed = window.confirm(
+      `Transfer ownership to ${member.username}? You will become a member.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setTransferringMembershipId(member.id);
+    setActionError(null);
+
+    try {
+      const result = await transferHouseholdOwnership({
+        accessToken,
+        householdId,
+        membershipId: member.id,
+      });
+
+      if (result.kind === "unauthorized") {
+        onSessionExpired();
+        return;
+      }
+
+      if (result.kind === "forbidden") {
+        setActionError("You are no longer allowed to transfer ownership.");
+        return;
+      }
+
+      if (result.kind === "invalid_member") {
+        setActionError("That member is no longer eligible to become owner.");
+        return;
+      }
+
+      setState((current) =>
+        current.status === "success"
+          ? {
+              status: "success",
+              members: current.members.map((currentMember) => ({
+                ...currentMember,
+                role: currentMember.id === member.id ? "owner" : "member",
+              })),
+            }
+          : current,
+      );
+      onOwnershipTransferred();
+    } catch {
+      setActionError("Unable to transfer household ownership.");
+    } finally {
+      setTransferringMembershipId(null);
     }
   }
 
@@ -127,11 +190,13 @@ export function HouseholdMemberList({
 
   return (
     <>
-      {removeError ? <p role="alert">{removeError}</p> : null}
+      {actionError ? <p role="alert">{actionError}</p> : null}
       <ul>
         {state.members.map((member) => {
           const joinedAt = new Date(member.joinedAt);
-          const canRemove = canRemoveMembers && member.role === "member";
+          const canManage = canManageMembers && member.role === "member";
+          const actionPending =
+            removingMembershipId !== null || transferringMembershipId !== null;
 
           return (
             <li key={member.id}>
@@ -139,14 +204,27 @@ export function HouseholdMemberList({
               <time dateTime={member.joinedAt}>
                 {dateFormatter.format(joinedAt)}
               </time>{" "}
-              {canRemove ? (
-                <button
-                  type="button"
-                  disabled={removingMembershipId !== null}
-                  onClick={() => void handleRemove(member.id)}
-                >
-                  {removingMembershipId === member.id ? "Removing…" : "Remove"}
-                </button>
+              {canManage ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={actionPending}
+                    onClick={() => void handleTransfer(member)}
+                  >
+                    {transferringMembershipId === member.id
+                      ? "Transferring…"
+                      : "Make owner"}
+                  </button>{" "}
+                  <button
+                    type="button"
+                    disabled={actionPending}
+                    onClick={() => void handleRemove(member.id)}
+                  >
+                    {removingMembershipId === member.id
+                      ? "Removing…"
+                      : "Remove"}
+                  </button>
+                </>
               ) : null}
             </li>
           );
