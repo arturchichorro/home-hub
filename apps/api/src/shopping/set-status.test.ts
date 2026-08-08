@@ -1,5 +1,9 @@
 import type { createDbClient } from "@home-hub/database/client";
-import { householdMembers, shoppingItems } from "@home-hub/database/schema";
+import {
+  householdMembers,
+  householdModuleSettings,
+  shoppingItems,
+} from "@home-hub/database/schema";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 
@@ -30,17 +34,20 @@ function createItem(status: ShoppingItemStatus): ReturnedItem {
 function createFakeDatabase({
   userExists = true,
   membershipExists = true,
+  moduleEnabled = true,
   item = createItem("active"),
   updatedItem = createItem("crossed"),
 }: {
   userExists?: boolean;
   membershipExists?: boolean;
+  moduleEnabled?: boolean;
   item?: ReturnedItem | null;
   updatedItem?: ReturnedItem | null;
 } = {}) {
   const findUser = vi.fn(async () => (userExists ? { id: userId } : undefined));
   const selections: unknown[] = [];
   const membershipWhereClauses: unknown[] = [];
+  const moduleSettingWhereClauses: unknown[] = [];
   const itemWhereClauses: unknown[] = [];
   const updateWhereClauses: unknown[] = [];
   const lockStrengths: unknown[] = [];
@@ -61,6 +68,19 @@ function createFakeDatabase({
     },
   };
 
+  const moduleSettingBuilder = {
+    from: (_table: unknown) => moduleSettingBuilder,
+    where: (condition: unknown) => {
+      moduleSettingWhereClauses.push(condition);
+      return moduleSettingBuilder;
+    },
+    limit: (_limit: unknown) => moduleSettingBuilder,
+    for: async (strength: unknown) => {
+      lockStrengths.push(strength);
+      return moduleEnabled ? [{ householdId }] : [];
+    },
+  };
+
   const itemBuilder = {
     from: (_table: unknown) => itemBuilder,
     where: (condition: unknown) => {
@@ -76,7 +96,9 @@ function createFakeDatabase({
 
   const select = vi.fn((selection: unknown) => {
     selections.push(selection);
-    return selections.length === 1 ? membershipBuilder : itemBuilder;
+    if (selections.length === 1) return membershipBuilder;
+    if (selections.length === 2) return moduleSettingBuilder;
+    return itemBuilder;
   });
 
   const returning = vi.fn(async (selection: unknown) => {
@@ -120,6 +142,7 @@ function createFakeDatabase({
     itemWhereClauses,
     lockStrengths,
     membershipWhereClauses,
+    moduleSettingWhereClauses,
     returningSelections,
     selections,
     transaction,
@@ -176,6 +199,35 @@ describe("set shopping item status service", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it("returns forbidden without looking up the item when the shopping module is disabled", async () => {
+    const { db, lockStrengths, moduleSettingWhereClauses, selections, update } =
+      createFakeDatabase({ moduleEnabled: false });
+    const setShoppingItemStatus = createSetShoppingItemStatusService({ db });
+
+    await expect(
+      setShoppingItemStatus({
+        userId,
+        householdId,
+        itemId,
+        status: "crossed",
+      }),
+    ).resolves.toEqual({ kind: "forbidden" });
+
+    expect(selections).toEqual([
+      { id: householdMembers.id },
+      { householdId: householdModuleSettings.householdId },
+    ]);
+    expect(moduleSettingWhereClauses).toEqual([
+      and(
+        eq(householdModuleSettings.householdId, householdId),
+        eq(householdModuleSettings.moduleKey, "shopping"),
+        eq(householdModuleSettings.enabled, true),
+      ),
+    ]);
+    expect(lockStrengths).toEqual(["share", "share"]);
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it("returns not found after a tenant-scoped, update-locked item lookup", async () => {
     const { db, itemWhereClauses, lockStrengths, selections, update } =
       createFakeDatabase({ item: null });
@@ -190,7 +242,7 @@ describe("set shopping item status service", () => {
       }),
     ).resolves.toEqual({ kind: "not_found" });
 
-    expect(selections[1]).toEqual({
+    expect(selections[2]).toEqual({
       id: shoppingItems.id,
       householdId: shoppingItems.householdId,
       name: shoppingItems.name,
@@ -202,7 +254,7 @@ describe("set shopping item status service", () => {
         eq(shoppingItems.householdId, householdId),
       ),
     ]);
-    expect(lockStrengths).toEqual(["share", "update"]);
+    expect(lockStrengths).toEqual(["share", "share", "update"]);
     expect(update).not.toHaveBeenCalled();
   });
 

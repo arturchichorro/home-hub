@@ -135,7 +135,7 @@ teaches us something new.
 - [x] Initialize every new household from the shared module catalogue
 - [x] Add owner-only operations to enable or disable a module for the whole household
 - [x] Synchronize enabled-module settings so navigation updates for every member
-- [ ] Enforce enabled-module checks in API commands, Zero queries, Zero mutators, uploads, and cross-module operations
+- [x] Enforce enabled-module checks in current API commands, Zero queries, and Zero mutators; require the same checks when uploads and cross-module operations are introduced
 - [ ] Preserve module data while disabled and restore access when re-enabled
 - [ ] Test forged access, concurrent toggles, cross-module operations, and household isolation
 - [ ] Complete the Phase 13 checkpoint and commit

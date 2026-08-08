@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { createDbClient } from "@home-hub/database/client";
-import { householdMembers, shoppingItems } from "@home-hub/database/schema";
+import {
+  householdMembers,
+  householdModuleSettings,
+  shoppingItems,
+} from "@home-hub/database/schema";
 import {
   cleanShoppingItemName,
   normalizeShoppingItemName,
@@ -58,6 +62,23 @@ export function createAddShoppingItemService({ db }: { db: Database }) {
         .for("share");
 
       if (!membership) {
+        return { kind: "forbidden" };
+      }
+
+      const [moduleSetting] = await tx
+        .select({ householdId: householdModuleSettings.householdId })
+        .from(householdModuleSettings)
+        .where(
+          and(
+            eq(householdModuleSettings.householdId, householdId),
+            eq(householdModuleSettings.moduleKey, "shopping"),
+            eq(householdModuleSettings.enabled, true),
+          ),
+        )
+        .limit(1)
+        .for("share");
+
+      if (!moduleSetting) {
         return { kind: "forbidden" };
       }
 

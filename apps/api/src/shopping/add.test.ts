@@ -1,5 +1,9 @@
 import type { createDbClient } from "@home-hub/database/client";
-import { householdMembers, shoppingItems } from "@home-hub/database/schema";
+import {
+  householdMembers,
+  householdModuleSettings,
+  shoppingItems,
+} from "@home-hub/database/schema";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 
@@ -19,6 +23,7 @@ type ReturnedItem = {
 function createFakeDatabase({
   userExists = true,
   membershipExists = true,
+  moduleEnabled = true,
   returnedItem = {
     id: "8d46a4c4-4845-4a6d-a937-139633ae1bb9",
     householdId,
@@ -28,6 +33,7 @@ function createFakeDatabase({
 }: {
   userExists?: boolean;
   membershipExists?: boolean;
+  moduleEnabled?: boolean;
   returnedItem?: ReturnedItem | null;
 } = {}) {
   const findUser = vi.fn(async () => (userExists ? { id: userId } : undefined));
@@ -60,6 +66,25 @@ function createFakeDatabase({
     },
   };
 
+  const moduleSettingBuilder = {
+    from: (table: unknown) => {
+      fromTables.push(table);
+      return moduleSettingBuilder;
+    },
+    where: (condition: unknown) => {
+      whereClauses.push(condition);
+      return moduleSettingBuilder;
+    },
+    limit: (limit: unknown) => {
+      limits.push(limit);
+      return moduleSettingBuilder;
+    },
+    for: async (strength: unknown) => {
+      lockStrengths.push(strength);
+      return moduleEnabled ? [{ householdId }] : [];
+    },
+  };
+
   const returning = vi.fn(async (selection: unknown) => {
     returningSelections.push(selection);
     return returnedItem ? [returnedItem] : [];
@@ -82,7 +107,7 @@ function createFakeDatabase({
 
   const select = vi.fn((selection: unknown) => {
     selections.push(selection);
-    return membershipBuilder;
+    return selections.length === 1 ? membershipBuilder : moduleSettingBuilder;
   });
 
   const tx = {
@@ -161,6 +186,37 @@ describe("add shopping item service", () => {
     expect(insertedTables).toHaveLength(0);
   });
 
+  it("returns forbidden without writing when the shopping module is disabled", async () => {
+    const {
+      db,
+      fromTables,
+      insertedTables,
+      lockStrengths,
+      selections,
+      whereClauses,
+    } = createFakeDatabase({ moduleEnabled: false });
+    const addShoppingItem = createAddShoppingItemService({ db });
+
+    await expect(
+      addShoppingItem({ userId, householdId, name: "Milk" }),
+    ).resolves.toEqual({ kind: "forbidden" });
+
+    expect(selections).toEqual([
+      { id: householdMembers.id },
+      { householdId: householdModuleSettings.householdId },
+    ]);
+    expect(fromTables).toEqual([householdMembers, householdModuleSettings]);
+    expect(whereClauses[1]).toEqual(
+      and(
+        eq(householdModuleSettings.householdId, householdId),
+        eq(householdModuleSettings.moduleKey, "shopping"),
+        eq(householdModuleSettings.enabled, true),
+      ),
+    );
+    expect(lockStrengths).toEqual(["share", "share"]);
+    expect(insertedTables).toHaveLength(0);
+  });
+
   it("cleans and normalizes the name and atomically inserts or reactivates the item", async () => {
     const {
       conflictConfigs,
@@ -195,7 +251,7 @@ describe("add shopping item service", () => {
       columns: { id: true },
       where: expect.any(Function),
     });
-    expect(lockStrengths).toEqual(["share"]);
+    expect(lockStrengths).toEqual(["share", "share"]);
     expect(insertedTables).toEqual([shoppingItems]);
     expect(insertedValues).toEqual([
       {

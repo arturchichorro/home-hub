@@ -17,12 +17,20 @@ afterEach(() => {
 
 function createMutationTestProvider({
   membershipExists = true,
+  moduleEnabled = true,
 }: {
   membershipExists?: boolean;
+  moduleEnabled?: boolean;
 } = {}) {
-  const results: unknown[] = membershipExists
-    ? [{ id: "membership-id" }, { id: itemId, householdId }]
-    : [undefined];
+  const results: unknown[] = !membershipExists
+    ? [undefined]
+    : moduleEnabled
+      ? [
+          { id: "membership-id" },
+          { householdId, moduleKey: "shopping", enabled: true },
+          { id: itemId, householdId },
+        ]
+      : [{ id: "membership-id" }, undefined];
   const run = vi.fn(async () => results.shift());
   const update = vi.fn(async () => undefined);
   const serverTransaction = {
@@ -297,7 +305,36 @@ describe("Zero routes", () => {
           id: { clientID: "test-client", id: 1 },
           result: {
             error: "app",
-            message: "Household mutation not allowed",
+            message: "Household module mutation not allowed",
+          },
+        },
+      ],
+    });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("rejects a mutation when the shopping module is disabled", async () => {
+    const { dbProvider, update } = createMutationTestProvider({
+      moduleEnabled: false,
+    });
+    const app = createZeroRoutes({ dbProvider, jwtSecret });
+
+    const response = await app.request("/mutate?schema=zero_0&appID=home-hub", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${createAccessToken()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(createMutationRequest()),
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      mutations: [
+        {
+          result: {
+            error: "app",
+            message: "Household module mutation not allowed",
           },
         },
       ],
