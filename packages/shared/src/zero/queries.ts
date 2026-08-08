@@ -33,9 +33,13 @@ const shoppingItemsByHousehold = defineHomeHubQuery(
     zql.shoppingItems
       .where("householdId", args.householdId)
       .whereExists("household", (household) =>
-        household.whereExists("members", (member) =>
-          member.where("userId", ctx.userId),
-        ),
+        household
+          .whereExists("members", (member) =>
+            member.where("userId", ctx.userId),
+          )
+          .whereExists("moduleSettings", (setting) =>
+            setting.where("moduleKey", "shopping").where("enabled", true),
+          ),
       )
       .orderBy("createdAt", "asc"),
 );
@@ -59,9 +63,13 @@ const recipesByHousehold = defineHomeHubQuery(
     zql.recipes
       .where("householdId", args.householdId)
       .whereExists("household", (household) =>
-        household.whereExists("members", (member) =>
-          member.where("userId", ctx.userId),
-        ),
+        household
+          .whereExists("members", (member) =>
+            member.where("userId", ctx.userId),
+          )
+          .whereExists("moduleSettings", (setting) =>
+            setting.where("moduleKey", "recipes").where("enabled", true),
+          ),
       )
       .orderBy("title", "asc")
       .orderBy("id", "asc"),
@@ -74,9 +82,13 @@ const recipeDetail = defineHomeHubQuery(
       .where("householdId", args.householdId)
       .where("id", args.recipeId)
       .whereExists("household", (household) =>
-        household.whereExists("members", (member) =>
-          member.where("userId", ctx.userId),
-        ),
+        household
+          .whereExists("members", (member) =>
+            member.where("userId", ctx.userId),
+          )
+          .whereExists("moduleSettings", (setting) =>
+            setting.where("moduleKey", "recipes").where("enabled", true),
+          ),
       )
       .related("ingredients", (ingredient) =>
         ingredient.orderBy("position", "asc").orderBy("id", "asc"),

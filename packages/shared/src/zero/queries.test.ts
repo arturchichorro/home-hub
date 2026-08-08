@@ -11,12 +11,46 @@ function getAst(query: unknown): AST {
   return (query as { ast: AST }).ast;
 }
 
-function equalsCondition(column: string, value: string) {
+function equalsCondition(column: string, value: string | boolean) {
   return {
     type: "simple",
     left: { type: "column", name: column },
     op: "=",
     right: { type: "literal", value },
+  };
+}
+
+function moduleAccessCondition(moduleKey: "shopping" | "recipes") {
+  return {
+    type: "correlatedSubquery",
+    op: "EXISTS",
+    related: {
+      subquery: {
+        table: "households",
+        where: {
+          type: "and",
+          conditions: [
+            directMembershipCondition(),
+            {
+              type: "correlatedSubquery",
+              op: "EXISTS",
+              related: {
+                subquery: {
+                  table: "householdModuleSettings",
+                  where: {
+                    type: "and",
+                    conditions: [
+                      equalsCondition("moduleKey", moduleKey),
+                      equalsCondition("enabled", true),
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
   };
 }
 
@@ -108,7 +142,7 @@ describe("recipe queries", () => {
         type: "and",
         conditions: [
           equalsCondition("householdId", householdId),
-          membershipCondition(),
+          moduleAccessCondition("recipes"),
         ],
       },
     });
@@ -128,7 +162,7 @@ describe("recipe queries", () => {
         conditions: [
           equalsCondition("householdId", householdId),
           equalsCondition("id", recipeId),
-          membershipCondition(),
+          moduleAccessCondition("recipes"),
         ],
       },
       related: [
@@ -180,6 +214,26 @@ describe("module settings queries", () => {
         conditions: [
           equalsCondition("householdId", householdId),
           membershipCondition(),
+        ],
+      },
+    });
+  });
+});
+
+describe("shopping queries", () => {
+  it("requires membership and an enabled Shopping setting", () => {
+    const query = queries.shopping.byHousehold.fn({
+      args: { householdId },
+      ctx: { userId },
+    });
+
+    expect(getAst(query)).toMatchObject({
+      table: "shoppingItems",
+      where: {
+        type: "and",
+        conditions: [
+          equalsCondition("householdId", householdId),
+          moduleAccessCondition("shopping"),
         ],
       },
     });
