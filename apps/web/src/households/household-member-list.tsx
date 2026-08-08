@@ -1,11 +1,12 @@
 import type { ListHouseholdMembersResponse } from "@home-hub/shared/households";
 import { useEffect, useState } from "react";
-import { listHouseholdMembers } from "./api";
+import { listHouseholdMembers, removeHouseholdMember } from "./api";
 
 type HouseholdMemberListProps = {
   accessToken: string;
   householdId: string;
   onSessionExpired: () => void;
+  canRemoveMembers: boolean;
 };
 
 type HouseholdMember = ListHouseholdMembersResponse["members"][number];
@@ -23,12 +24,19 @@ export function HouseholdMemberList({
   accessToken,
   householdId,
   onSessionExpired,
+  canRemoveMembers,
 }: HouseholdMemberListProps) {
   const [state, setState] = useState<MemberListState>({ status: "loading" });
+  const [removingMembershipId, setRemovingMembershipId] = useState<
+    string | null
+  >(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     setState({ status: "loading" });
+    setRemovingMembershipId(null);
+    setRemoveError(null);
 
     void listHouseholdMembers({ accessToken, householdId })
       .then((result) => {
@@ -65,6 +73,46 @@ export function HouseholdMemberList({
     };
   }, [accessToken, householdId, onSessionExpired]);
 
+  async function handleRemove(membershipId: string) {
+    setRemovingMembershipId(membershipId);
+    setRemoveError(null);
+
+    try {
+      const result = await removeHouseholdMember({
+        accessToken,
+        householdId,
+        membershipId,
+      });
+
+      if (result.kind === "unauthorized") {
+        onSessionExpired();
+        return;
+      }
+
+      if (result.kind === "forbidden") {
+        setRemoveError("You are no longer allowed to remove members.");
+        return;
+      }
+
+      if (result.kind === "success" || result.kind === "invalid_member") {
+        setState((current) =>
+          current.status === "success"
+            ? {
+                status: "success",
+                members: current.members.filter(
+                  (member) => member.id !== membershipId,
+                ),
+              }
+            : current,
+        );
+      }
+    } catch {
+      setRemoveError("Unable to remove the household member.");
+    } finally {
+      setRemovingMembershipId(null);
+    }
+  }
+
   if (state.status === "loading") {
     return <p>Loading household members…</p>;
   }
@@ -78,19 +126,32 @@ export function HouseholdMemberList({
   }
 
   return (
-    <ul>
-      {state.members.map((member) => {
-        const joinedAt = new Date(member.joinedAt);
+    <>
+      {removeError ? <p role="alert">{removeError}</p> : null}
+      <ul>
+        {state.members.map((member) => {
+          const joinedAt = new Date(member.joinedAt);
+          const canRemove = canRemoveMembers && member.role === "member";
 
-        return (
-          <li key={member.id}>
-            {member.username} — {member.role} — joined{` `}
-            <time dateTime={member.joinedAt}>
-              {dateFormatter.format(joinedAt)}
-            </time>
-          </li>
-        );
-      })}
-    </ul>
+          return (
+            <li key={member.id}>
+              {member.username} — {member.role} — joined{` `}
+              <time dateTime={member.joinedAt}>
+                {dateFormatter.format(joinedAt)}
+              </time>{" "}
+              {canRemove ? (
+                <button
+                  type="button"
+                  disabled={removingMembershipId !== null}
+                  onClick={() => void handleRemove(member.id)}
+                >
+                  {removingMembershipId === member.id ? "Removing…" : "Remove"}
+                </button>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </>
   );
 }

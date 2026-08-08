@@ -34,6 +34,7 @@ export function HouseholdSettings({
   }
 
   const membership = household.members[0];
+  const isOwner = membership?.role === "owner";
 
   return (
     <>
@@ -42,9 +43,10 @@ export function HouseholdSettings({
         accessToken={accessToken}
         householdId={household.id}
         onSessionExpired={onSessionExpired}
+        canRemoveMembers={isOwner}
       />
 
-      {membership?.role === "owner" ? (
+      {isOwner ? (
         <>
           <h3>Owner settings</h3>
           <RenameHouseholdForm

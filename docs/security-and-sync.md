@@ -107,6 +107,11 @@ locks the current owner's membership and the active invitation in one
 transaction, then sets `revoked_at`. Unknown, expired, accepted, and already
 revoked invitation IDs receive the same generic response.
 
+`DELETE /households/:householdId/members/:membershipId` removes an ordinary
+member. It locks the caller's owner membership as authorization evidence, then
+locks and deletes a target membership scoped to the same household. The owner
+membership cannot be removed through this operation.
+
 Any current household member may list the roster. Only the current owner may
 list pending invitations, which are restricted to unaccepted, unrevoked, and
 unexpired rows and expose only invitation ID, creation time, and expiry time.
