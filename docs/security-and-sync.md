@@ -102,6 +102,11 @@ do not expose email addresses. Pending-invitation listings omit token hashes
 and raw tokens. Revocation returns the same generic result for records that
 must not be disclosed.
 
+`DELETE /households/:householdId/invites/:inviteId` performs revocation. It
+locks the current owner's membership and the active invitation in one
+transaction, then sets `revoked_at`. Unknown, expired, accepted, and already
+revoked invitation IDs receive the same generic response.
+
 Any current household member may list the roster. Only the current owner may
 list pending invitations, which are restricted to unaccepted, unrevoked, and
 unexpired rows and expose only invitation ID, creation time, and expiry time.

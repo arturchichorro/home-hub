@@ -43,6 +43,7 @@ function createTestRoutes(overrides: ServiceOverrides = {}) {
     listHouseholdMembers:
       overrides.listHouseholdMembers ?? (async () => ({ kind: "forbidden" })),
     renameHousehold: async () => ({ kind: "forbidden" }),
+    revokeHouseholdInvite: async () => ({ kind: "forbidden" }),
     jwtSecret,
   });
 }

@@ -26,6 +26,10 @@ import {
   createRenameHouseholdRoute,
   type RenameHouseholdRouteInput,
 } from "./rename";
+import {
+  createRevokeHouseholdInviteRoute,
+  type RevokeHouseholdInviteRouteInput,
+} from "./revoke-invite";
 
 export type CreateHouseholdRoutesInput = AcceptHouseholdInviteRouteInput &
   CreateHouseholdRouteInput &
@@ -33,7 +37,8 @@ export type CreateHouseholdRoutesInput = AcceptHouseholdInviteRouteInput &
   CreateListHouseholdsRouteInput &
   ListHouseholdInvitesRouteInput &
   ListHouseholdMembersRouteInput &
-  RenameHouseholdRouteInput & {
+  RenameHouseholdRouteInput &
+  RevokeHouseholdInviteRouteInput & {
     jwtSecret: string;
   };
 
@@ -44,6 +49,11 @@ export function createHouseholdRoutes(input: CreateHouseholdRoutesInput) {
     "/",
     createBearerAuth(input.jwtSecret),
     createHouseholdRoute(input),
+  );
+  householdRoutes.delete(
+    "/:householdId/invites/:inviteId",
+    createBearerAuth(input.jwtSecret),
+    createRevokeHouseholdInviteRoute(input),
   );
   householdRoutes.get(
     "/",

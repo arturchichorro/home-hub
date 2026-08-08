@@ -119,7 +119,8 @@ teaches us something new.
 - [x] Add a household switcher with an explicit current-household route or state
 - [x] Build owner-only household settings and rename operations
 - [x] List members and pending invitations without exposing private account fields
-- [ ] Implement invitation revocation, member removal, and member-initiated leaving
+- [x] Implement owner-authorized invitation revocation through the API and web UI
+- [ ] Implement member removal and member-initiated leaving
 - [ ] Implement transactional ownership transfer without allowing an ownerless household
 - [ ] Test role changes, last-owner protection, cross-household isolation, and active-household fallback
 - [ ] Complete the Phase 12 checkpoint and commit
