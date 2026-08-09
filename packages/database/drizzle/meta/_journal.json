@@ -85,6 +85,13 @@
       "when": 1786260228876,
       "tag": "0011_previous_loa",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1786260671204,
+      "tag": "0012_add_recipe_images_to_zero_publication",
+      "breakpoints": true
     }
   ]
 }
