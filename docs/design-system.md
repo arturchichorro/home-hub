@@ -157,6 +157,311 @@ The future native package maps the same intent to typed values such as
 `colors.backgroundCanvas`, `spacing[4]`, and `radii.md`. It does not consume CSS
 or Tailwind and may adjust raw values to respect native platform conventions.
 
+### Platform ownership and mapping
+
+The dotted names in this document are the stable cross-platform vocabulary.
+They communicate intent; application code does not import them from a shared
+runtime package.
+
+`@home-hub/ui-web` owns CSS values, Tailwind registration, and web component
+styling. The future `@home-hub/ui-native` owns typed TypeScript values and
+native component styling. A platform may choose a different raw value when its
+rendering, accessibility, or interaction conventions require it, but it keeps
+the documented semantic meaning.
+
+| Shared token | Web implementation | Tailwind use | Future native implementation |
+| --- | --- | --- | --- |
+| `color.background.canvas` | `--color-canvas` | `bg-canvas` | `colors.backgroundCanvas` |
+| `color.background.surface` | `--color-surface` | `bg-surface` | `colors.backgroundSurface` |
+| `color.text.primary` | `--color-foreground` | `text-foreground` | `colors.textPrimary` |
+| `color.text.muted` | `--color-muted` | `text-muted` | `colors.textMuted` |
+| `color.border.default` | `--color-border` | `border-border` | `colors.borderDefault` |
+| `color.action.primary` | `--color-primary` | `bg-primary` or `text-primary` | `colors.actionPrimary` |
+| `color.status.danger` | `--color-danger` | `text-danger` or `border-danger` | `colors.statusDanger` |
+| `space.4` | four units of the 4px spacing base | `p-4`, `gap-4` | `spacing[4]` |
+| `font.size.base` | `--text-base` and its line height | `text-base` | `typography.size.base` |
+| `radius.md` | `--radius-md` | `rounded-md` | `radii.md` |
+| `shadow.raised` | `--shadow-raised` | `shadow-raised` | `shadows.raised` |
+| `motion.duration.fast` | `--motion-duration-fast` | referenced by web component transitions | `motion.duration.fast` |
+| `motion.easing.standard` | `--ease-standard` | referenced by web component transitions | `motion.easing.standard` |
+
+Color, type, radius, and shadow values that should generate Tailwind utilities
+are registered in `@theme`. Runtime-only values may remain ordinary `:root`
+custom properties. Feature code consumes utilities and Home Hub components; it
+must not duplicate raw OKLCH colors, spacing pixels, radii, or motion timings.
+
+Native components consume only `@home-hub/ui-native`. They do not import CSS,
+Tailwind, Base UI, or web token files. Conversely, web code does not import the
+future native token object. This keeps the vocabulary aligned without making
+the implementations artificially interchangeable.
+
+## Component foundations
+
+### Web: Base UI plus Tailwind
+
+`@home-hub/ui-web` is the only package that imports `@base-ui/react`. Base UI
+provides unstyled behavior for controls whose keyboard interaction, focus
+management, popup positioning, dismissal, or ARIA structure is meaningfully
+complex. Tailwind and Home Hub's semantic CSS variables provide all product
+styling.
+
+Use native HTML directly inside `ui-web` when it already provides the correct
+behavior. A plain button, link, input, textarea, heading, and list do not need a
+headless primitive merely for consistency. Use Base UI initially for the
+household and account menus, custom selects when native select behavior is
+insufficient, switches, dialogs, and any later sheet or popover behavior.
+
+Base UI owns:
+
+- the low-level parts and composition of its headless controls;
+- keyboard navigation and pointer interaction supplied by each primitive;
+- popup positioning, dismissal, and focus restoration where applicable;
+- baseline roles, ARIA attributes, and focus management.
+
+`@home-hub/ui-web` owns:
+
+- Home Hub component names, props, defaults, and supported variants;
+- semantic token usage and Tailwind classes;
+- visible focus, contrast, dimensions, responsive presentation, and motion;
+- labels, instructions, validation messages, and application-facing slots;
+- tests proving the wrapped behavior still works after composition and styling.
+
+Base UI is a foundation, not an accessibility waiver. Feature code still
+provides meaningful labels and announcements, and Home Hub still verifies
+keyboard use, focus visibility, contrast, zoom, and screen-reader behavior.
+
+The first web vocabulary is intentionally limited to Button, IconButton,
+Field, Select, Switch, Menu, Dialog, Panel, InlineAlert, StatusIndicator, and
+divided-list presentation. Add Tooltip, Toast, Combobox, or dedicated Sheet
+only when a working screen requires them. Route-navigation links, application
+shell composition, shopping rows, recipe content, and household-management
+rows remain feature or application components.
+
+### Future native: Expo UI
+
+`@home-hub/ui-native` will be the only application-facing package that imports
+`@expo/ui`. Prefer Expo UI's universal components when they cover the required
+interaction: Button, Switch, TextInput, Picker, BottomSheet, List, layout, text,
+and icon primitives are current candidates. Universal subtrees require Expo
+UI's `Host`, which the native package or application shell must place at an
+appropriate boundary.
+
+Use `@expo/ui/swift-ui` or `@expo/ui/jetpack-compose` directly only inside
+`ui-native` when an intentional native convention or missing universal feature
+requires it. Small genuine gaps may use ordinary React Native components
+inside the wrapper rather than introducing another overlapping primitive
+library.
+
+Expo UI owns native rendering through SwiftUI and Jetpack Compose and the
+platform behavior of its controls. `ui-native` owns Home Hub names, semantic
+token mapping, application-facing props, accessibility additions, and the
+decision to preserve or intentionally vary behavior by platform.
+
+Expo UI's API and component coverage are tied to the chosen Expo SDK. Recheck
+the current SDK documentation when mobile implementation starts; do not freeze
+today's package version or exact component signatures into this design-system
+contract. Verify the resulting application with VoiceOver and TalkBack rather
+than assuming native backing alone guarantees accessibility.
+
+## Initial component contracts
+
+These contracts describe application-facing behavior, not exact Base UI parts
+or final TypeScript signatures. Phase 16 should implement the smallest API that
+satisfies current call sites and the development gallery.
+
+### Button
+
+An interactive root contains a label, an optional leading or trailing icon, and
+an optional progress indicator. Variants are `primary`, `secondary`, `ghost`,
+and `danger`; the default size and one compact size are sufficient initially.
+
+Support rest, hover, pressed, focus-visible, disabled, and busy states. Busy
+prevents duplicate activation and exposes progress without changing the
+control's width unexpectedly. Use `primary` once per local action group,
+`secondary` for ordinary actions, `ghost` for low-emphasis row actions, and
+`danger` only for destructive confirmation.
+
+### IconButton
+
+An icon-only button has an interactive root and icon. It always receives an
+accessible name that describes the action, not the icon shape. Variants are
+`ghost` and `danger`; one comfortable square size is enough initially.
+
+Support the same interaction states as Button. Use it for recognizable,
+repeated row actions such as crossing or archiving a shopping item. Use a
+labeled Button when the meaning would be ambiguous; a tooltip is not a
+substitute for the accessible name.
+
+### Field
+
+A Field contains a persistent label, control, optional description, and
+optional validation or server message. It coordinates IDs and accessibility
+relationships for input, password input, textarea, and other simple controls.
+
+Support optional, required, disabled, read-only, invalid, and busy contexts.
+The error state includes text and styling rather than color alone. Do not use
+placeholder text as the label. Keep feature-specific validation and value state
+outside the UI package.
+
+### Select
+
+A Select combines Field labeling with a trigger, current value or placeholder,
+disclosure icon, popup, and option list. Options support selected, highlighted,
+disabled, and focus-visible states; the trigger supports invalid and disabled
+states.
+
+Use a native select when it satisfies the screen. Use the wrapped Base UI
+Select for household and recipe selection when custom menu layout or responsive
+popup behavior is actually required. Do not use Select for application
+navigation when ordinary links are appropriate.
+
+### Switch
+
+A Switch contains a clickable label, optional description, track, and thumb.
+It supports checked, unchecked, hover, pressed, focus-visible, and disabled
+states. The label states what setting the switch controls; the visual position
+is not its only state indication.
+
+Use Switch for immediate boolean settings such as enabling a household module.
+Do not use it for commands, multi-state values, or destructive choices. While
+an online-only change is pending, disable repeated toggles and expose progress
+near the setting.
+
+### Menu
+
+A Menu contains a trigger, positioned popup, optional group labels and
+separators, and menu items. Items are `default` or `danger` and support
+highlighted, focus-visible, disabled, and pending states. The primitive owns
+opening, dismissal, arrow-key navigation, typeahead where available, and focus
+restoration.
+
+Use Menu for the household selector and account actions. Items that navigate
+render with link semantics; items that execute commands use button/menu-item
+semantics. Do not place complex forms inside a menu: Join household and Create
+household may open a Dialog from their menu items.
+
+### Dialog
+
+A Dialog contains a portal, backdrop, popup, title, optional description,
+content, action area, and close control. Initial sizes are `small` for focused
+forms or confirmation and `medium` for household creation or joining.
+
+Support opening, open, closing, busy, and server-error states. Focus moves into
+the dialog, remains contained while modal, and returns to the trigger after
+close. Escape and the close control dismiss ordinary dialogs; a destructive or
+submitting dialog must not disappear accidentally if doing so would lose work.
+
+Use Dialog for login-independent focused tasks and confirmations without
+changing the current module. Do not use it for long household settings or the
+entire recipe screen. A dedicated mobile sheet remains deferred until needed.
+
+### Panel
+
+A Panel contains an optional header with title, description, and actions; a
+body; and an optional footer. Variants are `default` and `raised`. It supports
+normal, loading, empty, unavailable, and disabled-content presentation through
+explicit children rather than hidden internal data logic.
+
+Use `raised` for authentication and floating surfaces. Use `default` sparingly
+for grouped content; ordinary page sections may need only spacing and a
+separator. Panel never fetches data or understands household/module concepts.
+
+### InlineAlert
+
+An InlineAlert contains an optional icon, optional title, message, and optional
+action. Variants are `info`, `success`, `warning`, and `danger`. It may use
+`status` behavior for nonurgent updates or `alert` behavior for an error that
+requires immediate attention; the caller chooses based on urgency.
+
+Use it for validation summaries, server rejection, unavailable operations, and
+meaningful completion feedback. Do not announce every optimistic update or
+duplicate a field-level error in a page alert.
+
+### StatusIndicator
+
+A StatusIndicator contains a dot or icon and visible label. Variants are
+`neutral`, `success`, `warning`, and `danger`; size may be compact or default.
+It supports static and live status behavior, with live announcements enabled
+only when a change is useful to hear.
+
+Use it for Zero connection state and similarly concise system states. Map
+Connected to success, Connecting to warning, and Offline, Authentication
+required, Synchronization error, and Synchronization stopped to danger. Never
+render the colored dot without its label.
+
+### Divided list and feature composition
+
+The initial divided-list presentation standardizes separators, row spacing,
+and responsive action placement but does not prescribe domain row props.
+ShoppingItemRow, MemberRow, InvitationRow, IngredientRow, and CookLogRow remain
+feature components composed from buttons, icons, status text, and list
+presentation.
+
+Component names and variants are a controlled starting vocabulary. New
+variants require a concrete call site and must describe semantic emphasis or
+behavior rather than a one-off color or spacing exception.
+
+## Responsive layout
+
+Use mobile-first rules and Tailwind's default breakpoints. Do not add custom
+breakpoints until a real screen fails between the defaults. The initial design
+uses only `sm` at 40rem and `lg` at 64rem for intentional layout changes;
+intermediate widths should flow naturally.
+
+### Application shell
+
+The application canvas fills the viewport. The top bar may span the available
+width, while primary module content is centered at a maximum width of 48rem.
+Use 16px inline page padding by default, 24px from `sm`, and 32px from `lg`.
+
+At `sm` and above, the top bar presents the wordmark and household selector on
+the left, with connection state and account menu on the right. Below `sm`, it
+uses two rows: wordmark, connection state, and account menu first; a full-width
+household selector second. Connection text may shorten where necessary but
+must never become a color-only dot.
+
+Household and account surfaces are anchored menus or popovers on larger
+screens. On narrow screens they may use a modal sheet with the same options and
+ordering. Start with whichever Base UI primitive yields the simplest complete,
+keyboard-accessible behavior; visual transformation between popover and sheet
+is a later refinement if it complicates the working version.
+
+### Module navigation
+
+Module navigation remains a horizontal row of icon-and-label links. Below
+`sm`, it may scroll horizontally rather than collapse behind another menu.
+Keep the current destination visible, preserve text labels, and place Household
+last. The navigation does not wrap into multiple ambiguous rows.
+
+### Content and forms
+
+The authentication card has a maximum width of 28rem. It is vertically and
+horizontally centered when space permits; on small or short viewports it becomes
+a normal full-width block with page padding so content is never clipped.
+
+Forms stack labels, controls, messages, and primary actions by default. From
+`sm`, short related controls and secondary actions may share a row. Controls
+remain full width when narrowing them would harm scanning or touch use.
+
+List rows use a flexible content column and a fixed action area. Shopping item
+names may wrap while their cross/archive actions remain reachable. Household
+member and invitation rows may move actions below their content on narrow
+screens instead of shrinking labels or forcing page-level horizontal scroll.
+
+### Feature layouts
+
+The recipe selector and New recipe action stack below `sm` and share a row from
+`sm`. Recipe content stays in one centered column. Images use their stored
+aspect ratio and never exceed the content width. Ingredient and cooking-history
+rows may reflow into stacked label/value groups on narrow screens.
+
+Household settings remains one column at every size. Section actions align with
+their headings when space permits and move below them when it does not.
+
+Menus may overflow internally, but the document must not scroll horizontally.
+Honor safe-area insets for fixed or edge-aligned controls when the future mobile
+web layout requires them.
+
 ## Interface audit
 
 ### Authentication

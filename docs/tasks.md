@@ -158,10 +158,10 @@ teaches us something new.
 - [x] Audit the existing screens, interaction states, and repeated UI patterns
 - [x] Define the product's visual principles and accessibility baseline
 - [x] Define semantic tokens for color, typography, spacing, radii, shadows, and motion
-- [ ] Define responsive layout rules and breakpoints
-- [ ] Document shared token names and how each UI package maps them to its platform
-- [ ] Document Base UI for web and Expo UI for the future React Native library
-- [ ] Document component anatomy, variants, states, and usage guidance
+- [x] Define responsive layout rules and breakpoints
+- [x] Document shared token names and how each UI package maps them to its platform
+- [x] Document Base UI for web and Expo UI for the future React Native library
+- [x] Document component anatomy, variants, states, and usage guidance
 - [ ] Complete the Phase 15 checkpoint and commit
 
 ## Phase 16: Base UI web component library
