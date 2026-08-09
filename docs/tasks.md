@@ -149,8 +149,8 @@ teaches us something new.
 - [x] Implement authorized pending-image creation and short-lived presigned direct uploads
 - [x] Confirm uploads by verifying R2 object existence, content type, and size
 - [x] Implement authorized signed reads and deletion with object/metadata consistency
-- [ ] Build and verify the recipe-image web flow, including failure and pending states
-- [ ] Complete the Phase 14 checkpoint
+- [x] Build and verify the recipe-image web flow, including failure and pending states
+- [x] Complete the Phase 14 checkpoint
 - [ ] Commit the completed Phase 14 checkpoint
 
 ## Phase 15: design-system definition
