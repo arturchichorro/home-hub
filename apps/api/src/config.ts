@@ -39,6 +39,10 @@ const configSchema = z.object({
     .trim()
     .optional()
     .transform((value) => (value ? value : undefined)),
+  R2_ENDPOINT: z.url(),
+  R2_ACCESS_KEY_ID: z.string().min(1, "R2_ACCESS_KEY_ID is required"),
+  R2_SECRET_ACCESS_KEY: z.string().min(1, "R2_SECRET_ACCESS_KEY is required"),
+  R2_BUCKET: z.string().trim().min(1, "R2_BUCKET is required"),
 });
 
 export const config = configSchema.parse(process.env);

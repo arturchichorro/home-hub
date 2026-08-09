@@ -145,7 +145,7 @@ teaches us something new.
 
 - [x] Define and migrate pending/confirmed recipe-image metadata with optional cook-log ownership
 - [x] Add confirmed image metadata to the Zero publication, generated schema, and authorized recipe queries
-- [ ] Configure the R2 client and validate its environment without exposing credentials to Vite
+- [x] Configure the R2 client and validate its environment without exposing credentials to Vite
 - [ ] Implement authorized pending-image creation and short-lived presigned direct uploads
 - [ ] Confirm uploads by verifying R2 object existence, content type, and size
 - [ ] Implement authorized signed reads and deletion with object/metadata consistency
