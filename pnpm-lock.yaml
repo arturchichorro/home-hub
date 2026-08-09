@@ -126,6 +126,8 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
 
+  packages/ui-web: {}
+
 packages:
 
   '@aws-sdk/checksums@3.1000.26':
