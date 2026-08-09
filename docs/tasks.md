@@ -169,7 +169,7 @@ teaches us something new.
 - [x] Create the internal `@home-hub/ui-web` package for React DOM components
 - [x] Install Base UI as the unstyled accessible behavioral foundation for `ui-web`
 - [x] Implement web design tokens as CSS variables owned by `ui-web`
-- [ ] Configure Tailwind to consume the `ui-web` semantic CSS variables
+- [x] Configure Tailwind to consume the `ui-web` semantic CSS variables
 - [ ] Implement the first reusable primitives for buttons, fields, panels, alerts, and status indicators
 - [ ] Add a lightweight development gallery for visual and interaction-state review
 - [ ] Adopt the primitives in authentication, household selection, connection state, and Shopping
