@@ -69,7 +69,11 @@ export function HouseholdWorkspace({
       {enabledModuleKeys.has("recipes") ? (
         <section>
           <h2>Recipes</h2>
-          <RecipeList householdId={householdId} />
+          <RecipeList
+            accessToken={accessToken}
+            householdId={householdId}
+            onSessionExpired={onSessionExpired}
+          />
         </section>
       ) : null}
     </>

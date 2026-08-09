@@ -29,3 +29,54 @@ export const createRecipeImageUploadRequestSchema = z
 export type CreateRecipeImageUploadRequest = z.infer<
   typeof createRecipeImageUploadRequestSchema
 >;
+
+export const createRecipeImageUploadResponseSchema = z
+  .object({
+    imageId: z.uuid(),
+    upload: z
+      .object({
+        url: z.url(),
+        expiresInSeconds: z.number().int().positive(),
+        requiredHeaders: z
+          .object({
+            "Content-Type": recipeImageContentTypeSchema,
+          })
+          .strict(),
+      })
+      .strict(),
+  })
+  .strict();
+
+export type CreateRecipeImageUploadResponse = z.infer<
+  typeof createRecipeImageUploadResponseSchema
+>;
+
+export const confirmRecipeImageUploadResponseSchema = z
+  .object({
+    image: z
+      .object({
+        id: z.uuid(),
+        confirmedAt: z.iso.datetime(),
+      })
+      .strict(),
+  })
+  .strict();
+
+export type ConfirmRecipeImageUploadResponse = z.infer<
+  typeof confirmRecipeImageUploadResponseSchema
+>;
+
+export const createRecipeImageReadUrlResponseSchema = z
+  .object({
+    read: z
+      .object({
+        url: z.url(),
+        expiresInSeconds: z.number().int().positive(),
+      })
+      .strict(),
+  })
+  .strict();
+
+export type CreateRecipeImageReadUrlResponse = z.infer<
+  typeof createRecipeImageReadUrlResponseSchema
+>;

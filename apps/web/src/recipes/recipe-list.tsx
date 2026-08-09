@@ -5,10 +5,16 @@ import { CreateRecipeForm } from "./create-recipe-form";
 import { RecipeDetail } from "./recipe-detail";
 
 type RecipeListProps = {
+  accessToken: string;
   householdId: string;
+  onSessionExpired: () => void;
 };
 
-export function RecipeList({ householdId }: RecipeListProps) {
+export function RecipeList({
+  accessToken,
+  householdId,
+  onSessionExpired,
+}: RecipeListProps) {
   const [selection, setSelection] = useState<{
     householdId: string;
     recipeId: string;
@@ -53,7 +59,12 @@ export function RecipeList({ householdId }: RecipeListProps) {
       )}
 
       {selectedRecipeId ? (
-        <RecipeDetail householdId={householdId} recipeId={selectedRecipeId} />
+        <RecipeDetail
+          accessToken={accessToken}
+          householdId={householdId}
+          recipeId={selectedRecipeId}
+          onSessionExpired={onSessionExpired}
+        />
       ) : null}
     </>
   );

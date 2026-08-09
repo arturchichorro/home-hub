@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  confirmRecipeImageUploadResponseSchema,
+  createRecipeImageReadUrlResponseSchema,
   createRecipeImageUploadRequestSchema,
+  createRecipeImageUploadResponseSchema,
   maxRecipeImageByteSize,
   maxRecipeImageDimension,
   recipeImageContentTypes,
@@ -65,5 +68,44 @@ describe("createRecipeImageUploadRequestSchema", () => {
         objectKey: "user-controlled-key",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("recipe image HTTP response schemas", () => {
+  const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+
+  it("validates pending upload instructions", () => {
+    const response = {
+      imageId,
+      upload: {
+        url: "https://upload.example/image",
+        expiresInSeconds: 300,
+        requiredHeaders: { "Content-Type": "image/webp" },
+      },
+    };
+
+    expect(createRecipeImageUploadResponseSchema.parse(response)).toEqual(
+      response,
+    );
+  });
+
+  it("validates confirmation metadata", () => {
+    const response = {
+      image: { id: imageId, confirmedAt: "2026-08-10T12:00:00.000Z" },
+    };
+
+    expect(confirmRecipeImageUploadResponseSchema.parse(response)).toEqual(
+      response,
+    );
+  });
+
+  it("validates signed read instructions", () => {
+    const response = {
+      read: { url: "https://read.example/image", expiresInSeconds: 300 },
+    };
+
+    expect(createRecipeImageReadUrlResponseSchema.parse(response)).toEqual(
+      response,
+    );
   });
 });

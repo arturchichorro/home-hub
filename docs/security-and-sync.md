@@ -263,4 +263,13 @@ only previously synchronized Zero rows persist in the local cache.
 Only confirmed image metadata may be synchronized or receive a signed read URL.
 Abandoned pending rows and their possible objects are cleanup candidates.
 
+Image deletion is idempotent and deletes the R2 object before hard-deleting its
+PostgreSQL metadata. Authorization and metadata reads happen in a short
+transaction, the R2 request happens with no database locks held, and a second
+transaction reauthorizes and locks the row before deleting it. If R2 deletion
+fails, metadata remains untouched. If the database step fails after R2
+deletion, retrying repeats the idempotent object deletion and can finish the
+metadata cleanup. A transactional outbox may replace this deliberately simple
+recovery policy if background jobs are introduced later.
+
 Support JPEG, PNG, and WebP initially, with a 10 MiB maximum. Treat presigned URLs as bearer credentials. R2 credentials must never be placed in a `VITE_` environment variable.

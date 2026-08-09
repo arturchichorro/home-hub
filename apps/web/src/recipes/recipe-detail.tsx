@@ -2,10 +2,14 @@ import { queries } from "@home-hub/shared/zero/queries";
 import { useQuery } from "@rocicorp/zero/react";
 import { AddRecipeCookLogForm } from "./add-recipe-cook-log-form";
 import { AddRecipeIngredientForm } from "./add-recipe-ingredient-form";
+import { RecipeImageGallery } from "./recipe-image-gallery";
+import { RecipeImageUploadForm } from "./recipe-image-upload-form";
 
 type RecipeDetailProps = {
+  accessToken: string;
   householdId: string;
   recipeId: string;
+  onSessionExpired: () => void;
 };
 
 const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
@@ -13,7 +17,12 @@ const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
   timeStyle: "short",
 });
 
-export function RecipeDetail({ householdId, recipeId }: RecipeDetailProps) {
+export function RecipeDetail({
+  accessToken,
+  householdId,
+  recipeId,
+  onSessionExpired,
+}: RecipeDetailProps) {
   const [recipe, result] = useQuery(
     queries.recipes.detail({ householdId, recipeId }),
   );
@@ -36,11 +45,33 @@ export function RecipeDetail({ householdId, recipeId }: RecipeDetailProps) {
         Math.max(highestPosition, ingredient.position),
       -1,
     ) + 1;
+  const nextImagePosition =
+    recipe.images.reduce(
+      (highestPosition, image) => Math.max(highestPosition, image.position),
+      -1,
+    ) + 1;
 
   return (
     <article>
       <h3>{recipe.title}</h3>
       {recipe.description ? <p>{recipe.description}</p> : null}
+
+      <h4>Images</h4>
+      <RecipeImageUploadForm
+        accessToken={accessToken}
+        householdId={householdId}
+        recipeId={recipeId}
+        cookLogs={recipe.cookLogs}
+        position={nextImagePosition}
+        onSessionExpired={onSessionExpired}
+      />
+      <RecipeImageGallery
+        accessToken={accessToken}
+        householdId={householdId}
+        recipeId={recipeId}
+        images={recipe.images}
+        onSessionExpired={onSessionExpired}
+      />
 
       <h4>Ingredients</h4>
       <AddRecipeIngredientForm
