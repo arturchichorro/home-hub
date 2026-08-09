@@ -7,6 +7,7 @@
     "./households": "./src/households.ts",
     "./modules": "./src/modules.ts",
     "./normalization": "./src/normalization.ts",
+    "./recipe-images": "./src/recipe-images.ts",
     "./shopping": "./src/shopping.ts",
     "./recipes": "./src/recipes.ts",
     "./zero/context": "./src/zero/context.ts",
