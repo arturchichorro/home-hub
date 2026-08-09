@@ -167,8 +167,8 @@ teaches us something new.
 ## Phase 16: Base UI web component library
 
 - [x] Create the internal `@home-hub/ui-web` package for React DOM components
-- [ ] Install Base UI as the unstyled accessible behavioral foundation for `ui-web`
-- [ ] Implement web design tokens as CSS variables owned by `ui-web`
+- [x] Install Base UI as the unstyled accessible behavioral foundation for `ui-web`
+- [x] Implement web design tokens as CSS variables owned by `ui-web`
 - [ ] Configure Tailwind to consume the `ui-web` semantic CSS variables
 - [ ] Implement the first reusable primitives for buttons, fields, panels, alerts, and status indicators
 - [ ] Add a lightweight development gallery for visual and interaction-state review
