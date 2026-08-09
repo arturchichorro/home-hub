@@ -151,7 +151,7 @@ teaches us something new.
 - [x] Implement authorized signed reads and deletion with object/metadata consistency
 - [x] Build and verify the recipe-image web flow, including failure and pending states
 - [x] Complete the Phase 14 checkpoint
-- [ ] Commit the completed Phase 14 checkpoint
+- [x] Commit the completed Phase 14 checkpoint
 
 ## Phase 15: design-system definition
 
