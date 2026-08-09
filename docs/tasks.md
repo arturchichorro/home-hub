@@ -162,7 +162,7 @@ teaches us something new.
 - [x] Document shared token names and how each UI package maps them to its platform
 - [x] Document Base UI for web and Expo UI for the future React Native library
 - [x] Document component anatomy, variants, states, and usage guidance
-- [ ] Complete the Phase 15 checkpoint and commit
+- [x] Complete the Phase 15 checkpoint and commit
 
 ## Phase 16: Base UI web component library
 
