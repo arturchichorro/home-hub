@@ -57,6 +57,106 @@ retain a stable label or an explicit progress label. Loading announcements and
 errors use appropriate live-region behavior without repeatedly interrupting
 assistive-technology users.
 
+## Semantic tokens
+
+Token names describe interface roles rather than a particular raw color or
+platform implementation. The initial system is dark-first and intentionally
+small. Values are starting points to be judged in the component gallery rather
+than permanent branding commitments.
+
+### Color
+
+| Shared intent | Web variable | Initial web value |
+| --- | --- | --- |
+| `color.background.canvas` | `--color-canvas` | `oklch(0.16 0.006 40)` |
+| `color.background.surface` | `--color-surface` | `oklch(0.20 0.007 40)` |
+| `color.background.raised` | `--color-raised` | `oklch(0.24 0.008 40)` |
+| `color.text.primary` | `--color-foreground` | `oklch(0.94 0.01 70)` |
+| `color.text.muted` | `--color-muted` | `oklch(0.72 0.01 70)` |
+| `color.text.subtle` | `--color-subtle` | `oklch(0.58 0.01 70)` |
+| `color.border.default` | `--color-border` | `oklch(0.30 0.008 40)` |
+| `color.action.primary` | `--color-primary` | `oklch(0.68 0.20 38)` |
+| `color.action.primary-hover` | `--color-primary-hover` | `oklch(0.73 0.18 38)` |
+| `color.action.on-primary` | `--color-on-primary` | `oklch(0.98 0.01 70)` |
+| `color.status.success` | `--color-success` | `oklch(0.76 0.13 130)` |
+| `color.status.warning` | `--color-warning` | `oklch(0.80 0.14 85)` |
+| `color.status.danger` | `--color-danger` | `oklch(0.68 0.19 28)` |
+| `color.focus.ring` | `--color-focus-ring` | `oklch(0.78 0.15 65)` |
+
+Use opacity derived from these roles for subtle state backgrounds only when
+contrast remains sufficient. Do not create module-specific colors initially.
+
+### Spacing and sizing
+
+Use a four-pixel base and the deliberately sparse shared scale:
+
+| Token | Value |
+| --- | --- |
+| `space.1` | `4px` |
+| `space.2` | `8px` |
+| `space.3` | `12px` |
+| `space.4` | `16px` |
+| `space.6` | `24px` |
+| `space.8` | `32px` |
+| `space.12` | `48px` |
+| `space.16` | `64px` |
+
+Default control height is `40px`; preserve at least a `44px` touch target when
+controls appear in touch-oriented layouts. Content width, breakpoints, and
+responsive shell sizing are defined separately.
+
+### Typography
+
+Use the platform system sans-serif stack for the working version. Reserve a
+monospace stack for technical identifiers only.
+
+| Token | Size / line height |
+| --- | --- |
+| `font.size.xs` | `12px / 16px` |
+| `font.size.sm` | `14px / 20px` |
+| `font.size.base` | `16px / 24px` |
+| `font.size.lg` | `18px / 26px` |
+| `font.size.xl` | `22px / 30px` |
+| `font.size.2xl` | `28px / 36px` |
+
+Use weights 400, 500, and 600. Body text uses 400, controls and small headings
+use 500, and major headings use 600.
+
+### Shape, elevation, and motion
+
+| Token | Value |
+| --- | --- |
+| `radius.sm` | `6px` |
+| `radius.md` | `10px` |
+| `radius.lg` | `14px` |
+| `radius.full` | `9999px` |
+| `shadow.raised` | `0 12px 32px rgb(0 0 0 / 0.28)` |
+| `motion.duration.fast` | `120ms` |
+| `motion.duration.normal` | `180ms` |
+| `motion.easing.standard` | `cubic-bezier(0.2, 0, 0, 1)` |
+
+Use borders and surface changes before shadows. Menus, dialogs, and sheets may
+use `shadow.raised`; ordinary content panels do not. Reduced-motion mode removes
+nonessential transitions and makes essential state changes immediate.
+
+### Tailwind web mapping
+
+`@home-hub/ui-web` owns the web values in its global CSS. Tailwind CSS v4 is
+integrated through its Vite plugin and CSS-first `@theme` variables. Semantic
+color variables use Tailwind's `--color-*` namespace so utilities such as
+`bg-surface`, `text-foreground`, and `border-border` are
+generated from the same runtime CSS variables used by ordinary CSS.
+
+Do not introduce a JavaScript `tailwind.config` unless a concrete future need
+cannot be expressed by the CSS-first configuration. Do not use `@apply` to hide
+large utility bundles inside feature CSS; reusable combinations belong in
+Home Hub components, while isolated feature layout remains explicit at the
+call site.
+
+The future native package maps the same intent to typed values such as
+`colors.backgroundCanvas`, `spacing[4]`, and `radii.md`. It does not consume CSS
+or Tailwind and may adjust raw values to respect native platform conventions.
+
 ## Interface audit
 
 ### Authentication
