@@ -143,9 +143,15 @@ teaches us something new.
 
 ## Phase 14: R2 images
 
-- [ ] Implement authorized direct uploads and confirmation
-- [ ] Implement signed reads, deletion, type validation, and size limits
-- [ ] Complete the Phase 14 checkpoint and commit
+- [ ] Define and migrate pending/confirmed recipe-image metadata with optional cook-log ownership
+- [ ] Add confirmed image metadata to the Zero publication, generated schema, and authorized recipe queries
+- [ ] Configure the R2 client and validate its environment without exposing credentials to Vite
+- [ ] Implement authorized pending-image creation and short-lived presigned direct uploads
+- [ ] Confirm uploads by verifying R2 object existence, content type, and size
+- [ ] Implement authorized signed reads and deletion with object/metadata consistency
+- [ ] Build and verify the recipe-image web flow, including failure and pending states
+- [ ] Complete the Phase 14 checkpoint
+- [ ] Commit the completed Phase 14 checkpoint
 
 ## Phase 15: design-system definition
 

@@ -26,6 +26,7 @@ erDiagram
   recipes ||--o{ recipe_ingredients : contains
   recipes ||--o{ recipe_cook_logs : records
   recipes ||--o{ recipe_images : illustrates
+  recipe_cook_logs ||--o{ recipe_images : contextualizes
 ```
 
 ## Tables
@@ -187,12 +188,25 @@ event.
 - `id`
 - `household_id`
 - `recipe_id`
+- `cook_log_id`, nullable
 - `object_key`
 - `content_type`
+- `byte_size`
 - `position`: integer
+- `confirmed_at`, nullable
 - `created_at`, `updated_at`
 
-Object keys are server-controlled and independent of public hostnames.
+Every image belongs to one recipe and may optionally provide context for one
+cooking log from that same recipe. Cooking-log images remain part of the
+recipe's overall image collection. Enforce the optional cooking-log
+relationship with the household and recipe IDs so it cannot cross tenant or
+recipe boundaries.
+
+Object keys are server-controlled, unique, and independent of public
+hostnames. Create pending metadata before issuing a presigned upload;
+`confirmed_at` remains null until the API verifies the R2 object and its type
+and size. Only confirmed images are readable or synchronized. Position must be
+nonnegative.
 
 ## Transactional invariants
 
@@ -214,3 +228,5 @@ Object keys are server-controlled and independent of public hostnames.
   verifies both Recipes and Shopping are enabled, then inserts or reactivates
   the normalized shopping rows in one transaction.
 - Recipe image metadata may reference only a recipe from the same household.
+- A recipe image linked to a cooking log may reference only a log for that same
+  household and recipe.

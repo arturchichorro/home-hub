@@ -159,6 +159,14 @@ JWT and Argon2id solve different problems: Argon2id protects the password at res
 
 The API should authorize uploads, not proxy image bytes. Presigned direct uploads keep the API stateless and avoid filesystem storage.
 
+Every recipe image belongs to a recipe and may optionally reference one of that
+recipe's cooking logs. A cooking-log image also appears in the recipe's image
+collection. The API creates pending metadata before signing the upload and
+marks it confirmed only after verifying the R2 object, content type, and byte
+size. Store only the server-controlled object key in PostgreSQL; do not persist
+public or signed URLs. Disabling Recipes retains both metadata and objects but
+blocks image operations.
+
 ## Portable single-node production deployment
 
 The initial production target is one OVHcloud VPS in Brussels. Caddy, the Hono

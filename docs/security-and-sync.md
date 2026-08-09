@@ -253,11 +253,14 @@ only previously synchronized Zero rows persist in the local cache.
 
 ## R2 upload security
 
-1. The authenticated browser requests permission for a specific recipe, image ID, content type, and size.
-2. The API verifies household membership and recipe ownership.
-3. The API constructs `households/{householdId}/recipes/{recipeId}/{imageId}`.
+1. The authenticated browser requests permission for a specific recipe, image ID, optional cooking log, content type, and size.
+2. The API verifies household membership, that Recipes is enabled, recipe ownership, and any cooking-log relationship.
+3. The API constructs `households/{householdId}/recipes/{recipeId}/{imageId}` and creates pending metadata in PostgreSQL.
 4. The API returns a short-lived presigned `PUT` URL bound to an allowed content type.
 5. The browser uploads directly to R2.
-6. The browser confirms completion, and synchronized metadata is recorded.
+6. The browser confirms completion. The API verifies the object's type and size before marking the metadata confirmed.
+
+Only confirmed image metadata may be synchronized or receive a signed read URL.
+Abandoned pending rows and their possible objects are cleanup candidates.
 
 Support JPEG, PNG, and WebP initially, with a 10 MiB maximum. Treat presigned URLs as bearer credentials. R2 credentials must never be placed in a `VITE_` environment variable.
