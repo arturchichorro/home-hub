@@ -157,6 +157,7 @@ export const shoppingItems = pgTable(
 );
 
 export const householdsRelations = relations(households, ({ many }) => ({
+  images: many(recipeImages),
   members: many(householdMembers),
   moduleSettings: many(householdModuleSettings),
   recipes: many(recipes),
@@ -258,6 +259,11 @@ export const recipeCookLogs = pgTable(
       foreignColumns: [recipes.householdId, recipes.id],
       name: "recipe_cook_logs_household_recipe_fk",
     }),
+    unique("recipe_cook_logs_household_recipe_id_unique").on(
+      table.householdId,
+      table.recipeId,
+      table.id,
+    ),
     index("recipe_cook_logs_recipe_id_cooked_at_id_idx").on(
       table.recipeId,
       table.cookedAt,
@@ -273,6 +279,7 @@ export const recipesRelations = relations(recipes, ({ many, one }) => ({
   }),
   ingredients: many(recipeIngredients),
   cookLogs: many(recipeCookLogs),
+  images: many(recipeImages),
 }));
 
 export const recipeIngredientsRelations = relations(
@@ -289,16 +296,20 @@ export const recipeIngredientsRelations = relations(
   }),
 );
 
-export const recipeCookLogsRelations = relations(recipeCookLogs, ({ one }) => ({
-  household: one(households, {
-    fields: [recipeCookLogs.householdId],
-    references: [households.id],
+export const recipeCookLogsRelations = relations(
+  recipeCookLogs,
+  ({ many, one }) => ({
+    household: one(households, {
+      fields: [recipeCookLogs.householdId],
+      references: [households.id],
+    }),
+    recipe: one(recipes, {
+      fields: [recipeCookLogs.householdId, recipeCookLogs.recipeId],
+      references: [recipes.householdId, recipes.id],
+    }),
+    images: many(recipeImages),
   }),
-  recipe: one(recipes, {
-    fields: [recipeCookLogs.householdId, recipeCookLogs.recipeId],
-    references: [recipes.householdId, recipes.id],
-  }),
-}));
+);
 
 export const householdModuleSettings = pgTable(
   "household_module_settings",
@@ -332,3 +343,88 @@ export const householdModuleSettingsRelations = relations(
     }),
   }),
 );
+
+export const recipeImages = pgTable(
+  "recipe_images",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id").notNull(),
+    recipeId: uuid("recipe_id").notNull(),
+    cookLogId: uuid("cook_log_id"),
+    objectKey: text("object_key").notNull().unique(),
+    contentType: text("content_type").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    position: integer("position").notNull(),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.householdId, table.recipeId],
+      foreignColumns: [recipes.householdId, recipes.id],
+      name: "recipe_images_household_recipe_fk",
+    }),
+    foreignKey({
+      columns: [table.householdId, table.recipeId, table.cookLogId],
+      foreignColumns: [
+        recipeCookLogs.householdId,
+        recipeCookLogs.recipeId,
+        recipeCookLogs.id,
+      ],
+      name: "recipe_images_household_recipe_cook_log_fk",
+    }),
+    check(
+      "recipe_images_content_type_allowed",
+      sql`${table.contentType} IN ('image/jpeg', 'image/png', 'image/webp')`,
+    ),
+    check(
+      "recipe_images_byte_size_range",
+      sql`${table.byteSize} > 0 AND ${table.byteSize} <= 10485760`,
+    ),
+    check("recipe_images_position_nonnegative", sql`${table.position} >= 0`),
+    check(
+      "recipe_images_dimensions_range",
+      sql`${table.width} > 0 AND ${table.width} <= 16384 AND ${table.height} > 0 AND ${table.height} <= 16384`,
+    ),
+    index("recipe_images_recipe_id_position_id_idx").on(
+      table.recipeId,
+      table.position,
+      table.id,
+    ),
+    index("recipe_images_cook_log_id_position_id_idx").on(
+      table.cookLogId,
+      table.position,
+      table.id,
+    ),
+  ],
+);
+
+export const recipeImagesRelations = relations(recipeImages, ({ one }) => ({
+  household: one(households, {
+    fields: [recipeImages.householdId],
+    references: [households.id],
+  }),
+  recipe: one(recipes, {
+    fields: [recipeImages.householdId, recipeImages.recipeId],
+    references: [recipes.householdId, recipes.id],
+  }),
+  cookLog: one(recipeCookLogs, {
+    fields: [
+      recipeImages.householdId,
+      recipeImages.recipeId,
+      recipeImages.cookLogId,
+    ],
+    references: [
+      recipeCookLogs.householdId,
+      recipeCookLogs.recipeId,
+      recipeCookLogs.id,
+    ],
+  }),
+}));

@@ -192,6 +192,7 @@ event.
 - `object_key`
 - `content_type`
 - `byte_size`
+- `width`, `height`: display dimensions supplied by the browser
 - `position`: integer
 - `confirmed_at`, nullable
 - `created_at`, `updated_at`
@@ -206,7 +207,8 @@ Object keys are server-controlled, unique, and independent of public
 hostnames. Create pending metadata before issuing a presigned upload;
 `confirmed_at` remains null until the API verifies the R2 object and its type
 and size. Only confirmed images are readable or synchronized. Position must be
-nonnegative.
+nonnegative. Width and height are layout metadata rather than trusted security
+properties; constrain each to 1–16,384 pixels.
 
 ## Transactional invariants
 
