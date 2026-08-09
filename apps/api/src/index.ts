@@ -20,12 +20,20 @@ import { createRenameHouseholdService } from "./households/rename";
 import { createRevokeHouseholdInviteService } from "./households/revoke-invite";
 import { createSetHouseholdModuleEnabledService } from "./households/set-module-enabled";
 import { createTransferHouseholdOwnershipService } from "./households/transfer-ownership";
+import { createRecipeImageUploadService } from "./recipes/images/create-upload";
+import { createR2Client } from "./recipes/images/r2-client";
+import { signRecipeImageUpload } from "./recipes/images/sign-upload";
 import { createAddShoppingItemService } from "./shopping/add";
 import { createSetShoppingItemStatusService } from "./shopping/set-status";
 import { createZeroDbProvider } from "./zero/db-provider";
 
 const { db } = createDbClient(config.DATABASE_URL);
 const dbProvider = createZeroDbProvider({ db });
+const r2Client = createR2Client({
+  endpoint: config.R2_ENDPOINT,
+  accessKeyId: config.R2_ACCESS_KEY_ID,
+  secretAccessKey: config.R2_SECRET_ACCESS_KEY,
+});
 
 const signup = createSignupService({
   db,
@@ -63,6 +71,16 @@ const transferHouseholdOwnership = createTransferHouseholdOwnershipService({
 const setHouseholdModuleEnabled = createSetHouseholdModuleEnabledService({
   db,
 });
+const createRecipeImageUpload = createRecipeImageUploadService({
+  db,
+  signUpload: ({ objectKey, contentType }) =>
+    signRecipeImageUpload({
+      client: r2Client,
+      bucket: config.R2_BUCKET,
+      objectKey,
+      contentType,
+    }),
+});
 
 const app = createApp({
   acceptHouseholdInvite,
@@ -75,6 +93,7 @@ const app = createApp({
   getMe,
   createHousehold,
   createHouseholdInvite,
+  createRecipeImageUpload,
   listHouseholds,
   listHouseholdInvites,
   listHouseholdMembers,
