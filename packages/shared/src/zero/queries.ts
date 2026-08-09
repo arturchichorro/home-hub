@@ -96,6 +96,12 @@ const recipeDetail = defineHomeHubQuery(
       .related("cookLogs", (cookLog) =>
         cookLog.orderBy("cookedAt", "desc").orderBy("id", "desc"),
       )
+      .related("images", (image) =>
+        image
+          .where("confirmedAt", "IS NOT", null)
+          .orderBy("position", "asc")
+          .orderBy("id", "asc"),
+      )
       .one(),
 );
 
