@@ -21,9 +21,11 @@ import { createRevokeHouseholdInviteService } from "./households/revoke-invite";
 import { createSetHouseholdModuleEnabledService } from "./households/set-module-enabled";
 import { createTransferHouseholdOwnershipService } from "./households/transfer-ownership";
 import { createConfirmRecipeImageUploadService } from "./recipes/images/confirm-upload";
+import { createRecipeImageReadUrlService } from "./recipes/images/create-read-url";
 import { createRecipeImageUploadService } from "./recipes/images/create-upload";
 import { inspectR2Object } from "./recipes/images/inspect-object";
 import { createR2Client } from "./recipes/images/r2-client";
+import { signRecipeImageRead } from "./recipes/images/sign-read";
 import { signRecipeImageUpload } from "./recipes/images/sign-upload";
 import { createAddShoppingItemService } from "./shopping/add";
 import { createSetShoppingItemStatusService } from "./shopping/set-status";
@@ -92,6 +94,15 @@ const confirmRecipeImageUpload = createConfirmRecipeImageUploadService({
       objectKey,
     }),
 });
+const createRecipeImageReadUrl = createRecipeImageReadUrlService({
+  db,
+  signRead: ({ objectKey }) =>
+    signRecipeImageRead({
+      client: r2Client,
+      bucket: config.R2_BUCKET,
+      objectKey,
+    }),
+});
 
 const app = createApp({
   acceptHouseholdInvite,
@@ -105,6 +116,7 @@ const app = createApp({
   createHousehold,
   createHouseholdInvite,
   confirmRecipeImageUpload,
+  createRecipeImageReadUrl,
   createRecipeImageUpload,
   listHouseholds,
   listHouseholdInvites,

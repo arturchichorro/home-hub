@@ -7,6 +7,10 @@ import type {
   ConfirmRecipeImageUploadResult,
 } from "../images/confirm-upload";
 import type {
+  CreateRecipeImageReadUrlInput,
+  CreateRecipeImageReadUrlResult,
+} from "../images/create-read-url";
+import type {
   CreateRecipeImageUploadInput,
   CreateRecipeImageUploadResult,
 } from "../images/create-upload";
@@ -34,12 +38,18 @@ function createTestApp(
   ) => Promise<ConfirmRecipeImageUploadResult> = async () => ({
     kind: "forbidden",
   }),
+  createRecipeImageReadUrl: (
+    input: CreateRecipeImageReadUrlInput,
+  ) => Promise<CreateRecipeImageReadUrlResult> = async () => ({
+    kind: "forbidden",
+  }),
 ) {
   const app = new Hono();
   app.route(
     "/:householdId/recipes",
     createRecipeRoutes({
       confirmRecipeImageUpload,
+      createRecipeImageReadUrl,
       createRecipeImageUpload,
       jwtSecret,
     }),
@@ -135,6 +145,38 @@ describe("recipe routes", () => {
 
     expect(response.status).toBe(200);
     expect(confirmRecipeImageUpload).toHaveBeenCalledWith({
+      userId,
+      householdId,
+      recipeId,
+      imageId,
+    });
+  });
+
+  it("mounts authenticated read URLs under the confirmed image", async () => {
+    const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+    const createRecipeImageReadUrl = vi.fn(
+      async (): Promise<CreateRecipeImageReadUrlResult> => ({
+        kind: "success",
+        url: "https://signed-read.example",
+        expiresInSeconds: 300,
+      }),
+    );
+    const app = createTestApp(
+      async () => ({ kind: "forbidden" }),
+      async () => ({ kind: "forbidden" }),
+      createRecipeImageReadUrl,
+    );
+
+    const response = await app.request(
+      `/${householdId}/recipes/${recipeId}/images/${imageId}/read-url`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${createAccessToken()}` },
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(createRecipeImageReadUrl).toHaveBeenCalledWith({
       userId,
       householdId,
       recipeId,
