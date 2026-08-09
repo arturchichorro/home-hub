@@ -14,6 +14,10 @@ import type {
   CreateRecipeImageUploadInput,
   CreateRecipeImageUploadResult,
 } from "../images/create-upload";
+import type {
+  DeleteRecipeImageInput,
+  DeleteRecipeImageResult,
+} from "../images/delete";
 import { createRecipeRoutes } from "./index";
 
 const jwtSecret = "test-jwt-secret";
@@ -43,6 +47,11 @@ function createTestApp(
   ) => Promise<CreateRecipeImageReadUrlResult> = async () => ({
     kind: "forbidden",
   }),
+  deleteRecipeImage: (
+    input: DeleteRecipeImageInput,
+  ) => Promise<DeleteRecipeImageResult> = async () => ({
+    kind: "forbidden",
+  }),
 ) {
   const app = new Hono();
   app.route(
@@ -51,6 +60,7 @@ function createTestApp(
       confirmRecipeImageUpload,
       createRecipeImageReadUrl,
       createRecipeImageUpload,
+      deleteRecipeImage,
       jwtSecret,
     }),
   );
@@ -177,6 +187,35 @@ describe("recipe routes", () => {
 
     expect(response.status).toBe(200);
     expect(createRecipeImageReadUrl).toHaveBeenCalledWith({
+      userId,
+      householdId,
+      recipeId,
+      imageId,
+    });
+  });
+
+  it("mounts authenticated deletion under the recipe image", async () => {
+    const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+    const deleteRecipeImage = vi.fn(
+      async (): Promise<DeleteRecipeImageResult> => ({ kind: "success" }),
+    );
+    const app = createTestApp(
+      async () => ({ kind: "forbidden" }),
+      async () => ({ kind: "forbidden" }),
+      async () => ({ kind: "forbidden" }),
+      deleteRecipeImage,
+    );
+
+    const response = await app.request(
+      `/${householdId}/recipes/${recipeId}/images/${imageId}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${createAccessToken()}` },
+      },
+    );
+
+    expect(response.status).toBe(204);
+    expect(deleteRecipeImage).toHaveBeenCalledWith({
       userId,
       householdId,
       recipeId,

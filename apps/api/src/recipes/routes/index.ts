@@ -13,10 +13,15 @@ import {
   type CreateRecipeImageUploadRouteInput,
   createRecipeImageUploadRoute,
 } from "./create-image-upload";
+import {
+  type DeleteRecipeImageRouteInput,
+  deleteRecipeImageRoute,
+} from "./delete-image";
 
 export type CreateRecipeRoutesInput = ConfirmRecipeImageUploadRouteInput &
   CreateRecipeImageReadUrlRouteInput &
-  CreateRecipeImageUploadRouteInput & {
+  CreateRecipeImageUploadRouteInput &
+  DeleteRecipeImageRouteInput & {
     jwtSecret: string;
   };
 
@@ -27,6 +32,12 @@ export function createRecipeRoutes(input: CreateRecipeRoutesInput) {
     "/:recipeId/images/uploads",
     createBearerAuth(input.jwtSecret),
     createRecipeImageUploadRoute(input),
+  );
+
+  recipeRoutes.delete(
+    "/:recipeId/images/:imageId",
+    createBearerAuth(input.jwtSecret),
+    deleteRecipeImageRoute(input),
   );
 
   recipeRoutes.post(
