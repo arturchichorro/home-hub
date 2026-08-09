@@ -155,8 +155,8 @@ teaches us something new.
 
 ## Phase 15: design-system definition
 
-- [ ] Audit the existing screens, interaction states, and repeated UI patterns
-- [ ] Define the product's visual principles and accessibility baseline
+- [x] Audit the existing screens, interaction states, and repeated UI patterns
+- [x] Define the product's visual principles and accessibility baseline
 - [ ] Define semantic tokens for color, typography, spacing, radii, shadows, and motion
 - [ ] Define responsive layout rules and breakpoints
 - [ ] Document shared token names and how each UI package maps them to its platform
