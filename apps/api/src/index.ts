@@ -20,7 +20,9 @@ import { createRenameHouseholdService } from "./households/rename";
 import { createRevokeHouseholdInviteService } from "./households/revoke-invite";
 import { createSetHouseholdModuleEnabledService } from "./households/set-module-enabled";
 import { createTransferHouseholdOwnershipService } from "./households/transfer-ownership";
+import { createConfirmRecipeImageUploadService } from "./recipes/images/confirm-upload";
 import { createRecipeImageUploadService } from "./recipes/images/create-upload";
+import { inspectR2Object } from "./recipes/images/inspect-object";
 import { createR2Client } from "./recipes/images/r2-client";
 import { signRecipeImageUpload } from "./recipes/images/sign-upload";
 import { createAddShoppingItemService } from "./shopping/add";
@@ -81,6 +83,15 @@ const createRecipeImageUpload = createRecipeImageUploadService({
       contentType,
     }),
 });
+const confirmRecipeImageUpload = createConfirmRecipeImageUploadService({
+  db,
+  inspectObject: ({ objectKey }) =>
+    inspectR2Object({
+      client: r2Client,
+      bucket: config.R2_BUCKET,
+      objectKey,
+    }),
+});
 
 const app = createApp({
   acceptHouseholdInvite,
@@ -93,6 +104,7 @@ const app = createApp({
   getMe,
   createHousehold,
   createHouseholdInvite,
+  confirmRecipeImageUpload,
   createRecipeImageUpload,
   listHouseholds,
   listHouseholdInvites,

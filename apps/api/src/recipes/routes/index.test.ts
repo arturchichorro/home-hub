@@ -3,6 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { signAccessToken } from "../../auth/access-token";
 import type {
+  ConfirmRecipeImageUploadInput,
+  ConfirmRecipeImageUploadResult,
+} from "../images/confirm-upload";
+import type {
   CreateRecipeImageUploadInput,
   CreateRecipeImageUploadResult,
 } from "../images/create-upload";
@@ -25,11 +29,20 @@ function createTestApp(
   createRecipeImageUpload: (
     input: CreateRecipeImageUploadInput,
   ) => Promise<CreateRecipeImageUploadResult>,
+  confirmRecipeImageUpload: (
+    input: ConfirmRecipeImageUploadInput,
+  ) => Promise<ConfirmRecipeImageUploadResult> = async () => ({
+    kind: "forbidden",
+  }),
 ) {
   const app = new Hono();
   app.route(
     "/:householdId/recipes",
-    createRecipeRoutes({ createRecipeImageUpload, jwtSecret }),
+    createRecipeRoutes({
+      confirmRecipeImageUpload,
+      createRecipeImageUpload,
+      jwtSecret,
+    }),
   );
   return app;
 }
@@ -95,6 +108,37 @@ describe("recipe routes", () => {
       householdId,
       recipeId,
       ...body,
+    });
+  });
+
+  it("mounts authenticated confirmation under the uploaded image", async () => {
+    const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+    const confirmedAt = new Date("2026-08-10T12:00:00.000Z");
+    const confirmRecipeImageUpload = vi.fn(
+      async (): Promise<ConfirmRecipeImageUploadResult> => ({
+        kind: "success",
+        image: { id: imageId, confirmedAt },
+      }),
+    );
+    const app = createTestApp(
+      async () => ({ kind: "forbidden" }),
+      confirmRecipeImageUpload,
+    );
+
+    const response = await app.request(
+      `/${householdId}/recipes/${recipeId}/images/${imageId}/confirm`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${createAccessToken()}` },
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(confirmRecipeImageUpload).toHaveBeenCalledWith({
+      userId,
+      householdId,
+      recipeId,
+      imageId,
     });
   });
 });
