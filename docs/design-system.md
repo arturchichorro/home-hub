@@ -205,12 +205,6 @@ management, popup positioning, dismissal, or ARIA structure is meaningfully
 complex. Tailwind and Home Hub's semantic CSS variables provide all product
 styling.
 
-Use native HTML directly inside `ui-web` when it already provides the correct
-behavior. A plain button, link, input, textarea, heading, and list do not need a
-headless primitive merely for consistency. Use Base UI initially for the
-household and account menus, custom selects when native select behavior is
-insufficient, switches, dialogs, and any later sheet or popover behavior.
-
 Base UI owns:
 
 - the low-level parts and composition of its headless controls;
