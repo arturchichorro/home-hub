@@ -1,13 +1,26 @@
 import { mutators } from "@home-hub/shared/zero/mutators";
+import {
+  Button,
+  Field,
+  FieldControl,
+  FieldTextarea,
+  InlineAlert,
+} from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { type SubmitEvent, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 type CreateRecipeFormProps = {
   householdId: string;
+  onCancel: () => void;
+  onCreated: (recipeId: string) => void;
 };
 
-export function CreateRecipeForm({ householdId }: CreateRecipeFormProps) {
+export function CreateRecipeForm({
+  householdId,
+  onCancel,
+  onCreated,
+}: CreateRecipeFormProps) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
   const [title, setTitle] = useState("");
@@ -20,9 +33,10 @@ export function CreateRecipeForm({ householdId }: CreateRecipeFormProps) {
 
     const submittedTitle = title;
     const submittedDescription = description;
+    const recipeId = crypto.randomUUID();
     const mutation = zero.mutate(
       mutators.recipes.create({
-        recipeId: crypto.randomUUID(),
+        recipeId,
         householdId,
         title: submittedTitle,
         description: submittedDescription,
@@ -43,6 +57,7 @@ export function CreateRecipeForm({ householdId }: CreateRecipeFormProps) {
     setDescription((currentDescription) =>
       currentDescription === submittedDescription ? "" : currentDescription,
     );
+    onCreated(recipeId);
 
     const serverResult = await mutation.server;
 
@@ -52,26 +67,35 @@ export function CreateRecipeForm({ householdId }: CreateRecipeFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label htmlFor="recipe-title">Title</label>
-      <input
-        id="recipe-title"
-        name="title"
-        required
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-      />
-      <label htmlFor="recipe-description">Description</label>
-      <textarea
-        id="recipe-description"
-        name="description"
-        value={description}
-        onChange={(event) => setDescription(event.target.value)}
-      />
-      <button type="submit" disabled={!mutationEnabled}>
-        Create recipe
-      </button>
-      {error ? <p role="alert">{error}</p> : null}
+    <form onSubmit={handleSubmit} className="grid gap-5">
+      <Field label="Title">
+        <FieldControl
+          name="title"
+          required
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+        />
+      </Field>
+      <Field label="Description">
+        <FieldTextarea
+          name="description"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+        />
+      </Field>
+      <div className="flex flex-wrap justify-end gap-3">
+        <Button type="button" variant="secondary" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={!mutationEnabled}>
+          Create recipe
+        </Button>
+      </div>
+      {error ? (
+        <InlineAlert role="alert" variant="danger">
+          {error}
+        </InlineAlert>
+      ) : null}
     </form>
   );
 }
