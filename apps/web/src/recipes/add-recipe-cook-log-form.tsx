@@ -1,4 +1,11 @@
 import { mutators } from "@home-hub/shared/zero/mutators";
+import {
+  Button,
+  Field,
+  FieldControl,
+  FieldTextarea,
+  InlineAlert,
+} from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { type SubmitEvent, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
@@ -73,29 +80,39 @@ export function AddRecipeCookLogForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label htmlFor="recipe-cooked-at">Cooked at</label>
-      <input
-        id="recipe-cooked-at"
-        name="cookedAt"
-        type="datetime-local"
-        required
-        value={cookedAt}
-        onChange={(event) => setCookedAt(event.target.value)}
-      />
+    <form
+      onSubmit={handleSubmit}
+      className="grid gap-4 md:grid-cols-[16rem_minmax(0,1fr)]"
+    >
+      <Field label="Cooked at">
+        <FieldControl
+          name="cookedAt"
+          type="datetime-local"
+          required
+          value={cookedAt}
+          onChange={(event) => setCookedAt(event.target.value)}
+        />
+      </Field>
 
-      <label htmlFor="recipe-cook-log-comment">Comment</label>
-      <textarea
-        id="recipe-cook-log-comment"
-        name="comment"
-        value={comment}
-        onChange={(event) => setComment(event.target.value)}
-      />
+      <Field label="Comment" description="Optional notes about this cooking.">
+        <FieldTextarea
+          name="comment"
+          rows={2}
+          value={comment}
+          onChange={(event) => setComment(event.target.value)}
+        />
+      </Field>
 
-      <button type="submit" disabled={!mutationEnabled}>
-        Add cooking log
-      </button>
-      {error ? <p role="alert">{error}</p> : null}
+      <div className="flex justify-end md:col-span-2">
+        <Button type="submit" disabled={!mutationEnabled}>
+          Log cooking
+        </Button>
+      </div>
+      {error ? (
+        <InlineAlert role="alert" variant="danger" className="md:col-span-2">
+          {error}
+        </InlineAlert>
+      ) : null}
     </form>
   );
 }
