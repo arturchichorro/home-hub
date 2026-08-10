@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ShoppingList } from "../shopping/shopping-list";
 
-export const Route = createFileRoute("/households/$householdId/shopping")({
+export const Route = createFileRoute(
+  "/_authenticated/households/$householdId/shopping",
+)({
   component: ShoppingRoute,
 });
 

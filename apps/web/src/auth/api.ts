@@ -5,6 +5,8 @@ import {
   loginResponseSchema,
   meResponseSchema,
   refreshResponseSchema,
+  type SignupRequest,
+  signupRequestSchema,
 } from "@home-hub/shared/auth";
 
 export type Session = {
@@ -14,6 +16,11 @@ export type Session = {
 
 export type LoginResult =
   | { kind: "invalid_credentials" }
+  | { kind: "success"; session: Session };
+
+export type SignupResult =
+  | { kind: "conflict" }
+  | { kind: "forbidden" }
   | { kind: "success"; session: Session };
 
 export async function restoreSession(): Promise<Session | null> {
@@ -68,6 +75,30 @@ export async function login(request: LoginRequest): Promise<LoginResult> {
   }
 
   const session = loginResponseSchema.parse(await loginResponse.json());
+
+  return { kind: "success", session };
+}
+
+export async function signup(request: SignupRequest): Promise<SignupResult> {
+  const parsedRequest = signupRequestSchema.parse(request);
+
+  const signupResponse = await fetch("/auth/signup", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(parsedRequest),
+  });
+
+  if (signupResponse.status === 403) return { kind: "forbidden" };
+  if (signupResponse.status === 409) return { kind: "conflict" };
+
+  if (!signupResponse.ok) {
+    throw new Error("Failed to sign up");
+  }
+
+  const session = loginResponseSchema.parse(await signupResponse.json());
 
   return { kind: "success", session };
 }

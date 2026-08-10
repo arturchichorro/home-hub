@@ -9,73 +9,102 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as HouseholdsHouseholdIdRouteImport } from './routes/households.$householdId'
-import { Route as HouseholdsHouseholdIdRecipesRouteImport } from './routes/households.$householdId.recipes'
-import { Route as HouseholdsHouseholdIdSettingsRouteImport } from './routes/households.$householdId.settings'
-import { Route as HouseholdsHouseholdIdShoppingRouteImport } from './routes/households.$householdId.shopping'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
+import { Route as AuthenticatedHouseholdsHouseholdIdRouteImport } from './routes/_authenticated.households.$householdId'
+import { Route as AuthenticatedHouseholdsHouseholdIdRecipesRouteImport } from './routes/_authenticated.households.$householdId.recipes'
+import { Route as AuthenticatedHouseholdsHouseholdIdSettingsRouteImport } from './routes/_authenticated.households.$householdId.settings'
+import { Route as AuthenticatedHouseholdsHouseholdIdShoppingRouteImport } from './routes/_authenticated.households.$householdId.shopping'
 
-const IndexRoute = IndexRouteImport.update({
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const HouseholdsHouseholdIdRoute = HouseholdsHouseholdIdRouteImport.update({
-  id: '/households/$householdId',
-  path: '/households/$householdId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HouseholdsHouseholdIdRecipesRoute =
-  HouseholdsHouseholdIdRecipesRouteImport.update({
+const AuthenticatedHouseholdsHouseholdIdRoute =
+  AuthenticatedHouseholdsHouseholdIdRouteImport.update({
+    id: '/households/$householdId',
+    path: '/households/$householdId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedHouseholdsHouseholdIdRecipesRoute =
+  AuthenticatedHouseholdsHouseholdIdRecipesRouteImport.update({
     id: '/recipes',
     path: '/recipes',
-    getParentRoute: () => HouseholdsHouseholdIdRoute,
+    getParentRoute: () => AuthenticatedHouseholdsHouseholdIdRoute,
   } as any)
-const HouseholdsHouseholdIdSettingsRoute =
-  HouseholdsHouseholdIdSettingsRouteImport.update({
+const AuthenticatedHouseholdsHouseholdIdSettingsRoute =
+  AuthenticatedHouseholdsHouseholdIdSettingsRouteImport.update({
     id: '/settings',
     path: '/settings',
-    getParentRoute: () => HouseholdsHouseholdIdRoute,
+    getParentRoute: () => AuthenticatedHouseholdsHouseholdIdRoute,
   } as any)
-const HouseholdsHouseholdIdShoppingRoute =
-  HouseholdsHouseholdIdShoppingRouteImport.update({
+const AuthenticatedHouseholdsHouseholdIdShoppingRoute =
+  AuthenticatedHouseholdsHouseholdIdShoppingRouteImport.update({
     id: '/shopping',
     path: '/shopping',
-    getParentRoute: () => HouseholdsHouseholdIdRoute,
+    getParentRoute: () => AuthenticatedHouseholdsHouseholdIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/households/$householdId': typeof HouseholdsHouseholdIdRouteWithChildren
-  '/households/$householdId/recipes': typeof HouseholdsHouseholdIdRecipesRoute
-  '/households/$householdId/settings': typeof HouseholdsHouseholdIdSettingsRoute
-  '/households/$householdId/shopping': typeof HouseholdsHouseholdIdShoppingRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/households/$householdId': typeof AuthenticatedHouseholdsHouseholdIdRouteWithChildren
+  '/households/$householdId/recipes': typeof AuthenticatedHouseholdsHouseholdIdRecipesRoute
+  '/households/$householdId/settings': typeof AuthenticatedHouseholdsHouseholdIdSettingsRoute
+  '/households/$householdId/shopping': typeof AuthenticatedHouseholdsHouseholdIdShoppingRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/households/$householdId': typeof HouseholdsHouseholdIdRouteWithChildren
-  '/households/$householdId/recipes': typeof HouseholdsHouseholdIdRecipesRoute
-  '/households/$householdId/settings': typeof HouseholdsHouseholdIdSettingsRoute
-  '/households/$householdId/shopping': typeof HouseholdsHouseholdIdShoppingRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/households/$householdId': typeof AuthenticatedHouseholdsHouseholdIdRouteWithChildren
+  '/households/$householdId/recipes': typeof AuthenticatedHouseholdsHouseholdIdRecipesRoute
+  '/households/$householdId/settings': typeof AuthenticatedHouseholdsHouseholdIdSettingsRoute
+  '/households/$householdId/shopping': typeof AuthenticatedHouseholdsHouseholdIdShoppingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/households/$householdId': typeof HouseholdsHouseholdIdRouteWithChildren
-  '/households/$householdId/recipes': typeof HouseholdsHouseholdIdRecipesRoute
-  '/households/$householdId/settings': typeof HouseholdsHouseholdIdSettingsRoute
-  '/households/$householdId/shopping': typeof HouseholdsHouseholdIdShoppingRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/households/$householdId': typeof AuthenticatedHouseholdsHouseholdIdRouteWithChildren
+  '/_authenticated/households/$householdId/recipes': typeof AuthenticatedHouseholdsHouseholdIdRecipesRoute
+  '/_authenticated/households/$householdId/settings': typeof AuthenticatedHouseholdsHouseholdIdSettingsRoute
+  '/_authenticated/households/$householdId/shopping': typeof AuthenticatedHouseholdsHouseholdIdShoppingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
+    | '/signup'
     | '/households/$householdId'
     | '/households/$householdId/recipes'
     | '/households/$householdId/settings'
     | '/households/$householdId/shopping'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/login'
+    | '/signup'
     | '/'
     | '/households/$householdId'
     | '/households/$householdId/recipes'
@@ -83,78 +112,123 @@ export interface FileRouteTypes {
     | '/households/$householdId/shopping'
   id:
     | '__root__'
-    | '/'
-    | '/households/$householdId'
-    | '/households/$householdId/recipes'
-    | '/households/$householdId/settings'
-    | '/households/$householdId/shopping'
+    | '/_authenticated'
+    | '/login'
+    | '/signup'
+    | '/_authenticated/'
+    | '/_authenticated/households/$householdId'
+    | '/_authenticated/households/$householdId/recipes'
+    | '/_authenticated/households/$householdId/settings'
+    | '/_authenticated/households/$householdId/shopping'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  HouseholdsHouseholdIdRoute: typeof HouseholdsHouseholdIdRouteWithChildren
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  SignupRoute: typeof SignupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/households/$householdId': {
-      id: '/households/$householdId'
+    '/_authenticated/households/$householdId': {
+      id: '/_authenticated/households/$householdId'
       path: '/households/$householdId'
       fullPath: '/households/$householdId'
-      preLoaderRoute: typeof HouseholdsHouseholdIdRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedHouseholdsHouseholdIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/households/$householdId/recipes': {
-      id: '/households/$householdId/recipes'
+    '/_authenticated/households/$householdId/recipes': {
+      id: '/_authenticated/households/$householdId/recipes'
       path: '/recipes'
       fullPath: '/households/$householdId/recipes'
-      preLoaderRoute: typeof HouseholdsHouseholdIdRecipesRouteImport
-      parentRoute: typeof HouseholdsHouseholdIdRoute
+      preLoaderRoute: typeof AuthenticatedHouseholdsHouseholdIdRecipesRouteImport
+      parentRoute: typeof AuthenticatedHouseholdsHouseholdIdRoute
     }
-    '/households/$householdId/settings': {
-      id: '/households/$householdId/settings'
+    '/_authenticated/households/$householdId/settings': {
+      id: '/_authenticated/households/$householdId/settings'
       path: '/settings'
       fullPath: '/households/$householdId/settings'
-      preLoaderRoute: typeof HouseholdsHouseholdIdSettingsRouteImport
-      parentRoute: typeof HouseholdsHouseholdIdRoute
+      preLoaderRoute: typeof AuthenticatedHouseholdsHouseholdIdSettingsRouteImport
+      parentRoute: typeof AuthenticatedHouseholdsHouseholdIdRoute
     }
-    '/households/$householdId/shopping': {
-      id: '/households/$householdId/shopping'
+    '/_authenticated/households/$householdId/shopping': {
+      id: '/_authenticated/households/$householdId/shopping'
       path: '/shopping'
       fullPath: '/households/$householdId/shopping'
-      preLoaderRoute: typeof HouseholdsHouseholdIdShoppingRouteImport
-      parentRoute: typeof HouseholdsHouseholdIdRoute
+      preLoaderRoute: typeof AuthenticatedHouseholdsHouseholdIdShoppingRouteImport
+      parentRoute: typeof AuthenticatedHouseholdsHouseholdIdRoute
     }
   }
 }
 
-interface HouseholdsHouseholdIdRouteChildren {
-  HouseholdsHouseholdIdRecipesRoute: typeof HouseholdsHouseholdIdRecipesRoute
-  HouseholdsHouseholdIdSettingsRoute: typeof HouseholdsHouseholdIdSettingsRoute
-  HouseholdsHouseholdIdShoppingRoute: typeof HouseholdsHouseholdIdShoppingRoute
+interface AuthenticatedHouseholdsHouseholdIdRouteChildren {
+  AuthenticatedHouseholdsHouseholdIdRecipesRoute: typeof AuthenticatedHouseholdsHouseholdIdRecipesRoute
+  AuthenticatedHouseholdsHouseholdIdSettingsRoute: typeof AuthenticatedHouseholdsHouseholdIdSettingsRoute
+  AuthenticatedHouseholdsHouseholdIdShoppingRoute: typeof AuthenticatedHouseholdsHouseholdIdShoppingRoute
 }
 
-const HouseholdsHouseholdIdRouteChildren: HouseholdsHouseholdIdRouteChildren = {
-  HouseholdsHouseholdIdRecipesRoute: HouseholdsHouseholdIdRecipesRoute,
-  HouseholdsHouseholdIdSettingsRoute: HouseholdsHouseholdIdSettingsRoute,
-  HouseholdsHouseholdIdShoppingRoute: HouseholdsHouseholdIdShoppingRoute,
-}
+const AuthenticatedHouseholdsHouseholdIdRouteChildren: AuthenticatedHouseholdsHouseholdIdRouteChildren =
+  {
+    AuthenticatedHouseholdsHouseholdIdRecipesRoute:
+      AuthenticatedHouseholdsHouseholdIdRecipesRoute,
+    AuthenticatedHouseholdsHouseholdIdSettingsRoute:
+      AuthenticatedHouseholdsHouseholdIdSettingsRoute,
+    AuthenticatedHouseholdsHouseholdIdShoppingRoute:
+      AuthenticatedHouseholdsHouseholdIdShoppingRoute,
+  }
 
-const HouseholdsHouseholdIdRouteWithChildren =
-  HouseholdsHouseholdIdRoute._addFileChildren(
-    HouseholdsHouseholdIdRouteChildren,
+const AuthenticatedHouseholdsHouseholdIdRouteWithChildren =
+  AuthenticatedHouseholdsHouseholdIdRoute._addFileChildren(
+    AuthenticatedHouseholdsHouseholdIdRouteChildren,
   )
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedHouseholdsHouseholdIdRoute: typeof AuthenticatedHouseholdsHouseholdIdRouteWithChildren
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedHouseholdsHouseholdIdRoute:
+    AuthenticatedHouseholdsHouseholdIdRouteWithChildren,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  HouseholdsHouseholdIdRoute: HouseholdsHouseholdIdRouteWithChildren,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  LoginRoute: LoginRoute,
+  SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

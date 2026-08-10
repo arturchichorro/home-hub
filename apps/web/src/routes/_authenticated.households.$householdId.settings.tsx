@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { HouseholdSettings } from "../households/household-settings";
 
-export const Route = createFileRoute("/households/$householdId/settings")({
+export const Route = createFileRoute(
+  "/_authenticated/households/$householdId/settings",
+)({
   component: HouseholdSettingsRoute,
 });
 

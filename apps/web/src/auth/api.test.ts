@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { login, restoreSession } from "./api";
+import { login, restoreSession, signup } from "./api";
 
 const user = {
   id: "9f8a6942-f721-499d-957d-7bb3ed1158db",
@@ -168,5 +168,93 @@ describe("login", () => {
       login({ email: "not-an-email", password: "password" }),
     ).rejects.toThrow();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("signup", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const request = {
+    username: "  artur  ",
+    email: "  ARTUR@EXAMPLE.COM  ",
+    password: "a secure password",
+    accessCode: "  household-code  ",
+  };
+
+  it("normalizes the request and returns the authenticated session", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ user, accessToken: "access-token" }, { status: 201 }),
+    );
+
+    await expect(signup(request)).resolves.toEqual({
+      kind: "success",
+      session: { user, accessToken: "access-token" },
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith("/auth/signup", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: "artur",
+        email: "artur@example.com",
+        password: "a secure password",
+        accessCode: "household-code",
+      }),
+    });
+  });
+
+  it("reports when sign up is unavailable", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ error: "Signup unavailable" }, { status: 403 }),
+    );
+
+    await expect(signup(request)).resolves.toEqual({ kind: "forbidden" });
+  });
+
+  it("reports an existing username or email", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ error: "Already exists" }, { status: 409 }),
+    );
+
+    await expect(signup(request)).resolves.toEqual({ kind: "conflict" });
+  });
+
+  it("throws on an unexpected server failure", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ error: "Unavailable" }, { status: 503 }),
+    );
+
+    await expect(signup(request)).rejects.toThrow("Failed to sign up");
+  });
+
+  it("rejects invalid input before making a request", async () => {
+    await expect(
+      signup({ ...request, password: "too short" }),
+    ).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed success response data", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json(
+        {
+          user: { ...user, id: "not-a-uuid" },
+          accessToken: "access-token",
+        },
+        { status: 201 },
+      ),
+    );
+
+    await expect(signup(request)).rejects.toThrow();
   });
 });

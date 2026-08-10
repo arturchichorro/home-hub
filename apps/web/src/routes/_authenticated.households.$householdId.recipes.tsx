@@ -2,7 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { RecipeList } from "../recipes/recipe-list";
 import { validateRecipesSearch } from "../recipes/recipe-search";
 
-export const Route = createFileRoute("/households/$householdId/recipes")({
+export const Route = createFileRoute(
+  "/_authenticated/households/$householdId/recipes",
+)({
   validateSearch: validateRecipesSearch,
   component: RecipesRoute,
 });
