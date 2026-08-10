@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   acceptHouseholdInviteRequestSchema,
   acceptHouseholdInviteResponseSchema,
+  createHouseholdInviteResponseSchema,
   createHouseholdRequestSchema,
   createHouseholdResponseSchema,
   listHouseholdInvitesResponseSchema,
@@ -105,6 +106,36 @@ describe("accept household invite response", () => {
           householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
           role: "owner",
         },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("create household invite response", () => {
+  const invite = {
+    id: "74fc10c9-a82d-4126-918c-0d09d1224a32",
+    householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
+    createdAt: "2026-08-10T12:00:00.000Z",
+    expiresAt: "2026-08-17T12:00:00.000Z",
+    token: "a".repeat(43),
+  };
+
+  it("accepts the one-time public invite response", () => {
+    expect(createHouseholdInviteResponseSchema.parse({ invite })).toEqual({
+      invite,
+    });
+  });
+
+  it.each([
+    { ...invite, id: "not-a-uuid" },
+    { ...invite, createdAt: "not-a-date" },
+    { ...invite, expiresAt: "not-a-date" },
+    { ...invite, token: "too-short" },
+    { ...invite, tokenHash: "must-not-leak" },
+  ])("rejects invalid or unsafe invite data: %o", (invalidInvite) => {
+    expect(
+      createHouseholdInviteResponseSchema.safeParse({
+        invite: invalidInvite,
       }).success,
     ).toBe(false);
   });

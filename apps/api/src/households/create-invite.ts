@@ -21,6 +21,7 @@ export type CreateHouseholdInviteResult =
       invite: {
         id: string;
         householdId: string;
+        createdAt: Date;
         expiresAt: Date;
         token: string;
       };
@@ -69,6 +70,8 @@ export function createHouseholdInviteService({ db }: { db: Database }) {
         creatorId: userId,
         tokenHash: hashInviteToken(token),
         expiresAt,
+        createdAt: now,
+        updatedAt: now,
       });
 
       return {
@@ -76,6 +79,7 @@ export function createHouseholdInviteService({ db }: { db: Database }) {
         invite: {
           id: inviteId,
           householdId,
+          createdAt: now,
           expiresAt,
           token,
         },

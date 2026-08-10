@@ -2,7 +2,9 @@ import {
   type AcceptHouseholdInviteResponse,
   acceptHouseholdInviteRequestSchema,
   acceptHouseholdInviteResponseSchema,
+  type CreateHouseholdInviteResponse,
   type CreateHouseholdResponse,
+  createHouseholdInviteResponseSchema,
   createHouseholdRequestSchema,
   createHouseholdResponseSchema,
   type ListHouseholdInvitesResponse,
@@ -108,6 +110,39 @@ export type ListHouseholdInvitesCommandResult =
   | { kind: "success"; invites: ListHouseholdInvitesResponse["invites"] }
   | { kind: "unauthorized" }
   | { kind: "forbidden" };
+
+export type CreateHouseholdInviteCommandResult =
+  | {
+      kind: "success";
+      invite: CreateHouseholdInviteResponse["invite"];
+    }
+  | { kind: "unauthorized" }
+  | { kind: "forbidden" };
+
+export async function createHouseholdInvite({
+  accessToken,
+  householdId,
+}: HouseholdReadCommandInput): Promise<CreateHouseholdInviteCommandResult> {
+  const response = await fetch(
+    `/households/${encodeURIComponent(householdId)}/invites`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+
+  if (response.status === 401) return { kind: "unauthorized" };
+  if (response.status === 403) return { kind: "forbidden" };
+  if (!response.ok) throw new Error("Failed to create household invite");
+
+  const { invite } = createHouseholdInviteResponseSchema.parse(
+    await response.json(),
+  );
+
+  return { kind: "success", invite };
+}
 
 export type RenameHouseholdCommandInput = {
   accessToken: string;

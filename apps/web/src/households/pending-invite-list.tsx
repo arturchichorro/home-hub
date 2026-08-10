@@ -1,7 +1,14 @@
-import type { ListHouseholdInvitesResponse } from "@home-hub/shared/households";
+import type {
+  CreateHouseholdInviteResponse,
+  ListHouseholdInvitesResponse,
+} from "@home-hub/shared/households";
 import { Button, InlineAlert } from "@home-hub/ui-web";
-import { useEffect, useState } from "react";
-import { listHouseholdInvites, revokeHouseholdInvite } from "./api";
+import { type ReactNode, useEffect, useState } from "react";
+import {
+  createHouseholdInvite,
+  listHouseholdInvites,
+  revokeHouseholdInvite,
+} from "./api";
 
 type PendingInviteListProps = {
   accessToken: string;
@@ -10,6 +17,7 @@ type PendingInviteListProps = {
 };
 
 type PendingInvite = ListHouseholdInvitesResponse["invites"][number];
+type CreatedInvite = CreateHouseholdInviteResponse["invite"];
 
 type PendingInviteListState =
   | { status: "loading" }
@@ -29,6 +37,10 @@ export function PendingInviteList({
   const [state, setState] = useState<PendingInviteListState>({
     status: "loading",
   });
+  const [createdInvite, setCreatedInvite] = useState<CreatedInvite>();
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string>();
+  const [copyStatus, setCopyStatus] = useState<"copied" | "error">();
   const [revokingInviteId, setRevokingInviteId] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
 
@@ -38,9 +50,7 @@ export function PendingInviteList({
 
     void listHouseholdInvites({ accessToken, householdId })
       .then((result) => {
-        if (!active) {
-          return;
-        }
+        if (!active) return;
 
         if (result.kind === "unauthorized") {
           onSessionExpired();
@@ -70,6 +80,61 @@ export function PendingInviteList({
       active = false;
     };
   }, [accessToken, householdId, onSessionExpired]);
+
+  async function handleCreate() {
+    setCreateError(undefined);
+    setCopyStatus(undefined);
+    setIsCreating(true);
+
+    try {
+      const result = await createHouseholdInvite({
+        accessToken,
+        householdId,
+      });
+
+      if (result.kind === "unauthorized") {
+        onSessionExpired();
+        return;
+      }
+
+      if (result.kind === "forbidden") {
+        setCreateError("Only the household owner can create invitations.");
+        return;
+      }
+
+      setCreatedInvite(result.invite);
+      setState((current) =>
+        current.status === "success"
+          ? {
+              status: "success",
+              invites: [
+                ...current.invites,
+                {
+                  id: result.invite.id,
+                  createdAt: result.invite.createdAt,
+                  expiresAt: result.invite.expiresAt,
+                },
+              ],
+            }
+          : current,
+      );
+    } catch {
+      setCreateError("Unable to create an invitation.");
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
+  async function handleCopy() {
+    if (!createdInvite) return;
+
+    try {
+      await navigator.clipboard.writeText(createdInvite.token);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("error");
+    }
+  }
 
   async function handleRevoke(inviteId: string) {
     setRevokingInviteId(inviteId);
@@ -103,6 +168,11 @@ export function PendingInviteList({
               }
             : current,
         );
+
+        if (createdInvite?.id === inviteId) {
+          setCreatedInvite(undefined);
+          setCopyStatus(undefined);
+        }
       }
     } catch {
       setRevokeError("Unable to revoke the invitation.");
@@ -111,31 +181,22 @@ export function PendingInviteList({
     }
   }
 
-  if (state.status === "loading") {
-    return <InlineAlert>Loading pending invitations…</InlineAlert>;
-  }
+  let listContent: ReactNode;
 
-  if (state.status === "error") {
-    return (
+  if (state.status === "loading") {
+    listContent = <InlineAlert>Loading pending invitations…</InlineAlert>;
+  } else if (state.status === "error") {
+    listContent = (
       <InlineAlert role="alert" variant="danger">
         {state.message}
       </InlineAlert>
     );
-  }
-
-  if (state.invites.length === 0) {
-    return (
+  } else if (state.invites.length === 0) {
+    listContent = (
       <p className="text-sm text-muted">There are no pending invitations.</p>
     );
-  }
-
-  return (
-    <div className="grid gap-3">
-      {revokeError ? (
-        <InlineAlert role="alert" variant="danger">
-          {revokeError}
-        </InlineAlert>
-      ) : null}
+  } else {
+    listContent = (
       <ul className="divide-y divide-border border-y border-border">
         {state.invites.map((invite) => (
           <li
@@ -169,6 +230,61 @@ export function PendingInviteList({
           </li>
         ))}
       </ul>
+    );
+  }
+
+  return (
+    <div className="grid gap-4">
+      <div>
+        <Button
+          busy={isCreating}
+          disabled={state.status !== "success"}
+          onClick={() => void handleCreate()}
+        >
+          Create invitation
+        </Button>
+      </div>
+
+      {createError ? (
+        <InlineAlert role="alert" variant="danger">
+          {createError}
+        </InlineAlert>
+      ) : null}
+
+      {createdInvite ? (
+        <InlineAlert
+          variant="success"
+          title="Invitation created"
+          action={
+            <Button size="compact" onClick={() => void handleCopy()}>
+              Copy token
+            </Button>
+          }
+        >
+          <p>Copy this token now. It cannot be shown again.</p>
+          <code className="mt-2 block break-all font-mono text-xs">
+            {createdInvite.token}
+          </code>
+          {copyStatus === "copied" ? (
+            <p role="status" className="mt-2 text-success">
+              Copied to clipboard.
+            </p>
+          ) : null}
+          {copyStatus === "error" ? (
+            <p role="alert" className="mt-2 text-danger">
+              Copy failed. Select the token manually.
+            </p>
+          ) : null}
+        </InlineAlert>
+      ) : null}
+
+      {revokeError ? (
+        <InlineAlert role="alert" variant="danger">
+          {revokeError}
+        </InlineAlert>
+      ) : null}
+
+      {listContent}
     </div>
   );
 }

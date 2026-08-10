@@ -94,8 +94,9 @@ describe("create household invite route", () => {
     const invite = {
       id: "74fc10c9-a82d-4126-918c-0d09d1224a32",
       householdId,
+      createdAt: new Date("2026-07-28T12:00:00Z"),
       expiresAt: new Date("2026-08-04T12:00:00Z"),
-      token: "raw-household-invite-token",
+      token: "a".repeat(43),
     };
     const createHouseholdInvite = vi.fn(
       async (): Promise<CreateHouseholdInviteResult> => ({
@@ -115,6 +116,7 @@ describe("create household invite route", () => {
     await expect(response.json()).resolves.toEqual({
       invite: {
         ...invite,
+        createdAt: invite.createdAt.toISOString(),
         expiresAt: invite.expiresAt.toISOString(),
       },
     });

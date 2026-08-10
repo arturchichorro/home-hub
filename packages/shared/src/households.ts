@@ -56,6 +56,24 @@ export type AcceptHouseholdInviteResponse = z.infer<
   typeof acceptHouseholdInviteResponseSchema
 >;
 
+export const createHouseholdInviteResponseSchema = z
+  .object({
+    invite: z
+      .object({
+        id: z.uuid(),
+        householdId: z.uuid(),
+        createdAt: z.iso.datetime(),
+        expiresAt: z.iso.datetime(),
+        token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+      })
+      .strict(),
+  })
+  .strict();
+
+export type CreateHouseholdInviteResponse = z.infer<
+  typeof createHouseholdInviteResponseSchema
+>;
+
 export const renameHouseholdRequestSchema = z
   .object({
     name: householdNameSchema,

@@ -158,6 +158,7 @@ describe("create household invite service", () => {
     expect(result.invite).toEqual({
       id: expect.any(String),
       householdId,
+      createdAt: now,
       expiresAt,
       token: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/),
     });
@@ -170,6 +171,8 @@ describe("create household invite service", () => {
           creatorId: userId,
           tokenHash: hashInviteToken(result.invite.token),
           expiresAt,
+          createdAt: now,
+          updatedAt: now,
         },
       },
     ]);
