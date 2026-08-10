@@ -1,3 +1,4 @@
+import { Panel } from "@home-hub/ui-web";
 import { useState } from "react";
 import App from "./App";
 import type { Session } from "./auth/api";
@@ -13,9 +14,17 @@ export function Root({ initialSession }: RootProps) {
 
   if (!session) {
     return (
-      <main>
-        <p>You are not signed in.</p>
-        <LoginForm onAuthenticated={setSession} />
+      <main className="flex min-h-svh items-center justify-center bg-canvas px-5 py-10 font-sans text-foreground">
+        <div className="w-full max-w-md">
+          <h1 className="mb-5 text-center text-2xl font-semibold">Home Hub</h1>
+          <Panel
+            title="Sign in"
+            description="Sign in to access your households."
+            variant="raised"
+          >
+            <LoginForm onAuthenticated={setSession} />
+          </Panel>
+        </div>
       </main>
     );
   }

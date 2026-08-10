@@ -1,5 +1,5 @@
+import { Button, Field, FieldControl, InlineAlert } from "@home-hub/ui-web";
 import { type SubmitEvent, useState } from "react";
-
 import { login, type Session } from "./api";
 
 type LoginFormProps = {
@@ -34,34 +34,38 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label htmlFor="email">Email</label>
-      <input
-        id="email"
-        name="email"
-        type="email"
-        autoComplete="email"
-        required
-        value={email}
-        onChange={(event) => setEmail(event.target.value)}
-      />
+    <form onSubmit={handleSubmit} className="grid gap-4">
+      <Field label="Email">
+        <FieldControl
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />
+      </Field>
 
-      <label htmlFor="password">Password</label>
-      <input
-        id="password"
-        name="password"
-        type="password"
-        autoComplete="current-password"
-        required
-        value={password}
-        onChange={(event) => setPassword(event.target.value)}
-      />
+      <Field label="Password">
+        <FieldControl
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
+      </Field>
 
-      {error ? <p role="alert">{error}</p> : null}
+      {error ? (
+        <InlineAlert role="alert" variant="danger">
+          {error}
+        </InlineAlert>
+      ) : null}
 
-      <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Signing in…" : "Sign in"}
-      </button>
+      <Button type="submit" busy={isSubmitting}>
+        Sign in
+      </Button>
     </form>
   );
 }
