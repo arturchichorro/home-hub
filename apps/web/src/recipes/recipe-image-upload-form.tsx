@@ -4,6 +4,17 @@ import {
   recipeImageContentTypeSchema,
 } from "@home-hub/shared/recipe-images";
 import type { RecipeCookLog } from "@home-hub/shared/zero/schema";
+import {
+  Button,
+  Field,
+  FieldControl,
+  InlineAlert,
+  type InlineAlertVariant,
+  SelectItem,
+  SelectPopup,
+  SelectRoot,
+  SelectTrigger,
+} from "@home-hub/ui-web";
 import { type SubmitEvent, useRef, useState } from "react";
 import {
   confirmRecipeImageUpload,
@@ -29,6 +40,12 @@ type PendingUpload = {
 };
 
 type UploadStage = "idle" | "preparing" | "uploading" | "confirming";
+type UploadAction = "upload" | "discard";
+
+type UploadFeedback = {
+  text: string;
+  variant: InlineAlertVariant;
+};
 
 const cookLogDateFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
@@ -48,7 +65,8 @@ export function RecipeImageUploadForm({
   const [cookLogId, setCookLogId] = useState("");
   const [pendingUpload, setPendingUpload] = useState<PendingUpload>();
   const [stage, setStage] = useState<UploadStage>("idle");
-  const [message, setMessage] = useState<string>();
+  const [action, setAction] = useState<UploadAction>();
+  const [feedback, setFeedback] = useState<UploadFeedback>();
   const busy = stage !== "idle";
 
   function handleExpectedFailure(kind: string): boolean {
@@ -57,11 +75,17 @@ export function RecipeImageUploadForm({
       return true;
     }
     if (kind === "forbidden") {
-      setMessage("Recipe images are not available for this household.");
+      setFeedback({
+        text: "Recipe images are not available for this household.",
+        variant: "danger",
+      });
       return true;
     }
     if (kind === "not_found") {
-      setMessage("The recipe or pending image no longer exists.");
+      setFeedback({
+        text: "The recipe or pending image no longer exists.",
+        variant: "danger",
+      });
       return true;
     }
     return false;
@@ -76,7 +100,8 @@ export function RecipeImageUploadForm({
 
   async function uploadAndConfirm(pending: PendingUpload) {
     try {
-      setMessage(undefined);
+      setAction("upload");
+      setFeedback(undefined);
       setStage("uploading");
       await uploadRecipeImageObject({
         file: pending.file,
@@ -93,26 +118,35 @@ export function RecipeImageUploadForm({
 
       if (confirmation.kind === "success") {
         resetForm();
-        setMessage("Image uploaded. Waiting for synchronization…");
+        setFeedback({
+          text: "Image uploaded. Waiting for synchronization…",
+          variant: "success",
+        });
         return;
       }
 
       if (handleExpectedFailure(confirmation.kind)) return;
 
       if (confirmation.kind === "upload_not_found") {
-        setMessage("R2 has not received the image yet. Retry the upload.");
+        setFeedback({
+          text: "R2 has not received the image yet. Retry the upload.",
+          variant: "warning",
+        });
         return;
       }
 
-      setMessage(
-        "The uploaded object's type or size did not match. Discard it and try again.",
-      );
+      setFeedback({
+        text: "The uploaded object's type or size did not match. Discard it and try again.",
+        variant: "danger",
+      });
     } catch {
-      setMessage(
-        "The upload could not be completed. Retry it, or discard it if the URL expired.",
-      );
+      setFeedback({
+        text: "The upload could not be completed. Retry it, or discard it if the URL expired.",
+        variant: "danger",
+      });
     } finally {
       setStage("idle");
+      setAction(undefined);
     }
   }
 
@@ -124,13 +158,17 @@ export function RecipeImageUploadForm({
       selectedFile.type,
     );
     if (!parsedContentType.success) {
-      setMessage("Choose a JPEG, PNG, or WebP image.");
+      setFeedback({
+        text: "Choose a JPEG, PNG, or WebP image.",
+        variant: "danger",
+      });
       return;
     }
 
     try {
+      setAction("upload");
       setStage("preparing");
-      setMessage(undefined);
+      setFeedback(undefined);
       const dimensions = await readImageDimensions(selectedFile);
       const request = createRecipeImageUploadRequestSchema.safeParse({
         cookLogId: cookLogId || null,
@@ -142,9 +180,10 @@ export function RecipeImageUploadForm({
       });
 
       if (!request.success) {
-        setMessage(
-          "The image must be under 10 MiB and no larger than 16,384 pixels per side.",
-        );
+        setFeedback({
+          text: "The image must be under 10 MiB and no larger than 16,384 pixels per side.",
+          variant: "danger",
+        });
         return;
       }
 
@@ -167,9 +206,13 @@ export function RecipeImageUploadForm({
       setPendingUpload(pending);
       await uploadAndConfirm(pending);
     } catch {
-      setMessage("The selected file could not be prepared for upload.");
+      setFeedback({
+        text: "The selected file could not be prepared for upload.",
+        variant: "danger",
+      });
     } finally {
       setStage("idle");
+      setAction(undefined);
     }
   }
 
@@ -177,8 +220,9 @@ export function RecipeImageUploadForm({
     if (!pendingUpload || busy) return;
 
     try {
+      setAction("discard");
       setStage("preparing");
-      setMessage(undefined);
+      setFeedback(undefined);
       const result = await deleteRecipeImage({
         accessToken,
         householdId,
@@ -190,72 +234,121 @@ export function RecipeImageUploadForm({
         return;
       }
       resetForm();
-      setMessage("Pending image discarded.");
+      setFeedback({
+        text: "Pending image discarded.",
+        variant: "success",
+      });
     } catch {
-      setMessage("The pending image could not be discarded.");
+      setFeedback({
+        text: "The pending image could not be discarded.",
+        variant: "danger",
+      });
     } finally {
       setStage("idle");
+      setAction(undefined);
     }
   }
 
+  const selectedCookLog = cookLogs.find((cookLog) => cookLog.id === cookLogId);
+  const selectedTargetLabel = selectedCookLog
+    ? `${cookLogDateFormatter.format(new Date(selectedCookLog.cookedAt))}${selectedCookLog.comment ? ` — ${selectedCookLog.comment}` : ""}`
+    : "Recipe in general";
+  const stageMessage = {
+    preparing: "Preparing image…",
+    uploading: "Uploading image…",
+    confirming: "Confirming upload…",
+  }[stage as Exclude<UploadStage, "idle">];
+
   return (
-    <form onSubmit={handleSubmit}>
-      <label htmlFor="recipe-image-file">Image</label>
-      <input
-        ref={fileInput}
-        id="recipe-image-file"
-        name="image"
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        required
+    <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
+      <Field
+        label="Image"
+        description="JPEG, PNG, or WebP; up to 10 MiB."
         disabled={busy || Boolean(pendingUpload)}
-        onChange={(event) => setSelectedFile(event.target.files?.[0])}
-      />
-
-      <label htmlFor="recipe-image-cook-log">Cooking log (optional)</label>
-      <select
-        id="recipe-image-cook-log"
-        name="cookLogId"
-        value={cookLogId}
-        disabled={busy || Boolean(pendingUpload)}
-        onChange={(event) => setCookLogId(event.target.value)}
       >
-        <option value="">Recipe in general</option>
-        {cookLogs.map((cookLog) => (
-          <option key={cookLog.id} value={cookLog.id}>
-            {cookLogDateFormatter.format(new Date(cookLog.cookedAt))}
-            {cookLog.comment ? ` — ${cookLog.comment}` : ""}
-          </option>
-        ))}
-      </select>
+        <FieldControl
+          ref={fileInput}
+          name="image"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          required
+          className="file:mr-3 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground"
+          onChange={(event) => setSelectedFile(event.target.files?.[0])}
+        />
+      </Field>
 
-      {pendingUpload ? (
-        <>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void uploadAndConfirm(pendingUpload)}
-          >
-            Retry upload
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void discardPendingUpload()}
-          >
-            Discard pending image
-          </button>
-        </>
-      ) : (
-        <button type="submit" disabled={busy || !selectedFile}>
-          Upload image
-        </button>
-      )}
+      <Field
+        label="Attach to"
+        description="Optionally associate the image with one cooking log."
+        disabled={busy || Boolean(pendingUpload)}
+      >
+        <SelectRoot
+          name="cookLogId"
+          value={cookLogId || "recipe"}
+          disabled={busy || Boolean(pendingUpload)}
+          onValueChange={(value) =>
+            setCookLogId(value === "recipe" || value === null ? "" : value)
+          }
+        >
+          <SelectTrigger>{selectedTargetLabel}</SelectTrigger>
+          <SelectPopup>
+            <SelectItem value="recipe">Recipe in general</SelectItem>
+            {cookLogs.map((cookLog) => (
+              <SelectItem key={cookLog.id} value={cookLog.id}>
+                {cookLogDateFormatter.format(new Date(cookLog.cookedAt))}
+                {cookLog.comment ? ` — ${cookLog.comment}` : ""}
+              </SelectItem>
+            ))}
+          </SelectPopup>
+        </SelectRoot>
+      </Field>
 
-      {stage === "preparing" ? <p>Preparing image…</p> : null}
-      {stage === "uploading" ? <p>Uploading image…</p> : null}
-      {stage === "confirming" ? <p>Confirming upload…</p> : null}
-      {message ? <p role="status">{message}</p> : null}
+      <div className="flex flex-wrap justify-end gap-3 md:col-span-2">
+        {pendingUpload ? (
+          <>
+            <Button
+              type="button"
+              busy={busy && action === "upload"}
+              disabled={busy}
+              onClick={() => void uploadAndConfirm(pendingUpload)}
+            >
+              Retry upload
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              busy={busy && action === "discard"}
+              disabled={busy}
+              onClick={() => void discardPendingUpload()}
+            >
+              Discard pending image
+            </Button>
+          </>
+        ) : (
+          <Button
+            type="submit"
+            busy={busy && action === "upload"}
+            disabled={busy || !selectedFile}
+          >
+            Upload image
+          </Button>
+        )}
+      </div>
+
+      {stageMessage ? (
+        <InlineAlert role="status" className="md:col-span-2">
+          {stageMessage}
+        </InlineAlert>
+      ) : null}
+      {feedback ? (
+        <InlineAlert
+          role={feedback.variant === "danger" ? "alert" : "status"}
+          variant={feedback.variant}
+          className="md:col-span-2"
+        >
+          {feedback.text}
+        </InlineAlert>
+      ) : null}
     </form>
   );
 }
