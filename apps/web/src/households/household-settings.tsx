@@ -1,4 +1,5 @@
 import { queries } from "@home-hub/shared/zero/queries";
+import { InlineAlert } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { useEffect, useState } from "react";
 import { HouseholdMemberList } from "./household-member-list";
@@ -35,11 +36,15 @@ export function HouseholdSettings({
   }, [membership?.role]);
 
   if (result.type === "unknown") {
-    return <p>Loading household settings…</p>;
+    return <InlineAlert>Loading household settings…</InlineAlert>;
   }
 
   if (result.type === "error") {
-    return <p role="alert">Unable to load household settings.</p>;
+    return (
+      <InlineAlert role="alert" variant="danger">
+        Unable to load household settings.
+      </InlineAlert>
+    );
   }
 
   if (!household) {
@@ -51,30 +56,10 @@ export function HouseholdSettings({
     locallyTransferredHouseholdId !== household.id;
 
   return (
-    <>
-      <h3>Members</h3>
-      <HouseholdMemberList
-        accessToken={accessToken}
-        householdId={household.id}
-        onSessionExpired={onSessionExpired}
-        canManageMembers={isOwner}
-        onOwnershipTransferred={() =>
-          setLocallyTransferredHouseholdId(household.id)
-        }
-      />
-
-      <h3>Membership</h3>
-      <LeaveHouseholdControl
-        accessToken={accessToken}
-        householdId={household.id}
-        isOwner={isOwner}
-        onLeftHousehold={onLeftHousehold}
-        onSessionExpired={onSessionExpired}
-      />
-
+    <div className="grid gap-8">
       {isOwner ? (
-        <>
-          <h3>Owner settings</h3>
+        <section className="grid gap-4">
+          <h3 className="text-lg font-semibold">Name</h3>
           <RenameHouseholdForm
             key={household.id}
             accessToken={accessToken}
@@ -82,22 +67,54 @@ export function HouseholdSettings({
             currentName={household.name}
             onSessionExpired={onSessionExpired}
           />
+        </section>
+      ) : null}
 
-          <h3>Modules</h3>
-          <ModuleSettings
-            accessToken={accessToken}
-            householdId={household.id}
-            onSessionExpired={onSessionExpired}
-          />
+      <section className="grid gap-4 border-t border-border pt-6">
+        <h3 className="text-lg font-semibold">Members</h3>
+        <HouseholdMemberList
+          accessToken={accessToken}
+          householdId={household.id}
+          onSessionExpired={onSessionExpired}
+          canManageMembers={isOwner}
+          onOwnershipTransferred={() =>
+            setLocallyTransferredHouseholdId(household.id)
+          }
+        />
+      </section>
 
-          <h3>Pending invitations</h3>
-          <PendingInviteList
-            accessToken={accessToken}
-            householdId={household.id}
-            onSessionExpired={onSessionExpired}
-          />
+      {isOwner ? (
+        <>
+          <section className="grid gap-4 border-t border-border pt-6">
+            <h3 className="text-lg font-semibold">Pending invitations</h3>
+            <PendingInviteList
+              accessToken={accessToken}
+              householdId={household.id}
+              onSessionExpired={onSessionExpired}
+            />
+          </section>
+
+          <section className="grid gap-4 border-t border-border pt-6">
+            <h3 className="text-lg font-semibold">Modules</h3>
+            <ModuleSettings
+              accessToken={accessToken}
+              householdId={household.id}
+              onSessionExpired={onSessionExpired}
+            />
+          </section>
         </>
       ) : null}
-    </>
+
+      <section className="grid gap-4 border-t border-border pt-6">
+        <h3 className="text-lg font-semibold">Membership</h3>
+        <LeaveHouseholdControl
+          accessToken={accessToken}
+          householdId={household.id}
+          isOwner={isOwner}
+          onLeftHousehold={onLeftHousehold}
+          onSessionExpired={onSessionExpired}
+        />
+      </section>
+    </div>
   );
 }
