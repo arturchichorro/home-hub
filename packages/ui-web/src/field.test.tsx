@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { Field, FieldControl } from "./field";
+import { Field, FieldControl, FieldTextarea } from "./field";
 
 describe("Field", () => {
   it("associates its label and renders its description", () => {
@@ -38,5 +38,19 @@ describe("Field", () => {
 
     expect(markup).toContain('aria-busy="true"');
     expect(markup).toContain("disabled");
+  });
+
+  it("supports a native textarea with the same field relationship", () => {
+    const markup = renderToStaticMarkup(
+      <Field label="Comment">
+        <FieldTextarea name="comment" rows={4} />
+      </Field>,
+    );
+    const controlId = markup.match(/<textarea[^>]*id="([^"]+)"/)?.[1];
+
+    expect(controlId).toBeDefined();
+    expect(markup).toContain(`for="${controlId}"`);
+    expect(markup).toContain("min-h-24");
+    expect(markup).toContain('rows="4"');
   });
 });
