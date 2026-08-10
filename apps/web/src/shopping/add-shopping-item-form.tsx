@@ -1,4 +1,5 @@
 import { mutators } from "@home-hub/shared/zero/mutators";
+import { Button, Field, FieldControl, InlineAlert } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { type SubmitEvent, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
@@ -46,19 +47,27 @@ export function AddShoppingItemForm({ householdId }: AddShoppingItemFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label htmlFor="shopping-item-name">Item</label>
-      <input
-        id="shopping-item-name"
-        name="name"
-        required
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-      />
-      <button type="submit" disabled={!mutationEnabled}>
+    <form
+      onSubmit={handleSubmit}
+      className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+    >
+      <Field label="Item">
+        <FieldControl
+          name="name"
+          required
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+      </Field>
+
+      <Button type="submit" disabled={!mutationEnabled}>
         Add item
-      </button>
-      {error ? <p role="alert">{error}</p> : null}
+      </Button>
+      {error ? (
+        <InlineAlert role="alert" variant="danger" className="sm:col-span-2">
+          {error}
+        </InlineAlert>
+      ) : null}
     </form>
   );
 }
