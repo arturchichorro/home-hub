@@ -1,4 +1,5 @@
 import type { ListHouseholdInvitesResponse } from "@home-hub/shared/households";
+import { Button, InlineAlert } from "@home-hub/ui-web";
 import { useEffect, useState } from "react";
 import { listHouseholdInvites, revokeHouseholdInvite } from "./api";
 
@@ -111,41 +112,63 @@ export function PendingInviteList({
   }
 
   if (state.status === "loading") {
-    return <p>Loading pending invitations…</p>;
+    return <InlineAlert>Loading pending invitations…</InlineAlert>;
   }
 
   if (state.status === "error") {
-    return <p role="alert">{state.message}</p>;
+    return (
+      <InlineAlert role="alert" variant="danger">
+        {state.message}
+      </InlineAlert>
+    );
   }
 
   if (state.invites.length === 0) {
-    return <p>There are no pending invitations.</p>;
+    return (
+      <p className="text-sm text-muted">There are no pending invitations.</p>
+    );
   }
 
   return (
-    <>
-      {revokeError ? <p role="alert">{revokeError}</p> : null}
-      <ul>
+    <div className="grid gap-3">
+      {revokeError ? (
+        <InlineAlert role="alert" variant="danger">
+          {revokeError}
+        </InlineAlert>
+      ) : null}
+      <ul className="divide-y divide-border border-y border-border">
         {state.invites.map((invite) => (
-          <li key={invite.id}>
-            Created{` `}
-            <time dateTime={invite.createdAt}>
-              {dateTimeFormatter.format(new Date(invite.createdAt))}
-            </time>
-            {`; expires `}
-            <time dateTime={invite.expiresAt}>
-              {dateTimeFormatter.format(new Date(invite.expiresAt))}
-            </time>{" "}
-            <button
+          <li
+            key={invite.id}
+            className="grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+          >
+            <div className="grid gap-1 text-sm">
+              <span>
+                Created{` `}
+                <time dateTime={invite.createdAt}>
+                  {dateTimeFormatter.format(new Date(invite.createdAt))}
+                </time>
+              </span>
+              <span className="text-muted">
+                Expires{` `}
+                <time dateTime={invite.expiresAt}>
+                  {dateTimeFormatter.format(new Date(invite.expiresAt))}
+                </time>
+              </span>
+            </div>
+            <Button
               type="button"
+              size="compact"
+              variant="danger"
+              busy={revokingInviteId === invite.id}
               disabled={revokingInviteId !== null}
               onClick={() => void handleRevoke(invite.id)}
             >
-              {revokingInviteId === invite.id ? "Revoking…" : "Revoke"}
-            </button>
+              Revoke
+            </Button>
           </li>
         ))}
       </ul>
-    </>
+    </div>
   );
 }

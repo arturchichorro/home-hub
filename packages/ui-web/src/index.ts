@@ -53,3 +53,4 @@ export {
   type StatusIndicatorSize,
   type StatusIndicatorVariant,
 } from "./status-indicator";
+export { Switch, type SwitchProps } from "./switch";

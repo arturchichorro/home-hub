@@ -1,3 +1,4 @@
+import { Button, Field, FieldControl, InlineAlert } from "@home-hub/ui-web";
 import { type SubmitEvent, useEffect, useState } from "react";
 import { renameHousehold } from "./api";
 
@@ -61,24 +62,35 @@ export function RenameHouseholdForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label htmlFor="household-name">Household name</label>
-      <input
-        id="household-name"
-        name="name"
-        required
-        maxLength={100}
-        value={name}
-        onChange={(event) => {
-          setName(event.target.value);
-          setSuccess(false);
-        }}
-      />
-      <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Renaming…" : "Rename household"}
-      </button>
-      {error ? <p role="alert">{error}</p> : null}
-      {success ? <p>Household renamed.</p> : null}
+    <form
+      onSubmit={handleSubmit}
+      className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+    >
+      <Field label="Household name">
+        <FieldControl
+          name="name"
+          required
+          maxLength={100}
+          value={name}
+          onChange={(event) => {
+            setName(event.target.value);
+            setSuccess(false);
+          }}
+        />
+      </Field>
+      <Button type="submit" busy={isSubmitting}>
+        Rename household
+      </Button>
+      {error ? (
+        <InlineAlert role="alert" variant="danger" className="sm:col-span-2">
+          {error}
+        </InlineAlert>
+      ) : null}
+      {success ? (
+        <InlineAlert role="status" variant="success" className="sm:col-span-2">
+          Household renamed.
+        </InlineAlert>
+      ) : null}
     </form>
   );
 }

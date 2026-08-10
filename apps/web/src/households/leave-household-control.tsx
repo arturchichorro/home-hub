@@ -1,3 +1,4 @@
+import { Button, InlineAlert } from "@home-hub/ui-web";
 import { useState } from "react";
 import { leaveHousehold } from "./api";
 
@@ -20,7 +21,11 @@ export function LeaveHouseholdControl({
   const [error, setError] = useState<string | null>(null);
 
   if (isOwner) {
-    return <p>Transfer ownership before leaving this household.</p>;
+    return (
+      <InlineAlert variant="warning">
+        Transfer ownership before leaving this household.
+      </InlineAlert>
+    );
   }
 
   async function handleLeave() {
@@ -62,11 +67,20 @@ export function LeaveHouseholdControl({
   }
 
   return (
-    <>
-      {error ? <p role="alert">{error}</p> : null}
-      <button type="button" disabled={submitting} onClick={handleLeave}>
-        {submitting ? "Leaving…" : "Leave household"}
-      </button>
-    </>
+    <div className="grid justify-items-start gap-3">
+      {error ? (
+        <InlineAlert role="alert" variant="danger">
+          {error}
+        </InlineAlert>
+      ) : null}
+      <Button
+        type="button"
+        variant="danger"
+        busy={submitting}
+        onClick={handleLeave}
+      >
+        Leave household
+      </Button>
+    </div>
   );
 }

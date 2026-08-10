@@ -1,5 +1,6 @@
 import { householdModuleCatalog } from "@home-hub/shared/modules";
 import { queries } from "@home-hub/shared/zero/queries";
+import { InlineAlert, Switch } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { useState } from "react";
 import { setHouseholdModuleEnabled } from "./api";
@@ -21,9 +22,14 @@ export function ModuleSettings({
   const [pendingKey, setPendingKey] = useState<string>();
   const [error, setError] = useState<string>();
 
-  if (result.type === "unknown") return <p>Loading module settings…</p>;
+  if (result.type === "unknown")
+    return <InlineAlert>Loading module settings…</InlineAlert>;
   if (result.type === "error")
-    return <p role="alert">Unable to load module settings.</p>;
+    return (
+      <InlineAlert role="alert" variant="danger">
+        Unable to load module settings.
+      </InlineAlert>
+    );
 
   async function toggle(moduleKey: "shopping" | "recipes", enabled: boolean) {
     setPendingKey(moduleKey);
@@ -48,26 +54,34 @@ export function ModuleSettings({
   }
 
   return (
-    <>
-      {error ? <p role="alert">{error}</p> : null}
-      {householdModuleCatalog.map((module) => {
-        const setting = settings.find(
-          ({ moduleKey }) => moduleKey === module.key,
-        );
-        return (
-          <label key={module.key}>
-            <input
-              type="checkbox"
-              checked={setting?.enabled ?? false}
-              disabled={!setting || pendingKey !== undefined}
-              onChange={(event) =>
-                void toggle(module.key, event.target.checked)
-              }
-            />
-            {module.label}
-          </label>
-        );
-      })}
-    </>
+    <div className="grid gap-3">
+      {error ? (
+        <InlineAlert role="alert" variant="danger">
+          {error}
+        </InlineAlert>
+      ) : null}
+      <ul className="divide-y divide-border border-y border-border">
+        {householdModuleCatalog.map((module) => {
+          const setting = settings.find(
+            ({ moduleKey }) => moduleKey === module.key,
+          );
+          return (
+            <li key={module.key} className="py-3">
+              <Switch
+                label={module.label}
+                description={
+                  pendingKey === module.key
+                    ? "Saving…"
+                    : `Show ${module.label.toLowerCase()} in this household.`
+                }
+                checked={setting?.enabled ?? false}
+                disabled={!setting || pendingKey !== undefined}
+                onCheckedChange={(enabled) => void toggle(module.key, enabled)}
+              />
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }

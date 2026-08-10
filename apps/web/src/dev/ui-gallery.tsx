@@ -18,6 +18,7 @@ import {
   SelectRoot,
   SelectTrigger,
   StatusIndicator,
+  Switch,
 } from "@home-hub/ui-web";
 import { type ReactNode, useState } from "react";
 
@@ -59,6 +60,7 @@ export function UiGallery() {
   const [connected, setConnected] = useState(true);
   const [household, setHousehold] = useState("Rue des Mimosas");
   const [imageTarget, setImageTarget] = useState("recipe");
+  const [shoppingEnabled, setShoppingEnabled] = useState(true);
 
   return (
     <main className="min-h-screen bg-canvas px-5 py-10 font-sans text-foreground sm:px-8">
@@ -119,6 +121,25 @@ export function UiGallery() {
                 </SelectPopup>
               </SelectRoot>
             </Field>
+          </div>
+        </GallerySection>
+
+        <GallerySection
+          title="Switches"
+          description="Switches change a setting immediately and always include a visible label."
+        >
+          <div className="grid max-w-md gap-4">
+            <Switch
+              label="Shopping"
+              description="Show shopping in this household."
+              checked={shoppingEnabled}
+              onCheckedChange={setShoppingEnabled}
+            />
+            <Switch
+              label="Unavailable module"
+              description="Disabled controls remain visibly labeled."
+              disabled
+            />
           </div>
         </GallerySection>
 

@@ -1,4 +1,5 @@
 import type { ListHouseholdMembersResponse } from "@home-hub/shared/households";
+import { Button, InlineAlert } from "@home-hub/ui-web";
 import { useEffect, useState } from "react";
 import {
   listHouseholdMembers,
@@ -177,21 +178,31 @@ export function HouseholdMemberList({
   }
 
   if (state.status === "loading") {
-    return <p>Loading household members…</p>;
+    return <InlineAlert>Loading household members…</InlineAlert>;
   }
 
   if (state.status === "error") {
-    return <p role="alert">{state.message}</p>;
+    return (
+      <InlineAlert role="alert" variant="danger">
+        {state.message}
+      </InlineAlert>
+    );
   }
 
   if (state.members.length === 0) {
-    return <p>There are no household members.</p>;
+    return (
+      <p className="text-sm text-muted">There are no household members.</p>
+    );
   }
 
   return (
-    <>
-      {actionError ? <p role="alert">{actionError}</p> : null}
-      <ul>
+    <div className="grid gap-3">
+      {actionError ? (
+        <InlineAlert role="alert" variant="danger">
+          {actionError}
+        </InlineAlert>
+      ) : null}
+      <ul className="divide-y divide-border border-y border-border">
         {state.members.map((member) => {
           const joinedAt = new Date(member.joinedAt);
           const canManage = canManageMembers && member.role === "member";
@@ -199,37 +210,50 @@ export function HouseholdMemberList({
             removingMembershipId !== null || transferringMembershipId !== null;
 
           return (
-            <li key={member.id}>
-              {member.username} — {member.role} — joined{` `}
-              <time dateTime={member.joinedAt}>
-                {dateFormatter.format(joinedAt)}
-              </time>{" "}
+            <li
+              key={member.id}
+              className="grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+            >
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="truncate font-medium">{member.username}</span>
+                <span className="rounded-sm bg-raised px-2 py-1 text-xs capitalize text-muted">
+                  {member.role}
+                </span>
+                <span className="text-sm text-muted">
+                  Joined{` `}
+                  <time dateTime={member.joinedAt}>
+                    {dateFormatter.format(joinedAt)}
+                  </time>
+                </span>
+              </div>
               {canManage ? (
-                <>
-                  <button
+                <div className="flex flex-wrap gap-2 sm:justify-end">
+                  <Button
                     type="button"
+                    size="compact"
+                    variant="secondary"
+                    busy={transferringMembershipId === member.id}
                     disabled={actionPending}
                     onClick={() => void handleTransfer(member)}
                   >
-                    {transferringMembershipId === member.id
-                      ? "Transferring…"
-                      : "Make owner"}
-                  </button>{" "}
-                  <button
+                    Make owner
+                  </Button>
+                  <Button
                     type="button"
+                    size="compact"
+                    variant="danger"
+                    busy={removingMembershipId === member.id}
                     disabled={actionPending}
                     onClick={() => void handleRemove(member.id)}
                   >
-                    {removingMembershipId === member.id
-                      ? "Removing…"
-                      : "Remove"}
-                  </button>
-                </>
+                    Remove
+                  </Button>
+                </div>
               ) : null}
             </li>
           );
         })}
       </ul>
-    </>
+    </div>
   );
 }
