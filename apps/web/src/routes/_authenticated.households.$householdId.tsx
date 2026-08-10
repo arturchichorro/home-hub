@@ -14,6 +14,7 @@ function HouseholdRoute() {
 
   return (
     <App
+      accessToken={session.accessToken}
       householdId={householdId}
       username={session.user.username}
       onSessionExpired={onSessionExpired}

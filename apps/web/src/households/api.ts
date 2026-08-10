@@ -1,4 +1,7 @@
 import {
+  type CreateHouseholdResponse,
+  createHouseholdRequestSchema,
+  createHouseholdResponseSchema,
   type ListHouseholdInvitesResponse,
   type ListHouseholdMembersResponse,
   listHouseholdInvitesResponseSchema,
@@ -15,6 +18,39 @@ export type HouseholdReadCommandInput = {
   accessToken: string;
   householdId: string;
 };
+
+export type CreateHouseholdCommandInput = {
+  accessToken: string;
+  name: string;
+};
+
+export type CreateHouseholdCommandResult =
+  | { kind: "success"; household: CreateHouseholdResponse["household"] }
+  | { kind: "unauthorized" };
+
+export async function createHousehold({
+  accessToken,
+  name,
+}: CreateHouseholdCommandInput): Promise<CreateHouseholdCommandResult> {
+  const request = createHouseholdRequestSchema.parse({ name });
+  const response = await fetch("/households", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (response.status === 401) return { kind: "unauthorized" };
+  if (!response.ok) throw new Error("Failed to create household");
+
+  const { household } = createHouseholdResponseSchema.parse(
+    await response.json(),
+  );
+
+  return { kind: "success", household };
+}
 
 export type ListHouseholdMembersCommandResult =
   | { kind: "success"; members: ListHouseholdMembersResponse["members"] }

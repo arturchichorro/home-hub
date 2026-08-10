@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   acceptHouseholdInviteRequestSchema,
   createHouseholdRequestSchema,
+  createHouseholdResponseSchema,
   listHouseholdInvitesResponseSchema,
   listHouseholdMembersResponseSchema,
   renameHouseholdRequestSchema,
@@ -24,6 +25,31 @@ describe.each([
     { name: "Home", unexpected: true },
   ])("rejects an invalid request: %o", (request) => {
     expect(schema.safeParse(request).success).toBe(false);
+  });
+});
+
+describe("create household response", () => {
+  it("accepts the public created-household response", () => {
+    const household = {
+      id: "d92e5c4e-1c68-4942-9cc9-710207661bca",
+      name: "Home",
+    };
+
+    expect(createHouseholdResponseSchema.parse({ household })).toEqual({
+      household,
+    });
+  });
+
+  it("rejects invalid or unexpected household data", () => {
+    expect(
+      createHouseholdResponseSchema.safeParse({
+        household: {
+          id: "not-a-uuid",
+          name: "Home",
+          ownerId: "private",
+        },
+      }).success,
+    ).toBe(false);
   });
 });
 

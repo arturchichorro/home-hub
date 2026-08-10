@@ -5,6 +5,14 @@ export {
   type ButtonVariant,
 } from "./button";
 export {
+  DialogClose,
+  type DialogCloseProps,
+  DialogPopup,
+  type DialogPopupProps,
+  DialogRoot,
+  type DialogSize,
+} from "./dialog";
+export {
   Field,
   FieldControl,
   type FieldControlProps,

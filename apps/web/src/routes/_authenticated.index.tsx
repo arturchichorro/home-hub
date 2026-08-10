@@ -9,6 +9,10 @@ function HomeRoute() {
   const { onSessionExpired, session } = Route.useRouteContext();
 
   return (
-    <App username={session.user.username} onSessionExpired={onSessionExpired} />
+    <App
+      accessToken={session.accessToken}
+      username={session.user.username}
+      onSessionExpired={onSessionExpired}
+    />
   );
 }

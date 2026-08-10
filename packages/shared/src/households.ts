@@ -12,6 +12,21 @@ export type CreateHouseholdRequest = z.infer<
   typeof createHouseholdRequestSchema
 >;
 
+export const createHouseholdResponseSchema = z
+  .object({
+    household: z
+      .object({
+        id: z.uuid(),
+        name: householdNameSchema,
+      })
+      .strict(),
+  })
+  .strict();
+
+export type CreateHouseholdResponse = z.infer<
+  typeof createHouseholdResponseSchema
+>;
+
 export const acceptHouseholdInviteRequestSchema = z
   .object({
     token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),

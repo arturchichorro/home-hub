@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  createHousehold,
   leaveHousehold,
   listHouseholdInvites,
   listHouseholdMembers,
@@ -76,6 +77,64 @@ describe("setHouseholdModuleEnabled", () => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("createHousehold", () => {
+  it("normalizes the name and returns the created household", async () => {
+    const household = { id: householdId, name: "Rue des Mimosas" };
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ household }, { status: 201 }),
+    );
+
+    await expect(
+      createHousehold({
+        accessToken: "access-token",
+        name: "  Rue des Mimosas  ",
+      }),
+    ).resolves.toEqual({ kind: "success", household });
+
+    expect(fetchMock).toHaveBeenCalledWith("/households", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer access-token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name: "Rue des Mimosas" }),
+    });
+  });
+
+  it("reports an expired access session", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 401 }));
+
+    await expect(
+      createHousehold({ accessToken: "expired", name: "Home" }),
+    ).resolves.toEqual({ kind: "unauthorized" });
+  });
+
+  it("rejects an invalid name before making a request", async () => {
+    await expect(
+      createHousehold({ accessToken: "access-token", name: "   " }),
+    ).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed success data", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ household: { id: "not-a-uuid", name: "Home" } }),
+    );
+
+    await expect(
+      createHousehold({ accessToken: "access-token", name: "Home" }),
+    ).rejects.toThrow();
+  });
+
+  it("throws for an unexpected server failure", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
+
+    await expect(
+      createHousehold({ accessToken: "access-token", name: "Home" }),
+    ).rejects.toThrow("Failed to create household");
+  });
 });
 
 describe("renameHousehold", () => {

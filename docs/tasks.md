@@ -176,6 +176,7 @@ teaches us something new.
 - [x] Add addressable login and signup routes behind a shared authentication layout
 - [x] Protect the authenticated route tree and create Zero only for authenticated sessions
 - [x] Add the account menu and complete refresh-session logout from the web app
+- [x] Add household creation to the selector and navigate into the new household
 - [ ] Verify keyboard navigation, visible focus, labels, error states, disabled states, and responsive layout
 - [ ] Reserve `@home-hub/ui-native`, built on Expo UI, for a future native implementation of the same documented design language
 - [ ] Complete the Phase 16 checkpoint and commit
