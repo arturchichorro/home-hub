@@ -22,6 +22,18 @@ export {
   type InlineAlertProps,
   type InlineAlertVariant,
 } from "./inline-alert";
+export {
+  MenuItem,
+  type MenuItemProps,
+  type MenuItemVariant,
+  MenuPopup,
+  type MenuPopupProps,
+  MenuRoot,
+  MenuSeparator,
+  type MenuSeparatorProps,
+  MenuTrigger,
+  type MenuTriggerProps,
+} from "./menu";
 export { Panel, type PanelProps, type PanelVariant } from "./panel";
 export {
   StatusIndicator,

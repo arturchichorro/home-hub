@@ -5,6 +5,11 @@ import {
   FieldTextarea,
   IconButton,
   InlineAlert,
+  MenuItem,
+  MenuPopup,
+  MenuRoot,
+  MenuSeparator,
+  MenuTrigger,
   Panel,
   StatusIndicator,
 } from "@home-hub/ui-web";
@@ -46,6 +51,7 @@ function ArchiveIcon() {
 export function UiGallery() {
   const [clicks, setClicks] = useState(0);
   const [connected, setConnected] = useState(true);
+  const [household, setHousehold] = useState("Rue des Mimosas");
 
   return (
     <main className="min-h-screen bg-canvas px-5 py-10 font-sans text-foreground sm:px-8">
@@ -79,6 +85,32 @@ export function UiGallery() {
             <IconButton aria-label="Delete item" variant="danger">
               <span aria-hidden="true">×</span>
             </IconButton>
+          </div>
+        </GallerySection>
+
+        <GallerySection
+          title="Menus"
+          description="Menus combine selectable destinations with related commands."
+        >
+          <div className="flex flex-wrap items-center gap-3">
+            <MenuRoot>
+              <MenuTrigger>
+                {household}
+                <span aria-hidden="true">⌄</span>
+              </MenuTrigger>
+              <MenuPopup>
+                <MenuItem onClick={() => setHousehold("Rue des Mimosas")}>
+                  Rue des Mimosas
+                </MenuItem>
+                <MenuItem onClick={() => setHousehold("Weekend house")}>
+                  Weekend house
+                </MenuItem>
+                <MenuItem disabled>Unavailable household</MenuItem>
+                <MenuSeparator />
+                <MenuItem>Create household…</MenuItem>
+                <MenuItem variant="danger">Leave household…</MenuItem>
+              </MenuPopup>
+            </MenuRoot>
           </div>
         </GallerySection>
 
