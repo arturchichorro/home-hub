@@ -1,27 +1,24 @@
 import { queries } from "@home-hub/shared/zero/queries";
-import { Button, InlineAlert } from "@home-hub/ui-web";
+import { InlineAlert } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
-import { type ComponentType, type ReactNode, useState } from "react";
-import { RecipeList } from "../recipes/recipe-list";
-import { ShoppingList } from "../shopping/shopping-list";
-import { HouseholdSettings } from "./household-settings";
+import { Link, Navigate, Outlet, useMatchRoute } from "@tanstack/react-router";
+import type { ComponentType } from "react";
 
 type HouseholdWorkspaceProps = {
-  accessToken: string;
   householdId: string;
-  onLeftHousehold: () => void;
-  onSessionExpired: () => void;
 };
-
-type WorkspaceModule = "shopping" | "recipes" | "household";
 
 type ModuleIconProps = {
   className?: string;
 };
 
 type ModuleDefinition = {
-  key: WorkspaceModule;
+  key: "shopping" | "recipes" | "household";
   label: string;
+  to:
+    | "/households/$householdId/shopping"
+    | "/households/$householdId/recipes"
+    | "/households/$householdId/settings";
   Icon: ComponentType<ModuleIconProps>;
 };
 
@@ -80,100 +77,47 @@ function HouseholdIcon({ className }: ModuleIconProps) {
   );
 }
 
-const moduleDefinitions: readonly ModuleDefinition[] = [
-  { key: "shopping", label: "Shopping", Icon: ShoppingIcon },
-  { key: "recipes", label: "Recipes", Icon: RecipesIcon },
-  { key: "household", label: "Household", Icon: HouseholdIcon },
-];
-
-type ModuleNavigationProps = {
-  modules: readonly ModuleDefinition[];
-  selectedModule: WorkspaceModule;
-  onSelect: (module: WorkspaceModule) => void;
+const householdModuleDefinition: ModuleDefinition = {
+  key: "household",
+  label: "Household",
+  to: "/households/$householdId/settings",
+  Icon: HouseholdIcon,
 };
 
-function ModuleNavigation({
-  modules,
-  selectedModule,
-  onSelect,
-}: ModuleNavigationProps) {
-  return (
-    <nav
-      aria-label="Household modules"
-      className="flex flex-wrap justify-center gap-2 border-b border-border"
-    >
-      {modules.map(({ key, label, Icon }) => {
-        const selected = key === selectedModule;
+const moduleDefinitions: readonly ModuleDefinition[] = [
+  {
+    key: "shopping",
+    label: "Shopping",
+    to: "/households/$householdId/shopping",
+    Icon: ShoppingIcon,
+  },
+  {
+    key: "recipes",
+    label: "Recipes",
+    to: "/households/$householdId/recipes",
+    Icon: RecipesIcon,
+  },
+  householdModuleDefinition,
+];
 
-        return (
-          <Button
-            key={key}
-            variant="ghost"
-            aria-pressed={selected}
-            className={
-              selected
-                ? "rounded-none border-b-2 border-primary text-primary!"
-                : "rounded-none border-b-2 border-transparent"
-            }
-            onClick={() => onSelect(key)}
-          >
-            <Icon className="size-5" />
-            {label}
-          </Button>
-        );
-      })}
-    </nav>
-  );
-}
+const navigationLinkClasses =
+  "inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-none border-b-2 px-4 text-sm font-medium outline-none transition-colors duration-[var(--motion-duration-fast)] focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas";
 
-export function HouseholdWorkspace({
-  accessToken,
-  householdId,
-  onLeftHousehold,
-  onSessionExpired,
-}: HouseholdWorkspaceProps) {
-  const [selection, setSelection] = useState<{
-    householdId: string;
-    module: WorkspaceModule;
-  }>();
+export function HouseholdWorkspace({ householdId }: HouseholdWorkspaceProps) {
   const [settings, result] = useQuery(
     queries.modules.byHousehold({ householdId }),
   );
-
-  const management = (
-    <section
-      aria-labelledby="household-management-heading"
-      className="grid gap-6"
-    >
-      <h2 id="household-management-heading" className="text-xl font-semibold">
-        Household management
-      </h2>
-      <HouseholdSettings
-        accessToken={accessToken}
-        householdId={householdId}
-        onLeftHousehold={onLeftHousehold}
-        onSessionExpired={onSessionExpired}
-      />
-    </section>
-  );
+  const matchRoute = useMatchRoute();
 
   if (result.type === "unknown") {
-    return (
-      <div className="grid gap-8">
-        {management}
-        <InlineAlert>Loading household modules…</InlineAlert>
-      </div>
-    );
+    return <InlineAlert>Loading household modules…</InlineAlert>;
   }
 
   if (result.type === "error") {
     return (
-      <div className="grid gap-8">
-        {management}
-        <InlineAlert role="alert" variant="danger">
-          Unable to load household modules.
-        </InlineAlert>
-      </div>
+      <InlineAlert role="alert" variant="danger">
+        Unable to load household modules.
+      </InlineAlert>
     );
   }
 
@@ -185,42 +129,41 @@ export function HouseholdWorkspace({
   const availableModules = moduleDefinitions.filter(
     ({ key }) => key === "household" || enabledModuleKeys.has(key),
   );
-  const explicitlySelectedModule =
-    selection?.householdId === householdId ? selection.module : undefined;
-  const selectedModule =
-    explicitlySelectedModule !== undefined &&
-    availableModules.some(({ key }) => key === explicitlySelectedModule)
-      ? explicitlySelectedModule
-      : (availableModules[0]?.key ?? "household");
-
-  let content: ReactNode;
-  if (selectedModule === "shopping") {
-    content = <ShoppingList householdId={householdId} />;
-  } else if (selectedModule === "recipes") {
-    content = (
-      <section aria-labelledby="recipes-heading">
-        <h2 id="recipes-heading" className="sr-only">
-          Recipes
-        </h2>
-        <RecipeList
-          accessToken={accessToken}
-          householdId={householdId}
-          onSessionExpired={onSessionExpired}
-        />
-      </section>
-    );
-  } else {
-    content = management;
-  }
+  const routeIsAvailable = availableModules.some(({ to }) =>
+    matchRoute({ to, params: { householdId }, fuzzy: false }),
+  );
+  const fallbackModule = availableModules[0] ?? householdModuleDefinition;
 
   return (
     <div className="grid gap-8">
-      <ModuleNavigation
-        modules={availableModules}
-        selectedModule={selectedModule}
-        onSelect={(module) => setSelection({ householdId, module })}
-      />
-      {content}
+      <nav
+        aria-label="Household modules"
+        className="flex flex-wrap justify-center gap-2 border-b border-border"
+      >
+        {availableModules.map(({ key, label, to, Icon }) => (
+          <Link
+            key={key}
+            to={to}
+            params={{ householdId }}
+            activeOptions={{ exact: true }}
+            className={navigationLinkClasses}
+            activeProps={{ className: "border-primary text-primary" }}
+            inactiveProps={{
+              className:
+                "border-transparent text-muted hover:bg-raised hover:text-foreground",
+            }}
+          >
+            <Icon className="size-5" />
+            {label}
+          </Link>
+        ))}
+      </nav>
+
+      {routeIsAvailable ? (
+        <Outlet />
+      ) : (
+        <Navigate to={fallbackModule.to} params={{ householdId }} replace />
+      )}
     </div>
   );
 }

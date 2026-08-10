@@ -10,33 +10,89 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as HouseholdsHouseholdIdRouteImport } from './routes/households.$householdId'
+import { Route as HouseholdsHouseholdIdRecipesRouteImport } from './routes/households.$householdId.recipes'
+import { Route as HouseholdsHouseholdIdSettingsRouteImport } from './routes/households.$householdId.settings'
+import { Route as HouseholdsHouseholdIdShoppingRouteImport } from './routes/households.$householdId.shopping'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HouseholdsHouseholdIdRoute = HouseholdsHouseholdIdRouteImport.update({
+  id: '/households/$householdId',
+  path: '/households/$householdId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HouseholdsHouseholdIdRecipesRoute =
+  HouseholdsHouseholdIdRecipesRouteImport.update({
+    id: '/recipes',
+    path: '/recipes',
+    getParentRoute: () => HouseholdsHouseholdIdRoute,
+  } as any)
+const HouseholdsHouseholdIdSettingsRoute =
+  HouseholdsHouseholdIdSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => HouseholdsHouseholdIdRoute,
+  } as any)
+const HouseholdsHouseholdIdShoppingRoute =
+  HouseholdsHouseholdIdShoppingRouteImport.update({
+    id: '/shopping',
+    path: '/shopping',
+    getParentRoute: () => HouseholdsHouseholdIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/households/$householdId': typeof HouseholdsHouseholdIdRouteWithChildren
+  '/households/$householdId/recipes': typeof HouseholdsHouseholdIdRecipesRoute
+  '/households/$householdId/settings': typeof HouseholdsHouseholdIdSettingsRoute
+  '/households/$householdId/shopping': typeof HouseholdsHouseholdIdShoppingRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/households/$householdId': typeof HouseholdsHouseholdIdRouteWithChildren
+  '/households/$householdId/recipes': typeof HouseholdsHouseholdIdRecipesRoute
+  '/households/$householdId/settings': typeof HouseholdsHouseholdIdSettingsRoute
+  '/households/$householdId/shopping': typeof HouseholdsHouseholdIdShoppingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/households/$householdId': typeof HouseholdsHouseholdIdRouteWithChildren
+  '/households/$householdId/recipes': typeof HouseholdsHouseholdIdRecipesRoute
+  '/households/$householdId/settings': typeof HouseholdsHouseholdIdSettingsRoute
+  '/households/$householdId/shopping': typeof HouseholdsHouseholdIdShoppingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/households/$householdId'
+    | '/households/$householdId/recipes'
+    | '/households/$householdId/settings'
+    | '/households/$householdId/shopping'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/households/$householdId'
+    | '/households/$householdId/recipes'
+    | '/households/$householdId/settings'
+    | '/households/$householdId/shopping'
+  id:
+    | '__root__'
+    | '/'
+    | '/households/$householdId'
+    | '/households/$householdId/recipes'
+    | '/households/$householdId/settings'
+    | '/households/$householdId/shopping'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  HouseholdsHouseholdIdRoute: typeof HouseholdsHouseholdIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +104,57 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/households/$householdId': {
+      id: '/households/$householdId'
+      path: '/households/$householdId'
+      fullPath: '/households/$householdId'
+      preLoaderRoute: typeof HouseholdsHouseholdIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/households/$householdId/recipes': {
+      id: '/households/$householdId/recipes'
+      path: '/recipes'
+      fullPath: '/households/$householdId/recipes'
+      preLoaderRoute: typeof HouseholdsHouseholdIdRecipesRouteImport
+      parentRoute: typeof HouseholdsHouseholdIdRoute
+    }
+    '/households/$householdId/settings': {
+      id: '/households/$householdId/settings'
+      path: '/settings'
+      fullPath: '/households/$householdId/settings'
+      preLoaderRoute: typeof HouseholdsHouseholdIdSettingsRouteImport
+      parentRoute: typeof HouseholdsHouseholdIdRoute
+    }
+    '/households/$householdId/shopping': {
+      id: '/households/$householdId/shopping'
+      path: '/shopping'
+      fullPath: '/households/$householdId/shopping'
+      preLoaderRoute: typeof HouseholdsHouseholdIdShoppingRouteImport
+      parentRoute: typeof HouseholdsHouseholdIdRoute
+    }
   }
 }
 
+interface HouseholdsHouseholdIdRouteChildren {
+  HouseholdsHouseholdIdRecipesRoute: typeof HouseholdsHouseholdIdRecipesRoute
+  HouseholdsHouseholdIdSettingsRoute: typeof HouseholdsHouseholdIdSettingsRoute
+  HouseholdsHouseholdIdShoppingRoute: typeof HouseholdsHouseholdIdShoppingRoute
+}
+
+const HouseholdsHouseholdIdRouteChildren: HouseholdsHouseholdIdRouteChildren = {
+  HouseholdsHouseholdIdRecipesRoute: HouseholdsHouseholdIdRecipesRoute,
+  HouseholdsHouseholdIdSettingsRoute: HouseholdsHouseholdIdSettingsRoute,
+  HouseholdsHouseholdIdShoppingRoute: HouseholdsHouseholdIdShoppingRoute,
+}
+
+const HouseholdsHouseholdIdRouteWithChildren =
+  HouseholdsHouseholdIdRoute._addFileChildren(
+    HouseholdsHouseholdIdRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  HouseholdsHouseholdIdRoute: HouseholdsHouseholdIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

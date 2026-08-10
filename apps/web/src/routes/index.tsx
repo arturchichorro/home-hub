@@ -6,13 +6,7 @@ export const Route = createFileRoute("/")({
 });
 
 function HomeRoute() {
-  const { session, onSessionExpired } = Route.useRouteContext();
+  const { session } = Route.useRouteContext();
 
-  return (
-    <App
-      accessToken={session.accessToken}
-      username={session.user.username}
-      onSessionExpired={onSessionExpired}
-    />
-  );
+  return <App username={session.user.username} />;
 }

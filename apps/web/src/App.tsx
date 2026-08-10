@@ -1,16 +1,28 @@
-import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { HouseholdSwitcher } from "./households/household-switcher";
-import { HouseholdWorkspace } from "./households/household-workspace";
 import { ZeroConnectionStatus } from "./zero/connection-status";
 
 type AppProps = {
-  accessToken: string;
+  children?: ReactNode;
+  householdId?: string;
   username: string;
-  onSessionExpired: () => void;
 };
 
-function App({ accessToken, username, onSessionExpired }: AppProps) {
-  const [householdId, setHouseholdId] = useState<string>();
+function App({ children, householdId, username }: AppProps) {
+  const navigate = useNavigate();
+
+  function selectHousehold(nextHouseholdId: string | undefined) {
+    if (nextHouseholdId) {
+      void navigate({
+        to: "/households/$householdId",
+        params: { householdId: nextHouseholdId },
+      });
+      return;
+    }
+
+    void navigate({ to: "/" });
+  }
 
   return (
     <div className="min-h-svh bg-canvas font-sans text-foreground">
@@ -19,7 +31,7 @@ function App({ accessToken, username, onSessionExpired }: AppProps) {
           <p className="shrink-0 text-lg font-semibold">Home Hub</p>
           <HouseholdSwitcher
             selectedHouseholdId={householdId}
-            onSelect={setHouseholdId}
+            onSelect={selectHousehold}
           />
           <div className="ml-auto flex min-w-0 items-center gap-4">
             <ZeroConnectionStatus />
@@ -30,16 +42,7 @@ function App({ accessToken, username, onSessionExpired }: AppProps) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
-        {householdId && (
-          <HouseholdWorkspace
-            accessToken={accessToken}
-            householdId={householdId}
-            onLeftHousehold={() => setHouseholdId(undefined)}
-            onSessionExpired={onSessionExpired}
-          />
-        )}
-      </main>
+      <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8">{children}</main>
     </div>
   );
 }
