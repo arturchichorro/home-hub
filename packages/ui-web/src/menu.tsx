@@ -3,6 +3,7 @@ import type { ComponentProps } from "react";
 import { Button } from "./button";
 
 export const MenuRoot = BaseMenu.Root;
+export const MenuRadioGroup = BaseMenu.RadioGroup;
 
 type BaseMenuTriggerProps = ComponentProps<typeof BaseMenu.Trigger>;
 
@@ -91,6 +92,52 @@ export function MenuItem({
     .join(" ");
 
   return <BaseMenu.Item {...props} className={classes} />;
+}
+
+type BaseMenuRadioItemProps = ComponentProps<typeof BaseMenu.RadioItem>;
+
+export type MenuRadioItemProps = Omit<BaseMenuRadioItemProps, "className"> & {
+  className?: string;
+};
+
+export function MenuRadioItem({
+  closeOnClick = true,
+  className,
+  children,
+  ...props
+}: MenuRadioItemProps) {
+  const classes = [
+    "grid min-h-9 cursor-default grid-cols-[1rem_minmax(0,1fr)] items-center gap-2 rounded-sm px-3 py-2 text-sm text-foreground outline-none",
+    "data-checked:bg-surface data-highlighted:bg-surface data-disabled:opacity-50",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <BaseMenu.RadioItem
+      {...props}
+      closeOnClick={closeOnClick}
+      className={classes}
+    >
+      <BaseMenu.RadioItemIndicator
+        aria-hidden="true"
+        className="flex size-4 items-center justify-center text-primary"
+      >
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 16 16"
+          className="size-3"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="m3 8 3 3 7-7" />
+        </svg>
+      </BaseMenu.RadioItemIndicator>
+      <span className="min-w-0 truncate">{children}</span>
+    </BaseMenu.RadioItem>
+  );
 }
 
 type BaseMenuSeparatorProps = ComponentProps<typeof BaseMenu.Separator>;

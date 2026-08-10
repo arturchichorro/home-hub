@@ -7,6 +7,8 @@ import {
   InlineAlert,
   MenuItem,
   MenuPopup,
+  MenuRadioGroup,
+  MenuRadioItem,
   MenuRoot,
   MenuSeparator,
   MenuTrigger,
@@ -99,13 +101,17 @@ export function UiGallery() {
                 <span aria-hidden="true">⌄</span>
               </MenuTrigger>
               <MenuPopup>
-                <MenuItem onClick={() => setHousehold("Rue des Mimosas")}>
-                  Rue des Mimosas
-                </MenuItem>
-                <MenuItem onClick={() => setHousehold("Weekend house")}>
-                  Weekend house
-                </MenuItem>
-                <MenuItem disabled>Unavailable household</MenuItem>
+                <MenuRadioGroup value={household} onValueChange={setHousehold}>
+                  <MenuRadioItem value="Rue des Mimosas">
+                    Rue des Mimosas
+                  </MenuRadioItem>
+                  <MenuRadioItem value="Weekend house">
+                    Weekend house
+                  </MenuRadioItem>
+                  <MenuRadioItem disabled value="Unavailable household">
+                    Unavailable household
+                  </MenuRadioItem>
+                </MenuRadioGroup>
                 <MenuSeparator />
                 <MenuItem>Create household…</MenuItem>
                 <MenuItem variant="danger">Leave household…</MenuItem>
