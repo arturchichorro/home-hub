@@ -1,4 +1,5 @@
 import type { RecipeImage } from "@home-hub/shared/zero/schema";
+import { Button, InlineAlert } from "@home-hub/ui-web";
 import { useEffect, useState } from "react";
 import { createRecipeImageReadUrl, deleteRecipeImage } from "./image-api";
 
@@ -84,24 +85,55 @@ function RecipeImageCard({
     }
   }
 
-  if (deleted) return <p>Image deleted. Waiting for synchronization…</p>;
+  if (deleted) {
+    return (
+      <li>
+        <InlineAlert role="status" variant="success">
+          Image deleted. Waiting for synchronization…
+        </InlineAlert>
+      </li>
+    );
+  }
 
   return (
-    <li className="recipe-image-card">
+    <li className="overflow-hidden rounded-md border border-border bg-surface">
       {url ? (
-        <img src={url} alt="Recipe" width={image.width} height={image.height} />
+        <img
+          src={url}
+          alt="Uploaded view of the recipe"
+          width={image.width}
+          height={image.height}
+          loading="lazy"
+          className="aspect-video w-full object-cover"
+        />
       ) : error ? null : (
-        <p>Loading image…</p>
+        <div className="flex aspect-video items-center justify-center bg-raised px-4">
+          <p className="text-sm text-muted">Loading image…</p>
+        </div>
       )}
-      {image.cookLogId ? <p>Attached to a cooking log.</p> : null}
-      <button
-        type="button"
-        disabled={deleting}
-        onClick={() => void removeImage()}
-      >
-        {deleting ? "Deleting…" : "Delete image"}
-      </button>
-      {error ? <p role="alert">{error}</p> : null}
+      <div className="grid gap-3 p-4">
+        {image.cookLogId ? (
+          <p className="text-sm text-muted">Attached to a cooking log.</p>
+        ) : (
+          <p className="text-sm text-muted">Recipe photo</p>
+        )}
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            size="compact"
+            variant="danger"
+            busy={deleting}
+            onClick={() => void removeImage()}
+          >
+            Delete image
+          </Button>
+        </div>
+        {error ? (
+          <InlineAlert role="alert" variant="danger">
+            {error}
+          </InlineAlert>
+        ) : null}
+      </div>
     </li>
   );
 }
@@ -114,11 +146,13 @@ export function RecipeImageGallery({
   onSessionExpired,
 }: RecipeImageGalleryProps) {
   if (images.length === 0) {
-    return <p>There are no recipe images yet.</p>;
+    return (
+      <p className="text-sm text-muted">There are no recipe images yet.</p>
+    );
   }
 
   return (
-    <ul className="recipe-image-grid">
+    <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {images.map((image) => (
         <RecipeImageCard
           key={image.id}
