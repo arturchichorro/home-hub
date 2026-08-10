@@ -10,31 +10,41 @@ import {
   Panel,
 } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CreateRecipeForm } from "./create-recipe-form";
 import { RecipeDetail } from "./recipe-detail";
 
 type RecipeListProps = {
   accessToken: string;
   householdId: string;
+  selectedRecipeId: string | undefined;
+  onSelectRecipe: (recipeId: string | undefined) => void;
   onSessionExpired: () => void;
 };
 
 export function RecipeList({
   accessToken,
   householdId,
+  selectedRecipeId,
+  onSelectRecipe,
   onSessionExpired,
 }: RecipeListProps) {
-  const [selection, setSelection] = useState<{
-    householdId: string;
-    recipeId: string;
-  }>();
   const [creating, setCreating] = useState(false);
   const [recipes, result] = useQuery(
     queries.recipes.byHousehold({ householdId }),
   );
-  const explicitlySelectedRecipeId =
-    selection?.householdId === householdId ? selection.recipeId : undefined;
+  const queryComplete = result.type !== "unknown" && result.type !== "error";
+  const selectedRecipe =
+    recipes.find((recipe) => recipe.id === selectedRecipeId) ?? recipes[0];
+
+  useEffect(() => {
+    if (!queryComplete) return;
+
+    const canonicalRecipeId = selectedRecipe?.id;
+    if (canonicalRecipeId !== selectedRecipeId) {
+      onSelectRecipe(canonicalRecipeId);
+    }
+  }, [onSelectRecipe, queryComplete, selectedRecipe?.id, selectedRecipeId]);
 
   if (result.type === "unknown") {
     return <InlineAlert>Loading recipes…</InlineAlert>;
@@ -47,10 +57,6 @@ export function RecipeList({
       </InlineAlert>
     );
   }
-
-  const selectedRecipe =
-    recipes.find((recipe) => recipe.id === explicitlySelectedRecipeId) ??
-    recipes[0];
 
   return (
     <div className="grid gap-8">
@@ -69,9 +75,7 @@ export function RecipeList({
               <MenuPopup className="w-(--anchor-width)">
                 <MenuRadioGroup
                   value={selectedRecipe.id}
-                  onValueChange={(recipeId) =>
-                    setSelection({ householdId, recipeId })
-                  }
+                  onValueChange={onSelectRecipe}
                 >
                   {recipes.map((recipe) => (
                     <MenuRadioItem key={recipe.id} value={recipe.id}>
@@ -93,7 +97,7 @@ export function RecipeList({
             householdId={householdId}
             onCancel={() => setCreating(false)}
             onCreated={(recipeId) => {
-              setSelection({ householdId, recipeId });
+              onSelectRecipe(recipeId);
               setCreating(false);
             }}
           />
