@@ -13,6 +13,7 @@ import {
 import { useQuery } from "@rocicorp/zero/react";
 import { useState } from "react";
 import { CreateHouseholdDialog } from "./create-household-dialog";
+import { JoinHouseholdDialog } from "./join-household-dialog";
 
 type HouseholdSwitcherProps = {
   accessToken: string;
@@ -28,6 +29,7 @@ export function HouseholdSwitcher({
   onSelect,
 }: HouseholdSwitcherProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const [households, result] = useQuery(queries.households.mine({}));
 
   if (result.type === "unknown") {
@@ -87,6 +89,9 @@ export function HouseholdSwitcher({
             <p className="px-3 py-2 text-sm text-muted">No households yet</p>
           )}
           <MenuSeparator />
+          <MenuItem onClick={() => setJoinDialogOpen(true)}>
+            Join household…
+          </MenuItem>
           <MenuItem onClick={() => setCreateDialogOpen(true)}>
             Create household…
           </MenuItem>
@@ -98,6 +103,13 @@ export function HouseholdSwitcher({
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onCreated={onSelect}
+        onSessionExpired={onSessionExpired}
+      />
+      <JoinHouseholdDialog
+        accessToken={accessToken}
+        open={joinDialogOpen}
+        onOpenChange={setJoinDialogOpen}
+        onJoined={onSelect}
         onSessionExpired={onSessionExpired}
       />
     </>

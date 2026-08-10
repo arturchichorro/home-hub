@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   acceptHouseholdInviteRequestSchema,
+  acceptHouseholdInviteResponseSchema,
   createHouseholdRequestSchema,
   createHouseholdResponseSchema,
   listHouseholdInvitesResponseSchema,
@@ -62,6 +63,14 @@ describe("accept household invite request", () => {
     });
   });
 
+  it("trims a pasted invite token", () => {
+    const token = "a".repeat(43);
+
+    expect(
+      acceptHouseholdInviteRequestSchema.parse({ token: `  ${token}  ` }),
+    ).toEqual({ token });
+  });
+
   it.each([
     { token: "" },
     { token: "a".repeat(42) },
@@ -72,6 +81,32 @@ describe("accept household invite request", () => {
     expect(acceptHouseholdInviteRequestSchema.safeParse(request).success).toBe(
       false,
     );
+  });
+});
+
+describe("accept household invite response", () => {
+  it("accepts the public membership response", () => {
+    const membership = {
+      id: "7fc71398-7c45-4e3d-9062-3e483847cc74",
+      householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
+      role: "member" as const,
+    };
+
+    expect(acceptHouseholdInviteResponseSchema.parse({ membership })).toEqual({
+      membership,
+    });
+  });
+
+  it("rejects invalid or unexpected membership data", () => {
+    expect(
+      acceptHouseholdInviteResponseSchema.safeParse({
+        membership: {
+          id: "not-a-uuid",
+          householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
+          role: "owner",
+        },
+      }).success,
+    ).toBe(false);
   });
 });
 

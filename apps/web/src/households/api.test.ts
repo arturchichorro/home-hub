@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  acceptHouseholdInvite,
   createHousehold,
   leaveHousehold,
   listHouseholdInvites,
@@ -134,6 +135,77 @@ describe("createHousehold", () => {
     await expect(
       createHousehold({ accessToken: "access-token", name: "Home" }),
     ).rejects.toThrow("Failed to create household");
+  });
+});
+
+describe("acceptHouseholdInvite", () => {
+  const token = "a".repeat(43);
+  const membership = {
+    id: "7fc71398-7c45-4e3d-9062-3e483847cc74",
+    householdId,
+    role: "member" as const,
+  };
+
+  it("normalizes the token and returns the new membership", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ membership }, { status: 201 }),
+    );
+
+    await expect(
+      acceptHouseholdInvite({
+        accessToken: "access-token",
+        token: `  ${token}  `,
+      }),
+    ).resolves.toEqual({ kind: "success", membership });
+
+    expect(fetchMock).toHaveBeenCalledWith("/households/invites/accept", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer access-token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ token }),
+    });
+  });
+
+  it.each([
+    [401, "unauthorized"],
+    [400, "invalid_invite"],
+    [409, "already_member"],
+  ] as const)("maps status %s to %s", async (status, kind) => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status }));
+
+    await expect(
+      acceptHouseholdInvite({ accessToken: "access-token", token }),
+    ).resolves.toEqual({ kind });
+  });
+
+  it("rejects an invalid token without making a request", async () => {
+    await expect(
+      acceptHouseholdInvite({
+        accessToken: "access-token",
+        token: "not-a-token",
+      }),
+    ).resolves.toEqual({ kind: "invalid_invite" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed success data", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ membership: { ...membership, role: "owner" } }),
+    );
+
+    await expect(
+      acceptHouseholdInvite({ accessToken: "access-token", token }),
+    ).rejects.toThrow();
+  });
+
+  it("throws for an unexpected server failure", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
+
+    await expect(
+      acceptHouseholdInvite({ accessToken: "access-token", token }),
+    ).rejects.toThrow("Failed to accept household invite");
   });
 });
 

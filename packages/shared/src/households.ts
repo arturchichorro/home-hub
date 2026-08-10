@@ -29,12 +29,31 @@ export type CreateHouseholdResponse = z.infer<
 
 export const acceptHouseholdInviteRequestSchema = z
   .object({
-    token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+    token: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9_-]{43}$/),
   })
   .strict();
 
 export type AcceptHouseholdInviteRequest = z.infer<
   typeof acceptHouseholdInviteRequestSchema
+>;
+
+export const acceptHouseholdInviteResponseSchema = z
+  .object({
+    membership: z
+      .object({
+        id: z.uuid(),
+        householdId: z.uuid(),
+        role: z.literal("member"),
+      })
+      .strict(),
+  })
+  .strict();
+
+export type AcceptHouseholdInviteResponse = z.infer<
+  typeof acceptHouseholdInviteResponseSchema
 >;
 
 export const renameHouseholdRequestSchema = z
