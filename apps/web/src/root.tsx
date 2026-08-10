@@ -1,5 +1,6 @@
+import type { Zero } from "@rocicorp/zero";
 import { RouterProvider } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "./auth/api";
 import { createAppRouter } from "./router";
 
@@ -9,29 +10,47 @@ type RootProps = {
 
 export function Root({ initialSession }: RootProps) {
   const [session, setSession] = useState(initialSession);
+  const [zero, setZero] = useState<Zero>();
+  const onAuthenticated = useCallback((nextSession: Session) => {
+    setZero(undefined);
+    setSession(nextSession);
+  }, []);
+  const onSessionExpired = useCallback(() => {
+    setZero(undefined);
+    setSession(null);
+  }, []);
   const [router] = useState(() =>
     createAppRouter({
       session: initialSession,
-      onAuthenticated: setSession,
-      onSessionExpired: () => setSession(null),
+      zero: undefined,
+      onAuthenticated,
+      onSessionExpired,
+      onZeroReady: setZero,
     }),
   );
-  const previousSession = useRef(session);
+  const previousContext = useRef({ session, zero });
 
   useEffect(() => {
-    if (previousSession.current === session) return;
+    if (
+      previousContext.current.session === session &&
+      previousContext.current.zero === zero
+    ) {
+      return;
+    }
 
-    previousSession.current = session;
+    previousContext.current = { session, zero };
     void router.invalidate();
-  }, [router, session]);
+  }, [router, session, zero]);
 
   return (
     <RouterProvider
       router={router}
       context={{
         session,
-        onAuthenticated: setSession,
-        onSessionExpired: () => setSession(null),
+        zero,
+        onAuthenticated,
+        onSessionExpired,
+        onZeroReady: setZero,
       }}
     />
   );

@@ -1,6 +1,7 @@
 import type { ZeroAuthContext } from "@home-hub/shared/zero/context";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { schema } from "@home-hub/shared/zero/schema";
+import type { Zero } from "@rocicorp/zero";
 import { ZeroProvider } from "@rocicorp/zero/react";
 import { type ReactNode, useMemo } from "react";
 
@@ -13,12 +14,14 @@ if (!cacheURL) {
 type HomeHubZeroProviderProps = {
   userId: string;
   accessToken: string;
+  onReady: (zero: Zero) => void;
   children: ReactNode;
 };
 
 export function HomeHubZeroProvider({
   userId,
   accessToken,
+  onReady,
   children,
 }: HomeHubZeroProviderProps) {
   const context = useMemo<ZeroAuthContext>(() => ({ userId }), [userId]);
@@ -31,6 +34,7 @@ export function HomeHubZeroProvider({
       auth={accessToken}
       context={context}
       mutators={mutators}
+      init={onReady}
     >
       {children}
     </ZeroProvider>

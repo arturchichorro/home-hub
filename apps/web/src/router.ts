@@ -8,6 +8,9 @@ export function createAppRouter(context: RouterContext) {
     context,
     scrollRestoration: true,
     defaultPreload: "intent",
+
+    defaultPreloadStaleTime: 0,
+    defaultPreloadGcTime: 0,
   });
 }
 

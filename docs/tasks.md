@@ -175,6 +175,8 @@ teaches us something new.
 - [x] Adopt the primitives in authentication, household selection, connection state, and Shopping
 - [x] Add addressable login and signup routes behind a shared authentication layout
 - [x] Protect the authenticated route tree and create Zero only for authenticated sessions
+- [x] Keep the authenticated Zero client stable across navigation and expose it to TanStack Router loaders for query preloading
+- [x] Move household fallback navigation into an index route and scope enabled-module redirects to their module routes
 - [x] Add the account menu and complete refresh-session logout from the web app
 - [x] Add household creation to the selector and navigate into the new household
 - [x] Add invite-token household joining to the selector and navigate after acceptance
@@ -186,6 +188,7 @@ teaches us something new.
 ## Phase 17: production readiness and hardening
 
 - [ ] Add readiness, graceful shutdown, and consistent errors
+- [ ] Refresh the in-memory access JWT and reconnect the current Zero client when authentication expires
 - [ ] Fill important integration-test gaps
 - [ ] Reconcile the documentation with the implemented system
 - [ ] Verify PostgreSQL restore and Zero replica rebuild procedures

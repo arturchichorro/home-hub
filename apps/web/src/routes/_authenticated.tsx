@@ -16,12 +16,13 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthenticatedLayout() {
-  const { session } = Route.useRouteContext();
+  const { onZeroReady, session } = Route.useRouteContext();
 
   return (
     <HomeHubZeroProvider
       userId={session.user.id}
       accessToken={session.accessToken}
+      onReady={onZeroReady}
     >
       <Outlet />
     </HomeHubZeroProvider>

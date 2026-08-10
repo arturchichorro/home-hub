@@ -1,7 +1,7 @@
 import { queries } from "@home-hub/shared/zero/queries";
 import { InlineAlert } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
-import { Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
+import { Link, Outlet } from "@tanstack/react-router";
 import type { ComponentType } from "react";
 
 type HouseholdWorkspaceProps = {
@@ -107,9 +107,6 @@ export function HouseholdWorkspace({ householdId }: HouseholdWorkspaceProps) {
   const [settings, result] = useQuery(
     queries.modules.byHousehold({ householdId }),
   );
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname.replace(/\/$/, ""),
-  });
 
   if (result.type === "error") {
     return (
@@ -130,18 +127,6 @@ export function HouseholdWorkspace({ householdId }: HouseholdWorkspaceProps) {
         ({ key }) => key === "household" || enabledModuleKeys.has(key),
       )
     : moduleDefinitions;
-  const currentModule = moduleDefinitions.find(
-    ({ to }) => to.replace("$householdId", householdId) === pathname,
-  );
-  const currentModuleIsAvailable =
-    currentModule !== undefined &&
-    availableModules.some(({ key }) => key === currentModule.key);
-  const householdRootPath = `/households/${householdId}`;
-  const shouldRedirect =
-    queryComplete &&
-    (pathname === householdRootPath ||
-      (currentModule !== undefined && !currentModuleIsAvailable));
-  const fallbackModule = availableModules[0] ?? householdModuleDefinition;
 
   return (
     <div className="grid gap-8">
@@ -169,11 +154,7 @@ export function HouseholdWorkspace({ householdId }: HouseholdWorkspaceProps) {
         ))}
       </nav>
 
-      {shouldRedirect ? (
-        <Navigate to={fallbackModule.to} params={{ householdId }} replace />
-      ) : (
-        <Outlet />
-      )}
+      <Outlet />
     </div>
   );
 }
