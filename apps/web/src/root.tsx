@@ -1,13 +1,37 @@
 import { Panel } from "@home-hub/ui-web";
+import { RouterProvider } from "@tanstack/react-router";
 import { useState } from "react";
-import App from "./App";
 import type { Session } from "./auth/api";
 import { LoginForm } from "./auth/login-form";
+import { createAppRouter } from "./router";
 import { HomeHubZeroProvider } from "./zero/provider";
 
 type RootProps = {
   initialSession: Session | null;
 };
+
+type AuthenticatedRootProps = {
+  session: Session;
+  onSessionExpired: () => void;
+};
+
+function AuthenticatedRoot({
+  session,
+  onSessionExpired,
+}: AuthenticatedRootProps) {
+  const [router] = useState(() =>
+    createAppRouter({ session, onSessionExpired }),
+  );
+
+  return (
+    <HomeHubZeroProvider
+      userId={session.user.id}
+      accessToken={session.accessToken}
+    >
+      <RouterProvider router={router} context={{ session, onSessionExpired }} />
+    </HomeHubZeroProvider>
+  );
+}
 
 export function Root({ initialSession }: RootProps) {
   const [session, setSession] = useState(initialSession);
@@ -30,15 +54,9 @@ export function Root({ initialSession }: RootProps) {
   }
 
   return (
-    <HomeHubZeroProvider
-      userId={session.user.id}
-      accessToken={session.accessToken}
-    >
-      <App
-        accessToken={session.accessToken}
-        username={session.user.username}
-        onSessionExpired={() => setSession(null)}
-      />
-    </HomeHubZeroProvider>
+    <AuthenticatedRoot
+      session={session}
+      onSessionExpired={() => setSession(null)}
+    />
   );
 }

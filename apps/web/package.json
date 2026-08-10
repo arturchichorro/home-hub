@@ -14,11 +14,13 @@
     "@home-hub/shared": "workspace:*",
     "@home-hub/ui-web": "workspace:*",
     "@rocicorp/zero": "1.8.0",
+    "@tanstack/react-router": "^1.170.25",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/router-plugin": "^1.168.29",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

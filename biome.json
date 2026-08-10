@@ -7,7 +7,11 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!packages/database/drizzle"]
+    "includes": [
+      "**",
+      "!packages/database/drizzle",
+      "!apps/web/src/routeTree.gen.ts"
+    ]
   },
   "formatter": {
     "enabled": true,
