@@ -39,6 +39,15 @@ export {
 } from "./menu";
 export { Panel, type PanelProps, type PanelVariant } from "./panel";
 export {
+  SelectItem,
+  type SelectItemProps,
+  SelectPopup,
+  type SelectPopupProps,
+  SelectRoot,
+  SelectTrigger,
+  type SelectTriggerProps,
+} from "./select";
+export {
   StatusIndicator,
   type StatusIndicatorProps,
   type StatusIndicatorSize,

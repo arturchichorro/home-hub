@@ -13,6 +13,10 @@ import {
   MenuSeparator,
   MenuTrigger,
   Panel,
+  SelectItem,
+  SelectPopup,
+  SelectRoot,
+  SelectTrigger,
   StatusIndicator,
 } from "@home-hub/ui-web";
 import { type ReactNode, useState } from "react";
@@ -54,6 +58,7 @@ export function UiGallery() {
   const [clicks, setClicks] = useState(0);
   const [connected, setConnected] = useState(true);
   const [household, setHousehold] = useState("Rue des Mimosas");
+  const [imageTarget, setImageTarget] = useState("recipe");
 
   return (
     <main className="min-h-screen bg-canvas px-5 py-10 font-sans text-foreground sm:px-8">
@@ -87,6 +92,33 @@ export function UiGallery() {
             <IconButton aria-label="Delete item" variant="danger">
               <span aria-hidden="true">×</span>
             </IconButton>
+          </div>
+        </GallerySection>
+
+        <GallerySection
+          title="Selects"
+          description="Selects choose a value used by a form; they are distinct from command and navigation menus."
+        >
+          <div className="max-w-sm">
+            <Field label="Attach image to">
+              <SelectRoot
+                name="gallery-image-target"
+                value={imageTarget}
+                onValueChange={(value) => setImageTarget(value ?? "recipe")}
+              >
+                <SelectTrigger>
+                  {imageTarget === "recipe"
+                    ? "Recipe in general"
+                    : "2 Aug 2026 cooking"}
+                </SelectTrigger>
+                <SelectPopup>
+                  <SelectItem value="recipe">Recipe in general</SelectItem>
+                  <SelectItem value="cooking-log">
+                    2 Aug 2026 cooking
+                  </SelectItem>
+                </SelectPopup>
+              </SelectRoot>
+            </Field>
           </div>
         </GallerySection>
 
