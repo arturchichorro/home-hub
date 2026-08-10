@@ -60,6 +60,7 @@ pnpm biome lint --write path/to/file.ts
 - [ ] criar cenas de docs separadas por features (uma para shopping items, outra para recipes, outra para learn french, etc)
 - [ ] adicionar quantidades a shopping list items
 - [ ] adicionar feature de transformar recipes em cenas que posso adicionar à shopping list
+- [ ] move away de random ass inline svg icons, usar uma icon library
 
 ## Notes
 
