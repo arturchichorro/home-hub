@@ -13,6 +13,17 @@ if (!rootElement) {
 const root = createRoot(rootElement);
 
 async function start() {
+  if (import.meta.env.DEV && window.location.pathname === "/dev/ui") {
+    const { UiGallery } = await import("./dev/ui-gallery");
+
+    root.render(
+      <StrictMode>
+        <UiGallery />
+      </StrictMode>,
+    );
+    return;
+  }
+
   try {
     const initialSession = await restoreSession();
 

@@ -171,7 +171,7 @@ teaches us something new.
 - [x] Implement web design tokens as CSS variables owned by `ui-web`
 - [x] Configure Tailwind to consume the `ui-web` semantic CSS variables
 - [x] Implement the first reusable primitives for buttons, fields, panels, alerts, and status indicators
-- [ ] Add a lightweight development gallery for visual and interaction-state review
+- [x] Add a lightweight development gallery for visual and interaction-state review
 - [ ] Adopt the primitives in authentication, household selection, connection state, and Shopping
 - [ ] Verify keyboard navigation, visible focus, labels, error states, disabled states, and responsive layout
 - [ ] Reserve `@home-hub/ui-native`, built on Expo UI, for a future native implementation of the same documented design language
