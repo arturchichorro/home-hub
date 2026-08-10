@@ -36,6 +36,7 @@ export function Root({ initialSession }: RootProps) {
     >
       <App
         accessToken={session.accessToken}
+        username={session.user.username}
         onSessionExpired={() => setSession(null)}
       />
     </HomeHubZeroProvider>
