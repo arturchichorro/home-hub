@@ -35,10 +35,6 @@ export function HouseholdSettings({
     }
   }, [membership?.role]);
 
-  if (result.type === "unknown") {
-    return <InlineAlert>Loading household settings…</InlineAlert>;
-  }
-
   if (result.type === "error") {
     return (
       <InlineAlert role="alert" variant="danger">
@@ -56,7 +52,7 @@ export function HouseholdSettings({
     locallyTransferredHouseholdId !== household.id;
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-8" aria-busy={result.type !== "complete"}>
       {isOwner ? (
         <section className="grid gap-4">
           <h3 className="text-lg font-semibold">Name</h3>

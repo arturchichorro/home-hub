@@ -28,10 +28,6 @@ export function RecipeDetail({
     queries.recipes.detail({ householdId, recipeId }),
   );
 
-  if (result.type === "unknown") {
-    return <InlineAlert>Loading recipe details…</InlineAlert>;
-  }
-
   if (result.type === "error") {
     return (
       <InlineAlert role="alert" variant="danger">
@@ -40,13 +36,15 @@ export function RecipeDetail({
     );
   }
 
-  if (!recipe) {
+  if (!recipe && result.type === "complete") {
     return (
       <InlineAlert role="alert" variant="danger">
         Recipe not found.
       </InlineAlert>
     );
   }
+
+  if (!recipe) return null;
 
   const nextIngredientPosition =
     recipe.ingredients.reduce(
@@ -61,7 +59,7 @@ export function RecipeDetail({
     ) + 1;
 
   return (
-    <article className="grid gap-8">
+    <article className="grid gap-8" aria-busy={result.type !== "complete"}>
       <header>
         <h3 className="text-2xl font-semibold">{recipe.title}</h3>
         {recipe.description ? (

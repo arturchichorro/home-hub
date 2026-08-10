@@ -22,8 +22,6 @@ export function ModuleSettings({
   const [pendingKey, setPendingKey] = useState<string>();
   const [error, setError] = useState<string>();
 
-  if (result.type === "unknown")
-    return <InlineAlert>Loading module settings…</InlineAlert>;
   if (result.type === "error")
     return (
       <InlineAlert role="alert" variant="danger">
@@ -54,7 +52,7 @@ export function ModuleSettings({
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3" aria-busy={result.type !== "complete"}>
       {error ? (
         <InlineAlert role="alert" variant="danger">
           {error}

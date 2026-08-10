@@ -32,7 +32,7 @@ export function HouseholdSwitcher({
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const [households, result] = useQuery(queries.households.mine({}));
 
-  if (result.type === "unknown") {
+  if (result.type === "unknown" && households.length === 0) {
     return <StatusIndicator label="Loading households…" />;
   }
 

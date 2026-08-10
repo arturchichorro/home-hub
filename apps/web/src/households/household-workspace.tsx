@@ -1,7 +1,7 @@
 import { queries } from "@home-hub/shared/zero/queries";
 import { InlineAlert } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
-import { Link, Navigate, Outlet, useMatchRoute } from "@tanstack/react-router";
+import { Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
 import type { ComponentType } from "react";
 
 type HouseholdWorkspaceProps = {
@@ -107,11 +107,9 @@ export function HouseholdWorkspace({ householdId }: HouseholdWorkspaceProps) {
   const [settings, result] = useQuery(
     queries.modules.byHousehold({ householdId }),
   );
-  const matchRoute = useMatchRoute();
-
-  if (result.type === "unknown") {
-    return <InlineAlert>Loading household modules…</InlineAlert>;
-  }
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname.replace(/\/$/, ""),
+  });
 
   if (result.type === "error") {
     return (
@@ -121,17 +119,28 @@ export function HouseholdWorkspace({ householdId }: HouseholdWorkspaceProps) {
     );
   }
 
+  const queryComplete = result.type === "complete";
   const enabledModuleKeys = new Set(
     settings
       .filter((setting) => setting.enabled)
       .map((setting) => setting.moduleKey),
   );
-  const availableModules = moduleDefinitions.filter(
-    ({ key }) => key === "household" || enabledModuleKeys.has(key),
+  const availableModules = queryComplete
+    ? moduleDefinitions.filter(
+        ({ key }) => key === "household" || enabledModuleKeys.has(key),
+      )
+    : moduleDefinitions;
+  const currentModule = moduleDefinitions.find(
+    ({ to }) => to.replace("$householdId", householdId) === pathname,
   );
-  const routeIsAvailable = availableModules.some(({ to }) =>
-    matchRoute({ to, params: { householdId }, fuzzy: false }),
-  );
+  const currentModuleIsAvailable =
+    currentModule !== undefined &&
+    availableModules.some(({ key }) => key === currentModule.key);
+  const householdRootPath = `/households/${householdId}`;
+  const shouldRedirect =
+    queryComplete &&
+    (pathname === householdRootPath ||
+      (currentModule !== undefined && !currentModuleIsAvailable));
   const fallbackModule = availableModules[0] ?? householdModuleDefinition;
 
   return (
@@ -145,7 +154,8 @@ export function HouseholdWorkspace({ householdId }: HouseholdWorkspaceProps) {
             key={key}
             to={to}
             params={{ householdId }}
-            activeOptions={{ exact: true }}
+            preload="render"
+            activeOptions={{ exact: true, includeSearch: false }}
             className={navigationLinkClasses}
             activeProps={{ className: "border-primary text-primary" }}
             inactiveProps={{
@@ -159,10 +169,10 @@ export function HouseholdWorkspace({ householdId }: HouseholdWorkspaceProps) {
         ))}
       </nav>
 
-      {routeIsAvailable ? (
-        <Outlet />
-      ) : (
+      {shouldRedirect ? (
         <Navigate to={fallbackModule.to} params={{ householdId }} replace />
+      ) : (
+        <Outlet />
       )}
     </div>
   );

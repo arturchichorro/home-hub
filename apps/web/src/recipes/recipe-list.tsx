@@ -33,7 +33,7 @@ export function RecipeList({
   const [recipes, result] = useQuery(
     queries.recipes.byHousehold({ householdId }),
   );
-  const queryComplete = result.type !== "unknown" && result.type !== "error";
+  const queryComplete = result.type === "complete";
   const selectedRecipe =
     recipes.find((recipe) => recipe.id === selectedRecipeId) ?? recipes[0];
 
@@ -46,10 +46,6 @@ export function RecipeList({
     }
   }, [onSelectRecipe, queryComplete, selectedRecipe?.id, selectedRecipeId]);
 
-  if (result.type === "unknown") {
-    return <InlineAlert>Loading recipes…</InlineAlert>;
-  }
-
   if (result.type === "error") {
     return (
       <InlineAlert role="alert" variant="danger">
@@ -59,7 +55,7 @@ export function RecipeList({
   }
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-8" aria-busy={!queryComplete}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         {selectedRecipe ? (
           <div className="grid min-w-0 flex-1 gap-1.5">
@@ -111,9 +107,9 @@ export function RecipeList({
           recipeId={selectedRecipe.id}
           onSessionExpired={onSessionExpired}
         />
-      ) : (
+      ) : queryComplete ? (
         <p className="text-sm text-muted">There are no recipes yet.</p>
-      )}
+      ) : null}
     </div>
   );
 }

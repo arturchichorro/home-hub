@@ -71,10 +71,6 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
     queries.shopping.byHousehold({ householdId }),
   );
 
-  if (result.type === "unknown") {
-    return <InlineAlert>Loading shopping list…</InlineAlert>;
-  }
-
   if (result.type === "error") {
     return (
       <InlineAlert role="alert" variant="danger">
@@ -83,6 +79,7 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
     );
   }
 
+  const queryComplete = result.type === "complete";
   const currentItems = items.filter((item) => item.status !== "archived");
   const archivedItems = items.filter((item) => item.status === "archived");
 
@@ -98,7 +95,7 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
   }
 
   return (
-    <div className="grid gap-10">
+    <div className="grid gap-10" aria-busy={!queryComplete}>
       <section
         aria-labelledby="shopping-current-heading"
         className="grid gap-5"
@@ -109,9 +106,9 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
 
         <AddShoppingItemForm householdId={householdId} />
 
-        {currentItems.length === 0 ? (
+        {queryComplete && currentItems.length === 0 ? (
           <p className="text-sm text-muted">The shopping list is empty.</p>
-        ) : (
+        ) : currentItems.length > 0 ? (
           <ul className="divide-y divide-border border-y border-border">
             {currentItems.map((item) => {
               const crossed = item.status === "crossed";
@@ -153,7 +150,7 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
               );
             })}
           </ul>
-        )}
+        ) : null}
       </section>
 
       {archivedItems.length > 0 ? (
