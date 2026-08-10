@@ -1,4 +1,11 @@
 import { mutators } from "@home-hub/shared/zero/mutators";
+import {
+  Button,
+  Field,
+  FieldControl,
+  FieldTextarea,
+  InlineAlert,
+} from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { type SubmitEvent, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
@@ -58,44 +65,54 @@ export function AddRecipeIngredientForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label htmlFor="recipe-ingredient-name">Ingredient</label>
-      <input
-        id="recipe-ingredient-name"
-        name="name"
-        required
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-      />
+    <form
+      onSubmit={handleSubmit}
+      className="grid gap-4 md:grid-cols-[minmax(0,1fr)_8rem_8rem]"
+    >
+      <Field label="Ingredient">
+        <FieldControl
+          name="name"
+          required
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+      </Field>
 
-      <label htmlFor="recipe-ingredient-quantity">Quantity</label>
-      <input
-        id="recipe-ingredient-quantity"
-        name="quantity"
-        value={quantity}
-        onChange={(event) => setQuantity(event.target.value)}
-      />
+      <Field label="Quantity">
+        <FieldControl
+          name="quantity"
+          value={quantity}
+          onChange={(event) => setQuantity(event.target.value)}
+        />
+      </Field>
 
-      <label htmlFor="recipe-ingredient-unit">Unit</label>
-      <input
-        id="recipe-ingredient-unit"
-        name="unit"
-        value={unit}
-        onChange={(event) => setUnit(event.target.value)}
-      />
+      <Field label="Unit">
+        <FieldControl
+          name="unit"
+          value={unit}
+          onChange={(event) => setUnit(event.target.value)}
+        />
+      </Field>
 
-      <label htmlFor="recipe-ingredient-note">Note</label>
-      <textarea
-        id="recipe-ingredient-note"
-        name="note"
-        value={note}
-        onChange={(event) => setNote(event.target.value)}
-      />
+      <Field label="Note" className="md:col-span-3">
+        <FieldTextarea
+          name="note"
+          rows={2}
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+        />
+      </Field>
 
-      <button type="submit" disabled={!mutationEnabled}>
-        Add ingredient
-      </button>
-      {error ? <p role="alert">{error}</p> : null}
+      <div className="flex justify-end md:col-span-3">
+        <Button type="submit" disabled={!mutationEnabled}>
+          Add ingredient
+        </Button>
+      </div>
+      {error ? (
+        <InlineAlert role="alert" variant="danger" className="md:col-span-3">
+          {error}
+        </InlineAlert>
+      ) : null}
     </form>
   );
 }
