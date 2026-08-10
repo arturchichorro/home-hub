@@ -181,7 +181,7 @@ teaches us something new.
 - [x] Add household creation to the selector and navigate into the new household
 - [x] Add invite-token household joining to the selector and navigate after acceptance
 - [x] Add owner invite creation with one-time token display and clipboard sharing
-- [ ] Verify keyboard navigation, visible focus, labels, error states, disabled states, and responsive layout
+- [x] Verify keyboard navigation, visible focus, labels, error states, disabled states, and responsive layout
 - [ ] Reserve `@home-hub/ui-native`, built on Expo UI, for a future native implementation of the same documented design language
 - [ ] Complete the Phase 16 checkpoint and commit
 
