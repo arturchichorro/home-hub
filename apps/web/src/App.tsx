@@ -35,7 +35,7 @@ function App({
 
   return (
     <div className="min-h-svh bg-canvas font-sans text-foreground">
-      <header className="border-b border-border">
+      <header>
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-5 py-4 sm:px-8">
           <p className="shrink-0 text-lg font-semibold">Home Hub</p>
           <HouseholdSwitcher
@@ -51,7 +51,9 @@ function App({
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-5 pt-2 pb-8 sm:px-8">
+        {children}
+      </main>
     </div>
   );
 }

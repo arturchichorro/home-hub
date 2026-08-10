@@ -61,6 +61,7 @@ pnpm biome lint --write path/to/file.ts
 - [ ] adicionar quantidades a shopping list items
 - [ ] adicionar feature de transformar recipes em cenas que posso adicionar à shopping list
 - [ ] move away de random ass inline svg icons, usar uma icon library
+- [ ] fix flashing de household_members ao adicionar uma versão segura de users à publication de zero
 
 ## Notes
 

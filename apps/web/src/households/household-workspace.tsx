@@ -132,7 +132,7 @@ export function HouseholdWorkspace({ householdId }: HouseholdWorkspaceProps) {
     <div className="grid gap-8">
       <nav
         aria-label="Household modules"
-        className="flex flex-wrap justify-center gap-2 border-b border-border"
+        className="flex flex-wrap justify-center gap-2"
       >
         {availableModules.map(({ key, label, to, Icon }) => (
           <Link
