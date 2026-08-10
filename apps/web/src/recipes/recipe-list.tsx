@@ -1,4 +1,12 @@
 import { queries } from "@home-hub/shared/zero/queries";
+import {
+  InlineAlert,
+  MenuPopup,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuRoot,
+  MenuTrigger,
+} from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { useState } from "react";
 import { CreateRecipeForm } from "./create-recipe-form";
@@ -22,50 +30,65 @@ export function RecipeList({
   const [recipes, result] = useQuery(
     queries.recipes.byHousehold({ householdId }),
   );
-  const selectedRecipeId =
+  const explicitlySelectedRecipeId =
     selection?.householdId === householdId ? selection.recipeId : undefined;
 
   if (result.type === "unknown") {
-    return <p>Loading recipe list…</p>;
+    return <InlineAlert>Loading recipes…</InlineAlert>;
   }
 
   if (result.type === "error") {
-    return <p role="alert">Unable to load the recipe list.</p>;
+    return (
+      <InlineAlert role="alert" variant="danger">
+        Unable to load recipes.
+      </InlineAlert>
+    );
   }
 
-  return (
-    <>
-      <CreateRecipeForm householdId={householdId} />
-      {recipes.length === 0 ? (
-        <p>There are no recipes yet.</p>
-      ) : (
-        <ul>
-          {recipes.map((recipe) => {
-            return (
-              <li key={recipe.id}>
-                <button
-                  type="button"
-                  aria-pressed={selectedRecipeId === recipe.id}
-                  onClick={() =>
-                    setSelection({ householdId, recipeId: recipe.id })
-                  }
-                >
-                  {recipe.title}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+  const selectedRecipe =
+    recipes.find((recipe) => recipe.id === explicitlySelectedRecipeId) ??
+    recipes[0];
 
-      {selectedRecipeId ? (
-        <RecipeDetail
-          accessToken={accessToken}
-          householdId={householdId}
-          recipeId={selectedRecipeId}
-          onSessionExpired={onSessionExpired}
-        />
-      ) : null}
-    </>
+  return (
+    <div className="grid gap-8">
+      <CreateRecipeForm householdId={householdId} />
+
+      {selectedRecipe ? (
+        <>
+          <MenuRoot>
+            <MenuTrigger
+              aria-label={`Choose recipe. Current recipe: ${selectedRecipe.title}`}
+              className="w-full max-w-sm justify-between!"
+            >
+              <span className="truncate">{selectedRecipe.title}</span>
+              <span aria-hidden="true">⌄</span>
+            </MenuTrigger>
+            <MenuPopup className="w-(--anchor-width)">
+              <MenuRadioGroup
+                value={selectedRecipe.id}
+                onValueChange={(recipeId) =>
+                  setSelection({ householdId, recipeId })
+                }
+              >
+                {recipes.map((recipe) => (
+                  <MenuRadioItem key={recipe.id} value={recipe.id}>
+                    {recipe.title}
+                  </MenuRadioItem>
+                ))}
+              </MenuRadioGroup>
+            </MenuPopup>
+          </MenuRoot>
+
+          <RecipeDetail
+            accessToken={accessToken}
+            householdId={householdId}
+            recipeId={selectedRecipe.id}
+            onSessionExpired={onSessionExpired}
+          />
+        </>
+      ) : (
+        <p className="text-sm text-muted">There are no recipes yet.</p>
+      )}
+    </div>
   );
 }
