@@ -122,7 +122,8 @@ export function MenuRadioItem({
     >
       <BaseMenu.RadioItemIndicator
         aria-hidden="true"
-        className="flex size-4 items-center justify-center text-primary"
+        keepMounted
+        className="flex size-4 items-center justify-center text-primary data-unchecked:invisible"
       >
         <svg
           aria-hidden="true"
