@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { login, restoreSession, signup } from "./api";
+import { login, logout, restoreSession, signup } from "./api";
 
 const user = {
   id: "9f8a6942-f721-499d-957d-7bb3ed1158db",
@@ -256,5 +256,34 @@ describe("signup", () => {
     );
 
     await expect(signup(request)).rejects.toThrow();
+  });
+});
+
+describe("logout", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("logs out the refresh-cookie session", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await expect(logout()).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith("/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
+  });
+
+  it("throws when the server cannot complete logout", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ error: "Unavailable" }, { status: 503 }),
+    );
+
+    await expect(logout()).rejects.toThrow("Failed to log out");
   });
 });

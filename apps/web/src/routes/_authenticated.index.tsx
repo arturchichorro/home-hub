@@ -6,7 +6,9 @@ export const Route = createFileRoute("/_authenticated/")({
 });
 
 function HomeRoute() {
-  const { session } = Route.useRouteContext();
+  const { onSessionExpired, session } = Route.useRouteContext();
 
-  return <App username={session.user.username} />;
+  return (
+    <App username={session.user.username} onSessionExpired={onSessionExpired} />
+  );
 }

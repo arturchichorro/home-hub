@@ -1,15 +1,17 @@
 import { useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { AccountMenu } from "./auth/account-menu";
 import { HouseholdSwitcher } from "./households/household-switcher";
 import { ZeroConnectionStatus } from "./zero/connection-status";
 
 type AppProps = {
   children?: ReactNode;
   householdId?: string;
+  onSessionExpired: () => void;
   username: string;
 };
 
-function App({ children, householdId, username }: AppProps) {
+function App({ children, householdId, onSessionExpired, username }: AppProps) {
   const navigate = useNavigate();
 
   function selectHousehold(nextHouseholdId: string | undefined) {
@@ -35,9 +37,7 @@ function App({ children, householdId, username }: AppProps) {
           />
           <div className="ml-auto flex min-w-0 items-center gap-4">
             <ZeroConnectionStatus />
-            <span className="max-w-40 truncate text-sm font-medium">
-              {username}
-            </span>
+            <AccountMenu username={username} onLoggedOut={onSessionExpired} />
           </div>
         </div>
       </header>

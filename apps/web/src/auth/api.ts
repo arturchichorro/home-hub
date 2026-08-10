@@ -102,3 +102,14 @@ export async function signup(request: SignupRequest): Promise<SignupResult> {
 
   return { kind: "success", session };
 }
+
+export async function logout(): Promise<void> {
+  const logoutResponse = await fetch("/auth/logout", {
+    method: "POST",
+    credentials: "include",
+  });
+
+  if (!logoutResponse.ok) {
+    throw new Error("Failed to log out");
+  }
+}
