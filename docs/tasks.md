@@ -228,7 +228,24 @@ action.
 - [ ] Complete a production restore rehearsal and document routine operations
 - [ ] Complete the Phase 18 checkpoint and commit
 
-## Phase 19: deploy to and migrate onto the Raspberry Pi
+## Phase 19: continuous integration after initial deployment
+
+Do not implement CI before the initial VPS deployment. This is the first
+post-deployment requirement. Until it is complete, every change must still be
+verified locally with the relevant checks below before it is considered ready
+to deploy.
+
+- [ ] Add a CI workflow that starts from a clean, frozen dependency installation
+- [ ] Run formatting and linting checks
+- [ ] Run type-checking for every application and package
+- [ ] Run the complete test suite
+- [ ] Regenerate the Zero schema and fail if committed generated output differs
+- [ ] Verify migration files and Drizzle metadata are consistent with the declared database schema
+- [ ] Build the production web application
+- [ ] Document how to investigate failures while keeping the equivalent local verification commands available
+- [ ] Complete the Phase 19 checkpoint and commit
+
+## Phase 20: deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack
 - [ ] Validate SSD performance and durability, cooling, power protection, and available capacity
@@ -237,9 +254,9 @@ action.
 - [ ] Plan a maintenance window, final backup, DNS cutover, and VPS rollback window
 - [ ] Migrate PostgreSQL and secrets, rebuild Zero, and switch production traffic
 - [ ] Verify the full production journey and monitor stability before retiring the VPS
-- [ ] Complete the Phase 19 checkpoint and commit
+- [ ] Complete the Phase 20 checkpoint and commit
 
-## Phase 20: French vocabulary as the first post-deployment module
+## Phase 21: French vocabulary as the first post-deployment module
 
 - [ ] Define the smallest useful household vocabulary model and module-owned operations
 - [ ] Register French Vocabulary in the built-in module catalogue, disabled by default
@@ -248,4 +265,4 @@ action.
 - [ ] Build the vocabulary interface from the shared UI primitives
 - [ ] Verify enabling, disabling with data retention, re-enabling, and household isolation
 - [ ] Document the checklist for adding future modules such as household finance
-- [ ] Complete the Phase 20 final checkpoint and commit
+- [ ] Complete the Phase 21 final checkpoint and commit
