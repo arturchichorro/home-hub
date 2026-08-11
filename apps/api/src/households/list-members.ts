@@ -1,6 +1,8 @@
 import type { Database } from "@home-hub/database";
 import { householdMembers, users } from "@home-hub/database/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
+import { findActiveUser } from "../authorization/active-user";
+import { findHouseholdMembershipForShare } from "../authorization/household-access";
 
 export type ListHouseholdMembersInput = {
   userId: string;
@@ -25,26 +27,16 @@ export function createListHouseholdMembersService({ db }: { db: Database }) {
     householdId,
   }: ListHouseholdMembersInput): Promise<ListHouseholdMembersResult> {
     return db.transaction(async (tx) => {
-      const user = await tx.query.users.findFirst({
-        columns: { id: true },
-        where: (users, { eq }) => eq(users.id, userId),
-      });
+      const user = await findActiveUser(tx, userId);
 
       if (!user) {
         return { kind: "unauthorized" };
       }
 
-      const [callerMembership] = await tx
-        .select({ id: householdMembers.id })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.householdId, householdId),
-            eq(householdMembers.userId, userId),
-          ),
-        )
-        .limit(1)
-        .for("share");
+      const callerMembership = await findHouseholdMembershipForShare(tx, {
+        householdId,
+        userId,
+      });
 
       if (!callerMembership) {
         return { kind: "forbidden" };

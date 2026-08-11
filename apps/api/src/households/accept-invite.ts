@@ -1,8 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { Database } from "@home-hub/database";
 import { householdInvites, householdMembers } from "@home-hub/database/schema";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { findActiveUser } from "../authorization/active-user";
+import { findHouseholdMembershipWithoutLock } from "../authorization/household-access";
 import { hashInviteToken } from "./invite-token";
+import { findHouseholdInviteByTokenHashForUpdate } from "./scoped-entities";
 
 export type AcceptHouseholdInviteInput = {
   userId: string;
@@ -28,10 +31,7 @@ export function createAcceptHouseholdInviteService({ db }: { db: Database }) {
     token,
   }: AcceptHouseholdInviteInput): Promise<AcceptHouseholdInviteResult> {
     return db.transaction(async (tx) => {
-      const user = await tx.query.users.findFirst({
-        columns: { id: true },
-        where: (users, { eq }) => eq(users.id, userId),
-      });
+      const user = await findActiveUser(tx, userId);
 
       if (!user) {
         return { kind: "unauthorized" };
@@ -39,18 +39,10 @@ export function createAcceptHouseholdInviteService({ db }: { db: Database }) {
 
       const tokenHash = hashInviteToken(token);
 
-      const [invite] = await tx
-        .select({
-          id: householdInvites.id,
-          householdId: householdInvites.householdId,
-          expiresAt: householdInvites.expiresAt,
-          acceptedAt: householdInvites.acceptedAt,
-          revokedAt: householdInvites.revokedAt,
-        })
-        .from(householdInvites)
-        .where(eq(householdInvites.tokenHash, tokenHash))
-        .limit(1)
-        .for("update");
+      const invite = await findHouseholdInviteByTokenHashForUpdate(
+        tx,
+        tokenHash,
+      );
 
       const now = new Date();
       const isInactive =
@@ -63,17 +55,10 @@ export function createAcceptHouseholdInviteService({ db }: { db: Database }) {
         return { kind: "invalid_invite" };
       }
 
-      const [householdMember] = await tx
-        .select({ id: householdMembers.id })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.householdId, invite.householdId),
-            eq(householdMembers.userId, userId),
-          ),
-        )
-        .limit(1)
-        .execute();
+      const householdMember = await findHouseholdMembershipWithoutLock(tx, {
+        householdId: invite.householdId,
+        userId,
+      });
 
       if (householdMember) {
         return { kind: "already_member" };

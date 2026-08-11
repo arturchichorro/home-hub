@@ -1,10 +1,10 @@
 import type { Database } from "@home-hub/database";
-import {
-  householdMembers,
-  householdModuleSettings,
-} from "@home-hub/database/schema";
+import { householdModuleSettings } from "@home-hub/database/schema";
 import type { HouseholdModuleKey } from "@home-hub/shared/modules";
 import { and, eq } from "drizzle-orm";
+import { findActiveUser } from "../authorization/active-user";
+import { findHouseholdOwnerForShare } from "../authorization/household-access";
+import { findHouseholdModuleSettingForUpdate } from "./scoped-entities";
 
 export type SetHouseholdModuleEnabledInput = {
   userId: string;
@@ -34,37 +34,19 @@ export function createSetHouseholdModuleEnabledService({
     enabled,
   }: SetHouseholdModuleEnabledInput): Promise<SetHouseholdModuleEnabledResult> {
     return db.transaction(async (tx) => {
-      const user = await tx.query.users.findFirst({
-        columns: { id: true },
-        where: (users, { eq }) => eq(users.id, userId),
-      });
+      const user = await findActiveUser(tx, userId);
       if (!user) return { kind: "unauthorized" };
 
-      const [owner] = await tx
-        .select({ id: householdMembers.id })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.householdId, householdId),
-            eq(householdMembers.userId, userId),
-            eq(householdMembers.role, "owner"),
-          ),
-        )
-        .limit(1)
-        .for("share");
+      const owner = await findHouseholdOwnerForShare(tx, {
+        householdId,
+        userId,
+      });
       if (!owner) return { kind: "forbidden" };
 
-      const [setting] = await tx
-        .select({ moduleKey: householdModuleSettings.moduleKey })
-        .from(householdModuleSettings)
-        .where(
-          and(
-            eq(householdModuleSettings.householdId, householdId),
-            eq(householdModuleSettings.moduleKey, moduleKey),
-          ),
-        )
-        .limit(1)
-        .for("update");
+      const setting = await findHouseholdModuleSettingForUpdate(tx, {
+        householdId,
+        moduleKey,
+      });
       if (!setting) return { kind: "module_not_configured" };
 
       const [updated] = await tx

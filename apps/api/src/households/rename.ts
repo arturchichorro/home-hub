@@ -1,6 +1,8 @@
 import type { Database } from "@home-hub/database";
-import { householdMembers, households } from "@home-hub/database/schema";
-import { and, eq } from "drizzle-orm";
+import { households } from "@home-hub/database/schema";
+import { eq } from "drizzle-orm";
+import { findActiveUser } from "../authorization/active-user";
+import { findHouseholdOwnerForShare } from "../authorization/household-access";
 
 export type RenameHouseholdInput = {
   userId: string;
@@ -20,27 +22,16 @@ export function createRenameHouseholdService({ db }: { db: Database }) {
     name,
   }: RenameHouseholdInput): Promise<RenameHouseholdResult> {
     return db.transaction(async (tx) => {
-      const user = await tx.query.users.findFirst({
-        columns: { id: true },
-        where: (users, { eq }) => eq(users.id, userId),
-      });
+      const user = await findActiveUser(tx, userId);
 
       if (!user) {
         return { kind: "unauthorized" };
       }
 
-      const [ownerMembership] = await tx
-        .select({ id: householdMembers.id })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.householdId, householdId),
-            eq(householdMembers.userId, userId),
-            eq(householdMembers.role, "owner"),
-          ),
-        )
-        .limit(1)
-        .for("share");
+      const ownerMembership = await findHouseholdOwnerForShare(tx, {
+        householdId,
+        userId,
+      });
 
       if (!ownerMembership) {
         return { kind: "forbidden" };

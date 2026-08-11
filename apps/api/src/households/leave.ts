@@ -1,6 +1,8 @@
 import type { Database } from "@home-hub/database";
 import { householdMembers } from "@home-hub/database/schema";
 import { and, eq } from "drizzle-orm";
+import { findActiveUser } from "../authorization/active-user";
+import { findHouseholdMembershipForUpdate } from "../authorization/household-access";
 
 export type LeaveHouseholdInput = {
   userId: string;
@@ -19,26 +21,16 @@ export function createLeaveHouseholdService({ db }: { db: Database }) {
     householdId,
   }: LeaveHouseholdInput): Promise<LeaveHouseholdResult> {
     return db.transaction(async (tx) => {
-      const user = await tx.query.users.findFirst({
-        columns: { id: true },
-        where: (users, { eq }) => eq(users.id, userId),
-      });
+      const user = await findActiveUser(tx, userId);
 
       if (!user) {
         return { kind: "unauthorized" };
       }
 
-      const [membership] = await tx
-        .select({ id: householdMembers.id, role: householdMembers.role })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.householdId, householdId),
-            eq(householdMembers.userId, userId),
-          ),
-        )
-        .limit(1)
-        .for("update");
+      const membership = await findHouseholdMembershipForUpdate(tx, {
+        householdId,
+        userId,
+      });
 
       if (!membership) {
         return { kind: "forbidden" };

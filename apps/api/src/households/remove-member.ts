@@ -1,6 +1,9 @@
 import type { Database } from "@home-hub/database";
 import { householdMembers } from "@home-hub/database/schema";
 import { and, eq } from "drizzle-orm";
+import { findActiveUser } from "../authorization/active-user";
+import { findHouseholdMembershipWithRoleForShare } from "../authorization/household-access";
+import { findHouseholdMemberByIdForUpdate } from "./scoped-entities";
 
 export type RemoveHouseholdMemberInput = {
   userId: string;
@@ -21,42 +24,28 @@ export function createRemoveHouseholdMemberService({ db }: { db: Database }) {
     membershipId,
   }: RemoveHouseholdMemberInput): Promise<RemoveHouseholdMemberResult> {
     return db.transaction(async (tx) => {
-      const user = await tx.query.users.findFirst({
-        columns: { id: true },
-        where: (users, { eq }) => eq(users.id, userId),
-      });
+      const user = await findActiveUser(tx, userId);
 
       if (!user) {
         return { kind: "unauthorized" };
       }
 
-      const [callerMembership] = await tx
-        .select({ id: householdMembers.id, role: householdMembers.role })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.householdId, householdId),
-            eq(householdMembers.userId, userId),
-          ),
-        )
-        .limit(1)
-        .for("share");
+      const callerMembership = await findHouseholdMembershipWithRoleForShare(
+        tx,
+        {
+          householdId,
+          userId,
+        },
+      );
 
       if (callerMembership?.role !== "owner") {
         return { kind: "forbidden" };
       }
 
-      const [targetMembership] = await tx
-        .select({ id: householdMembers.id, role: householdMembers.role })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.id, membershipId),
-            eq(householdMembers.householdId, householdId),
-          ),
-        )
-        .limit(1)
-        .for("update");
+      const targetMembership = await findHouseholdMemberByIdForUpdate(tx, {
+        householdId,
+        membershipId,
+      });
 
       if (!targetMembership) {
         return { kind: "invalid_member" };

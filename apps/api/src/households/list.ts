@@ -1,6 +1,7 @@
 import type { Database } from "@home-hub/database";
 import { householdMembers, households } from "@home-hub/database/schema";
 import { asc, desc, eq } from "drizzle-orm";
+import { findActiveUser } from "../authorization/active-user";
 
 export type HouseholdSummary = {
   id: string;
@@ -16,10 +17,7 @@ export function createListHouseholdsService({ db }: { db: Database }) {
   return async function listHouseholds(
     userId: string,
   ): Promise<ListHouseholdsResult> {
-    const user = await db.query.users.findFirst({
-      columns: { id: true },
-      where: (users, { eq }) => eq(users.id, userId),
-    });
+    const user = await findActiveUser(db, userId);
 
     if (!user) {
       return { kind: "unauthorized" };

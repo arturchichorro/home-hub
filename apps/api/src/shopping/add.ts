@@ -1,15 +1,15 @@
 import { randomUUID } from "node:crypto";
 import type { Database } from "@home-hub/database";
-import {
-  householdMembers,
-  householdModuleSettings,
-  shoppingItems,
-} from "@home-hub/database/schema";
+import { shoppingItems } from "@home-hub/database/schema";
 import {
   cleanShoppingItemName,
   normalizeShoppingItemName,
 } from "@home-hub/shared/normalization";
-import { and, eq } from "drizzle-orm";
+import { findActiveUser } from "../authorization/active-user";
+import {
+  findEnabledHouseholdModuleForShare,
+  findHouseholdMembershipForShare,
+} from "../authorization/household-access";
 
 type ShoppingItemRow = typeof shoppingItems.$inferSelect;
 
@@ -39,43 +39,25 @@ export function createAddShoppingItemService({ db }: { db: Database }) {
     name,
   }: AddShoppingItemInput): Promise<AddShoppingItemResult> {
     return db.transaction(async (tx) => {
-      const user = await tx.query.users.findFirst({
-        columns: { id: true },
-        where: (users, { eq }) => eq(users.id, userId),
-      });
+      const user = await findActiveUser(tx, userId);
 
       if (!user) {
         return { kind: "unauthorized" };
       }
 
-      const [membership] = await tx
-        .select({ id: householdMembers.id })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.householdId, householdId),
-            eq(householdMembers.userId, userId),
-          ),
-        )
-        .limit(1)
-        .for("share");
+      const membership = await findHouseholdMembershipForShare(tx, {
+        householdId,
+        userId,
+      });
 
       if (!membership) {
         return { kind: "forbidden" };
       }
 
-      const [moduleSetting] = await tx
-        .select({ householdId: householdModuleSettings.householdId })
-        .from(householdModuleSettings)
-        .where(
-          and(
-            eq(householdModuleSettings.householdId, householdId),
-            eq(householdModuleSettings.moduleKey, "shopping"),
-            eq(householdModuleSettings.enabled, true),
-          ),
-        )
-        .limit(1)
-        .for("share");
+      const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
+        householdId,
+        moduleKey: "shopping",
+      });
 
       if (!moduleSetting) {
         return { kind: "forbidden" };

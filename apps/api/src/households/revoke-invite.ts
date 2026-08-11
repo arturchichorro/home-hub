@@ -1,6 +1,9 @@
 import type { Database } from "@home-hub/database";
-import { householdInvites, householdMembers } from "@home-hub/database/schema";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { householdInvites } from "@home-hub/database/schema";
+import { eq } from "drizzle-orm";
+import { findActiveUser } from "../authorization/active-user";
+import { findHouseholdOwnerForShare } from "../authorization/household-access";
+import { findActiveHouseholdInviteForUpdate } from "./scoped-entities";
 
 export type RevokeHouseholdInviteInput = {
   userId: string;
@@ -21,47 +24,27 @@ export function createRevokeHouseholdInviteService({ db }: { db: Database }) {
     inviteId,
   }: RevokeHouseholdInviteInput): Promise<RevokeHouseholdInviteResult> {
     return db.transaction(async (tx) => {
-      const user = await tx.query.users.findFirst({
-        columns: { id: true },
-        where: (users, { eq }) => eq(users.id, userId),
-      });
+      const user = await findActiveUser(tx, userId);
 
       if (!user) {
         return { kind: "unauthorized" };
       }
 
-      const [ownerMembership] = await tx
-        .select({ id: householdMembers.id })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.householdId, householdId),
-            eq(householdMembers.userId, userId),
-            eq(householdMembers.role, "owner"),
-          ),
-        )
-        .limit(1)
-        .for("share");
+      const ownerMembership = await findHouseholdOwnerForShare(tx, {
+        householdId,
+        userId,
+      });
 
       if (!ownerMembership) {
         return { kind: "forbidden" };
       }
 
       const now = new Date();
-      const [invite] = await tx
-        .select({ id: householdInvites.id })
-        .from(householdInvites)
-        .where(
-          and(
-            eq(householdInvites.id, inviteId),
-            eq(householdInvites.householdId, householdId),
-            isNull(householdInvites.acceptedAt),
-            isNull(householdInvites.revokedAt),
-            gt(householdInvites.expiresAt, now),
-          ),
-        )
-        .limit(1)
-        .for("update");
+      const invite = await findActiveHouseholdInviteForUpdate(tx, {
+        householdId,
+        inviteId,
+        now,
+      });
 
       if (!invite) {
         return { kind: "invalid_invite" };

@@ -6,6 +6,7 @@ import {
   households,
 } from "@home-hub/database/schema";
 import { householdModuleCatalog } from "@home-hub/shared/modules";
+import { findActiveUser } from "../authorization/active-user";
 
 export type CreateHouseholdInput = {
   userId: string;
@@ -22,10 +23,7 @@ export function createHouseholdService({ db }: { db: Database }) {
     name,
   }: CreateHouseholdInput): Promise<CreateHouseholdResult> {
     return db.transaction(async (tx) => {
-      const user = await tx.query.users.findFirst({
-        columns: { id: true },
-        where: (users, { eq }) => eq(users.id, userId),
-      });
+      const user = await findActiveUser(tx, userId);
 
       if (!user) {
         return { kind: "unauthorized" };

@@ -1,17 +1,19 @@
 import { randomUUID } from "node:crypto";
 import type { Database } from "@home-hub/database";
-import {
-  householdMembers,
-  householdModuleSettings,
-  recipeCookLogs,
-  recipeImages,
-  recipes,
-} from "@home-hub/database/schema";
+import { recipeImages } from "@home-hub/database/schema";
 import type {
   CreateRecipeImageUploadRequest,
   RecipeImageContentType,
 } from "@home-hub/shared/recipe-images";
-import { and, eq } from "drizzle-orm";
+import { findActiveUser } from "../../authorization/active-user";
+import {
+  findEnabledHouseholdModuleForShare,
+  findHouseholdMembershipForShare,
+} from "../../authorization/household-access";
+import {
+  findRecipeCookLogForShare,
+  findRecipeForShare,
+} from "./scoped-entities";
 import { recipeImageUploadUrlLifetimeSeconds } from "./sign-upload";
 
 type SignUpload = (input: {
@@ -67,62 +69,30 @@ export function createRecipeImageUploadService({
     position,
   }: CreateRecipeImageUploadInput): Promise<CreateRecipeImageUploadResult> {
     return db.transaction(async (tx) => {
-      const user = await tx.query.users.findFirst({
-        columns: { id: true },
-        where: (users, { eq }) => eq(users.id, userId),
-      });
+      const user = await findActiveUser(tx, userId);
       if (!user) return { kind: "unauthorized" };
 
-      const [membership] = await tx
-        .select({ id: householdMembers.id })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.householdId, householdId),
-            eq(householdMembers.userId, userId),
-          ),
-        )
-        .limit(1)
-        .for("share");
+      const membership = await findHouseholdMembershipForShare(tx, {
+        householdId,
+        userId,
+      });
       if (!membership) return { kind: "forbidden" };
 
-      const [moduleSetting] = await tx
-        .select({ householdId: householdModuleSettings.householdId })
-        .from(householdModuleSettings)
-        .where(
-          and(
-            eq(householdModuleSettings.householdId, householdId),
-            eq(householdModuleSettings.moduleKey, "recipes"),
-            eq(householdModuleSettings.enabled, true),
-          ),
-        )
-        .limit(1)
-        .for("share");
+      const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
+        householdId,
+        moduleKey: "recipes",
+      });
       if (!moduleSetting) return { kind: "forbidden" };
 
-      const [recipe] = await tx
-        .select({ id: recipes.id })
-        .from(recipes)
-        .where(
-          and(eq(recipes.householdId, householdId), eq(recipes.id, recipeId)),
-        )
-        .limit(1)
-        .for("share");
+      const recipe = await findRecipeForShare(tx, { householdId, recipeId });
       if (!recipe) return { kind: "not_found" };
 
       if (cookLogId !== null) {
-        const [cookLog] = await tx
-          .select({ id: recipeCookLogs.id })
-          .from(recipeCookLogs)
-          .where(
-            and(
-              eq(recipeCookLogs.householdId, householdId),
-              eq(recipeCookLogs.recipeId, recipeId),
-              eq(recipeCookLogs.id, cookLogId),
-            ),
-          )
-          .limit(1)
-          .for("share");
+        const cookLog = await findRecipeCookLogForShare(tx, {
+          householdId,
+          recipeId,
+          cookLogId,
+        });
         if (!cookLog) return { kind: "not_found" };
       }
 

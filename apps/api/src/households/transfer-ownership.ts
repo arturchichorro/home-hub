@@ -1,6 +1,9 @@
 import type { Database } from "@home-hub/database";
 import { householdMembers } from "@home-hub/database/schema";
 import { and, eq } from "drizzle-orm";
+import { findActiveUser } from "../authorization/active-user";
+import { findHouseholdOwnerForUpdate } from "../authorization/household-access";
+import { findHouseholdMemberByIdForUpdate } from "./scoped-entities";
 
 export type TransferHouseholdOwnershipInput = {
   userId: string;
@@ -25,42 +28,25 @@ export function createTransferHouseholdOwnershipService({
     membershipId,
   }: TransferHouseholdOwnershipInput): Promise<TransferHouseholdOwnershipResult> {
     return db.transaction(async (tx) => {
-      const user = await tx.query.users.findFirst({
-        columns: { id: true },
-        where: (users, { eq }) => eq(users.id, userId),
-      });
+      const user = await findActiveUser(tx, userId);
 
       if (!user) {
         return { kind: "unauthorized" };
       }
 
-      const [currentOwner] = await tx
-        .select({ id: householdMembers.id, role: householdMembers.role })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.householdId, householdId),
-            eq(householdMembers.userId, userId),
-          ),
-        )
-        .limit(1)
-        .for("update");
+      const currentOwner = await findHouseholdOwnerForUpdate(tx, {
+        householdId,
+        userId,
+      });
 
       if (currentOwner?.role !== "owner") {
         return { kind: "forbidden" };
       }
 
-      const [targetMember] = await tx
-        .select({ id: householdMembers.id, role: householdMembers.role })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.id, membershipId),
-            eq(householdMembers.householdId, householdId),
-          ),
-        )
-        .limit(1)
-        .for("update");
+      const targetMember = await findHouseholdMemberByIdForUpdate(tx, {
+        householdId,
+        membershipId,
+      });
 
       if (targetMember?.role !== "member") {
         return { kind: "invalid_member" };

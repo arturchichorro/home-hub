@@ -1,11 +1,16 @@
 import type { Database } from "@home-hub/database";
-import {
-  householdMembers,
-  householdModuleSettings,
-  recipeImages,
-} from "@home-hub/database/schema";
+import { recipeImages } from "@home-hub/database/schema";
 import { and, eq } from "drizzle-orm";
+import { findActiveUser } from "../../authorization/active-user";
+import {
+  findEnabledHouseholdModuleForShare,
+  findHouseholdMembershipForShare,
+} from "../../authorization/household-access";
 import type { InspectR2ObjectResult } from "./inspect-object";
+import {
+  findRecipeImageForShare,
+  findRecipeImageForUpdate,
+} from "./scoped-entities";
 
 type InspectObject = (input: {
   objectKey: string;
@@ -40,57 +45,26 @@ export function createConfirmRecipeImageUploadService({
     imageId,
   }: ConfirmRecipeImageUploadInput): Promise<ConfirmRecipeImageUploadResult> {
     const initial = await db.transaction(async (tx) => {
-      const user = await tx.query.users.findFirst({
-        columns: { id: true },
-        where: (users, { eq }) => eq(users.id, userId),
-      });
+      const user = await findActiveUser(tx, userId);
       if (!user) return { kind: "unauthorized" as const };
 
-      const [membership] = await tx
-        .select({ id: householdMembers.id })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.householdId, householdId),
-            eq(householdMembers.userId, userId),
-          ),
-        )
-        .limit(1)
-        .for("share");
+      const membership = await findHouseholdMembershipForShare(tx, {
+        householdId,
+        userId,
+      });
       if (!membership) return { kind: "forbidden" as const };
 
-      const [moduleSetting] = await tx
-        .select({ householdId: householdModuleSettings.householdId })
-        .from(householdModuleSettings)
-        .where(
-          and(
-            eq(householdModuleSettings.householdId, householdId),
-            eq(householdModuleSettings.moduleKey, "recipes"),
-            eq(householdModuleSettings.enabled, true),
-          ),
-        )
-        .limit(1)
-        .for("share");
+      const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
+        householdId,
+        moduleKey: "recipes",
+      });
       if (!moduleSetting) return { kind: "forbidden" as const };
 
-      const [image] = await tx
-        .select({
-          id: recipeImages.id,
-          objectKey: recipeImages.objectKey,
-          contentType: recipeImages.contentType,
-          byteSize: recipeImages.byteSize,
-          confirmedAt: recipeImages.confirmedAt,
-        })
-        .from(recipeImages)
-        .where(
-          and(
-            eq(recipeImages.id, imageId),
-            eq(recipeImages.householdId, householdId),
-            eq(recipeImages.recipeId, recipeId),
-          ),
-        )
-        .limit(1)
-        .for("share");
+      const image = await findRecipeImageForShare(tx, {
+        householdId,
+        recipeId,
+        imageId,
+      });
       if (!image) return { kind: "not_found" as const };
 
       return { kind: "image" as const, image };
@@ -117,57 +91,26 @@ export function createConfirmRecipeImageUploadService({
     }
 
     return db.transaction(async (tx) => {
-      const user = await tx.query.users.findFirst({
-        columns: { id: true },
-        where: (users, { eq }) => eq(users.id, userId),
-      });
+      const user = await findActiveUser(tx, userId);
       if (!user) return { kind: "unauthorized" };
 
-      const [membership] = await tx
-        .select({ id: householdMembers.id })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.householdId, householdId),
-            eq(householdMembers.userId, userId),
-          ),
-        )
-        .limit(1)
-        .for("share");
+      const membership = await findHouseholdMembershipForShare(tx, {
+        householdId,
+        userId,
+      });
       if (!membership) return { kind: "forbidden" };
 
-      const [moduleSetting] = await tx
-        .select({ householdId: householdModuleSettings.householdId })
-        .from(householdModuleSettings)
-        .where(
-          and(
-            eq(householdModuleSettings.householdId, householdId),
-            eq(householdModuleSettings.moduleKey, "recipes"),
-            eq(householdModuleSettings.enabled, true),
-          ),
-        )
-        .limit(1)
-        .for("share");
+      const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
+        householdId,
+        moduleKey: "recipes",
+      });
       if (!moduleSetting) return { kind: "forbidden" };
 
-      const [image] = await tx
-        .select({
-          id: recipeImages.id,
-          objectKey: recipeImages.objectKey,
-          contentType: recipeImages.contentType,
-          byteSize: recipeImages.byteSize,
-          confirmedAt: recipeImages.confirmedAt,
-        })
-        .from(recipeImages)
-        .where(
-          and(
-            eq(recipeImages.id, imageId),
-            eq(recipeImages.householdId, householdId),
-            eq(recipeImages.recipeId, recipeId),
-          ),
-        )
-        .limit(1)
-        .for("update");
+      const image = await findRecipeImageForUpdate(tx, {
+        householdId,
+        recipeId,
+        imageId,
+      });
       if (!image) return { kind: "not_found" };
 
       if (image.confirmedAt) {

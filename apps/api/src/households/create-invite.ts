@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Database } from "@home-hub/database";
-import { householdInvites, householdMembers } from "@home-hub/database/schema";
-import { and, eq } from "drizzle-orm";
+import { householdInvites } from "@home-hub/database/schema";
+import { findActiveUser } from "../authorization/active-user";
+import { findHouseholdOwnerForShare } from "../authorization/household-access";
 import { generateInviteToken, hashInviteToken } from "./invite-token";
 
 const inviteTtlMilliseconds = 7 * 24 * 60 * 60 * 1000;
@@ -31,27 +32,16 @@ export function createHouseholdInviteService({ db }: { db: Database }) {
     householdId,
   }: CreateHouseholdInviteInput): Promise<CreateHouseholdInviteResult> {
     return db.transaction(async (tx) => {
-      const user = await tx.query.users.findFirst({
-        columns: { id: true },
-        where: (users, { eq }) => eq(users.id, userId),
-      });
+      const user = await findActiveUser(tx, userId);
 
       if (!user) {
         return { kind: "unauthorized" };
       }
 
-      const [ownerMembership] = await tx
-        .select({ id: householdMembers.id })
-        .from(householdMembers)
-        .where(
-          and(
-            eq(householdMembers.householdId, householdId),
-            eq(householdMembers.userId, userId),
-            eq(householdMembers.role, "owner"),
-          ),
-        )
-        .limit(1)
-        .for("share");
+      const ownerMembership = await findHouseholdOwnerForShare(tx, {
+        householdId,
+        userId,
+      });
 
       if (!ownerMembership) {
         return { kind: "forbidden" };
