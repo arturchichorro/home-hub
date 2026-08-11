@@ -6,7 +6,7 @@ This sequence optimizes for understanding. Complete one phase, explain it in you
 
 Learn pnpm workspace linking, TypeScript project boundaries, Vite’s development server, Hono's Node.js adapter, and the difference between source code and build output.
 
-Create only the root workspace, `apps/web`, `apps/api`, `packages/database`, and `packages/shared`. Reserve `apps/mobile` for the future rather than creating it now. Render a static React page and expose a Hono `/health` route through `@hono/node-server`.
+Create only the root workspace, `apps/web`, `apps/api`, `packages/database`, and `packages/shared`. Reserve `apps/mobile` for the future rather than creating it now. Render a static React page and expose a Hono `/api/health` route through `@hono/node-server`.
 
 Checkpoint: explain which process serves each port and why the browser cannot import server-only code.
 
@@ -25,7 +25,7 @@ Checkpoint: explain why normalization must happen before uniqueness checks and w
 
 ## Phase 4: signup, login, JWTs, and refresh-token rotation
 
-Implement Argon2id password hashing, short-lived JWT access tokens, opaque rotating refresh tokens, refresh-token hashing, the web refresh cookie, bearer authentication middleware, refresh, logout, and `/auth/me`.
+Implement Argon2id password hashing, short-lived JWT access tokens, opaque rotating refresh tokens, refresh-token hashing, the web refresh cookie, bearer authentication middleware, refresh, logout, and `/api/auth/me`.
 
 Checkpoint: trace the password, access JWT, and refresh token through the system. Explain why Argon2id remains necessary, why access tokens are short-lived, how refresh rotation detects reuse, and which values are stored in PostgreSQL or accessible to browser JavaScript.
 

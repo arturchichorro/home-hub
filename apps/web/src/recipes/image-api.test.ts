@@ -50,7 +50,7 @@ describe("recipe image API", () => {
       }),
     ).resolves.toMatchObject({ kind: "success", imageId });
     expect(fetchMock).toHaveBeenCalledWith(
-      `/households/${householdId}/recipes/${recipeId}/images/uploads`,
+      `/api/households/${householdId}/recipes/${recipeId}/images/uploads`,
       {
         method: "POST",
         headers: {
@@ -161,7 +161,7 @@ describe("recipe image API", () => {
       kind: "success",
     });
     expect(fetchMock).toHaveBeenCalledWith(
-      `/households/${householdId}/recipes/${recipeId}/images/${imageId}`,
+      `/api/households/${householdId}/recipes/${recipeId}/images/${imageId}`,
       {
         method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}` },

@@ -12,7 +12,7 @@ export function setRefreshTokenCookie(
   setCookie(c, refreshTokenCookieName, refreshToken, {
     httpOnly: true,
     sameSite: "Lax",
-    path: "/auth",
+    path: "/api/auth",
     secure: isProduction,
     maxAge: refreshTokenMaxAgeSeconds,
   });
@@ -20,7 +20,7 @@ export function setRefreshTokenCookie(
 
 export function clearRefreshTokenCookie(c: Context, isProduction: boolean) {
   deleteCookie(c, refreshTokenCookieName, {
-    path: "/auth",
+    path: "/api/auth",
     secure: isProduction,
   });
 }

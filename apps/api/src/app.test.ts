@@ -37,13 +37,13 @@ describe("app", () => {
       isProduction: false,
     });
 
-    const response = await app.request("/health");
+    const response = await app.request("/api/health");
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ ok: true });
   });
 
-  it("mounts household creation at POST /households", async () => {
+  it("mounts household creation at POST /api/households", async () => {
     const household = {
       id: "d92e5c4e-1c68-4942-9cc9-710207661bca",
       name: "Home",
@@ -87,7 +87,7 @@ describe("app", () => {
       secret: jwtSecret,
     });
 
-    const response = await app.request("/households", {
+    const response = await app.request("/api/households", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -149,7 +149,7 @@ describe("app", () => {
     });
 
     const response = await app.request(
-      `/households/${householdId}/shopping/items`,
+      `/api/households/${householdId}/shopping/items`,
       {
         method: "POST",
         headers: {

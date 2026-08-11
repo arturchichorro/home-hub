@@ -24,7 +24,7 @@ export type SignupResult =
   | { kind: "success"; session: Session };
 
 export async function restoreSession(): Promise<Session | null> {
-  const refreshResponse = await fetch("/auth/refresh", {
+  const refreshResponse = await fetch("/api/auth/refresh", {
     method: "POST",
     credentials: "include",
   });
@@ -39,7 +39,7 @@ export async function restoreSession(): Promise<Session | null> {
     await refreshResponse.json(),
   );
 
-  const meResponse = await fetch("/auth/me", {
+  const meResponse = await fetch("/api/auth/me", {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -59,7 +59,7 @@ export async function restoreSession(): Promise<Session | null> {
 export async function login(request: LoginRequest): Promise<LoginResult> {
   const parsedRequest = loginRequestSchema.parse(request);
 
-  const loginResponse = await fetch("/auth/login", {
+  const loginResponse = await fetch("/api/auth/login", {
     method: "POST",
     credentials: "include",
     headers: {
@@ -82,7 +82,7 @@ export async function login(request: LoginRequest): Promise<LoginResult> {
 export async function signup(request: SignupRequest): Promise<SignupResult> {
   const parsedRequest = signupRequestSchema.parse(request);
 
-  const signupResponse = await fetch("/auth/signup", {
+  const signupResponse = await fetch("/api/auth/signup", {
     method: "POST",
     credentials: "include",
     headers: {
@@ -104,7 +104,7 @@ export async function signup(request: SignupRequest): Promise<SignupResult> {
 }
 
 export async function logout(): Promise<void> {
-  const logoutResponse = await fetch("/auth/logout", {
+  const logoutResponse = await fetch("/api/auth/logout", {
     method: "POST",
     credentials: "include",
   });

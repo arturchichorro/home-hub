@@ -24,12 +24,15 @@ export type CreateAppInput = CreateAuthRoutesInput &
 export function createApp(input: CreateAppInput) {
   const app = new Hono();
 
-  app.get("/health", (c) => c.json({ ok: true }));
-  app.route("/auth", createAuthRoutes(input));
-  app.route("/households", createHouseholdRoutes(input));
-  app.route("/households/:householdId/recipes", createRecipeRoutes(input));
-  app.route("/households/:householdId/shopping", createShoppingRoutes(input));
-  app.route("/zero", createZeroRoutes(input));
+  app.get("/api/health", (c) => c.json({ ok: true }));
+  app.route("/api/auth", createAuthRoutes(input));
+  app.route("/api/households", createHouseholdRoutes(input));
+  app.route("/api/households/:householdId/recipes", createRecipeRoutes(input));
+  app.route(
+    "/api/households/:householdId/shopping",
+    createShoppingRoutes(input),
+  );
+  app.route("/api/zero", createZeroRoutes(input));
 
   return app;
 }

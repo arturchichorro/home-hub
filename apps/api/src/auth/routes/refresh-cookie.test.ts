@@ -30,7 +30,7 @@ describe("refresh cookie", () => {
     expect(cookie).toContain("home_hub_refresh=refresh-token");
     expect(cookie).toContain("HttpOnly");
     expect(cookie).toContain("Max-Age=2592000");
-    expect(cookie).toContain("Path=/auth");
+    expect(cookie).toContain("Path=/api/auth");
     expect(cookie).toContain("SameSite=Lax");
     expect(cookie).not.toContain("Secure");
   });
@@ -47,7 +47,7 @@ describe("refresh cookie", () => {
 
     expect(cookie).toContain("home_hub_refresh=");
     expect(cookie).toContain("Max-Age=0");
-    expect(cookie).toContain("Path=/auth");
+    expect(cookie).toContain("Path=/api/auth");
     expect(cookie).not.toContain("Secure");
   });
 

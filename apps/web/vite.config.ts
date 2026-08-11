@@ -16,11 +16,7 @@ export default defineConfig({
   envDir: "../../",
   server: {
     proxy: {
-      "/auth": {
-        target: "http://localhost:3000",
-        changeOrigin: true,
-      },
-      "/households": {
+      "/api": {
         target: "http://localhost:3000",
         changeOrigin: true,
       },

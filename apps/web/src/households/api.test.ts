@@ -36,7 +36,7 @@ describe("setHouseholdModuleEnabled", () => {
       }),
     ).resolves.toEqual({ kind: "success" });
     expect(fetchMock).toHaveBeenCalledWith(
-      `/households/${householdId}/modules/shopping`,
+      `/api/households/${householdId}/modules/shopping`,
       {
         method: "PATCH",
         headers: {
@@ -95,7 +95,7 @@ describe("createHousehold", () => {
       }),
     ).resolves.toEqual({ kind: "success", household });
 
-    expect(fetchMock).toHaveBeenCalledWith("/households", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/households", {
       method: "POST",
       headers: {
         Authorization: "Bearer access-token",
@@ -159,7 +159,7 @@ describe("acceptHouseholdInvite", () => {
       }),
     ).resolves.toEqual({ kind: "success", membership });
 
-    expect(fetchMock).toHaveBeenCalledWith("/households/invites/accept", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/households/invites/accept", {
       method: "POST",
       headers: {
         Authorization: "Bearer access-token",
@@ -227,7 +227,7 @@ describe("createHouseholdInvite", () => {
     ).resolves.toEqual({ kind: "success", invite });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `/households/${householdId}/invites`,
+      `/api/households/${householdId}/invites`,
       {
         method: "POST",
         headers: { Authorization: "Bearer access-token" },
@@ -279,7 +279,7 @@ describe("renameHousehold", () => {
       }),
     ).resolves.toEqual({ kind: "success" });
 
-    expect(fetchMock).toHaveBeenCalledWith(`/households/${householdId}`, {
+    expect(fetchMock).toHaveBeenCalledWith(`/api/households/${householdId}`, {
       method: "PATCH",
       headers: {
         Authorization: "Bearer access-token",
@@ -351,7 +351,7 @@ describe("listHouseholdMembers", () => {
     ).resolves.toEqual({ kind: "success", members });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `/households/${householdId}/members`,
+      `/api/households/${householdId}/members`,
       { headers: { Authorization: "Bearer access-token" } },
     );
   });
@@ -405,7 +405,7 @@ describe("listHouseholdInvites", () => {
     ).resolves.toEqual({ kind: "success", invites });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `/households/${householdId}/invites`,
+      `/api/households/${householdId}/invites`,
       { headers: { Authorization: "Bearer access-token" } },
     );
   });
@@ -457,7 +457,7 @@ describe("revokeHouseholdInvite", () => {
     ).resolves.toEqual({ kind: "success" });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `/households/${householdId}/invites/${inviteId}`,
+      `/api/households/${householdId}/invites/${inviteId}`,
       {
         method: "DELETE",
         headers: { Authorization: "Bearer access-token" },
@@ -511,7 +511,7 @@ describe("removeHouseholdMember", () => {
     ).resolves.toEqual({ kind: "success" });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `/households/${householdId}/members/${membershipId}`,
+      `/api/households/${householdId}/members/${membershipId}`,
       {
         method: "DELETE",
         headers: { Authorization: "Bearer access-token" },
@@ -559,7 +559,7 @@ describe("leaveHousehold", () => {
     ).resolves.toEqual({ kind: "success" });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `/households/${householdId}/membership`,
+      `/api/households/${householdId}/membership`,
       {
         method: "DELETE",
         headers: { Authorization: "Bearer access-token" },
@@ -605,7 +605,7 @@ describe("transferHouseholdOwnership", () => {
     ).resolves.toEqual({ kind: "success" });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `/households/${householdId}/ownership`,
+      `/api/households/${householdId}/ownership`,
       {
         method: "PATCH",
         headers: {

@@ -27,7 +27,7 @@ describe("restoreSession", () => {
 
     await expect(restoreSession()).resolves.toBeNull();
     expect(fetchMock).toHaveBeenCalledOnce();
-    expect(fetchMock).toHaveBeenCalledWith("/auth/refresh", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/refresh", {
       method: "POST",
       credentials: "include",
     });
@@ -43,11 +43,11 @@ describe("restoreSession", () => {
       accessToken: "access-token",
     });
 
-    expect(fetchMock).toHaveBeenNthCalledWith(1, "/auth/refresh", {
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/auth/refresh", {
       method: "POST",
       credentials: "include",
     });
-    expect(fetchMock).toHaveBeenNthCalledWith(2, "/auth/me", {
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/auth/me", {
       headers: {
         Authorization: "Bearer access-token",
       },
@@ -117,7 +117,7 @@ describe("login", () => {
       session: { user, accessToken: "access-token" },
     });
 
-    expect(fetchMock).toHaveBeenCalledWith("/auth/login", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/login", {
       method: "POST",
       credentials: "include",
       headers: {
@@ -198,7 +198,7 @@ describe("signup", () => {
       session: { user, accessToken: "access-token" },
     });
 
-    expect(fetchMock).toHaveBeenCalledWith("/auth/signup", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/signup", {
       method: "POST",
       credentials: "include",
       headers: {
@@ -273,7 +273,7 @@ describe("logout", () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     await expect(logout()).resolves.toBeUndefined();
-    expect(fetchMock).toHaveBeenCalledWith("/auth/logout", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/logout", {
       method: "POST",
       credentials: "include",
     });

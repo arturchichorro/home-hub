@@ -213,11 +213,11 @@ the compiled SPA with an `index.html` fallback, and reverse-proxies API and
 Zero traffic. PostgreSQL and the containers' direct API and Zero ports remain
 private to the Compose network.
 
-The exact public hostnames or path prefixes are chosen when production routing
-is implemented. That choice must be made together with the refresh-cookie
-path, CORS policy, `WEB_ORIGIN`, and `VITE_ZERO_CACHE_URL`; do not add a path
-prefix that prevents the existing `/auth` refresh cookie from reaching the
-authentication routes.
+The public API uses the `/api` prefix, keeping API requests distinct from SPA
+routes such as `/households/:householdId/shopping`. Production routing must
+preserve that boundary and the SPA's `index.html` fallback. Changes to the API
+prefix must be made together with the `/api/auth` refresh-cookie path, CORS
+policy, `WEB_ORIGIN`, and the Zero query and mutation callback URLs.
 
 ## Application-shell caching
 

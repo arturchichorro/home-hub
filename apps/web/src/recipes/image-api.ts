@@ -50,7 +50,7 @@ function imageUrl({
   recipeId,
   imageId,
 }: Omit<RecipeImageCommandInput, "accessToken">): string {
-  return `/households/${encodeURIComponent(householdId)}/recipes/${encodeURIComponent(recipeId)}/images/${encodeURIComponent(imageId)}`;
+  return `/api/households/${encodeURIComponent(householdId)}/recipes/${encodeURIComponent(recipeId)}/images/${encodeURIComponent(imageId)}`;
 }
 
 export async function requestRecipeImageUpload({
@@ -61,7 +61,7 @@ export async function requestRecipeImageUpload({
 }: RequestRecipeImageUploadInput): Promise<RequestRecipeImageUploadResult> {
   const request = createRecipeImageUploadRequestSchema.parse(requestInput);
   const response = await fetch(
-    `/households/${encodeURIComponent(householdId)}/recipes/${encodeURIComponent(recipeId)}/images/uploads`,
+    `/api/households/${encodeURIComponent(householdId)}/recipes/${encodeURIComponent(recipeId)}/images/uploads`,
     {
       method: "POST",
       headers: {

@@ -52,7 +52,7 @@ export async function acceptHouseholdInvite({
   if (!parsedRequest.success) return { kind: "invalid_invite" };
 
   const request = parsedRequest.data;
-  const response = await fetch("/households/invites/accept", {
+  const response = await fetch("/api/households/invites/accept", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -82,7 +82,7 @@ export async function createHousehold({
   name,
 }: CreateHouseholdCommandInput): Promise<CreateHouseholdCommandResult> {
   const request = createHouseholdRequestSchema.parse({ name });
-  const response = await fetch("/households", {
+  const response = await fetch("/api/households", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -124,7 +124,7 @@ export async function createHouseholdInvite({
   householdId,
 }: HouseholdReadCommandInput): Promise<CreateHouseholdInviteCommandResult> {
   const response = await fetch(
-    `/households/${encodeURIComponent(householdId)}/invites`,
+    `/api/households/${encodeURIComponent(householdId)}/invites`,
     {
       method: "POST",
       headers: {
@@ -211,7 +211,7 @@ export async function renameHousehold({
 }: RenameHouseholdCommandInput): Promise<RenameHouseholdCommandResult> {
   const request = renameHouseholdRequestSchema.parse({ name });
   const response = await fetch(
-    `/households/${encodeURIComponent(householdId)}`,
+    `/api/households/${encodeURIComponent(householdId)}`,
     {
       method: "PATCH",
       headers: {
@@ -242,7 +242,7 @@ export async function listHouseholdMembers({
   householdId,
 }: HouseholdReadCommandInput): Promise<ListHouseholdMembersCommandResult> {
   const response = await fetch(
-    `/households/${encodeURIComponent(householdId)}/members`,
+    `/api/households/${encodeURIComponent(householdId)}/members`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -274,7 +274,7 @@ export async function listHouseholdInvites({
   householdId,
 }: HouseholdReadCommandInput): Promise<ListHouseholdInvitesCommandResult> {
   const response = await fetch(
-    `/households/${encodeURIComponent(householdId)}/invites`,
+    `/api/households/${encodeURIComponent(householdId)}/invites`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -307,7 +307,7 @@ export async function revokeHouseholdInvite({
   inviteId,
 }: RevokeHouseholdInviteCommandInput): Promise<RevokeHouseholdInviteCommandResult> {
   const response = await fetch(
-    `/households/${encodeURIComponent(householdId)}/invites/${encodeURIComponent(inviteId)}`,
+    `/api/households/${encodeURIComponent(householdId)}/invites/${encodeURIComponent(inviteId)}`,
     {
       method: "DELETE",
       headers: {
@@ -341,7 +341,7 @@ export async function removeHouseholdMember({
   membershipId,
 }: RemoveHouseholdMemberCommandInput): Promise<RemoveHouseholdMemberCommandResult> {
   const response = await fetch(
-    `/households/${encodeURIComponent(householdId)}/members/${encodeURIComponent(membershipId)}`,
+    `/api/households/${encodeURIComponent(householdId)}/members/${encodeURIComponent(membershipId)}`,
     {
       method: "DELETE",
       headers: {
@@ -374,7 +374,7 @@ export async function leaveHousehold({
   householdId,
 }: HouseholdReadCommandInput): Promise<LeaveHouseholdCommandResult> {
   const response = await fetch(
-    `/households/${encodeURIComponent(householdId)}/membership`,
+    `/api/households/${encodeURIComponent(householdId)}/membership`,
     {
       method: "DELETE",
       headers: {
@@ -411,7 +411,7 @@ export async function transferHouseholdOwnership({
     membershipId,
   });
   const response = await fetch(
-    `/households/${encodeURIComponent(householdId)}/ownership`,
+    `/api/households/${encodeURIComponent(householdId)}/ownership`,
     {
       method: "PATCH",
       headers: {
@@ -449,7 +449,7 @@ export async function setHouseholdModuleEnabled({
 }: SetHouseholdModuleEnabledCommandInput): Promise<SetHouseholdModuleEnabledCommandResult> {
   const body = setHouseholdModuleEnabledRequestSchema.parse({ enabled });
   const response = await fetch(
-    `/households/${encodeURIComponent(householdId)}/modules/${encodeURIComponent(moduleKey)}`,
+    `/api/households/${encodeURIComponent(householdId)}/modules/${encodeURIComponent(moduleKey)}`,
     {
       method: "PATCH",
       headers: {

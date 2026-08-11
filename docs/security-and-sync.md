@@ -50,9 +50,9 @@ Refresh tokens provide continuity and revocation:
 7. If a revoked token is used again, revoke the active descendants in that session chain because the token may have been stolen.
 8. Revoke the current session on logout. Revoke all of the user's sessions on password change or an explicit “log out everywhere” operation.
 
-`POST /auth/refresh` returns only a new access token in JSON. The replacement refresh token remains inaccessible to browser JavaScript and is sent only in the refresh cookie. A missing, unknown, expired, or revoked token receives the same generic `401` response, and the API clears the cookie.
+`POST /api/auth/refresh` returns only a new access token in JSON. The replacement refresh token remains inaccessible to browser JavaScript and is sent only in the refresh cookie. A missing, unknown, expired, or revoked token receives the same generic `401` response, and the API clears the cookie.
 
-The web client keeps the access JWT in memory and receives the refresh token in an `HttpOnly`, `SameSite=Lax`, `Path=/auth` cookie named `home_hub_refresh`. Set `Secure` in production only. It silently refreshes after a page reload. Do not put either token in `localStorage`.
+The web client keeps the access JWT in memory and receives the refresh token in an `HttpOnly`, `SameSite=Lax`, `Path=/api/auth` cookie named `home_hub_refresh`. Set `Secure` in production only. It silently refreshes after a page reload. Do not put either token in `localStorage`.
 
 A future mobile client stores its refresh token using platform secure storage and keeps the access JWT in memory. The refresh endpoint must support a native-safe token transport without weakening the web cookie path.
 
@@ -102,23 +102,23 @@ do not expose email addresses. Pending-invitation listings omit token hashes
 and raw tokens. Revocation returns the same generic result for records that
 must not be disclosed.
 
-`DELETE /households/:householdId/invites/:inviteId` performs revocation. It
+`DELETE /api/households/:householdId/invites/:inviteId` performs revocation. It
 locks the current owner's membership and the active invitation in one
 transaction, then sets `revoked_at`. Unknown, expired, accepted, and already
 revoked invitation IDs receive the same generic response.
 
-`DELETE /households/:householdId/members/:membershipId` removes an ordinary
+`DELETE /api/households/:householdId/members/:membershipId` removes an ordinary
 member. It locks the caller's owner membership as authorization evidence, then
 locks and deletes a target membership scoped to the same household. The owner
 membership cannot be removed through this operation.
 
-`DELETE /households/:householdId/membership` removes the authenticated user's
+`DELETE /api/households/:householdId/membership` removes the authenticated user's
 own membership. The API derives the user ID from the access token, locks that
 membership for update, and rejects an owner until ownership has been
 transferred. After success, the client clears that household as its active
 selection rather than silently selecting another household.
 
-`PATCH /households/:householdId/ownership` transfers ownership to the existing
+`PATCH /api/households/:householdId/ownership` transfers ownership to the existing
 member identified by the validated request body. The transaction locks the
 current owner first and the target member second, demotes the current owner,
 then promotes the target. Both updates are guarded by their expected roles;

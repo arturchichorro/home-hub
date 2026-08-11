@@ -10,7 +10,7 @@ teaches us something new.
 - [x] Create `apps/web` with React and Vite
 - [x] Render a static page
 - [x] Create `apps/api` with Hono on Node.js
-- [x] Expose and verify `GET /health`
+- [x] Expose and verify `GET /api/health`
 - [x] Create the initial `packages/database` and `packages/shared` boundaries
 - [x] Verify type-checking, development servers, and builds
 - [x] Explain the Phase 1 checkpoint in my own words
@@ -43,17 +43,17 @@ teaches us something new.
 - [x] Add the exported Drizzle database-client boundary
 - [x] Define signup validation and session-cookie policy
 - [x] Implement and test signup service logic
-- [x] Wire and test `POST /auth/signup`
+- [x] Wire and test `POST /api/auth/signup`
 - [x] Define login credentials and failure policy
 - [x] Implement signup and login services with Argon2id
-- [x] Wire and test `POST /auth/login`
+- [x] Wire and test `POST /api/auth/login`
 - [x] Issue access JWTs from signup and login services
 - [x] Implement opaque refresh-token rotation, reuse detection, and revocation
-- [x] Wire and test `POST /auth/refresh`
+- [x] Wire and test `POST /api/auth/refresh`
 - [x] Implement and test current-session logout service
-- [x] Wire and test `POST /auth/logout`
+- [x] Wire and test `POST /api/auth/logout`
 - [x] Implement and test bearer authentication middleware
-- [x] Implement and test `GET /auth/me`
+- [x] Implement and test `GET /api/auth/me`
 - [x] Complete the Phase 4 checkpoint
 - [x] Commit Phase 4
 
