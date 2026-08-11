@@ -23,13 +23,19 @@ export type SignupResult =
   | { kind: "forbidden" }
   | { kind: "success"; session: Session };
 
-export async function restoreSession(): Promise<Session | null> {
+export type RefreshAccessTokenResult =
+  | { kind: "unauthorized" }
+  | { kind: "success"; accessToken: string };
+
+let activeRefreshRequest: Promise<RefreshAccessTokenResult> | undefined;
+
+async function requestAccessTokenRefresh(): Promise<RefreshAccessTokenResult> {
   const refreshResponse = await fetch("/api/auth/refresh", {
     method: "POST",
     credentials: "include",
   });
 
-  if (refreshResponse.status === 401) return null;
+  if (refreshResponse.status === 401) return { kind: "unauthorized" };
 
   if (!refreshResponse.ok) {
     throw new Error("Failed to refresh session");
@@ -38,6 +44,26 @@ export async function restoreSession(): Promise<Session | null> {
   const { accessToken } = refreshResponseSchema.parse(
     await refreshResponse.json(),
   );
+
+  return { kind: "success", accessToken };
+}
+
+export function refreshAccessToken(): Promise<RefreshAccessTokenResult> {
+  if (!activeRefreshRequest) {
+    activeRefreshRequest = requestAccessTokenRefresh().finally(() => {
+      activeRefreshRequest = undefined;
+    });
+  }
+
+  return activeRefreshRequest;
+}
+
+export async function restoreSession(): Promise<Session | null> {
+  const refreshResult = await refreshAccessToken();
+
+  if (refreshResult.kind === "unauthorized") return null;
+
+  const { accessToken } = refreshResult;
 
   const meResponse = await fetch("/api/auth/me", {
     headers: {

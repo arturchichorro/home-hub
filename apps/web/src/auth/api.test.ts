@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { login, logout, restoreSession, signup } from "./api";
+import {
+  login,
+  logout,
+  refreshAccessToken,
+  restoreSession,
+  signup,
+} from "./api";
 
 const user = {
   id: "9f8a6942-f721-499d-957d-7bb3ed1158db",
@@ -9,6 +15,60 @@ const user = {
 };
 
 const fetchMock = vi.fn<typeof fetch>();
+
+describe("refreshAccessToken", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("deduplicates concurrent refresh-token rotation", async () => {
+    let resolveResponse: (response: Response) => void = () => undefined;
+    fetchMock.mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        resolveResponse = resolve;
+      }),
+    );
+
+    const firstRefresh = refreshAccessToken();
+    const secondRefresh = refreshAccessToken();
+
+    expect(firstRefresh).toBe(secondRefresh);
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    resolveResponse(Response.json({ accessToken: "replacement-token" }));
+
+    await expect(firstRefresh).resolves.toEqual({
+      kind: "success",
+      accessToken: "replacement-token",
+    });
+    await expect(secondRefresh).resolves.toEqual({
+      kind: "success",
+      accessToken: "replacement-token",
+    });
+  });
+
+  it("allows another refresh after the active request settles", async () => {
+    fetchMock
+      .mockResolvedValueOnce(Response.json({ accessToken: "first-token" }))
+      .mockResolvedValueOnce(Response.json({ accessToken: "second-token" }));
+
+    await expect(refreshAccessToken()).resolves.toEqual({
+      kind: "success",
+      accessToken: "first-token",
+    });
+    await expect(refreshAccessToken()).resolves.toEqual({
+      kind: "success",
+      accessToken: "second-token",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
 
 describe("restoreSession", () => {
   beforeEach(() => {

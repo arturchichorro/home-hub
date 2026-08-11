@@ -16,12 +16,15 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthenticatedLayout() {
-  const { onZeroReady, session } = Route.useRouteContext();
+  const { onAccessTokenRefreshed, onSessionExpired, onZeroReady, session } =
+    Route.useRouteContext();
 
   return (
     <HomeHubZeroProvider
       userId={session.user.id}
       accessToken={session.accessToken}
+      onAccessTokenRefreshed={onAccessTokenRefreshed}
+      onSessionExpired={onSessionExpired}
       onReady={onZeroReady}
     >
       <Outlet />

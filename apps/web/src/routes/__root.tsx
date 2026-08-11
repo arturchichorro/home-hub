@@ -14,6 +14,7 @@ export type RouterContext = {
   session: Session | null;
   zero: Zero | undefined;
   onAuthenticated: (session: Session) => void;
+  onAccessTokenRefreshed: (accessToken: string) => void;
   onSessionExpired: () => void;
   onZeroReady: (zero: Zero) => void;
 };

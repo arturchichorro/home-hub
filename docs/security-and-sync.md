@@ -64,7 +64,7 @@ A future mobile client stores its refresh token using platform secure storage an
 
 ## Zero authentication
 
-Pass the current access JWT to Zero's `auth` option. Zero forwards it to the query and mutate endpoints as a bearer token. Those endpoints verify the same signature, issuer, audience, and expiry used by ordinary API middleware. When the access token is refreshed, reconnect Zero with the new token without changing the authenticated user.
+Pass the current access JWT to Zero's `auth` option. Zero forwards it to the query and mutate endpoints as a bearer token. Those endpoints verify the same signature, issuer, audience, and expiry used by ordinary API middleware. When Zero enters `needs-auth`, make one deduplicated refresh request, replace the in-memory access token, and let the existing Zero provider reconnect without changing the authenticated user or recreating its client. A refresh `401` ends the session; temporary failures retain the session and retry with bounded exponential backoff. Deduplication is required because refresh tokens rotate and concurrent refresh requests could otherwise look like token reuse.
 
 The API derives the user from the verified JWT and never from query or mutation arguments.
 

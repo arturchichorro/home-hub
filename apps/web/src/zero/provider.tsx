@@ -4,6 +4,7 @@ import { schema } from "@home-hub/shared/zero/schema";
 import type { Zero } from "@rocicorp/zero";
 import { ZeroProvider } from "@rocicorp/zero/react";
 import { type ReactNode, useMemo } from "react";
+import { ZeroAuthRefresh } from "./zero-auth-refresh";
 
 const cacheURL = import.meta.env.VITE_ZERO_CACHE_URL;
 
@@ -14,6 +15,8 @@ if (!cacheURL) {
 type HomeHubZeroProviderProps = {
   userId: string;
   accessToken: string;
+  onAccessTokenRefreshed: (accessToken: string) => void;
+  onSessionExpired: () => void;
   onReady: (zero: Zero) => void;
   children: ReactNode;
 };
@@ -21,6 +24,8 @@ type HomeHubZeroProviderProps = {
 export function HomeHubZeroProvider({
   userId,
   accessToken,
+  onAccessTokenRefreshed,
+  onSessionExpired,
   onReady,
   children,
 }: HomeHubZeroProviderProps) {
@@ -36,6 +41,10 @@ export function HomeHubZeroProvider({
       mutators={mutators}
       init={onReady}
     >
+      <ZeroAuthRefresh
+        onAccessTokenRefreshed={onAccessTokenRefreshed}
+        onSessionExpired={onSessionExpired}
+      />
       {children}
     </ZeroProvider>
   );

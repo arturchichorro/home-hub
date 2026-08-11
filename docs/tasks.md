@@ -192,6 +192,7 @@ action.
 - [x] Protect the authenticated route tree and create Zero only for authenticated sessions
 - [x] Keep the authenticated Zero client stable across navigation and expose it to TanStack Router loaders for query preloading
 - [x] Move household fallback navigation into an index route and scope enabled-module redirects to their module routes
+- [x] Refresh the in-memory access JWT through a deduplicated request when Zero enters `needs-auth`
 - [x] Add the account menu and complete refresh-session logout from the web app
 - [x] Add household creation to the selector and navigate into the new household
 - [x] Add invite-token household joining to the selector and navigate after acceptance
@@ -209,7 +210,6 @@ action.
 - [x] Add structured API request logging and a central safe error handler
 - [x] Add root application error and not-found boundaries
 - [ ] Handle invalid or inaccessible household routes without rendering protected content
-- [ ] Refresh the in-memory access JWT and reconnect the current Zero client when authentication expires
 - [ ] Fill important integration-test gaps
 - [x] Reconcile the documentation with the implemented system and establish canonical sources
 - [ ] Verify PostgreSQL restore and Zero replica rebuild procedures

@@ -15,6 +15,13 @@ export function Root({ initialSession }: RootProps) {
     setZero(undefined);
     setSession(nextSession);
   }, []);
+  const onAccessTokenRefreshed = useCallback((accessToken: string) => {
+    setSession((currentSession) =>
+      currentSession && currentSession.accessToken !== accessToken
+        ? { ...currentSession, accessToken }
+        : currentSession,
+    );
+  }, []);
   const onSessionExpired = useCallback(() => {
     setZero(undefined);
     setSession(null);
@@ -24,6 +31,7 @@ export function Root({ initialSession }: RootProps) {
       session: initialSession,
       zero: undefined,
       onAuthenticated,
+      onAccessTokenRefreshed,
       onSessionExpired,
       onZeroReady: setZero,
     }),
@@ -49,6 +57,7 @@ export function Root({ initialSession }: RootProps) {
         session,
         zero,
         onAuthenticated,
+        onAccessTokenRefreshed,
         onSessionExpired,
         onZeroReady: setZero,
       }}
