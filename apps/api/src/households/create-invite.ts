@@ -1,12 +1,10 @@
 import { randomUUID } from "node:crypto";
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import { householdInvites, householdMembers } from "@home-hub/database/schema";
 import { and, eq } from "drizzle-orm";
 import { generateInviteToken, hashInviteToken } from "./invite-token";
 
 const inviteTtlMilliseconds = 7 * 24 * 60 * 60 * 1000;
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 export type CreateHouseholdInviteInput = {
   userId: string;

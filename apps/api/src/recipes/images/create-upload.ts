@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
@@ -13,8 +13,6 @@ import type {
 } from "@home-hub/shared/recipe-images";
 import { and, eq } from "drizzle-orm";
 import { recipeImageUploadUrlLifetimeSeconds } from "./sign-upload";
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 type SignUpload = (input: {
   objectKey: string;

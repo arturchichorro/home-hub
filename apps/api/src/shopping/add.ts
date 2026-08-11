@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
@@ -11,7 +11,6 @@ import {
 } from "@home-hub/shared/normalization";
 import { and, eq } from "drizzle-orm";
 
-type Database = ReturnType<typeof createDbClient>["db"];
 type ShoppingItemRow = typeof shoppingItems.$inferSelect;
 
 export type AddShoppingItemInput = {

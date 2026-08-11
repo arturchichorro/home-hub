@@ -1,4 +1,4 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
@@ -6,8 +6,6 @@ import {
 } from "@home-hub/database/schema";
 import { and, eq } from "drizzle-orm";
 import type { InspectR2ObjectResult } from "./inspect-object";
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 type InspectObject = (input: {
   objectKey: string;

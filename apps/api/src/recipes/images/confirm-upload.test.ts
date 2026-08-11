@@ -1,4 +1,4 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
@@ -22,8 +22,6 @@ const pendingImage = {
   byteSize: 2_048,
   confirmedAt: null,
 };
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 function createFakeDatabase({
   users = [true, true],

@@ -1,4 +1,4 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
@@ -13,7 +13,6 @@ const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const itemId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 
-type Database = ReturnType<typeof createDbClient>["db"];
 type ShoppingItemStatus = typeof shoppingItems.$inferSelect.status;
 type ReturnedItem = {
   id: string;

@@ -1,4 +1,4 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
@@ -28,8 +28,6 @@ const input = {
   height: 600,
   position: 0,
 };
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 function createFakeDatabase({
   userExists = true,

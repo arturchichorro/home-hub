@@ -1,4 +1,4 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import { householdInvites, householdMembers } from "@home-hub/database/schema";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,8 +9,6 @@ const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const inviteId = "e467b00a-5f80-4c13-aa5b-d2e59996dd82";
 const now = new Date("2026-08-07T12:00:00.000Z");
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 function createFakeDatabase({
   userExists = true,

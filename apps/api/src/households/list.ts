@@ -1,4 +1,4 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import { householdMembers, households } from "@home-hub/database/schema";
 import { asc, desc, eq } from "drizzle-orm";
 
@@ -11,8 +11,6 @@ export type HouseholdSummary = {
 export type ListHouseholdsResult =
   | { kind: "unauthorized" }
   | { kind: "success"; households: HouseholdSummary[] };
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 export function createListHouseholdsService({ db }: { db: Database }) {
   return async function listHouseholds(

@@ -1,8 +1,6 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import { householdMembers, users } from "@home-hub/database/schema";
 import { and, asc, eq } from "drizzle-orm";
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 export type ListHouseholdMembersInput = {
   userId: string;

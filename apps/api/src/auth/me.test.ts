@@ -1,4 +1,4 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import { describe, expect, it, vi } from "vitest";
 
 import { createMeService } from "./me";
@@ -9,8 +9,6 @@ const storedUser = {
   username: "artur",
   email: "artur@example.com",
 };
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 type FindFirstQuery = {
   columns: {

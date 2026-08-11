@@ -1,4 +1,4 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
@@ -13,8 +13,6 @@ const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 const objectKey = `households/${householdId}/recipes/${recipeId}/${imageId}`;
 const input = { userId, householdId, recipeId, imageId };
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 function createFakeDatabase({
   users = [true, true],

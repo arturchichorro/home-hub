@@ -1,12 +1,10 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
   recipeImages,
 } from "@home-hub/database/schema";
 import { and, eq } from "drizzle-orm";
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 type DeleteObject = (input: { objectKey: string }) => Promise<void>;
 

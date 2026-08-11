@@ -1,4 +1,4 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import { householdMembers } from "@home-hub/database/schema";
 import { and, eq } from "drizzle-orm";
 
@@ -13,8 +13,6 @@ export type RemoveHouseholdMemberResult =
   | { kind: "forbidden" }
   | { kind: "invalid_member" }
   | { kind: "success" };
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 export function createRemoveHouseholdMemberService({ db }: { db: Database }) {
   return async function removeHouseholdMember({

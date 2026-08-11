@@ -1,13 +1,11 @@
 import { randomUUID } from "node:crypto";
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
   households,
 } from "@home-hub/database/schema";
 import { householdModuleCatalog } from "@home-hub/shared/modules";
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 export type CreateHouseholdInput = {
   userId: string;

@@ -1,10 +1,8 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import { refreshTokens } from "@home-hub/database/schema";
 import { eq } from "drizzle-orm";
 
 import { hashRefreshToken } from "./refresh-token";
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 type CreateLogoutServiceInput = {
   db: Database;

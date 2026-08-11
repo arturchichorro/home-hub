@@ -1,4 +1,4 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import { householdInvites, householdMembers } from "@home-hub/database/schema";
 import { and, asc, eq, gt, isNull } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,8 +16,6 @@ const inviteRows = [
     expiresAt: new Date("2026-08-13T12:00:00Z"),
   },
 ];
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 function createFakeDatabase({
   userExists = true,

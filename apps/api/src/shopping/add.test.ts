@@ -1,4 +1,4 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
@@ -12,7 +12,6 @@ import { createAddShoppingItemService } from "./add";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 
-type Database = ReturnType<typeof createDbClient>["db"];
 type ReturnedItem = {
   id: string;
   householdId: string;

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import { refreshTokens } from "@home-hub/database/schema";
 import { eq } from "drizzle-orm";
 import { signAccessToken } from "./access-token";
@@ -8,8 +8,6 @@ import { generateRefreshToken, hashRefreshToken } from "./refresh-token";
 export type RefreshResult =
   | { kind: "invalid_token" }
   | { kind: "success"; accessToken: string; refreshToken: string };
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 type CreateRefreshServiceInput = {
   db: Database;

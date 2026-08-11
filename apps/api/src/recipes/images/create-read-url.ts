@@ -1,4 +1,4 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
@@ -6,8 +6,6 @@ import {
 } from "@home-hub/database/schema";
 import { and, eq, isNotNull } from "drizzle-orm";
 import { recipeImageReadUrlLifetimeSeconds } from "./sign-read";
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 type SignRead = (input: { objectKey: string }) => Promise<string>;
 

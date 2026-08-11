@@ -1,4 +1,4 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import { refreshTokens } from "@home-hub/database/schema";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,8 +17,6 @@ type StoredToken = {
   revokedAt: Date | null;
   replacedById: string | null;
 };
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 function createFakeDatabase(selectResults: Array<StoredToken | undefined>) {
   let selectIndex = 0;

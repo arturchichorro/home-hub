@@ -1,10 +1,8 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 
 export type MeResult =
   | { kind: "not_found" }
   | { kind: "success"; user: { id: string; username: string; email: string } };
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 export function createMeService({ db }: { db: Database }) {
   return async function getMe(userId: string): Promise<MeResult> {

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import { refreshTokens } from "@home-hub/database/schema";
 import type { LoginRequest } from "@home-hub/shared/auth";
 import { signAccessToken } from "./access-token";
@@ -7,8 +7,6 @@ import { hashPassword, verifyPassword } from "./password";
 import { generateRefreshToken, hashRefreshToken } from "./refresh-token";
 
 const refreshTokenTtlMilliseconds = 30 * 24 * 60 * 60 * 1000;
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 type CreateLoginServiceInput = {
   db: Database;

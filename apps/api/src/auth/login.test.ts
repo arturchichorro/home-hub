@@ -1,4 +1,4 @@
-import type { createDbClient } from "@home-hub/database/client";
+import type { Database } from "@home-hub/database";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { verifyAccessToken } from "./access-token";
@@ -22,8 +22,6 @@ const storedUser = {
   createdAt: new Date("2026-01-01T00:00:00Z"),
   updatedAt: new Date("2026-01-01T00:00:00Z"),
 };
-
-type Database = ReturnType<typeof createDbClient>["db"];
 
 function createFakeDatabase(user: typeof storedUser | undefined) {
   const findFirst = vi.fn(async () => user);
