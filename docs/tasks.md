@@ -226,11 +226,6 @@ action.
 
 ## Phase 19: continuous integration after initial deployment
 
-Do not implement CI before the initial VPS deployment. This is the first
-post-deployment requirement. Until it is complete, every change must still be
-verified locally with the relevant checks below before it is considered ready
-to deploy.
-
 - [ ] Add a CI workflow that starts from a clean, frozen dependency installation
 - [ ] Run formatting and linting checks
 - [ ] Run type-checking for every application and package
