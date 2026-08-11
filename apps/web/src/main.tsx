@@ -1,6 +1,8 @@
+import { Button } from "@home-hub/ui-web";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
+import { ApplicationState } from "./application-state.tsx";
 import { restoreSession } from "./auth/api.ts";
 import { Root } from "./root.tsx";
 
@@ -35,10 +37,14 @@ async function start() {
   } catch {
     root.render(
       <StrictMode>
-        <main>
-          <h1>Home Hub</h1>
-          <p>Unable to restore your session.</p>
-        </main>
+        <ApplicationState
+          title="Unable to restore your session"
+          description="Check your connection and try again."
+          role="alert"
+          actions={
+            <Button onClick={() => window.location.reload()}>Try again</Button>
+          }
+        />
       </StrictMode>,
     );
   }
