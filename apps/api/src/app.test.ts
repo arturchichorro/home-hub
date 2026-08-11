@@ -1,41 +1,71 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createApp } from "./app";
+import { type CreateAppInput, createApp } from "./app";
 import { signAccessToken } from "./auth/access-token";
 import type { ZeroDbProvider } from "./zero/db-provider";
 
 const dbProvider = {} as ZeroDbProvider;
+const jwtSecret = "test-jwt-secret";
+
+const defaultInput: CreateAppInput = {
+  auth: {
+    signup: async () => ({ kind: "forbidden" }),
+    login: async () => ({ kind: "invalid_credentials" }),
+    refresh: async () => ({ kind: "invalid_token" }),
+    logout: async () => undefined,
+    getMe: async () => ({ kind: "not_found" }),
+  },
+  households: {
+    acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
+    createHousehold: async () => ({ kind: "unauthorized" }),
+    createHouseholdInvite: async () => ({ kind: "forbidden" }),
+    listHouseholds: async () => ({ kind: "unauthorized" }),
+    listHouseholdInvites: async () => ({ kind: "forbidden" }),
+    listHouseholdMembers: async () => ({ kind: "forbidden" }),
+    leaveHousehold: async () => ({ kind: "forbidden" }),
+    transferHouseholdOwnership: async () => ({ kind: "forbidden" }),
+    setHouseholdModuleEnabled: async () => ({ kind: "forbidden" }),
+    renameHousehold: async () => ({ kind: "forbidden" }),
+    revokeHouseholdInvite: async () => ({ kind: "forbidden" }),
+    removeHouseholdMember: async () => ({ kind: "forbidden" }),
+  },
+  recipeImages: {
+    confirmRecipeImageUpload: async () => ({ kind: "forbidden" }),
+    createRecipeImageReadUrl: async () => ({ kind: "forbidden" }),
+    createRecipeImageUpload: async () => ({ kind: "forbidden" }),
+    deleteRecipeImage: async () => ({ kind: "forbidden" }),
+  },
+  shopping: {
+    addShoppingItem: async () => ({ kind: "forbidden" }),
+    setShoppingItemStatus: async () => ({ kind: "forbidden" }),
+  },
+  infrastructure: {
+    zeroDbProvider: dbProvider,
+    jwtSecret,
+    isProduction: false,
+  },
+};
+
+type CreateTestAppOverrides = {
+  [Group in keyof CreateAppInput]?: Partial<CreateAppInput[Group]>;
+};
+
+function createTestApp(overrides: CreateTestAppOverrides = {}) {
+  return createApp({
+    auth: { ...defaultInput.auth, ...overrides.auth },
+    households: { ...defaultInput.households, ...overrides.households },
+    recipeImages: { ...defaultInput.recipeImages, ...overrides.recipeImages },
+    shopping: { ...defaultInput.shopping, ...overrides.shopping },
+    infrastructure: {
+      ...defaultInput.infrastructure,
+      ...overrides.infrastructure,
+    },
+  });
+}
 
 describe("app", () => {
   it("returns a successful health response", async () => {
-    const app = createApp({
-      acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
-      addShoppingItem: async () => ({ kind: "forbidden" }),
-      setShoppingItemStatus: async () => ({ kind: "forbidden" }),
-      signup: async () => ({ kind: "forbidden" }),
-      login: async () => ({ kind: "invalid_credentials" }),
-      refresh: async () => ({ kind: "invalid_token" }),
-      logout: async () => undefined,
-      getMe: async () => ({ kind: "not_found" }),
-      createHousehold: async () => ({ kind: "unauthorized" }),
-      createHouseholdInvite: async () => ({ kind: "forbidden" }),
-      confirmRecipeImageUpload: async () => ({ kind: "forbidden" }),
-      createRecipeImageReadUrl: async () => ({ kind: "forbidden" }),
-      createRecipeImageUpload: async () => ({ kind: "forbidden" }),
-      deleteRecipeImage: async () => ({ kind: "forbidden" }),
-      listHouseholds: async () => ({ kind: "unauthorized" }),
-      listHouseholdInvites: async () => ({ kind: "forbidden" }),
-      listHouseholdMembers: async () => ({ kind: "forbidden" }),
-      leaveHousehold: async () => ({ kind: "forbidden" }),
-      transferHouseholdOwnership: async () => ({ kind: "forbidden" }),
-      setHouseholdModuleEnabled: async () => ({ kind: "forbidden" }),
-      renameHousehold: async () => ({ kind: "forbidden" }),
-      revokeHouseholdInvite: async () => ({ kind: "forbidden" }),
-      removeHouseholdMember: async () => ({ kind: "forbidden" }),
-      dbProvider,
-      jwtSecret: "test-jwt-secret",
-      isProduction: false,
-    });
+    const app = createTestApp();
 
     const response = await app.request("/api/health");
 
@@ -52,34 +82,8 @@ describe("app", () => {
       kind: "success" as const,
       household,
     }));
-    const jwtSecret = "test-jwt-secret";
-    const app = createApp({
-      acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
-      addShoppingItem: async () => ({ kind: "forbidden" }),
-      setShoppingItemStatus: async () => ({ kind: "forbidden" }),
-      signup: async () => ({ kind: "forbidden" }),
-      login: async () => ({ kind: "invalid_credentials" }),
-      refresh: async () => ({ kind: "invalid_token" }),
-      logout: async () => undefined,
-      getMe: async () => ({ kind: "not_found" }),
-      createHousehold,
-      createHouseholdInvite: async () => ({ kind: "forbidden" }),
-      confirmRecipeImageUpload: async () => ({ kind: "forbidden" }),
-      createRecipeImageReadUrl: async () => ({ kind: "forbidden" }),
-      createRecipeImageUpload: async () => ({ kind: "forbidden" }),
-      deleteRecipeImage: async () => ({ kind: "forbidden" }),
-      listHouseholds: async () => ({ kind: "unauthorized" }),
-      listHouseholdInvites: async () => ({ kind: "forbidden" }),
-      listHouseholdMembers: async () => ({ kind: "forbidden" }),
-      leaveHousehold: async () => ({ kind: "forbidden" }),
-      transferHouseholdOwnership: async () => ({ kind: "forbidden" }),
-      setHouseholdModuleEnabled: async () => ({ kind: "forbidden" }),
-      renameHousehold: async () => ({ kind: "forbidden" }),
-      revokeHouseholdInvite: async () => ({ kind: "forbidden" }),
-      removeHouseholdMember: async () => ({ kind: "forbidden" }),
-      dbProvider,
-      jwtSecret,
-      isProduction: false,
+    const app = createTestApp({
+      households: { createHousehold },
     });
     const accessToken = signAccessToken({
       userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
@@ -113,34 +117,8 @@ describe("app", () => {
       kind: "success" as const,
       item,
     }));
-    const jwtSecret = "test-jwt-secret";
-    const app = createApp({
-      acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
-      addShoppingItem,
-      setShoppingItemStatus: async () => ({ kind: "forbidden" }),
-      signup: async () => ({ kind: "forbidden" }),
-      login: async () => ({ kind: "invalid_credentials" }),
-      refresh: async () => ({ kind: "invalid_token" }),
-      logout: async () => undefined,
-      getMe: async () => ({ kind: "not_found" }),
-      createHousehold: async () => ({ kind: "unauthorized" }),
-      createHouseholdInvite: async () => ({ kind: "forbidden" }),
-      confirmRecipeImageUpload: async () => ({ kind: "forbidden" }),
-      createRecipeImageReadUrl: async () => ({ kind: "forbidden" }),
-      createRecipeImageUpload: async () => ({ kind: "forbidden" }),
-      deleteRecipeImage: async () => ({ kind: "forbidden" }),
-      listHouseholds: async () => ({ kind: "unauthorized" }),
-      listHouseholdInvites: async () => ({ kind: "forbidden" }),
-      listHouseholdMembers: async () => ({ kind: "forbidden" }),
-      leaveHousehold: async () => ({ kind: "forbidden" }),
-      transferHouseholdOwnership: async () => ({ kind: "forbidden" }),
-      setHouseholdModuleEnabled: async () => ({ kind: "forbidden" }),
-      renameHousehold: async () => ({ kind: "forbidden" }),
-      revokeHouseholdInvite: async () => ({ kind: "forbidden" }),
-      removeHouseholdMember: async () => ({ kind: "forbidden" }),
-      dbProvider,
-      jwtSecret,
-      isProduction: false,
+    const app = createTestApp({
+      shopping: { addShoppingItem },
     });
     const accessToken = signAccessToken({
       userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",

@@ -41,107 +41,114 @@ const r2Client = createR2Client({
   secretAccessKey: config.R2_SECRET_ACCESS_KEY,
 });
 
-const signup = createSignupService({
-  db,
-  jwtSecret: config.API_JWT_SECRET,
-  signupAccessCode: config.SIGNUP_ACCESS_CODE,
-});
+const infrastructure = { config, db, dbProvider, r2Client };
 
-const login = createLoginService({
-  db,
-  jwtSecret: config.API_JWT_SECRET,
-});
+const auth = {
+  signup: createSignupService({
+    db: infrastructure.db,
+    jwtSecret: infrastructure.config.API_JWT_SECRET,
+    signupAccessCode: infrastructure.config.SIGNUP_ACCESS_CODE,
+  }),
+  login: createLoginService({
+    db: infrastructure.db,
+    jwtSecret: infrastructure.config.API_JWT_SECRET,
+  }),
+  refresh: createRefreshService({
+    db: infrastructure.db,
+    jwtSecret: infrastructure.config.API_JWT_SECRET,
+  }),
+  logout: createLogoutService({ db: infrastructure.db }),
+  getMe: createMeService({ db: infrastructure.db }),
+};
 
-const refresh = createRefreshService({
-  db,
-  jwtSecret: config.API_JWT_SECRET,
-});
+const households = {
+  acceptHouseholdInvite: createAcceptHouseholdInviteService({
+    db: infrastructure.db,
+  }),
+  createHousehold: createHouseholdService({ db: infrastructure.db }),
+  createHouseholdInvite: createHouseholdInviteService({
+    db: infrastructure.db,
+  }),
+  listHouseholds: createListHouseholdsService({ db: infrastructure.db }),
+  listHouseholdInvites: createListHouseholdInvitesService({
+    db: infrastructure.db,
+  }),
+  listHouseholdMembers: createListHouseholdMembersService({
+    db: infrastructure.db,
+  }),
+  leaveHousehold: createLeaveHouseholdService({ db: infrastructure.db }),
+  renameHousehold: createRenameHouseholdService({ db: infrastructure.db }),
+  revokeHouseholdInvite: createRevokeHouseholdInviteService({
+    db: infrastructure.db,
+  }),
+  removeHouseholdMember: createRemoveHouseholdMemberService({
+    db: infrastructure.db,
+  }),
+  transferHouseholdOwnership: createTransferHouseholdOwnershipService({
+    db: infrastructure.db,
+  }),
+  setHouseholdModuleEnabled: createSetHouseholdModuleEnabledService({
+    db: infrastructure.db,
+  }),
+};
 
-const logout = createLogoutService({ db });
-const getMe = createMeService({ db });
-const acceptHouseholdInvite = createAcceptHouseholdInviteService({ db });
-const createHousehold = createHouseholdService({ db });
-const createHouseholdInvite = createHouseholdInviteService({ db });
-const listHouseholds = createListHouseholdsService({ db });
-const listHouseholdInvites = createListHouseholdInvitesService({ db });
-const listHouseholdMembers = createListHouseholdMembersService({ db });
-const leaveHousehold = createLeaveHouseholdService({ db });
-const renameHousehold = createRenameHouseholdService({ db });
-const revokeHouseholdInvite = createRevokeHouseholdInviteService({ db });
-const addShoppingItem = createAddShoppingItemService({ db });
-const setShoppingItemStatus = createSetShoppingItemStatusService({ db });
-const removeHouseholdMember = createRemoveHouseholdMemberService({ db });
-const transferHouseholdOwnership = createTransferHouseholdOwnershipService({
-  db,
-});
-const setHouseholdModuleEnabled = createSetHouseholdModuleEnabledService({
-  db,
-});
-const createRecipeImageUpload = createRecipeImageUploadService({
-  db,
-  signUpload: ({ objectKey, contentType }) =>
-    signRecipeImageUpload({
-      client: r2Client,
-      bucket: config.R2_BUCKET,
-      objectKey,
-      contentType,
-    }),
-});
-const confirmRecipeImageUpload = createConfirmRecipeImageUploadService({
-  db,
-  inspectObject: ({ objectKey }) =>
-    inspectR2Object({
-      client: r2Client,
-      bucket: config.R2_BUCKET,
-      objectKey,
-    }),
-});
-const createRecipeImageReadUrl = createRecipeImageReadUrlService({
-  db,
-  signRead: ({ objectKey }) =>
-    signRecipeImageRead({
-      client: r2Client,
-      bucket: config.R2_BUCKET,
-      objectKey,
-    }),
-});
-const deleteRecipeImage = createDeleteRecipeImageService({
-  db,
-  deleteObject: ({ objectKey }) =>
-    deleteR2Object({
-      client: r2Client,
-      bucket: config.R2_BUCKET,
-      objectKey,
-    }),
-});
+const shopping = {
+  addShoppingItem: createAddShoppingItemService({ db: infrastructure.db }),
+  setShoppingItemStatus: createSetShoppingItemStatusService({
+    db: infrastructure.db,
+  }),
+};
+
+const recipeImages = {
+  createRecipeImageUpload: createRecipeImageUploadService({
+    db: infrastructure.db,
+    signUpload: ({ objectKey, contentType }) =>
+      signRecipeImageUpload({
+        client: infrastructure.r2Client,
+        bucket: infrastructure.config.R2_BUCKET,
+        objectKey,
+        contentType,
+      }),
+  }),
+  confirmRecipeImageUpload: createConfirmRecipeImageUploadService({
+    db: infrastructure.db,
+    inspectObject: ({ objectKey }) =>
+      inspectR2Object({
+        client: infrastructure.r2Client,
+        bucket: infrastructure.config.R2_BUCKET,
+        objectKey,
+      }),
+  }),
+  createRecipeImageReadUrl: createRecipeImageReadUrlService({
+    db: infrastructure.db,
+    signRead: ({ objectKey }) =>
+      signRecipeImageRead({
+        client: infrastructure.r2Client,
+        bucket: infrastructure.config.R2_BUCKET,
+        objectKey,
+      }),
+  }),
+  deleteRecipeImage: createDeleteRecipeImageService({
+    db: infrastructure.db,
+    deleteObject: ({ objectKey }) =>
+      deleteR2Object({
+        client: infrastructure.r2Client,
+        bucket: infrastructure.config.R2_BUCKET,
+        objectKey,
+      }),
+  }),
+};
 
 const app = createApp({
-  acceptHouseholdInvite,
-  addShoppingItem,
-  setShoppingItemStatus,
-  signup,
-  login,
-  refresh,
-  logout,
-  getMe,
-  createHousehold,
-  createHouseholdInvite,
-  confirmRecipeImageUpload,
-  createRecipeImageReadUrl,
-  createRecipeImageUpload,
-  deleteRecipeImage,
-  listHouseholds,
-  listHouseholdInvites,
-  listHouseholdMembers,
-  leaveHousehold,
-  renameHousehold,
-  revokeHouseholdInvite,
-  removeHouseholdMember,
-  transferHouseholdOwnership,
-  setHouseholdModuleEnabled,
-  dbProvider,
-  jwtSecret: config.API_JWT_SECRET,
-  isProduction: config.NODE_ENV === "production",
+  auth,
+  households,
+  recipeImages,
+  shopping,
+  infrastructure: {
+    zeroDbProvider: infrastructure.dbProvider,
+    jwtSecret: infrastructure.config.API_JWT_SECRET,
+    isProduction: infrastructure.config.NODE_ENV === "production",
+  },
 });
 
 serve(
