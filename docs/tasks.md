@@ -210,8 +210,8 @@ action.
 - [x] Add structured API request logging and a central safe error handler
 - [x] Add root application error and not-found boundaries
 - [x] Reconcile the documentation with the implemented system and establish canonical sources
-- [ ] Verify a clean-checkout setup and production builds
-- [ ] Complete the Phase 17 checkpoint and commit
+- [x] Verify a clean-checkout setup and production builds
+- [x] Complete the Phase 17 checkpoint and commit
 
 ## Phase 18: deploy to an online VPS
 
