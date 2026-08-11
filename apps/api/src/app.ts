@@ -10,6 +10,7 @@ import {
   type ObservabilityEnv,
   type StructuredLogger,
 } from "./observability";
+import type { ReadinessCheck } from "./readiness";
 import {
   type CreateRecipeRoutesInput,
   createRecipeRoutes,
@@ -34,18 +35,27 @@ export type CreateAppInput = {
     isProduction: boolean;
     jwtSecret: string;
     logger: StructuredLogger;
+    readinessCheck: ReadinessCheck;
     zeroDbProvider: CreateZeroRoutesInput["dbProvider"];
   };
 };
 
 export function createApp(input: CreateAppInput) {
   const app = new Hono<ObservabilityEnv>();
-  const { isProduction, jwtSecret, logger, zeroDbProvider } =
+  const { isProduction, jwtSecret, logger, readinessCheck, zeroDbProvider } =
     input.infrastructure;
 
   installApiObservability(app, { logger });
 
   app.get("/api/health", (c) => c.json({ ok: true }));
+  app.get("/api/ready", async (c) => {
+    try {
+      await readinessCheck();
+      return c.json({ ok: true });
+    } catch {
+      return c.json({ ok: false }, 503);
+    }
+  });
   app.route(
     "/api/auth",
     createAuthRoutes({ ...input.auth, isProduction, jwtSecret }),

@@ -203,7 +203,7 @@ action.
 
 ## Phase 17: production readiness and hardening
 
-- [ ] Add readiness and graceful shutdown
+- [x] Add readiness and graceful shutdown
 - [x] Export stable database and transaction types from `@home-hub/database`
 - [x] Extract focused API authorization helpers while preserving explicit lock modes
 - [x] Group API dependencies by feature and separate infrastructure dependencies

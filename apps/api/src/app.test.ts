@@ -49,6 +49,7 @@ const defaultInput: CreateAppInput = {
     jwtSecret,
     isProduction: false,
     logger: silentLogger,
+    readinessCheck: async () => undefined,
   },
 };
 
@@ -91,6 +92,30 @@ describe("app", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ ok: true });
+  });
+
+  it("reports readiness when required infrastructure responds", async () => {
+    const readinessCheck = vi.fn(async () => undefined);
+    const app = createTestApp({ infrastructure: { readinessCheck } });
+
+    const response = await app.request("/api/ready");
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true });
+    expect(readinessCheck).toHaveBeenCalledOnce();
+  });
+
+  it("reports unready without exposing infrastructure errors", async () => {
+    const readinessCheck = vi.fn(async () => {
+      throw new Error("postgres://user:secret@database/home_hub");
+    });
+    const app = createTestApp({ infrastructure: { readinessCheck } });
+
+    const response = await app.request("/api/ready");
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ ok: false });
+    expect(readinessCheck).toHaveBeenCalledOnce();
   });
 
   it("logs completed requests with a returned request ID", async () => {

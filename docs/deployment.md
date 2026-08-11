@@ -56,6 +56,14 @@ including all schemas.
 unnecessary rebuilds during ordinary container restarts, but the replica is
 disposable: if it is missing, Zero resynchronizes it from PostgreSQL.
 
+The API exposes `/api/health` as a process liveness check and `/api/ready` as a
+readiness check backed by a lightweight PostgreSQL query. Route public health
+monitoring to the appropriate endpoint: liveness must not fail merely because
+PostgreSQL is temporarily unavailable, while readiness must return `503` until
+the API can use its required database. On `SIGINT` or `SIGTERM`, the API stops
+accepting connections, allows active requests a bounded drain period, and then
+closes its PostgreSQL pool.
+
 R2 objects are independent of the VPS. PostgreSQL stores only their metadata,
 so a database backup does not contain image bytes.
 

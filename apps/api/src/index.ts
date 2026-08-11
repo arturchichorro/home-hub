@@ -1,3 +1,4 @@
+import type { Server } from "node:http";
 import { createDbClient } from "@home-hub/database/client";
 import { serve } from "@hono/node-server";
 
@@ -21,6 +22,7 @@ import { createRevokeHouseholdInviteService } from "./households/revoke-invite";
 import { createSetHouseholdModuleEnabledService } from "./households/set-module-enabled";
 import { createTransferHouseholdOwnershipService } from "./households/transfer-ownership";
 import { consoleStructuredLogger } from "./observability";
+import { createDatabaseReadinessCheck } from "./readiness";
 import { createConfirmRecipeImageUploadService } from "./recipes/images/confirm-upload";
 import { createRecipeImageReadUrlService } from "./recipes/images/create-read-url";
 import { createRecipeImageUploadService } from "./recipes/images/create-upload";
@@ -30,11 +32,12 @@ import { inspectR2Object } from "./recipes/images/inspect-object";
 import { createR2Client } from "./recipes/images/r2-client";
 import { signRecipeImageRead } from "./recipes/images/sign-read";
 import { signRecipeImageUpload } from "./recipes/images/sign-upload";
+import { closeHttpServer, createGracefulShutdown } from "./server-lifecycle";
 import { createAddShoppingItemService } from "./shopping/add";
 import { createSetShoppingItemStatusService } from "./shopping/set-status";
 import { createZeroDbProvider } from "./zero/db-provider";
 
-const { db } = createDbClient(config.DATABASE_URL);
+const { db, close: closeDatabase } = createDbClient(config.DATABASE_URL);
 const dbProvider = createZeroDbProvider({ db });
 const r2Client = createR2Client({
   endpoint: config.R2_ENDPOINT,
@@ -150,10 +153,11 @@ const app = createApp({
     jwtSecret: infrastructure.config.API_JWT_SECRET,
     isProduction: infrastructure.config.NODE_ENV === "production",
     logger: consoleStructuredLogger,
+    readinessCheck: createDatabaseReadinessCheck({ db: infrastructure.db }),
   },
 });
 
-serve(
+const server = serve(
   {
     fetch: app.fetch,
     port: config.API_PORT,
@@ -164,4 +168,18 @@ serve(
       port: info.port,
     });
   },
-);
+) as Server;
+
+const shutdown = createGracefulShutdown({
+  closeServer: () => closeHttpServer(server),
+  closeInfrastructure: closeDatabase,
+  logger: consoleStructuredLogger,
+});
+
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.once(signal, () => {
+    void shutdown(signal).catch(() => {
+      process.exitCode = 1;
+    });
+  });
+}
