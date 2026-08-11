@@ -1,5 +1,11 @@
 # Architecture
 
+This document describes the current system structure and the boundaries between
+its runtimes. See [Security and synchronization](./security-and-sync.md) for
+authorization, locking, and synchronization invariants; [Data model](./data-model.md)
+for persisted schema details; and [Architecture decisions](./decisions.md) for
+the reasoning behind the major choices.
+
 ## Chosen stack
 
 
@@ -37,8 +43,8 @@ home-hub/
 │   # mobile/                Reserved for a future Expo/React Native application
 ├── packages/
 │   ├── database/            Drizzle schema, database client, SQL migrations
-│   └── shared/              Zod contracts, domain helpers, Zero schema/queries/mutators
-│   # ui-web/                Added in the web component-library phase
+│   ├── shared/              Zod contracts, domain helpers, Zero schema/queries/mutators
+│   └── ui-web/              Base UI-backed React DOM component library
 │   # ui-native/             Reserved for the future React Native application
 ├── docs/
 ├── package.json
@@ -114,7 +120,8 @@ Each household has an enabled setting for every implemented module. The owner
 configures that setting for the whole household; there are no per-member module
 permissions. Core household selection and management cannot be disabled.
 Disabling a module retains its data but blocks its interface and every
-server-side access path. A missing setting fails closed.
+server-side access path. A missing setting fails closed. The canonical
+enforcement rules are in [Security and synchronization](./security-and-sync.md).
 
 Cross-module behavior is implemented as an explicit application operation. For
 example, adding recipe ingredients to the shopping list connects Recipes and
@@ -157,9 +164,12 @@ The API owns:
 - transformation of named Zero queries using trusted user context;
 - transactional execution and authorization of Zero mutations;
 - R2 presigned upload and read URLs;
-- health and readiness endpoints.
+- the health endpoint.
 
-The API remains stateless apart from PostgreSQL and R2.
+The API remains stateless apart from PostgreSQL and R2. Feature dependencies
+are grouped by `auth`, `households`, `shopping`, `recipeImages`, and `zero`.
+Database access, R2, validated configuration, logging, and the Zero database
+provider remain explicit infrastructure dependencies.
 
 Run Hono on Node.js through `@hono/node-server`. Hono's Web-standard request and response objects fit Zero's `handleQueryRequest` and `handleMutateRequest` APIs directly. Keep handlers thin: validation and authentication middleware establish trusted inputs, while transactional service functions enforce business rules and tenancy.
 
@@ -190,9 +200,9 @@ Typical values are:
 - `R2_BUCKET`
 - `VITE_ZERO_CACHE_URL`
 
-Production implementation is deferred, but its initial target is decided: a
-single OVHcloud VPS in Brussels running Caddy, the Hono API, `zero-cache`, and
-PostgreSQL through Docker Compose. See `docs/deployment.md`.
+The initial production target is a single OVHcloud VPS in Brussels running
+Caddy, the Hono API, `zero-cache`, and PostgreSQL through Docker Compose. See
+[Deployment](./deployment.md).
 
 ## Production topology
 
@@ -219,6 +229,3 @@ preserve that boundary and the SPA's `index.html` fallback. Changes to the API
 prefix must be made together with the `/api/auth` refresh-cookie path, CORS
 policy, `WEB_ORIGIN`, and the Zero query and mutation callback URLs.
 
-## Application-shell caching
-
-Do not add a service worker at the beginning. First prove that Zero retains synchronized reads after a normal reload. If an installable/offline-loading application shell is still desired, add `vite-plugin-pwa` later and cache only compiled static assets—not API responses or authenticated data.

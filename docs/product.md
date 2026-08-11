@@ -1,5 +1,10 @@
 # Product
 
+This document owns product scope and behavior. See
+[Security and synchronization](./security-and-sync.md) for the authoritative
+permission rules and [Architecture](./architecture.md) for implementation
+boundaries.
+
 ## Purpose
 
 Home Hub is a private application for groups of people who share a household.
@@ -56,7 +61,7 @@ one another's internals. Shopping items and recipe ingredients are separate
 domain records. Introduce a shared entity only when concrete behavior requires
 shared identity or metadata rather than merely copying values.
 
-## Initial household rules
+## Household behavior
 
 - Household names do not need to be unique.
 - Each household has exactly one owner.
@@ -64,12 +69,15 @@ shared identity or metadata rather than merely copying values.
 - Owners may rename the household, revoke invitations, remove members, transfer
   ownership, and configure modules.
 - Members may leave a household.
-- Ownership transfer must be transactional, and no operation may leave a
-  household without exactly one owner.
+- No operation may leave a household without exactly one owner.
 - A future administrator role may be considered if a real permission need
   appears, but it is not part of the initial model.
 - Membership, ownership, module configuration, and destructive household
   changes are online-only API operations.
+
+The exact authorization, privacy, and transaction-locking requirements for
+these operations are defined in
+[Security and synchronization](./security-and-sync.md#household-management-and-module-configuration).
 
 ## Deliberate non-goals
 

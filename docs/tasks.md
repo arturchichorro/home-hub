@@ -1,8 +1,23 @@
 # Home Hub tasks
 
-This is a lightweight implementation checklist. The documents in `docs/` remain
-the source of truth and should evolve when decisions change or implementation
-teaches us something new.
+This is the single project backlog and chronological roadmap. Subject documents
+in `docs/` describe the current system and should link here instead of keeping
+separate task lists or phase plans.
+
+## Working rhythm for every phase
+
+1. Read the relevant official library documentation.
+2. State the intended data flow and security boundary.
+3. Write the smallest test or manual observation that will prove the behavior.
+4. Implement the smallest coherent change yourself.
+5. Ask the guiding agent to review and explain problems, not to replace your implementation.
+6. Run the checks and inspect the result directly.
+7. Summarize what you learned in your own words before continuing.
+
+The learner applies database migrations and creates commits manually. The
+guiding agent may inspect generated SQL and database state, but should not run
+migration commands or commit changes unless explicitly asked for that specific
+action.
 
 ## Phase 1: workspace and static web page
 
@@ -182,15 +197,21 @@ teaches us something new.
 - [x] Add invite-token household joining to the selector and navigate after acceptance
 - [x] Add owner invite creation with one-time token display and clipboard sharing
 - [x] Verify keyboard navigation, visible focus, labels, error states, disabled states, and responsive layout
-- [ ] Reserve `@home-hub/ui-native`, built on Expo UI, for a future native implementation of the same documented design language
-- [ ] Complete the Phase 16 checkpoint and commit
+- [x] Reserve `@home-hub/ui-native`, built on Expo UI, for a future native implementation of the same documented design language
+- [x] Complete the Phase 16 checkpoint and commit
 
 ## Phase 17: production readiness and hardening
 
-- [ ] Add readiness, graceful shutdown, and consistent errors
+- [ ] Add readiness and graceful shutdown
+- [x] Export stable database and transaction types from `@home-hub/database`
+- [x] Extract focused API authorization helpers while preserving explicit lock modes
+- [x] Group API dependencies by feature and separate infrastructure dependencies
+- [x] Add structured API request logging and a central safe error handler
+- [x] Add root application error and not-found boundaries
+- [ ] Handle invalid or inaccessible household routes without rendering protected content
 - [ ] Refresh the in-memory access JWT and reconnect the current Zero client when authentication expires
 - [ ] Fill important integration-test gaps
-- [ ] Reconcile the documentation with the implemented system
+- [x] Reconcile the documentation with the implemented system and establish canonical sources
 - [ ] Verify PostgreSQL restore and Zero replica rebuild procedures
 - [ ] Decide whether application-shell caching is justified
 - [ ] Verify a clean-checkout setup and production builds

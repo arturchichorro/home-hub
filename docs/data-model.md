@@ -1,5 +1,10 @@
 # Data model
 
+This document owns persisted entities, columns, relationships, constraints,
+and schema-level invariants. Authorization, transaction locking, and
+synchronization rules are defined in
+[Security and synchronization](./security-and-sync.md).
+
 ## General rules
 
 - Generate UUIDv4 identifiers in the client for rows created optimistically.
@@ -74,7 +79,7 @@ Use `id` as the primary key and enforce a unique household/user pair.
 
 Each household has exactly one owner. Enforce at most one owner with a partial
 unique index on `household_id` for rows whose role is `owner`; household
-creation and future ownership-transfer operations must transactionally ensure
+creation and ownership-transfer operations must transactionally ensure
 that an owner always exists.
 
 Ownership may transfer only to another membership in the same household. The
@@ -210,25 +215,17 @@ and size. Only confirmed images are readable or synchronized. Position must be
 nonnegative. Width and height are layout metadata rather than trusted security
 properties; constrain each to 1–16,384 pixels.
 
-## Transactional invariants
+## Schema invariants
 
-- Creating a household and its owner membership is one transaction.
-- A household has exactly one owner.
-- Ownership transfer changes the old and new owner roles in one transaction.
-- Accepting an invite and creating membership is one transaction.
-- Removing or leaving a membership cannot remove the household's sole owner.
-- Every household operation checks membership inside the same transaction as its write.
-- Only the owner may change household module settings.
-- A module-owned query or write requires both membership and an enabled module
-  setting; a missing setting is treated as disabled.
-- Concurrent duplicate shopping-item names resolve through the normalized-name
-  constraint; adding an existing name deliberately reactivates its canonical
-  shopping row.
-- A recipe ingredient may reference only a recipe from the same household.
-- A recipe cooking log may reference only a recipe from the same household.
-- Adding recipe ingredients to Shopping verifies household access and
-  verifies both Recipes and Shopping are enabled, then inserts or reactivates
-  the normalized shopping rows in one transaction.
-- Recipe image metadata may reference only a recipe from the same household.
-- A recipe image linked to a cooking log may reference only a log for that same
-  household and recipe.
+- A household has at most one owner row; application transactions ensure it
+  always has exactly one owner.
+- A user has at most one membership in a household.
+- Shopping names are unique by normalized name within a household.
+- Recipe ingredients, cooking logs, and images cannot reference records from a
+  different household; image-to-cook-log references also remain within one
+  recipe.
+- Module settings are unique by household and stable module key.
+
+The transactions that preserve these invariants, including their explicit
+locking requirements, are documented in
+[Security and synchronization](./security-and-sync.md).

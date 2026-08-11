@@ -1,5 +1,11 @@
 # Security and synchronization
 
+This is the canonical source for authentication, authorization, tenant
+isolation, transaction-locking requirements, synchronization behavior, and
+storage security. Other documents should link here instead of restating these
+rules. Runtime structure belongs in [Architecture](./architecture.md), and
+table structure belongs in [Data model](./data-model.md).
+
 ## Trust model
 
 Treat all browser-provided values as untrusted, including household IDs, row IDs, mutation arguments, and Zero query arguments. Authentication establishes who the caller is; authorization establishes what that user may do.
@@ -139,6 +145,27 @@ checks apply to ordinary API routes, named Zero queries, custom mutators, R2
 authorization, and cross-module operations. Hiding navigation is user
 experience, not enforcement.
 
+### Access checks and lock modes
+
+Keep the required consistency visible at each call site rather than routing all
+authorization through one configurable helper:
+
+- Use an ordinary read when the operation only needs a current snapshot and
+  does not rely on that row remaining unchanged for a later write.
+- Use `FOR SHARE` when membership, ownership, an enabled module setting, or a
+  household-scoped entity is authorization evidence for a write but the
+  operation does not modify that evidence. This prevents a concurrent update
+  or deletion from invalidating the check before the transaction commits.
+- Use `FOR UPDATE` when the operation changes the checked membership, owner
+  role, invitation, module setting, refresh token, or scoped entity, or when
+  concurrent attempts must be serialized.
+
+Entity lookups always include the household ID alongside the entity ID so a
+foreign row is indistinguishable from a missing row. Multi-row operations lock
+in a stable order—for example, the current owner before a transfer target—to
+reduce deadlock risk. External R2 requests never run while database locks are
+held.
+
 For self-hosting, Rocicorp does not issue an API key. In production, configure a strong `ZERO_ADMIN_PASSWORD`. Optional `ZERO_QUERY_API_KEY` and `ZERO_MUTATE_API_KEY` values can authenticate calls from `zero-cache` to the API, but they complement rather than replace user authentication.
 
 ## Production network and recovery boundary
@@ -159,6 +186,20 @@ The `zero-cache` SQLite replica may be stored on a named volume for faster
 restarts, but it is not the authoritative backup. If it is absent after a host
 migration, Zero rebuilds it from PostgreSQL. Cloudflare R2 objects are external
 to both PostgreSQL and VPS backups and need their own retention policy.
+
+## HTTP error and logging safety
+
+Every API request receives a request ID. The API emits one structured request
+record containing the request ID, method, matched route, response status, and
+duration. Unexpected failures are logged once by the central error handler
+with a deliberately small serialized error shape, then returned as a consistent
+`500` response containing only a safe message and the request ID.
+
+Logs and error responses must never include authorization headers, cookies,
+passwords, signup codes, refresh tokens, raw invitation tokens, R2 credentials,
+or presigned URLs. Expected authentication, authorization, validation, and
+domain failures remain ordinary handled responses rather than unexpected-error
+logs.
 
 ## Query authorization
 
@@ -183,12 +224,14 @@ enabled setting. Do not accept a household ID and merely assume it is
 authorized.
 
 Zero uses a custom PostgreSQL publication named `home_hub_zero` as a coarse
-replication allowlist. Initially it publishes only `households`,
-`household_members`, `household_module_settings`, and `shopping_items`. It excludes `users`,
-`refresh_tokens`, and `household_invites`, so password hashes, email addresses,
-refresh-token hashes, and invite-token hashes do not enter the Zero replica.
-Publishing a table does not authorize client access; named queries must still
-apply authenticated, household-scoped row authorization.
+replication allowlist. It publishes the columns required from `households`,
+`household_members`, `household_module_settings`, `shopping_items`, `recipes`,
+`recipe_ingredients`, `recipe_cook_logs`, and `recipe_images`. It excludes
+`users`, `refresh_tokens`, and `household_invites`, so password hashes, email
+addresses, refresh-token hashes, and invite-token hashes do not enter the Zero
+replica. The recipe-image publication also omits object keys. Publishing a
+table does not authorize client access; named queries must still apply
+authenticated, household-scoped row authorization.
 
 ## Mutation authorization
 

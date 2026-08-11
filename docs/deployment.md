@@ -1,5 +1,11 @@
 # Deployment
 
+This document owns deployment and recovery procedures. The runtime topology is
+defined in [Architecture](./architecture.md#production-topology), production
+security requirements in
+[Security and synchronization](./security-and-sync.md#production-network-and-recovery-boundary),
+and remaining work in [Tasks](./tasks.md).
+
 ## Deployment sequence
 
 Production is introduced in two deliberate stages:
@@ -19,9 +25,7 @@ single Docker Compose project containing:
 
 Cloudflare R2 remains external and stores recipe image bytes.
 
-This is a target architecture, not current implementation work. Prepare it
-during Phase 17 and deploy it during Phase 18 after the application and Zero
-data flow are understood.
+This is the target architecture, not the currently deployed environment.
 Before purchasing the host, confirm that the selected Brussels VPS offering
 supports installing Docker Engine and running this Compose workload. If it
 does not, choose another European location or provider without changing the
@@ -65,7 +69,7 @@ so a database backup does not contain image bytes.
 - Define an independent retention policy for R2 objects.
 - Do not treat a Docker volume or same-host VPS snapshot as the only backup.
 
-## Phase 18: online VPS
+## Online VPS
 
 The VPS is the first real production environment. Before launch, define the
 domain and routing, production secrets, host firewall, off-host encrypted
@@ -75,7 +79,7 @@ the application after both container restarts and a host reboot.
 Do not treat the VPS as a disposable rehearsal: it remains the rollback target
 while the Raspberry Pi is being proven.
 
-## Phase 19: moving to the Raspberry Pi
+## Moving to the Raspberry Pi
 
 The future Raspberry Pi 16 GB with SSD can use the same topology if it passes an
 operational compatibility check:

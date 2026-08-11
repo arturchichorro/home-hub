@@ -259,9 +259,10 @@ than assuming native backing alone guarantees accessibility.
 
 ## Initial component contracts
 
-These contracts describe application-facing behavior, not exact Base UI parts
-or final TypeScript signatures. Phase 16 should implement the smallest API that
-satisfies current call sites and the development gallery.
+These contracts describe application-facing behavior rather than exact Base UI
+parts or final TypeScript signatures. The implemented `@home-hub/ui-web`
+package keeps its API limited to current call sites and the development
+gallery.
 
 ### Button
 
