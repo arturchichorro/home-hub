@@ -6,6 +6,11 @@ import {
   createHouseholdRoutes,
 } from "./households/routes";
 import {
+  installApiObservability,
+  type ObservabilityEnv,
+  type StructuredLogger,
+} from "./observability";
+import {
   type CreateRecipeRoutesInput,
   createRecipeRoutes,
 } from "./recipes/routes";
@@ -28,13 +33,17 @@ export type CreateAppInput = {
   infrastructure: {
     isProduction: boolean;
     jwtSecret: string;
+    logger: StructuredLogger;
     zeroDbProvider: CreateZeroRoutesInput["dbProvider"];
   };
 };
 
 export function createApp(input: CreateAppInput) {
-  const app = new Hono();
-  const { isProduction, jwtSecret, zeroDbProvider } = input.infrastructure;
+  const app = new Hono<ObservabilityEnv>();
+  const { isProduction, jwtSecret, logger, zeroDbProvider } =
+    input.infrastructure;
+
+  installApiObservability(app, { logger });
 
   app.get("/api/health", (c) => c.json({ ok: true }));
   app.route(

@@ -20,6 +20,7 @@ import { createRenameHouseholdService } from "./households/rename";
 import { createRevokeHouseholdInviteService } from "./households/revoke-invite";
 import { createSetHouseholdModuleEnabledService } from "./households/set-module-enabled";
 import { createTransferHouseholdOwnershipService } from "./households/transfer-ownership";
+import { consoleStructuredLogger } from "./observability";
 import { createConfirmRecipeImageUploadService } from "./recipes/images/confirm-upload";
 import { createRecipeImageReadUrlService } from "./recipes/images/create-read-url";
 import { createRecipeImageUploadService } from "./recipes/images/create-upload";
@@ -148,6 +149,7 @@ const app = createApp({
     zeroDbProvider: infrastructure.dbProvider,
     jwtSecret: infrastructure.config.API_JWT_SECRET,
     isProduction: infrastructure.config.NODE_ENV === "production",
+    logger: consoleStructuredLogger,
   },
 });
 
@@ -157,6 +159,9 @@ serve(
     port: config.API_PORT,
   },
   (info) => {
-    console.log(`API listening on http://localhost:${info.port}`);
+    consoleStructuredLogger.info({
+      event: "server_started",
+      port: info.port,
+    });
   },
 );
