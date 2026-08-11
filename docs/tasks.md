@@ -209,11 +209,7 @@ action.
 - [x] Group API dependencies by feature and separate infrastructure dependencies
 - [x] Add structured API request logging and a central safe error handler
 - [x] Add root application error and not-found boundaries
-- [ ] Handle invalid or inaccessible household routes without rendering protected content
-- [ ] Fill important integration-test gaps
 - [x] Reconcile the documentation with the implemented system and establish canonical sources
-- [ ] Verify PostgreSQL restore and Zero replica rebuild procedures
-- [ ] Decide whether application-shell caching is justified
 - [ ] Verify a clean-checkout setup and production builds
 - [ ] Complete the Phase 17 checkpoint and commit
 
