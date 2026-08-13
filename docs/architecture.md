@@ -25,7 +25,7 @@ the reasoning behind the major choices.
 | Password hashing               | Argon2id                                          |
 | Image storage                  | Cloudflare R2 through its S3-compatible API       |
 | TLS and reverse proxy          | Caddy                                             |
-| Initial production host        | Single OVHcloud Brussels VPS                      |
+| Initial production host        | OVHcloud VPS-1 in Gravelines, Ubuntu 26.04 AMD64  |
 | Production process topology    | Docker Compose on one Linux host                  |
 | Unit and API testing           | Vitest and focused HTTP/service tests             |
 | Formatting and linting         | Biome                                             |
@@ -200,9 +200,11 @@ Typical values are:
 - `R2_BUCKET`
 - `VITE_ZERO_CACHE_URL`
 
-The initial production target is a single OVHcloud VPS in Brussels running
-Caddy, the Hono API, `zero-cache`, and PostgreSQL through Docker Compose. See
-[Deployment](./deployment.md).
+The initial production target is an OVHcloud VPS-1 in Gravelines running
+Ubuntu Server 26.04 LTS on AMD64, with Caddy, the Hono API, `zero-cache`, and
+PostgreSQL deployed through Docker Compose. See [Deployment](./deployment.md).
+The application is exposed at `https://home.achichorro.com`; Caddy serves the
+SPA at the origin and routes `/api/*` and `/zero/*` to their private services.
 
 ## Production topology
 
@@ -228,4 +230,3 @@ routes such as `/households/:householdId/shopping`. Production routing must
 preserve that boundary and the SPA's `index.html` fallback. Changes to the API
 prefix must be made together with the `/api/auth` refresh-cookie path, CORS
 policy, `WEB_ORIGIN`, and the Zero query and mutation callback URLs.
-

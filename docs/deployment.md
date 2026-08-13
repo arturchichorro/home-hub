@@ -14,8 +14,9 @@ Production is introduced in two deliberate stages:
 2. validate a Raspberry Pi as a production host, then migrate with a tested
    rollback path.
 
-The first production deployment is one OVHcloud VPS in Brussels. It runs a
-single Docker Compose project containing:
+The first production deployment is an OVHcloud VPS-1 in Gravelines, France,
+running Ubuntu Server 26.04 LTS on AMD64. It runs a single Docker Compose
+project containing:
 
 - Caddy;
 - the compiled React/Vite application;
@@ -25,11 +26,9 @@ single Docker Compose project containing:
 
 Cloudflare R2 remains external and stores recipe image bytes.
 
-This is the target architecture, not the currently deployed environment.
-Before purchasing the host, confirm that the selected Brussels VPS offering
-supports installing Docker Engine and running this Compose workload. If it
-does not, choose another European location or provider without changing the
-application topology.
+The VPS includes OVHcloud's standard daily backup retained for 24 hours. The
+optional manual snapshot service is useful before risky maintenance, but
+neither replaces the off-provider PostgreSQL backups required below.
 
 ## Public routing
 
@@ -42,9 +41,11 @@ Caddy is the only public application entry point. It:
 - proxies Zero HTTP and WebSocket traffic to `zero-cache`.
 
 PostgreSQL and direct container ports are not published to the internet. The
-exact domain and path layout remains undecided. Choose it together with the
-refresh-cookie path, allowed web origin, CORS configuration, and Zero cache
-URL.
+application uses one public origin, `https://home.achichorro.com`. Caddy serves
+the SPA at that origin, proxies `/api/*` to Hono, and proxies `/zero/*` HTTP and
+WebSocket traffic to `zero-cache`. Production configuration must keep the
+`/api/auth` refresh-cookie path, `WEB_ORIGIN`, CORS policy, Zero callback URLs,
+and `VITE_ZERO_CACHE_URL` aligned with this routing.
 
 ## Persistent state
 
