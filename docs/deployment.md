@@ -100,6 +100,12 @@ Schema migrations are never coupled to normal service startup. The `migrate`
 service is an explicitly invoked tool: review the generated SQL, run that
 service manually, and only then start or update the application services.
 
+`scripts/backup-production-postgres.sh` creates a PostgreSQL custom-format
+dump containing every database schema, validates the archive before upload,
+and copies it to the dedicated private R2 backup bucket. Its temporary local
+dump is removed on every exit. R2 credentials live only in the untracked,
+owner-readable `.env.backup` file on the production host.
+
 Do not treat the VPS as a disposable rehearsal: it remains the rollback target
 while the Raspberry Pi is being proven.
 
