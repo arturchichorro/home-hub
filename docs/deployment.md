@@ -104,6 +104,26 @@ Schema migrations are never coupled to normal service startup. The `migrate`
 service is an explicitly invoked tool: review the generated SQL, run that
 service manually, and only then start or update the application services.
 
+### Manual release and rollback
+
+Before a manual release, record the currently deployed Git revision and create
+an off-host PostgreSQL backup. Pull with `git pull --ff-only`, review any new
+migrations, apply them deliberately, rebuild the `api` and `web` images, and
+recreate those services. Finish by checking API readiness, Zero keepalive, and
+one authenticated synchronization flow.
+
+A routine rollback is a **code-only rollback** to the recorded Git revision:
+check out that revision, rebuild the `api` and `web` images, recreate those two
+services, and repeat the health and application checks. This is safe only when
+the older application remains compatible with the current database schema.
+Database migrations are not automatically reversed.
+
+If a release contains a backward-incompatible migration, restoring PostgreSQL
+is a separate disaster-recovery decision. It requires a maintenance window and
+explicit acceptance that writes made after the selected backup may be lost.
+Never perform or automate a production database restore as part of an ordinary
+application rollback.
+
 `scripts/backup-production-postgres.sh` creates a PostgreSQL custom-format
 dump containing every database schema, validates the archive before upload,
 and copies it to the dedicated private R2 backup bucket. Its temporary local
@@ -135,6 +155,14 @@ the isolated PostgreSQL 17 verifier. The restored database contained 11 public
 application tables, 13 applied Drizzle migrations, and 8 tables in the
 `home_hub_zero` publication. Production PostgreSQL was not contacted during
 the rehearsal.
+
+### Restart rehearsal record
+
+On 14 August 2026, the complete VPS was rebooted. PostgreSQL, the API,
+`zero-cache`, and Caddy returned healthy through their restart policies; the
+backup timer returned to its waiting state; public API readiness and Zero
+keepalive returned `200`; and existing application rows and R2 images remained
+available.
 
 ## Moving to the Raspberry Pi
 
