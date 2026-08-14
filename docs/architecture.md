@@ -183,6 +183,12 @@ Generate migrations with `pnpm db:generate`, inspect the SQL, and apply them man
 
 Image bytes travel directly between the browser and R2 through short-lived presigned URLs. The API stores only metadata and never writes uploaded files to its filesystem.
 
+Because those transfers go from the browser to the R2 origin rather than the
+application origin, the recipe-image bucket permits `GET` and `PUT` from
+`https://home.achichorro.com` and the local Vite origin. This bucket CORS
+policy does not expose the bucket publicly; access still requires a valid
+short-lived presigned URL.
+
 ## Configuration
 
 Use one root `.env` for local development and commit only `.env.example`. Vite may expose variables prefixed with `VITE_`; all other values remain server-side.
@@ -229,4 +235,6 @@ routes such as `/households/:householdId/shopping`. Production routing must
 preserve that boundary and the SPA's `index.html` fallback. Changes to the API
 prefix must be made together with the `/api/auth` refresh-cookie path and the
 Zero query and mutation callback URLs. The deployed browser and API share one
-origin, so the current production topology does not require CORS.
+origin, so the application API does not require CORS. Direct browser-to-R2
+transfers are cross-origin and require the restricted R2 bucket CORS policy
+described above.
