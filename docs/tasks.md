@@ -215,7 +215,7 @@ action.
 
 ## Phase 18: deploy to an online VPS
 
-- [ ] Confirm the VPS, CPU architecture, operating system, domain, and public routing
+- [x] Confirm the VPS, CPU architecture, operating system, domain, and public routing
 - [ ] Build the production images and Caddy/Docker Compose configuration
 - [ ] Configure production secrets, firewall rules, TLS, and private service networking
 - [ ] Configure automated encrypted PostgreSQL backups outside the VPS
