@@ -1,0 +1,17 @@
+home.achichorro.com {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	handle_path /zero/* {
+		reverse_proxy zero-cache:4848
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
