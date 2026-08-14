@@ -220,9 +220,9 @@ action.
 - [x] Configure production secrets, firewall rules, TLS, and private service networking
 - [x] Configure automated encrypted PostgreSQL backups outside the VPS
 - [x] Deploy the web application, API, `zero-cache`, PostgreSQL, and Caddy
-- [ ] Verify authentication, synchronization, R2 access, health checks, restart behavior, and rollback
-- [ ] Configure loopback-only PostgreSQL access through an SSH tunnel for TablePlus
+- [x] Verify authentication, synchronization, R2 access, health checks, and restart behavior; document code rollback
 - [x] Complete a production restore rehearsal and document routine operations
+- [ ] Configure loopback-only PostgreSQL access through an SSH tunnel for TablePlus
 - [ ] Complete the Phase 18 checkpoint and commit
 
 ## Phase 19: continuous integration after initial deployment
