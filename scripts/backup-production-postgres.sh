@@ -42,6 +42,7 @@ export RCLONE_CONFIG_BACKUP_ENDPOINT="${BACKUP_R2_ENDPOINT}"
 export RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID="${BACKUP_R2_ACCESS_KEY_ID}"
 export RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY="${BACKUP_R2_SECRET_ACCESS_KEY}"
 export RCLONE_CONFIG_BACKUP_NO_CHECK_BUCKET=true
+export RCLONE_CONFIG=/dev/null
 
 compose=(
   docker compose
@@ -83,7 +84,7 @@ rclone copyto \
 
 local_size="$(wc -c <"${dump_file}" | tr -d ' ')"
 remote_size="$(
-  rclone lsl "backup:${BACKUP_R2_BUCKET}/${remote_path}" --files-only |
+  rclone lsl "backup:${BACKUP_R2_BUCKET}/${remote_path}" |
     awk 'NR == 1 { print $1 }'
 )"
 
