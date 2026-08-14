@@ -80,16 +80,14 @@ rclone copyto \
   "${dump_file}" \
   "backup:${BACKUP_R2_BUCKET}/${remote_path}" \
   --immutable \
-  --no-traverse
+  --no-traverse \
+  --s3-no-head
 
 local_size="$(wc -c <"${dump_file}" | tr -d ' ')"
-remote_size="$(
-  rclone lsl "backup:${BACKUP_R2_BUCKET}/${remote_path}" |
-    awk 'NR == 1 { print $1 }'
-)"
 
-if [[ "${remote_size}" != "${local_size}" ]]; then
-  echo "Uploaded backup size does not match the local dump" >&2
+if ! rclone cat "backup:${BACKUP_R2_BUCKET}/${remote_path}" |
+  cmp --silent "${dump_file}" -; then
+  echo "Uploaded backup does not match the local dump" >&2
   exit 1
 fi
 
