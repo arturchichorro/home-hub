@@ -222,8 +222,8 @@ action.
 - [x] Deploy the web application, API, `zero-cache`, PostgreSQL, and Caddy
 - [x] Verify authentication, synchronization, R2 access, health checks, and restart behavior; document code rollback
 - [x] Complete a production restore rehearsal and document routine operations
-- [ ] Configure loopback-only PostgreSQL access through an SSH tunnel for TablePlus
-- [ ] Complete the Phase 18 checkpoint and commit
+- [x] Configure loopback-only PostgreSQL access through an SSH tunnel for TablePlus
+- [x] Complete the Phase 18 checkpoint and commit
 
 ## Phase 19: continuous integration after initial deployment
 

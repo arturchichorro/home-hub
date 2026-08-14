@@ -100,6 +100,16 @@ only inside the Compose network. Runtime secrets come from an untracked
 `.env.production` file based on `.env.production.example` and are passed only
 to the services that require them.
 
+### Production database inspection
+
+PostgreSQL additionally binds its container port to `127.0.0.1:5432` on the
+VPS for administrative access. It must never bind to `0.0.0.0`, and port 5432
+must not be allowed through UFW. TablePlus connects to database host
+`127.0.0.1`, port `5432`, database and user `home_hub`, using the production
+PostgreSQL password, with its SSH tunnel pointed at the VPS as user `ubuntu`
+and authenticated by the dedicated VPS private key. The tunnel encrypts the
+connection and keeps PostgreSQL unavailable from the public internet.
+
 Schema migrations are never coupled to normal service startup. The `migrate`
 service is an explicitly invoked tool: review the generated SQL, run that
 service manually, and only then start or update the application services.
