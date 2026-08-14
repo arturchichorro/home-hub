@@ -1,6 +1,6 @@
 FROM node:26-bookworm-slim AS dependencies
 
-RUN corepack enable
+RUN npm install --global pnpm@11.10.0
 
 WORKDIR /app
 
