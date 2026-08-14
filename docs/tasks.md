@@ -218,7 +218,7 @@ action.
 - [x] Confirm the VPS, CPU architecture, operating system, domain, and public routing
 - [x] Build the production images and Caddy/Docker Compose configuration
 - [x] Configure production secrets, firewall rules, TLS, and private service networking
-- [ ] Configure automated encrypted PostgreSQL backups outside the VPS
+- [x] Configure automated encrypted PostgreSQL backups outside the VPS
 - [x] Deploy the web application, API, `zero-cache`, PostgreSQL, and Caddy
 - [ ] Verify authentication, synchronization, R2 access, health checks, restart behavior, and rollback
 - [ ] Configure loopback-only PostgreSQL access through an SSH tunnel for TablePlus

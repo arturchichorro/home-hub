@@ -111,6 +111,18 @@ The `home-hub-backup.timer` systemd timer invokes that script every Sunday at
 missed backup after the host next starts. Backup outcomes are recorded in the
 system journal under `home-hub-backup.service`.
 
+Objects below the backup bucket's `postgres/` prefix have a 30-day deletion
+lock and expire after 90 days. The lock applies to existing and new backups and
+takes precedence over lifecycle deletion. At the current weekly frequency,
+the bucket retains roughly thirteen PostgreSQL recovery points.
+
+`scripts/verify-production-backup.sh` downloads the newest backup by default,
+restores it into a network-isolated PostgreSQL 17 container with temporary
+storage, and verifies application tables, Drizzle migration history, and the
+Zero publication. It never connects to the production PostgreSQL service and
+removes the downloaded dump and disposable database on every exit. Pass a
+specific object path below `postgres/` to rehearse an older recovery point.
+
 Do not treat the VPS as a disposable rehearsal: it remains the rollback target
 while the Raspberry Pi is being proven.
 
