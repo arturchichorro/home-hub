@@ -1,0 +1,118 @@
+name: home-hub-production
+
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: home_hub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: home_hub
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_wal_senders=10
+      - -c
+      - max_replication_slots=10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U home_hub -d home_hub"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    profiles: ["tools"]
+    build:
+      context: .
+      dockerfile: packages/database/Dockerfile
+    environment:
+      DATABASE_URL: postgres://home_hub:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/home_hub
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      NODE_ENV: production
+      API_PORT: 3000
+      DATABASE_URL: postgres://home_hub:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/home_hub
+      API_JWT_SECRET: ${API_JWT_SECRET:?API_JWT_SECRET is required}
+      SIGNUP_ACCESS_CODE: ${SIGNUP_ACCESS_CODE-}
+      R2_ENDPOINT: ${R2_ENDPOINT:?R2_ENDPOINT is required}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:?R2_ACCESS_KEY_ID is required}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:?R2_SECRET_ACCESS_KEY is required}
+      R2_BUCKET: ${R2_BUCKET:?R2_BUCKET is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  zero-cache:
+    image: rocicorp/zero:1.8.0
+    restart: unless-stopped
+    stop_grace_period: 10m
+    environment:
+      ZERO_UPSTREAM_DB: postgres://home_hub:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/home_hub
+      ZERO_CVR_DB: postgres://home_hub:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/home_hub
+      ZERO_CHANGE_DB: postgres://home_hub:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/home_hub
+      ZERO_REPLICA_FILE: /data/replica.db
+      ZERO_ADMIN_PASSWORD: ${ZERO_ADMIN_PASSWORD:?ZERO_ADMIN_PASSWORD is required}
+      ZERO_APP_ID: home_hub
+      ZERO_APP_PUBLICATIONS: home_hub_zero
+      ZERO_QUERY_URL: http://api:3000/api/zero/query
+      ZERO_MUTATE_URL: http://api:3000/api/zero/mutate
+      ZERO_ENABLE_CRUD_MUTATIONS: "false"
+      ZERO_NUM_SYNC_WORKERS: "1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    volumes:
+      - zero_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:4848/keepalive"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10m
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_ZERO_CACHE_URL: https://home.achichorro.com/zero
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  postgres_data:
+  zero_data:
+  caddy_data:
+  caddy_config:

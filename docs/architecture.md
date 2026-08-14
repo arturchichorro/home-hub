@@ -193,7 +193,6 @@ Typical values are:
 - `API_PORT`
 - `API_JWT_SECRET`
 - `SIGNUP_ACCESS_CODE`
-- `WEB_ORIGIN`
 - `R2_ENDPOINT`
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
@@ -228,5 +227,6 @@ private to the Compose network.
 The public API uses the `/api` prefix, keeping API requests distinct from SPA
 routes such as `/households/:householdId/shopping`. Production routing must
 preserve that boundary and the SPA's `index.html` fallback. Changes to the API
-prefix must be made together with the `/api/auth` refresh-cookie path, CORS
-policy, `WEB_ORIGIN`, and the Zero query and mutation callback URLs.
+prefix must be made together with the `/api/auth` refresh-cookie path and the
+Zero query and mutation callback URLs. The deployed browser and API share one
+origin, so the current production topology does not require CORS.

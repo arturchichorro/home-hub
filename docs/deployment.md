@@ -44,8 +44,10 @@ PostgreSQL and direct container ports are not published to the internet. The
 application uses one public origin, `https://home.achichorro.com`. Caddy serves
 the SPA at that origin, proxies `/api/*` to Hono, and proxies `/zero/*` HTTP and
 WebSocket traffic to `zero-cache`. Production configuration must keep the
-`/api/auth` refresh-cookie path, `WEB_ORIGIN`, CORS policy, Zero callback URLs,
-and `VITE_ZERO_CACHE_URL` aligned with this routing.
+`/api/auth` refresh-cookie path, Zero callback URLs, and
+`VITE_ZERO_CACHE_URL` aligned with this routing. The browser uses the same
+origin for the SPA and API, so production does not require cross-origin API
+access.
 
 ## Persistent state
 
@@ -84,6 +86,16 @@ The VPS is the first real production environment. Before launch, define the
 domain and routing, production secrets, host firewall, off-host encrypted
 backups, restore and rollback procedures, and routine upgrade process. Verify
 the application after both container restarts and a host reboot.
+
+`compose.production.yml` owns the production stack. Only its `web` service
+publishes host ports; PostgreSQL, the API, and `zero-cache` remain reachable
+only inside the Compose network. Runtime secrets come from an untracked
+`.env.production` file based on `.env.production.example` and are passed only
+to the services that require them.
+
+Schema migrations are never coupled to normal service startup. The `migrate`
+service is an explicitly invoked tool: review the generated SQL, run that
+service manually, and only then start or update the application services.
 
 Do not treat the VPS as a disposable rehearsal: it remains the rollback target
 while the Raspberry Pi is being proven.
