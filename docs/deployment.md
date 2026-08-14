@@ -72,7 +72,10 @@ so a database backup does not contain image bytes.
 
 ## Backup requirements
 
-- Create automated, encrypted PostgreSQL backups outside the VPS.
+- Create automated PostgreSQL backups outside the VPS in a dedicated private
+  Cloudflare R2 bucket. R2 provides automatic AES-256 encryption at rest and
+  TLS in transit; client-managed backup encryption keys are intentionally
+  deferred until the application's threat model justifies their recovery cost.
 - Back up every PostgreSQL schema, including Zero-owned schemas.
 - Test restoration periodically; an untested backup is not a recovery plan.
 - Keep production environment secrets encrypted and separate from Git and
