@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Home Hub production PostgreSQL backup weekly
+
+[Timer]
+OnCalendar=Sun *-*-* 03:15:00 UTC
+Persistent=true
+RandomizedDelaySec=15m
+Unit=home-hub-backup.service
+
+[Install]
+WantedBy=timers.target

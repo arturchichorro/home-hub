@@ -1,0 +1,15 @@
+[Unit]
+Description=Back up the Home Hub production PostgreSQL database
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/home-hub
+UMask=0077
+TimeoutStartSec=30m
+ExecStart=/opt/home-hub/scripts/backup-production-postgres.sh
+

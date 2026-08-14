@@ -106,6 +106,11 @@ and copies it to the dedicated private R2 backup bucket. Its temporary local
 dump is removed on every exit. R2 credentials live only in the untracked,
 owner-readable `.env.backup` file on the production host.
 
+The `home-hub-backup.timer` systemd timer invokes that script every Sunday at
+03:15 UTC with up to 15 minutes of randomized delay. A persistent timer runs a
+missed backup after the host next starts. Backup outcomes are recorded in the
+system journal under `home-hub-backup.service`.
+
 Do not treat the VPS as a disposable rehearsal: it remains the rollback target
 while the Raspberry Pi is being proven.
 
