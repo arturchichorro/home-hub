@@ -62,6 +62,7 @@ pnpm biome lint --write path/to/file.ts
 - [ ] adicionar feature de transformar recipes em cenas que posso adicionar à shopping list
 - [ ] move away de random ass inline svg icons, usar uma icon library
 - [ ] fix flashing de household_members ao adicionar uma versão segura de users à publication de zero
+- [ ] tem de ser possível editar um shopping item
 
 ## Ideias
 - [ ] personal scoped todo list / wish list / wtv -> sem ser household scoped

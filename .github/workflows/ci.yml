@@ -11,6 +11,21 @@ jobs:
   verify:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: home_hub
+          POSTGRES_PASSWORD: home_hub
+          POSTGRES_DB: home_hub
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U home_hub -d home_hub"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -54,6 +69,11 @@ jobs:
             git diff -- packages/database/drizzle
             exit 1
           fi
+
+      - name: Apply complete migration history
+        env:
+          DATABASE_URL: postgres://home_hub:home_hub@127.0.0.1:5432/home_hub
+        run: pnpm db:migrate
 
       - name: Build production web application
         env:

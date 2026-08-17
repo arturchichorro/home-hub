@@ -177,7 +177,15 @@ Run Hono on Node.js through `@hono/node-server`. Hono's Web-standard request and
 
 PostgreSQL is the source of truth. Schema changes are represented by reviewable SQL migration files and are never applied automatically during API startup.
 
-Generate migrations with `pnpm db:generate`, inspect the SQL, and apply them manually with `pnpm db:migrate`. The person building the project applies migrations and commits changes so persisted-state changes remain deliberate.
+Generate migrations with `pnpm db:generate`, inspect the SQL, and apply them
+locally with `pnpm db:migrate`. The person building the project generates,
+reviews, tests, and commits migrations so persisted-state changes remain
+deliberate. CI applies the complete committed migration history to a disposable
+PostgreSQL database. After CI succeeds, production deployment creates an
+off-host backup and automatically applies pending forward migrations before
+starting the new application version. It never automatically reverses a
+migration or restores a backup. Destructive or backward-incompatible changes
+require an explicit staged migration and rollback plan.
 
 ### Cloudflare R2
 
