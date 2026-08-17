@@ -175,8 +175,11 @@ Keep the GitHub repository public. Use `develop` as the default integration
 branch and require a verified pull request before merging it into protected
 `main`. A successful push to `main` deploys through a GitHub `production`
 environment and a dedicated SSH key that is restricted on the VPS to the
-deployment script. Database migrations remain manual and block automatic
-deployment.
+deployment script. CI rehearses the full committed migration history against a
+disposable PostgreSQL database. Production deployment creates an off-host
+backup and then applies pending forward migrations before starting the new
+application version. It never automatically rolls migrations back or restores
+a backup; destructive changes require an explicit staged plan.
 
 Repository history was checked before the visibility change and contained no
 production environment files, credentials, or private keys. Public Actions

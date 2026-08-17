@@ -111,16 +111,19 @@ and authenticated by the dedicated VPS private key. The tunnel encrypts the
 connection and keeps PostgreSQL unavailable from the public internet.
 
 Schema migrations are never coupled to normal service startup. The `migrate`
-service is an explicitly invoked tool: review the generated SQL, run that
-service manually, and only then start or update the application services.
+service remains an explicitly invoked, one-shot tool. The production deployment
+script invokes it after CI has rehearsed the migration history and after an
+off-host backup has succeeded, but ordinary container restarts never migrate
+the database.
 
 ### Manual release and rollback
 
 Before a manual release, record the currently deployed Git revision and create
-an off-host PostgreSQL backup. Pull with `git pull --ff-only`, review any new
-migrations, apply them deliberately, rebuild the `api` and `web` images, and
-recreate those services. Finish by checking API readiness, Zero keepalive, and
-one authenticated synchronization flow.
+an off-host PostgreSQL backup. Pull with `git pull --ff-only`, build the release
+images, apply the already reviewed and tested forward migrations through the
+one-shot `migrate` service, and recreate the application services. Finish by
+checking API readiness, Zero keepalive, and one authenticated synchronization
+flow.
 
 A routine rollback is a **code-only rollback** to the recorded Git revision:
 check out that revision, rebuild the `api` and `web` images, recreate those two
@@ -139,14 +142,16 @@ application rollback.
 `scripts/deploy-production.sh` is the sole command authorized for the
 dedicated GitHub Actions deployment key. It serializes deployments with a host
 lock, requires a clean `main` checkout and a fast-forward update, creates an
-off-host PostgreSQL backup, rebuilds the Compose services, waits for container
-health, and verifies the public web, API readiness, and Zero keepalive routes.
+off-host PostgreSQL backup, pulls the verified revision, builds all release
+images, applies pending forward migrations with the one-shot `migrate` service,
+starts the new services, waits for container health, and verifies the public
+web, API readiness, and Zero keepalive routes. A migration failure stops the
+deployment before the new application containers are started. The script never
+reverses a migration or restores a database backup automatically.
 
-If the commits awaiting deployment change anything below
-`packages/database/drizzle`, the script stops before pulling or rebuilding.
-The learner must review and apply those migrations through the established
-manual process. Automatic deployment never applies or reverses migrations and
-never restores a database backup.
+Destructive or backward-incompatible migrations are not routine deployments.
+They require an explicit staged compatibility plan, a reviewed rollback and
+restore decision, and deliberate operator involvement.
 
 The GitHub repository uses `develop` as its default integration branch and
 protected `main` as its production branch. CI runs on pushes and pull requests.
@@ -179,8 +184,10 @@ VITE_ZERO_CACHE_URL=https://home.achichorro.com/zero \
 
 Zero generation is expected to print warnings about database defaults; the
 check fails only when formatted generated output differs. Drizzle generation
-must report that there is nothing to migrate and leave its directory clean.
-Neither check applies a migration.
+must report that there is nothing to migrate and leave its directory clean. CI
+then applies the complete migration history to a disposable PostgreSQL 17
+database. Running that final rehearsal locally requires a disposable database;
+do not point it at production.
 
 If `verify` fails, inspect its first failing step; production deployment will
 not start. If `Deploy production` fails, use the stage that failed to narrow
@@ -189,8 +196,10 @@ the investigation:
 - SSH setup or connection: verify the environment secret and variable names,
   the pinned host fingerprint, and the restricted public key without printing
   private key material.
-- Migration refusal: review and apply the committed migrations manually before
-  retrying the code deployment.
+- Migration rehearsal failure: correct the committed migration chain before
+  merging; no production deployment has started.
+- Production migration failure: inspect the migration output and database state
+  before retrying. Do not automatically restore the backup or reverse SQL.
 - Backup failure: run the backup script directly on the VPS and inspect
   `home-hub-backup.service` in the system journal.
 - Build, startup, or health failure: inspect Compose state and bounded service

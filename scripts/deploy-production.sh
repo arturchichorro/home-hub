@@ -33,12 +33,6 @@ if ! git merge-base --is-ancestor HEAD origin/main; then
   exit 1
 fi
 
-if ! git diff --quiet HEAD..origin/main -- packages/database/drizzle; then
-  echo "Automatic deployment refused: database migrations require manual review and application." >&2
-  git diff --name-only HEAD..origin/main -- packages/database/drizzle >&2
-  exit 1
-fi
-
 ./scripts/backup-production-postgres.sh
 
 git pull --ff-only origin main
@@ -46,7 +40,19 @@ git pull --ff-only origin main
 docker compose \
   --env-file "$environment_file" \
   -f "$compose_file" \
-  up -d --build --wait
+  --profile tools \
+  build api web migrate
+
+docker compose \
+  --env-file "$environment_file" \
+  -f "$compose_file" \
+  --profile tools \
+  run --rm migrate
+
+docker compose \
+  --env-file "$environment_file" \
+  -f "$compose_file" \
+  up -d --no-build --wait
 
 curl --fail --silent --show-error \
   https://home.achichorro.com/api/ready >/dev/null

@@ -14,10 +14,12 @@ separate task lists or phase plans.
 6. Run the checks and inspect the result directly.
 7. Summarize what you learned in your own words before continuing.
 
-The learner applies database migrations and creates commits manually. The
-guiding agent may inspect generated SQL and database state, but should not run
-migration commands or commit changes unless explicitly asked for that specific
-action.
+The learner generates, reviews, and applies local database migrations and
+creates commits manually. The guiding agent may inspect generated SQL and
+database state, but should not run local or production migration commands or
+commit changes unless explicitly asked for that specific action. CI rehearses
+the committed migration history on a disposable database, and the production
+deployment applies tested forward migrations after an off-host backup.
 
 ## Phase 1: workspace and static web page
 
@@ -236,7 +238,8 @@ action.
 - [x] Build the production web application
 - [x] Make sure that pushing to main on github triggers a redeploy, and move most of development to a develop branch. Focused prs from develop -> main will be used to trigger redeploys
 - [x] Document how to investigate failures while keeping the equivalent local verification commands available
-- [x] Complete the Phase 19 checkpoint and commit
+- [ ] Rehearse the full migration history in CI and apply tested forward migrations automatically after a production backup
+- [ ] Complete the Phase 19 checkpoint and commit
 
 ## Phase 20: deploy to and migrate onto the Raspberry Pi
 
