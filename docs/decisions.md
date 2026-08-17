@@ -166,3 +166,22 @@ documents or manual document versions.
 
 **Alternatives:** versioned document copies; duplicated roadmaps; splitting
 documents based only on line count.
+
+## Public repository with a protected production branch
+
+**Status:** accepted
+
+Keep the GitHub repository public. Use `develop` as the default integration
+branch and require a verified pull request before merging it into protected
+`main`. A successful push to `main` deploys through a GitHub `production`
+environment and a dedicated SSH key that is restricted on the VPS to the
+deployment script. Database migrations remain manual and block automatic
+deployment.
+
+Repository history was checked before the visibility change and contained no
+production environment files, credentials, or private keys. Public Actions
+logs must never print secrets, and security must not depend on hiding the
+source code or infrastructure design.
+
+**Alternatives:** pay for private-repository ruleset enforcement; allow direct
+pushes to `main`; keep deployment entirely manual.

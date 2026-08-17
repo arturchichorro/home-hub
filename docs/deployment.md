@@ -148,6 +148,71 @@ The learner must review and apply those migrations through the established
 manual process. Automatic deployment never applies or reverses migrations and
 never restores a database backup.
 
+The GitHub repository uses `develop` as its default integration branch and
+protected `main` as its production branch. CI runs on pushes and pull requests.
+The deployment job runs only after verification succeeds for a push to `main`,
+and only that job can read the `production` environment's SSH material. The
+VPS accepts that key only with `restrict` and a forced command pointing to the
+deployment script.
+
+### CI and deployment troubleshooting
+
+Run the CI checks locally in the same order before investigating a runner-only
+failure:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm check
+pnpm typecheck
+pnpm test
+
+pnpm --filter @home-hub/database zero:generate
+pnpm exec biome format --write packages/shared/src/zero/schema.gen.ts
+git diff --exit-code -- packages/shared/src/zero/schema.gen.ts
+
+pnpm db:generate
+git status --short -- packages/database/drizzle
+
+VITE_ZERO_CACHE_URL=https://home.achichorro.com/zero \
+  pnpm --filter @home-hub/web build
+```
+
+Zero generation is expected to print warnings about database defaults; the
+check fails only when formatted generated output differs. Drizzle generation
+must report that there is nothing to migrate and leave its directory clean.
+Neither check applies a migration.
+
+If `verify` fails, inspect its first failing step; production deployment will
+not start. If `Deploy production` fails, use the stage that failed to narrow
+the investigation:
+
+- SSH setup or connection: verify the environment secret and variable names,
+  the pinned host fingerprint, and the restricted public key without printing
+  private key material.
+- Migration refusal: review and apply the committed migrations manually before
+  retrying the code deployment.
+- Backup failure: run the backup script directly on the VPS and inspect
+  `home-hub-backup.service` in the system journal.
+- Build, startup, or health failure: inspect Compose state and bounded service
+  logs, then call the public readiness routes directly.
+
+Useful production diagnostics are:
+
+```bash
+cd /opt/home-hub
+docker compose --env-file .env.production -f compose.production.yml ps
+docker compose --env-file .env.production -f compose.production.yml \
+  logs --tail=200 api zero-cache web postgres
+curl -i https://home.achichorro.com/api/ready
+curl -i https://home.achichorro.com/zero/keepalive
+sudo journalctl -u home-hub-backup.service -n 50 --no-pager
+```
+
+Do not print environment files, private keys, database URLs, or GitHub secrets
+while investigating. Do not repeatedly retry a failed deployment until its
+cause is understood. A failed code deployment never authorizes an automatic
+database restore or migration rollback.
+
 `scripts/backup-production-postgres.sh` creates a PostgreSQL custom-format
 dump containing every database schema, validates the archive before upload,
 and copies it to the dedicated private R2 backup bucket. Its temporary local
