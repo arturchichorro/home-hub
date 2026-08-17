@@ -59,3 +59,46 @@ jobs:
         env:
           VITE_ZERO_CACHE_URL: https://home.achichorro.com/zero
         run: pnpm --filter @home-hub/web build
+
+  deploy:
+    name: Deploy production
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      deployments: write
+    environment:
+      name: production
+      url: https://home.achichorro.com
+    concurrency:
+      group: production-deployment
+      cancel-in-progress: false
+
+    steps:
+      - name: Configure deployment SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/home_hub_deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/home_hub_deploy ~/.ssh/known_hosts
+
+      - name: Deploy verified main revision
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER }}
+        run: |
+          ssh -T \
+            -i ~/.ssh/home_hub_deploy \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o IdentitiesOnly=yes \
+            -o ServerAliveCountMax=10 \
+            -o ServerAliveInterval=30 \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "$VPS_USER@$VPS_HOST"
