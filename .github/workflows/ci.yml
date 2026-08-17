@@ -54,3 +54,8 @@ jobs:
             git diff -- packages/database/drizzle
             exit 1
           fi
+
+      - name: Build production web application
+        env:
+          VITE_ZERO_CACHE_URL: https://home.achichorro.com/zero
+        run: pnpm --filter @home-hub/web build
