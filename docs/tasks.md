@@ -236,7 +236,7 @@ action.
 - [x] Build the production web application
 - [x] Make sure that pushing to main on github triggers a redeploy, and move most of development to a develop branch. Focused prs from develop -> main will be used to trigger redeploys
 - [x] Document how to investigate failures while keeping the equivalent local verification commands available
-- [ ] Complete the Phase 19 checkpoint and commit
+- [x] Complete the Phase 19 checkpoint and commit
 
 ## Phase 20: deploy to and migrate onto the Raspberry Pi
 
