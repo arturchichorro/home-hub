@@ -63,6 +63,11 @@ pnpm biome lint --write path/to/file.ts
 - [ ] move away de random ass inline svg icons, usar uma icon library
 - [ ] fix flashing de household_members ao adicionar uma versão segura de users à publication de zero
 
+## Ideias
+- [ ] personal scoped todo list / wish list / wtv -> sem ser household scoped
+- [ ] household shopping list -> transformar em várias listas, emq dá para adicionar listas diferentes na mesma household (tp wishlist / shopping list / todo list)
+- [ ] goals module
+
 ## Notes
 
 - Household invitation revocation is planned as part of the household
