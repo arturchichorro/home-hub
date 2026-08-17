@@ -29,3 +29,28 @@ jobs:
 
       - name: Check formatting and linting
         run: pnpm check
+
+      - name: Type-check workspace
+        run: pnpm typecheck
+
+      - name: Run test suite
+        run: pnpm test
+
+      - name: Verify generated Zero schema
+        run: |
+          pnpm --filter @home-hub/database zero:generate
+          pnpm exec biome format --write packages/shared/src/zero/schema.gen.ts
+          git diff --exit-code -- packages/shared/src/zero/schema.gen.ts
+
+      - name: Verify Drizzle migrations
+        env:
+          DATABASE_URL: postgres://home_hub:home_hub@127.0.0.1:5432/home_hub
+        run: |
+          pnpm db:generate
+          changes="$(git status --porcelain --untracked-files=all -- packages/database/drizzle)"
+          if [ -n "$changes" ]; then
+            echo "Drizzle schema and committed migrations are out of sync:"
+            echo "$changes"
+            git diff -- packages/database/drizzle
+            exit 1
+          fi
