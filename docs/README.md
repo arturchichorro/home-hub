@@ -9,6 +9,13 @@ household enables the built-in modules it wants to use. Initial modules include:
 
 Connected changes should appear immediately and converge across clients. Previously synchronized data should remain readable without connectivity. Long-term offline writes are deliberately out of scope: editing becomes unavailable when the synchronization client determines that it is disconnected.
 
+## Project planning
+
+- [Tasks](./tasks.md) contains committed work in implementation order.
+- [Task history](./task-history.md) preserves completed delivery phases.
+- [Backlog](./backlog.md) contains optional improvements and possible future modules.
+- Subject documents in this directory describe the currently implemented system and accepted decisions.
+
 ## Useful commands
 
 ### Local database
@@ -53,23 +60,3 @@ pnpm --filter @home-hub/web build
 ```sh
 pnpm biome lint --write path/to/file.ts
 ```
-
-## Todo
-
-- [ ] separate concerns (db, methods, etc)
-- [ ] criar cenas de docs separadas por features (uma para shopping items, outra para recipes, outra para learn french, etc)
-- [ ] adicionar quantidades a shopping list items
-- [ ] adicionar feature de transformar recipes em cenas que posso adicionar à shopping list
-- [ ] move away de random ass inline svg icons, usar uma icon library
-- [ ] fix flashing de household_members ao adicionar uma versão segura de users à publication de zero
-- [ ] tem de ser possível editar um shopping item
-
-## Ideias
-- [ ] personal scoped todo list / wish list / wtv -> sem ser household scoped
-- [ ] household shopping list -> transformar em várias listas, emq dá para adicionar listas diferentes na mesma household (tp wishlist / shopping list / todo list)
-- [ ] goals module
-
-## Notes
-
-- Household invitation revocation is planned as part of the household
-  management phase; the schema already contains `household_invites.revoked_at`.
