@@ -233,7 +233,7 @@ action.
 - [x] Run the complete test suite
 - [x] Regenerate the Zero schema and fail if committed generated output differs
 - [x] Verify migration files and Drizzle metadata are consistent with the declared database schema
-- [ ] Build the production web application
+- [x] Build the production web application
 - [ ] Make sure that pushing to main on github triggers a redeploy, and move most of development to a develop branch. Focused prs from develop -> main will be used to trigger redeploys
 - [ ] Document how to investigate failures while keeping the equivalent local verification commands available
 - [ ] Complete the Phase 19 checkpoint and commit

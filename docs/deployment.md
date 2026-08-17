@@ -134,6 +134,20 @@ explicit acceptance that writes made after the selected backup may be lost.
 Never perform or automate a production database restore as part of an ordinary
 application rollback.
 
+### Automatic code deployment
+
+`scripts/deploy-production.sh` is the sole command authorized for the
+dedicated GitHub Actions deployment key. It serializes deployments with a host
+lock, requires a clean `main` checkout and a fast-forward update, creates an
+off-host PostgreSQL backup, rebuilds the Compose services, waits for container
+health, and verifies the public web, API readiness, and Zero keepalive routes.
+
+If the commits awaiting deployment change anything below
+`packages/database/drizzle`, the script stops before pulling or rebuilding.
+The learner must review and apply those migrations through the established
+manual process. Automatic deployment never applies or reverses migrations and
+never restores a database backup.
+
 `scripts/backup-production-postgres.sh` creates a PostgreSQL custom-format
 dump containing every database schema, validates the archive before upload,
 and copies it to the dedicated private R2 backup bucket. Its temporary local
