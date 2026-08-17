@@ -227,7 +227,7 @@ action.
 
 ## Phase 19: continuous integration after initial deployment
 
-- [ ] Add a CI workflow that starts from a clean, frozen dependency installation
+- [x] Add a CI workflow that starts from a clean, frozen dependency installation
 - [ ] Run formatting and linting checks
 - [ ] Run type-checking for every application and package
 - [ ] Run the complete test suite
