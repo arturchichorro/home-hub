@@ -25,3 +25,4 @@ together before implementation begins.
 - [ ] Goals
 - [ ] Household finance
 - [ ] Friend list with timestamped notes
+- [ ] Turn home hub web into a PWA
