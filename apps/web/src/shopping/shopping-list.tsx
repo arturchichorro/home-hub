@@ -2,9 +2,11 @@ import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import { IconButton, InlineAlert } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { AddShoppingItemForm } from "./add-shopping-item-form";
 import { ShoppingItemNameInput } from "./shopping-item-name-input";
+import { orderCurrentShoppingItems } from "./shopping-list-order";
 
 type ShoppingListProps = {
   householdId: string;
@@ -67,6 +69,7 @@ function ArchiveIcon() {
 export function ShoppingList({ householdId }: ShoppingListProps) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
+  const [showArchived, setShowArchived] = useState(false);
 
   const [items, result] = useQuery(
     queries.shopping.byHousehold({ householdId }),
@@ -81,7 +84,7 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
   }
 
   const queryComplete = result.type === "complete";
-  const currentItems = items.filter((item) => item.status !== "archived");
+  const currentItems = orderCurrentShoppingItems(items);
   const archivedItems = items.filter((item) => item.status === "archived");
 
   function setStatus(itemId: string, status: ShoppingItemStatus) {
@@ -96,71 +99,70 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
   }
 
   return (
-    <div className="grid gap-10" aria-busy={!queryComplete}>
-      <section
-        aria-labelledby="shopping-current-heading"
-        className="grid gap-5"
-      >
-        <h2 id="shopping-current-heading" className="text-xl font-semibold">
-          Shopping list
-        </h2>
+    <section
+      aria-labelledby="shopping-current-heading"
+      aria-busy={!queryComplete}
+      className="grid gap-5"
+    >
+      <h2 id="shopping-current-heading" className="text-xl font-semibold">
+        Shopping list
+      </h2>
 
-        <AddShoppingItemForm householdId={householdId} />
+      <ul className="divide-y divide-border border-y border-border">
+        <li>
+          <AddShoppingItemForm householdId={householdId} />
+        </li>
 
-        {queryComplete && currentItems.length === 0 ? (
-          <p className="text-sm text-muted">The shopping list is empty.</p>
-        ) : currentItems.length > 0 ? (
-          <ul className="divide-y divide-border border-y border-border">
-            {currentItems.map((item) => {
-              const crossed = item.status === "crossed";
-              const toggleLabel = crossed ? "Reactivate" : "Cross";
+        {currentItems.map((item) => {
+          const crossed = item.status === "crossed";
+          const toggleLabel = crossed ? "Reactivate" : "Cross";
 
-              return (
-                <li
-                  key={item.id}
-                  className="flex min-h-14 items-center gap-2 py-2"
-                >
-                  <ShoppingItemNameInput
-                    householdId={householdId}
-                    itemId={item.id}
-                    currentName={item.name}
-                    crossed={crossed}
-                  />
-                  <IconButton
-                    aria-label={`${toggleLabel} ${item.name}`}
-                    title={`${toggleLabel} ${item.name}`}
-                    disabled={!mutationEnabled}
-                    onClick={() =>
-                      setStatus(item.id, crossed ? "active" : "crossed")
-                    }
-                  >
-                    {crossed ? <RestoreIcon /> : <CrossIcon />}
-                  </IconButton>
-                  <IconButton
-                    aria-label={`Archive ${item.name}`}
-                    title={`Archive ${item.name}`}
-                    disabled={!mutationEnabled}
-                    onClick={() => setStatus(item.id, "archived")}
-                  >
-                    <ArchiveIcon />
-                  </IconButton>
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
-      </section>
+          return (
+            <li key={item.id} className="flex min-h-14 items-center gap-2 py-2">
+              <ShoppingItemNameInput
+                householdId={householdId}
+                itemId={item.id}
+                currentName={item.name}
+                crossed={crossed}
+              />
+              <IconButton
+                aria-label={`${toggleLabel} ${item.name}`}
+                title={`${toggleLabel} ${item.name}`}
+                disabled={!mutationEnabled}
+                onClick={() =>
+                  setStatus(item.id, crossed ? "active" : "crossed")
+                }
+              >
+                {crossed ? <RestoreIcon /> : <CrossIcon />}
+              </IconButton>
+              <IconButton
+                aria-label={`Archive ${item.name}`}
+                title={`Archive ${item.name}`}
+                disabled={!mutationEnabled}
+                onClick={() => setStatus(item.id, "archived")}
+              >
+                <ArchiveIcon />
+              </IconButton>
+            </li>
+          );
+        })}
 
-      {archivedItems.length > 0 ? (
-        <section
-          aria-labelledby="shopping-archived-heading"
-          className="grid gap-3"
-        >
-          <h2 id="shopping-archived-heading" className="text-lg font-semibold">
-            Archived
-          </h2>
-          <ul className="divide-y divide-border border-y border-border">
-            {archivedItems.map((item) => (
+        <li className="flex min-h-14 items-center py-2">
+          <IconButton
+            aria-label={
+              showArchived ? "Hide archived items" : "Show archived items"
+            }
+            aria-pressed={showArchived}
+            title={showArchived ? "Hide archived items" : "Show archived items"}
+            disabled={archivedItems.length === 0}
+            onClick={() => setShowArchived((visible) => !visible)}
+          >
+            <ArchiveIcon />
+          </IconButton>
+        </li>
+
+        {showArchived
+          ? archivedItems.map((item) => (
               <li
                 key={item.id}
                 className="flex min-h-14 items-center gap-2 py-2"
@@ -180,10 +182,9 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
                   <RestoreIcon />
                 </IconButton>
               </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-    </div>
+            ))
+          : null}
+      </ul>
+    </section>
   );
 }

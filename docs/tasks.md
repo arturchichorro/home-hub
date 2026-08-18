@@ -36,6 +36,16 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Standardize application inputs on a Base UI-backed `ui-web` primitive
 - [ ] Complete the shopping-item editing checkpoint and commit
 
+## Refine the shopping and application-shell interface
+
+- [x] Make the top bar sticky and non-wrapping, with compact mobile branding, household trigger, and connection status
+- [x] Refine menu triggers and make the household picker content-sized
+- [x] Move enabled household modules into a menu beside the household picker
+- [x] Present add-item, current, crossed, archive-toggle, and expanded archived rows as one shopping list
+- [x] Keep archived items hidden until the archive row is toggled open
+- [ ] Verify focused responsive, keyboard, accessible-name, and interface-build behavior
+- [ ] Update the design-system documentation and complete the UI checkpoint
+
 ## Deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack

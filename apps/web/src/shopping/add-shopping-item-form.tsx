@@ -1,18 +1,36 @@
 import { mutators } from "@home-hub/shared/zero/mutators";
-import { Button, Field, FieldControl, InlineAlert } from "@home-hub/ui-web";
+import { ErrorPopover, IconButton, Input } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
-import { type SubmitEvent, useState } from "react";
+import { type SubmitEvent, useId, useRef, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 type AddShoppingItemFormProps = {
   householdId: string;
 };
 
+function PlusIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-4"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth="2"
+    >
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
 export function AddShoppingItemForm({ householdId }: AddShoppingItemFormProps) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState<string>();
+  const errorId = useId();
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,27 +65,46 @@ export function AddShoppingItemForm({ householdId }: AddShoppingItemFormProps) {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
-    >
-      <Field label="Item">
-        <FieldControl
+    <>
+      <form
+        onSubmit={handleSubmit}
+        className="flex min-h-14 items-center gap-2 py-2"
+      >
+        <Input
+          ref={inputRef}
+          appearance="inline"
+          aria-label="Add shopping item"
+          aria-invalid={error ? true : undefined}
+          aria-errormessage={error ? errorId : undefined}
+          autoComplete="off"
+          disabled={!mutationEnabled}
+          maxLength={100}
           name="name"
+          placeholder="Add item"
           required
           value={name}
-          onChange={(event) => setName(event.target.value)}
+          onValueChange={(nextName) => {
+            setName(nextName);
+            setError(undefined);
+          }}
         />
-      </Field>
-
-      <Button type="submit" disabled={!mutationEnabled}>
-        Add item
-      </Button>
-      {error ? (
-        <InlineAlert role="alert" variant="danger" className="sm:col-span-2">
-          {error}
-        </InlineAlert>
-      ) : null}
-    </form>
+        <IconButton
+          aria-label="Add shopping item"
+          title="Add shopping item"
+          type="submit"
+          disabled={!mutationEnabled || name.trim().length === 0}
+        >
+          <PlusIcon />
+        </IconButton>
+      </form>
+      <ErrorPopover
+        anchor={inputRef}
+        id={errorId}
+        open={error !== undefined}
+        onDismiss={() => setError(undefined)}
+      >
+        {error}
+      </ErrorPopover>
+    </>
   );
 }

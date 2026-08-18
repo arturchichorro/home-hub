@@ -23,6 +23,30 @@ export function MenuTrigger({ className, ...props }: MenuTriggerProps) {
   );
 }
 
+export type MenuChevronProps = ComponentProps<"svg">;
+
+export function MenuChevron({ className, ...props }: MenuChevronProps) {
+  const classes = ["size-4 shrink-0 text-muted", className]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <svg
+      {...props}
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      className={classes}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.75"
+    >
+      <path d="m4 6 4 4 4-4" />
+    </svg>
+  );
+}
+
 type BaseMenuPopupProps = ComponentProps<typeof BaseMenu.Popup>;
 type BaseMenuPositionerProps = ComponentProps<typeof BaseMenu.Positioner>;
 

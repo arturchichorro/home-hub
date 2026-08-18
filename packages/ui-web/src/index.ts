@@ -40,6 +40,8 @@ export {
   type InputProps,
 } from "./input";
 export {
+  MenuChevron,
+  type MenuChevronProps,
   MenuItem,
   type MenuItemProps,
   type MenuItemVariant,

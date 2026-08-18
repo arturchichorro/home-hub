@@ -30,6 +30,7 @@ export function ZeroConnectionStatus() {
     <StatusIndicator
       live
       label={presentation.label}
+      labelClassName="sr-only sm:not-sr-only"
       variant={presentation.variant}
     />
   );

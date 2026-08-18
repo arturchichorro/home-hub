@@ -393,8 +393,9 @@ only when a change is useful to hear.
 
 Use it for Zero connection state and similarly concise system states. Map
 Connected to success, Connecting to warning, and Offline, Authentication
-required, Synchronization error, and Synchronization stopped to danger. Never
-render the colored dot without its label.
+required, Synchronization error, and Synchronization stopped to danger. The
+application shell may visually hide its label on narrow screens, but the label
+remains available to assistive technology and live announcements.
 
 ### Divided list and feature composition
 
@@ -421,11 +422,13 @@ The application canvas fills the viewport. The top bar may span the available
 width, while primary module content is centered at a maximum width of 48rem.
 Use 16px inline page padding by default, 24px from `sm`, and 32px from `lg`.
 
-At `sm` and above, the top bar presents the wordmark and household selector on
-the left, with connection state and account menu on the right. Below `sm`, it
-uses two rows: wordmark, connection state, and account menu first; a full-width
-household selector second. Connection text may shorten where necessary but
-must never become a color-only dot.
+The top bar is sticky and never wraps. At `sm` and above, it presents the
+wordmark, content-sized household selector, and module menu on the left, with
+connection state and account menu on the right. Below `sm`, the same single row
+uses the compact `HH` wordmark, an icon-only household trigger, the module
+trigger, connection dot, and a width-limited account menu. The connection label
+is visually hidden on the narrow layout but remains its accessible name and
+live-region content.
 
 Household and account surfaces are anchored menus or popovers on larger
 screens. On narrow screens they may use a modal sheet with the same options and
@@ -435,10 +438,10 @@ is a later refinement if it complicates the working version.
 
 ### Module navigation
 
-Module navigation remains a horizontal row of icon-and-label links. Below
-`sm`, it may scroll horizontally rather than collapse behind another menu.
-Keep the current destination visible, preserve text labels, and place Household
-last. The navigation does not wrap into multiple ambiguous rows.
+Module navigation uses an icon trigger beside the household selector. Its menu
+contains enabled household modules with icons and text labels, indicates the
+current destination, and places Household last. Household remains available
+regardless of module settings.
 
 ### Content and forms
 
@@ -483,9 +486,11 @@ and session-restoration states.
 
 The persistent top bar contains:
 
-- the Home Hub wordmark;
+- the Home Hub wordmark, shortened visually to `HH` below `sm`;
 - the selected-household control;
-- a connection indicator using both text and color;
+- a module-menu control beside the household control;
+- a connection indicator using text and color, with its text visually hidden
+  but still accessible below `sm`;
 - the current username and an account menu, initially containing logout.
 
 The household control opens a household-selection surface. It lists current
@@ -494,10 +499,9 @@ code and to create a household. The initial product retains unaddressed opaque
 invites, so it does not show an incoming-invitation inbox. Outgoing pending
 invites remain visible to the owner in household settings.
 
-Below the top bar, route navigation shows enabled household modules as icon and
-label links. Household settings is always present and always last. These are
-navigation links with a current-page state, not ARIA tabs controlling one
-in-page tab panel.
+The module menu shows enabled household modules as icon-and-label choices.
+Household settings is always present and always last, and the current route is
+represented as the selected choice.
 
 On narrow screens, top-bar menus may become modal sheets or drawers while
 preserving the same information architecture.
@@ -505,17 +509,20 @@ preserving the same information architecture.
 ### Connection state
 
 Show Zero's existing labels: Connected, Connecting, Offline, Authentication
-required, Synchronization error, and Synchronization stopped. Color reinforces
-the state but never replaces its text. Connected uses a positive color,
-connecting uses a caution color, and offline/error/auth-required/closed use a
-danger color.
+required, Synchronization error, and Synchronization stopped. Connected uses a
+positive color, connecting uses a caution color, and
+offline/error/auth-required/closed use a danger color. On narrow screens only
+the colored dot is visible, while the full text remains available to assistive
+technology and status announcements.
 
 ### Shopping
 
-The primary section contains active and crossed items. Each row shows the item
-name, an action that toggles active/crossed, and a separate archive action.
-Archived items appear in a secondary section below and provide a restore
-action. The screen also needs add-item, empty, loading, synchronization error,
+Shopping is one divided list. Its first row is a borderless add-item input with
+a plus action. Active items follow in creation order, then crossed items in
+creation order. Each item row provides active/crossed and archive actions. A
+persistent archive-icon row follows current items; archived item rows remain
+hidden until that row is toggled open and then appear directly below it with a
+restore action. The screen also needs loading, synchronization error,
 mutation-disabled, and optimistic mutation states.
 
 ### Recipes

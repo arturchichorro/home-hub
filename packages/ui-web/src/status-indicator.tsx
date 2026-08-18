@@ -15,6 +15,7 @@ export type StatusIndicatorProps = Omit<
   variant?: StatusIndicatorVariant;
   size?: StatusIndicatorSize;
   live?: boolean;
+  labelClassName?: string;
 };
 
 const variantClasses: Record<StatusIndicatorVariant, string> = {
@@ -39,6 +40,7 @@ export function StatusIndicator({
   variant = "neutral",
   size = "default",
   live = false,
+  labelClassName,
   className,
   ...props
 }: StatusIndicatorProps) {
@@ -63,7 +65,7 @@ export function StatusIndicator({
         aria-hidden="true"
         className={`shrink-0 rounded-full bg-current ${dotSizeClasses[size]}`}
       />
-      <span>{label}</span>
+      <span className={labelClassName}>{label}</span>
     </span>
   );
 }

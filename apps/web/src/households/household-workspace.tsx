@@ -1,7 +1,13 @@
 import { queries } from "@home-hub/shared/zero/queries";
-import { InlineAlert } from "@home-hub/ui-web";
+import {
+  MenuPopup,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuRoot,
+  MenuTrigger,
+} from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
-import { Link, Outlet } from "@tanstack/react-router";
+import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ComponentType } from "react";
 
 type HouseholdWorkspaceProps = {
@@ -12,8 +18,10 @@ type ModuleIconProps = {
   className?: string;
 };
 
+type ModuleKey = "shopping" | "recipes" | "household";
+
 type ModuleDefinition = {
-  key: "shopping" | "recipes" | "household";
+  key: ModuleKey;
   label: string;
   to:
     | "/households/$householdId/shopping"
@@ -100,21 +108,38 @@ const moduleDefinitions: readonly ModuleDefinition[] = [
   householdModuleDefinition,
 ];
 
-const navigationLinkClasses =
-  "inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-none border-b-2 px-4 text-sm font-medium outline-none transition-colors duration-[var(--motion-duration-fast)] focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas";
+function ModulesIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <rect x="4" y="4" width="6" height="6" rx="1" />
+      <rect x="14" y="4" width="6" height="6" rx="1" />
+      <rect x="4" y="14" width="6" height="6" rx="1" />
+      <rect x="14" y="14" width="6" height="6" rx="1" />
+    </svg>
+  );
+}
 
-export function HouseholdWorkspace({ householdId }: HouseholdWorkspaceProps) {
+function getCurrentModule(pathname: string): ModuleKey {
+  if (pathname.endsWith("/shopping")) return "shopping";
+  if (pathname.endsWith("/recipes")) return "recipes";
+  return "household";
+}
+
+export function HouseholdModuleMenu({ householdId }: HouseholdWorkspaceProps) {
+  const navigate = useNavigate();
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
   const [settings, result] = useQuery(
     queries.modules.byHousehold({ householdId }),
   );
-
-  if (result.type === "error") {
-    return (
-      <InlineAlert role="alert" variant="danger">
-        Unable to load household modules.
-      </InlineAlert>
-    );
-  }
 
   const queryComplete = result.type === "complete";
   const enabledModuleKeys = new Set(
@@ -128,33 +153,46 @@ export function HouseholdWorkspace({ householdId }: HouseholdWorkspaceProps) {
       )
     : moduleDefinitions;
 
-  return (
-    <div className="grid gap-8">
-      <nav
-        aria-label="Household modules"
-        className="flex flex-wrap justify-center gap-2"
-      >
-        {availableModules.map(({ key, label, to, Icon }) => (
-          <Link
-            key={key}
-            to={to}
-            params={{ householdId }}
-            preload="render"
-            activeOptions={{ exact: true, includeSearch: false }}
-            className={navigationLinkClasses}
-            activeProps={{ className: "border-primary text-primary" }}
-            inactiveProps={{
-              className:
-                "border-transparent text-muted hover:bg-raised hover:text-foreground",
-            }}
-          >
-            <Icon className="size-5" />
-            {label}
-          </Link>
-        ))}
-      </nav>
+  function selectModule(key: string) {
+    const module = availableModules.find((candidate) => candidate.key === key);
+    if (!module) return;
 
-      <Outlet />
-    </div>
+    void navigate({ to: module.to, params: { householdId } });
+  }
+
+  return (
+    <MenuRoot>
+      <MenuTrigger
+        aria-label="Choose household module"
+        className="size-10! p-0!"
+        disabled={result.type === "error"}
+        title={
+          result.type === "error"
+            ? "Household modules are unavailable"
+            : "Choose household module"
+        }
+      >
+        <ModulesIcon />
+      </MenuTrigger>
+      <MenuPopup>
+        <MenuRadioGroup
+          value={getCurrentModule(pathname)}
+          onValueChange={selectModule}
+        >
+          {availableModules.map(({ key, label, Icon }) => (
+            <MenuRadioItem key={key} value={key}>
+              <span className="flex items-center gap-2">
+                <Icon className="size-5 text-muted" />
+                {label}
+              </span>
+            </MenuRadioItem>
+          ))}
+        </MenuRadioGroup>
+      </MenuPopup>
+    </MenuRoot>
   );
+}
+
+export function HouseholdWorkspace(_props: HouseholdWorkspaceProps) {
+  return <Outlet />;
 }
