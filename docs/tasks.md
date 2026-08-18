@@ -34,7 +34,7 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Verify normalization, authorization, duplicate rejection, and the interface build
 - [x] Refine editing to use row-style inputs, debounced saves, and an error popover
 - [x] Standardize application inputs on a Base UI-backed `ui-web` primitive
-- [ ] Complete the shopping-item editing checkpoint and commit
+- [x] Complete the shopping-item editing checkpoint and commit
 
 ## Refine the shopping and application-shell interface
 
