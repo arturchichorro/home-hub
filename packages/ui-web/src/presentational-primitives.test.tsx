@@ -61,4 +61,16 @@ describe("StatusIndicator", () => {
     expect(markup).not.toContain('role="status"');
     expect(markup).not.toContain("aria-live");
   });
+
+  it("allows responsive visual treatment without removing the label", () => {
+    const markup = renderToStaticMarkup(
+      <StatusIndicator
+        label="Connected"
+        labelClassName="sr-only sm:not-sr-only"
+      />,
+    );
+
+    expect(markup).toContain('class="sr-only sm:not-sr-only"');
+    expect(markup).toContain("Connected");
+  });
 });

@@ -34,7 +34,23 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Verify normalization, authorization, duplicate rejection, and the interface build
 - [x] Refine editing to use row-style inputs, debounced saves, and an error popover
 - [x] Standardize application inputs on a Base UI-backed `ui-web` primitive
-- [ ] Complete the shopping-item editing checkpoint and commit
+- [x] Complete the shopping-item editing checkpoint and commit
+
+## Refine the shopping and application-shell interface
+
+- [x] Make the top bar sticky and non-wrapping, with compact mobile branding, household trigger, and connection status
+- [x] Refine menu triggers and make the household picker content-sized
+- [x] Move enabled household modules into a menu beside the household picker
+- [x] Present add-item, current, crossed, archive-toggle, and expanded archived rows as one shopping list
+- [x] Keep archived items hidden until the archive row is toggled open
+- [x] Verify focused responsive, keyboard, accessible-name, and interface-build behavior
+- [x] Update the design-system documentation and complete the UI checkpoint
+
+## Standardize web icons on Lucide
+
+- [x] Adopt `lucide-react` through the shared `ui-web` package
+- [x] Replace application, menu, select, and gallery icons with Lucide components
+- [x] Verify there are no remaining one-off SVG icons and complete the icon checkpoint
 
 ## Deploy to and migrate onto the Raspberry Pi
 

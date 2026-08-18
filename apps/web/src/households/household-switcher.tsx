@@ -1,6 +1,8 @@
 import { queries } from "@home-hub/shared/zero/queries";
 import {
+  House,
   InlineAlert,
+  MenuChevron,
   MenuItem,
   MenuPopup,
   MenuRadioGroup,
@@ -57,12 +59,17 @@ export function HouseholdSwitcher({
               ? `Switch household. Current household: ${selectedHousehold.name}`
               : "Choose household"
           }
-          className="min-w-52 justify-between!"
+          className="size-10! min-w-0 p-0! sm:h-10! sm:w-auto! sm:max-w-full sm:justify-between! sm:px-4!"
         >
-          {selectedHousehold?.name ?? "Choose household"}
-          <span aria-hidden="true">⌄</span>
+          <span className="sm:hidden">
+            <House aria-hidden="true" className="size-5" />
+          </span>
+          <span className="hidden truncate sm:inline">
+            {selectedHousehold?.name ?? "Choose household"}
+          </span>
+          <MenuChevron className="hidden sm:block" />
         </MenuTrigger>
-        <MenuPopup className="w-(--anchor-width)">
+        <MenuPopup className="w-max min-w-(--anchor-width)! max-w-[calc(100vw-2rem)]">
           {households.length > 0 ? (
             <MenuRadioGroup
               value={selectedHouseholdId ?? ""}

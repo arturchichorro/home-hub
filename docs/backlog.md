@@ -13,7 +13,6 @@ together before implementation begins.
 - [ ] Add quantities to shopping items
 - [ ] Add recipe ingredients to Shopping
 - [ ] Publish safe member profiles through Zero to prevent interface flashing
-- [ ] Replace one-off inline SVG icons with a shared icon library
 - [ ] Improve separation between database access, domain behavior, and transport code
 - [ ] Add module-specific documentation for Shopping and Recipes
 
@@ -21,7 +20,8 @@ together before implementation begins.
 
 - [ ] French Vocabulary
 - [ ] Personal todo or wish lists
-- [ ] Multiple household lists, after reconsidering the current product non-goal
+- [ ] Multiple household lists, after reconsidering the current product non-goal - UI inspired by Gkeep
 - [ ] Goals
 - [ ] Household finance
 - [ ] Friend list with timestamped notes
+- [ ] Turn home hub web into a PWA
