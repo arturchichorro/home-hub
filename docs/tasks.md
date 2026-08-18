@@ -43,7 +43,7 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Move enabled household modules into a menu beside the household picker
 - [x] Present add-item, current, crossed, archive-toggle, and expanded archived rows as one shopping list
 - [x] Keep archived items hidden until the archive row is toggled open
-- [ ] Verify focused responsive, keyboard, accessible-name, and interface-build behavior
+- [x] Verify focused responsive, keyboard, accessible-name, and interface-build behavior
 - [ ] Update the design-system documentation and complete the UI checkpoint
 
 ## Standardize web icons on Lucide
