@@ -159,8 +159,10 @@ or synchronized data.
 
 **Status:** accepted
 
-Keep one current document for each stable subject and one chronological backlog
-in [Tasks](./tasks.md). Update current documents when choices change, identify
+Keep one current document for each stable subject, committed work in
+[Tasks](./tasks.md), completed delivery phases in
+[Task history](./task-history.md), and optional future work in
+[Backlog](./backlog.md). Update current documents when choices change, identify
 superseded decisions here, and rely on Git history rather than copied `v2`
 documents or manual document versions.
 

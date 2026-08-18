@@ -13,6 +13,10 @@ export {
   type DialogSize,
 } from "./dialog";
 export {
+  ErrorPopover,
+  type ErrorPopoverProps,
+} from "./error-popover";
+export {
   Field,
   FieldControl,
   type FieldControlProps,
@@ -30,6 +34,11 @@ export {
   type InlineAlertProps,
   type InlineAlertVariant,
 } from "./inline-alert";
+export {
+  Input,
+  type InputAppearance,
+  type InputProps,
+} from "./input";
 export {
   MenuItem,
   type MenuItemProps,

@@ -1,10 +1,12 @@
 import {
   Button,
+  ErrorPopover,
   Field,
   FieldControl,
   FieldTextarea,
   IconButton,
   InlineAlert,
+  Input,
   MenuItem,
   MenuPopup,
   MenuRadioGroup,
@@ -20,7 +22,7 @@ import {
   StatusIndicator,
   Switch,
 } from "@home-hub/ui-web";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 
 type GallerySectionProps = {
   title: string;
@@ -61,6 +63,8 @@ export function UiGallery() {
   const [household, setHousehold] = useState("Rue des Mimosas");
   const [imageTarget, setImageTarget] = useState("recipe");
   const [shoppingEnabled, setShoppingEnabled] = useState(true);
+  const [showFieldError, setShowFieldError] = useState(true);
+  const errorAnchorRef = useRef<HTMLInputElement>(null);
 
   return (
     <main className="min-h-screen bg-canvas px-5 py-10 font-sans text-foreground sm:px-8">
@@ -235,6 +239,36 @@ export function UiGallery() {
             >
               <p className="text-sm text-muted">Raised panel body content.</p>
             </Panel>
+          </div>
+        </GallerySection>
+
+        <GallerySection
+          title="Error popovers"
+          description="Compact validation feedback anchored to an editable control without moving focus."
+        >
+          <div className="flex max-w-xl items-center gap-3 border-y border-border py-2">
+            <Input
+              ref={errorAnchorRef}
+              appearance="inline"
+              aria-label="Example shopping item name"
+              aria-invalid={showFieldError || undefined}
+              defaultValue="Oat milk"
+              onValueChange={() => setShowFieldError(false)}
+            />
+            <Button
+              size="compact"
+              variant="secondary"
+              onClick={() => setShowFieldError(true)}
+            >
+              Show error
+            </Button>
+            <ErrorPopover
+              anchor={errorAnchorRef}
+              open={showFieldError}
+              onDismiss={() => setShowFieldError(false)}
+            >
+              This item is already in the list.
+            </ErrorPopover>
           </div>
         </GallerySection>
 

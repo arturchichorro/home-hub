@@ -4,6 +4,7 @@ import { IconButton, InlineAlert } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { AddShoppingItemForm } from "./add-shopping-item-form";
+import { ShoppingItemNameInput } from "./shopping-item-name-input";
 
 type ShoppingListProps = {
   householdId: string;
@@ -119,15 +120,12 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
                   key={item.id}
                   className="flex min-h-14 items-center gap-2 py-2"
                 >
-                  <span
-                    className={
-                      crossed
-                        ? "min-w-0 flex-1 truncate text-muted line-through"
-                        : "min-w-0 flex-1 truncate"
-                    }
-                  >
-                    {item.name}
-                  </span>
+                  <ShoppingItemNameInput
+                    householdId={householdId}
+                    itemId={item.id}
+                    currentName={item.name}
+                    crossed={crossed}
+                  />
                   <IconButton
                     aria-label={`${toggleLabel} ${item.name}`}
                     title={`${toggleLabel} ${item.name}`}
@@ -167,9 +165,12 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
                 key={item.id}
                 className="flex min-h-14 items-center gap-2 py-2"
               >
-                <span className="min-w-0 flex-1 truncate text-muted">
-                  {item.name}
-                </span>
+                <ShoppingItemNameInput
+                  householdId={householdId}
+                  itemId={item.id}
+                  currentName={item.name}
+                  muted
+                />
                 <IconButton
                   aria-label={`Restore ${item.name}`}
                   title={`Restore ${item.name}`}

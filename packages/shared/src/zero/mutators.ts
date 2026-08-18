@@ -7,6 +7,7 @@ import {
 } from "../recipes";
 import {
   addShoppingItemMutationSchema,
+  renameShoppingItemMutationSchema,
   setShoppingItemStatusMutationSchema,
 } from "../shopping";
 import type { ZeroAuthContext } from "./context";
@@ -85,6 +86,49 @@ const addShoppingItem = defineHomeHubMutator(
         updatedAt: timestamp,
       });
     }
+  },
+);
+
+const renameShoppingItem = defineHomeHubMutator(
+  renameShoppingItemMutationSchema,
+  async ({ args, ctx, tx }) => {
+    await requireServerHouseholdModuleAccess({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+      moduleKey: "shopping",
+    });
+
+    const item = await tx.run(
+      zql.shoppingItems
+        .where("id", args.itemId)
+        .where("householdId", args.householdId)
+        .one(),
+    );
+
+    if (!item) {
+      throw new Error("Shopping item rename not allowed");
+    }
+
+    const normalizedName = normalizeShoppingItemName(args.name);
+    const itemWithName = await tx.run(
+      zql.shoppingItems
+        .where("normalizedName", normalizedName)
+        .where("householdId", args.householdId)
+        .one(),
+    );
+
+    if (itemWithName && itemWithName.id !== args.itemId) {
+      throw new Error("Shopping item name already exists");
+    }
+
+    await tx.mutate.shoppingItems.update({
+      id: args.itemId,
+      name: args.name,
+      normalizedName,
+      updatedAt:
+        tx.location === "server" ? Date.now() : args.optimisticUpdatedAt,
+    });
   },
 );
 
@@ -190,6 +234,7 @@ const addRecipeCookLog = defineHomeHubMutator(
 export const mutators = defineHomeHubMutators({
   shopping: {
     add: addShoppingItem,
+    rename: renameShoppingItem,
     setStatus: setShoppingItemStatus,
   },
   recipes: {

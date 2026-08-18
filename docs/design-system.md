@@ -225,11 +225,11 @@ provides meaningful labels and announcements, and Home Hub still verifies
 keyboard use, focus visibility, contrast, zoom, and screen-reader behavior.
 
 The first web vocabulary is intentionally limited to Button, IconButton,
-Field, Select, Switch, Menu, Dialog, Panel, InlineAlert, StatusIndicator, and
-divided-list presentation. Add Tooltip, Toast, Combobox, or dedicated Sheet
-only when a working screen requires them. Route-navigation links, application
-shell composition, shopping rows, recipe content, and household-management
-rows remain feature or application components.
+Input, Field, Select, Switch, Menu, Dialog, Panel, InlineAlert, ErrorPopover,
+StatusIndicator, and divided-list presentation. Add Tooltip, Toast, Combobox,
+or dedicated Sheet only when a working screen requires them. Route-navigation
+links, application shell composition, shopping rows, recipe content, and
+household-management rows remain feature or application components.
 
 ### Future native: Expo UI
 
@@ -286,6 +286,18 @@ Support the same interaction states as Button. Use it for recognizable,
 repeated row actions such as crossing or archiving a shopping item. Use a
 labeled Button when the meaning would be ambiguous; a tooltip is not a
 substitute for the accessible name.
+
+### Input
+
+Input is the Base UI-backed text-control foundation. Its `field` appearance is
+used by FieldControl for conventional forms; its borderless `inline`
+appearance supports direct editing inside rows while preserving visible focus,
+disabled, and invalid states. Feature code consumes this Home Hub primitive
+rather than styling raw text inputs independently.
+
+Input owns presentation and control-state styling, not labels, validation
+rules, debouncing, persistence, or domain behavior. Inputs still require an
+accessible name, either through Field or an explicit label.
 
 ### Field
 
