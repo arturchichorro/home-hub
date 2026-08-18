@@ -44,7 +44,7 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Present add-item, current, crossed, archive-toggle, and expanded archived rows as one shopping list
 - [x] Keep archived items hidden until the archive row is toggled open
 - [x] Verify focused responsive, keyboard, accessible-name, and interface-build behavior
-- [ ] Update the design-system documentation and complete the UI checkpoint
+- [x] Update the design-system documentation and complete the UI checkpoint
 
 ## Standardize web icons on Lucide
 
