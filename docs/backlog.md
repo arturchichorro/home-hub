@@ -19,9 +19,10 @@ together before implementation begins.
 
 ## Future modules and capabilities
 
+- [ ] Make web mobile responsive and general UI improvements
 - [ ] French Vocabulary
 - [ ] Personal todo or wish lists
-- [ ] Multiple household lists, after reconsidering the current product non-goal
+- [ ] Multiple household lists, after reconsidering the current product non-goal - UI inspired by Gkeep
 - [ ] Goals
 - [ ] Household finance
 - [ ] Friend list with timestamped notes
