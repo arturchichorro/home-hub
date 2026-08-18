@@ -13,6 +13,10 @@ export {
   type DialogSize,
 } from "./dialog";
 export {
+  ErrorPopover,
+  type ErrorPopoverProps,
+} from "./error-popover";
+export {
   Field,
   FieldControl,
   type FieldControlProps,

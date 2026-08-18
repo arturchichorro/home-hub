@@ -2,10 +2,9 @@ import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import { IconButton, InlineAlert } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { AddShoppingItemForm } from "./add-shopping-item-form";
-import { EditShoppingItemForm } from "./edit-shopping-item-form";
+import { ShoppingItemNameInput } from "./shopping-item-name-input";
 
 type ShoppingListProps = {
   householdId: string;
@@ -65,28 +64,9 @@ function ArchiveIcon() {
   );
 }
 
-function EditIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-4"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-    >
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
-    </svg>
-  );
-}
-
 export function ShoppingList({ householdId }: ShoppingListProps) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
-  const [editingItemId, setEditingItemId] = useState<string>();
 
   const [items, result] = useQuery(
     queries.shopping.byHousehold({ householdId }),
@@ -140,53 +120,30 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
                   key={item.id}
                   className="flex min-h-14 items-center gap-2 py-2"
                 >
-                  {editingItemId === item.id ? (
-                    <EditShoppingItemForm
-                      householdId={householdId}
-                      itemId={item.id}
-                      currentName={item.name}
-                      onCancel={() => setEditingItemId(undefined)}
-                      onSaved={() => setEditingItemId(undefined)}
-                    />
-                  ) : (
-                    <>
-                      <span
-                        className={
-                          crossed
-                            ? "min-w-0 flex-1 truncate text-muted line-through"
-                            : "min-w-0 flex-1 truncate"
-                        }
-                      >
-                        {item.name}
-                      </span>
-                      <IconButton
-                        aria-label={`Edit ${item.name}`}
-                        title={`Edit ${item.name}`}
-                        disabled={!mutationEnabled}
-                        onClick={() => setEditingItemId(item.id)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        aria-label={`${toggleLabel} ${item.name}`}
-                        title={`${toggleLabel} ${item.name}`}
-                        disabled={!mutationEnabled}
-                        onClick={() =>
-                          setStatus(item.id, crossed ? "active" : "crossed")
-                        }
-                      >
-                        {crossed ? <RestoreIcon /> : <CrossIcon />}
-                      </IconButton>
-                      <IconButton
-                        aria-label={`Archive ${item.name}`}
-                        title={`Archive ${item.name}`}
-                        disabled={!mutationEnabled}
-                        onClick={() => setStatus(item.id, "archived")}
-                      >
-                        <ArchiveIcon />
-                      </IconButton>
-                    </>
-                  )}
+                  <ShoppingItemNameInput
+                    householdId={householdId}
+                    itemId={item.id}
+                    currentName={item.name}
+                    crossed={crossed}
+                  />
+                  <IconButton
+                    aria-label={`${toggleLabel} ${item.name}`}
+                    title={`${toggleLabel} ${item.name}`}
+                    disabled={!mutationEnabled}
+                    onClick={() =>
+                      setStatus(item.id, crossed ? "active" : "crossed")
+                    }
+                  >
+                    {crossed ? <RestoreIcon /> : <CrossIcon />}
+                  </IconButton>
+                  <IconButton
+                    aria-label={`Archive ${item.name}`}
+                    title={`Archive ${item.name}`}
+                    disabled={!mutationEnabled}
+                    onClick={() => setStatus(item.id, "archived")}
+                  >
+                    <ArchiveIcon />
+                  </IconButton>
                 </li>
               );
             })}
@@ -208,37 +165,20 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
                 key={item.id}
                 className="flex min-h-14 items-center gap-2 py-2"
               >
-                {editingItemId === item.id ? (
-                  <EditShoppingItemForm
-                    householdId={householdId}
-                    itemId={item.id}
-                    currentName={item.name}
-                    onCancel={() => setEditingItemId(undefined)}
-                    onSaved={() => setEditingItemId(undefined)}
-                  />
-                ) : (
-                  <>
-                    <span className="min-w-0 flex-1 truncate text-muted">
-                      {item.name}
-                    </span>
-                    <IconButton
-                      aria-label={`Edit ${item.name}`}
-                      title={`Edit ${item.name}`}
-                      disabled={!mutationEnabled}
-                      onClick={() => setEditingItemId(item.id)}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      aria-label={`Restore ${item.name}`}
-                      title={`Restore ${item.name}`}
-                      disabled={!mutationEnabled}
-                      onClick={() => setStatus(item.id, "active")}
-                    >
-                      <RestoreIcon />
-                    </IconButton>
-                  </>
-                )}
+                <ShoppingItemNameInput
+                  householdId={householdId}
+                  itemId={item.id}
+                  currentName={item.name}
+                  muted
+                />
+                <IconButton
+                  aria-label={`Restore ${item.name}`}
+                  title={`Restore ${item.name}`}
+                  disabled={!mutationEnabled}
+                  onClick={() => setStatus(item.id, "active")}
+                >
+                  <RestoreIcon />
+                </IconButton>
               </li>
             ))}
           </ul>

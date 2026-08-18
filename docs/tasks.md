@@ -32,6 +32,7 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Enforce household, module, item, and normalized-name uniqueness boundaries
 - [x] Add accessible editing controls for current and archived items
 - [x] Verify normalization, authorization, duplicate rejection, and the interface build
+- [x] Refine editing to use row-style inputs, debounced saves, and an error popover
 - [ ] Complete the shopping-item editing checkpoint and commit
 
 ## Deploy to and migrate onto the Raspberry Pi
