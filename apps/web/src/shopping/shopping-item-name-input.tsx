@@ -1,9 +1,8 @@
 import { cleanShoppingItemName } from "@home-hub/shared/normalization";
 import { mutators } from "@home-hub/shared/zero/mutators";
-import { ErrorPopover } from "@home-hub/ui-web";
+import { ErrorPopover, Input } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import {
-  type ChangeEvent,
   type KeyboardEvent,
   useCallback,
   useEffect,
@@ -177,8 +176,7 @@ export function ShoppingItemNameInput({
     };
   }, [clearScheduledSave]);
 
-  function handleChange(event: ChangeEvent<HTMLInputElement>) {
-    const nextName = event.target.value;
+  function handleChange(nextName: string) {
     replaceDraft(nextName);
     setError(undefined);
     clearScheduledSave();
@@ -204,11 +202,6 @@ export function ShoppingItemNameInput({
   }
 
   const classes = [
-    "h-10 min-w-0 flex-1 rounded-sm border-0 bg-transparent px-1 text-base outline-none",
-    "enabled:cursor-text enabled:hover:bg-raised",
-    "focus-visible:bg-raised focus-visible:ring-2 focus-visible:ring-focus-ring/40",
-    "disabled:cursor-default",
-    "transition-colors duration-[var(--motion-duration-fast)]",
     muted || crossed ? "text-muted" : "text-foreground",
     crossed ? "line-through" : undefined,
   ]
@@ -217,8 +210,9 @@ export function ShoppingItemNameInput({
 
   return (
     <>
-      <input
+      <Input
         ref={inputRef}
+        appearance="inline"
         aria-label="Shopping item name"
         aria-busy={isSaving || undefined}
         aria-invalid={error ? true : undefined}
@@ -228,7 +222,7 @@ export function ShoppingItemNameInput({
         value={draftName}
         className={classes}
         onBlur={() => void saveDraft(true)}
-        onChange={handleChange}
+        onValueChange={handleChange}
         onKeyDown={handleKeyDown}
       />
       <ErrorPopover

@@ -6,6 +6,7 @@ import {
   FieldTextarea,
   IconButton,
   InlineAlert,
+  Input,
   MenuItem,
   MenuPopup,
   MenuRadioGroup,
@@ -246,13 +247,13 @@ export function UiGallery() {
           description="Compact validation feedback anchored to an editable control without moving focus."
         >
           <div className="flex max-w-xl items-center gap-3 border-y border-border py-2">
-            <input
+            <Input
               ref={errorAnchorRef}
+              appearance="inline"
               aria-label="Example shopping item name"
               aria-invalid={showFieldError || undefined}
               defaultValue="Oat milk"
-              className="h-10 min-w-0 flex-1 rounded-sm border-0 bg-transparent px-1 text-base outline-none hover:bg-raised focus-visible:bg-raised focus-visible:ring-2 focus-visible:ring-focus-ring/40"
-              onChange={() => setShowFieldError(false)}
+              onValueChange={() => setShowFieldError(false)}
             />
             <Button
               size="compact"

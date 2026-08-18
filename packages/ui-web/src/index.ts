@@ -35,6 +35,11 @@ export {
   type InlineAlertVariant,
 } from "./inline-alert";
 export {
+  Input,
+  type InputAppearance,
+  type InputProps,
+} from "./input";
+export {
   MenuItem,
   type MenuItemProps,
   type MenuItemVariant,

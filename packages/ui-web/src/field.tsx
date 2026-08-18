@@ -1,18 +1,8 @@
 import { Field as BaseField } from "@base-ui/react/field";
-import type { ComponentProps, ReactNode } from "react";
+import { type ComponentProps, forwardRef, type ReactNode } from "react";
+import { Input, type InputProps } from "./input";
 
 type BaseFieldRootProps = ComponentProps<typeof BaseField.Root>;
-type BaseFieldControlProps = ComponentProps<typeof BaseField.Control>;
-
-const fieldControlClasses = [
-  "w-full rounded-md border border-border bg-surface text-base text-foreground outline-none",
-  "placeholder:text-subtle enabled:hover:border-subtle",
-  "focus-visible:border-focus-ring focus-visible:ring-2 focus-visible:ring-focus-ring/30",
-  "data-invalid:border-danger data-invalid:focus-visible:ring-danger/30",
-  "data-disabled:cursor-not-allowed data-disabled:opacity-50",
-  "read-only:cursor-default read-only:bg-raised",
-  "transition-colors duration-[var(--motion-duration-fast)]",
-].join(" ");
 
 export type FieldProps = Omit<BaseFieldRootProps, "children" | "className"> & {
   label: ReactNode;
@@ -62,17 +52,22 @@ export function Field({
   );
 }
 
-export type FieldControlProps = Omit<BaseFieldControlProps, "className"> & {
+export type FieldControlProps = Omit<InputProps, "appearance" | "className"> & {
   className?: string;
 };
 
-export function FieldControl({ className, ...props }: FieldControlProps) {
-  const classes = [fieldControlClasses, "h-10 px-3", className]
-    .filter(Boolean)
-    .join(" ");
-
-  return <BaseField.Control {...props} className={classes} />;
-}
+export const FieldControl = forwardRef<HTMLInputElement, FieldControlProps>(
+  function FieldControl({ className, ...props }, ref) {
+    return (
+      <Input
+        {...props}
+        ref={ref}
+        appearance="field"
+        className={className ?? ""}
+      />
+    );
+  },
+);
 
 export type FieldTextareaProps = Omit<
   ComponentProps<"textarea">,
@@ -83,7 +78,13 @@ export type FieldTextareaProps = Omit<
 
 export function FieldTextarea({ className, ...props }: FieldTextareaProps) {
   const classes = [
-    fieldControlClasses,
+    "w-full rounded-md border border-border bg-surface text-base text-foreground outline-none",
+    "placeholder:text-subtle enabled:hover:border-subtle",
+    "focus-visible:border-focus-ring focus-visible:ring-2 focus-visible:ring-focus-ring/30",
+    "data-invalid:border-danger data-invalid:focus-visible:ring-danger/30",
+    "data-disabled:cursor-not-allowed data-disabled:opacity-50",
+    "read-only:cursor-default read-only:bg-raised",
+    "transition-colors duration-[var(--motion-duration-fast)]",
     "min-h-24 resize-y px-3 py-2",
     className,
   ]
