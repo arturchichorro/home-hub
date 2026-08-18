@@ -26,6 +26,14 @@ commit changes unless explicitly asked for that specific action. CI rehearses
 the committed migration history on a disposable database, and the production
 deployment applies tested forward migrations after an off-host backup.
 
+## Edit shopping item names
+
+- [x] Define and validate an optimistic rename mutation
+- [x] Enforce household, module, item, and normalized-name uniqueness boundaries
+- [x] Add accessible editing controls for current and archived items
+- [x] Verify normalization, authorization, duplicate rejection, and the interface build
+- [ ] Complete the shopping-item editing checkpoint and commit
+
 ## Deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack

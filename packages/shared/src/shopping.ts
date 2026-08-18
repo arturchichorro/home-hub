@@ -57,3 +57,16 @@ export const addShoppingItemMutationSchema = z
 export type AddShoppingItemMutationInput = z.infer<
   typeof addShoppingItemMutationSchema
 >;
+
+export const renameShoppingItemMutationSchema = z
+  .object({
+    householdId: z.uuid(),
+    itemId: z.uuid(),
+    name: shoppingItemNameSchema,
+    optimisticUpdatedAt: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export type RenameShoppingItemMutationInput = z.infer<
+  typeof renameShoppingItemMutationSchema
+>;

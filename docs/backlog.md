@@ -4,12 +4,11 @@ This document is a lightweight list of optional future improvements, modules,
 and ideas. The order expresses current preference, not a commitment or schedule.
 
 Keep each idea to a single bullet. When an item becomes active, move it to
-[Tasks](./tasks.md) and define its requirements and implementation sequence
-there.
+[Tasks](./tasks.md), follow its working rhythm, and define the requirements
+together before implementation begins.
 
 ## Improvements
 
-- [ ] Edit shopping items
 - [ ] Open last opened household on app start (through local storage or something)
 - [ ] Add quantities to shopping items
 - [ ] Add recipe ingredients to Shopping
@@ -25,3 +24,4 @@ there.
 - [ ] Multiple household lists, after reconsidering the current product non-goal
 - [ ] Goals
 - [ ] Household finance
+- [ ] Friend list with timestamped notes

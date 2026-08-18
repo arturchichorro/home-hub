@@ -27,6 +27,13 @@ const addArgs = {
   optimisticTimestamp: optimisticUpdatedAt,
 };
 
+const renameArgs = {
+  householdId,
+  itemId,
+  name: "Oat Milk",
+  optimisticUpdatedAt,
+};
+
 const createRecipeArgs = {
   recipeId,
   householdId,
@@ -342,6 +349,139 @@ describe("shopping.add mutator", () => {
       status: "active",
       createdAt: authoritativeTimestamp,
       updatedAt: authoritativeTimestamp,
+    });
+  });
+});
+
+describe("shopping.rename mutator", () => {
+  it("is registered with a stable name", () => {
+    expect(mutators.shopping.rename.mutatorName).toBe("shopping.rename");
+  });
+
+  it("optimistically updates the display and normalized names", async () => {
+    const { queries, transaction, update } = createFakeTransaction({
+      location: "client",
+      results: [{ id: itemId, householdId, name: "Milk" }, undefined],
+    });
+
+    await mutators.shopping.rename.fn({
+      args: renameArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(queries).toHaveLength(2);
+    expect(update).toHaveBeenCalledWith({
+      id: itemId,
+      name: "Oat Milk",
+      normalizedName: "oat milk",
+      updatedAt: optimisticUpdatedAt,
+    });
+  });
+
+  it("allows display-name changes that keep the same normalized name", async () => {
+    const { transaction, update } = createFakeTransaction({
+      location: "client",
+      results: [
+        { id: itemId, householdId, name: "OAT MILK" },
+        { id: itemId, householdId, normalizedName: "oat milk" },
+      ],
+    });
+
+    await mutators.shopping.rename.fn({
+      args: renameArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(update).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a name already used by another household item", async () => {
+    const otherItemId = "9c090146-f84a-4d11-9ca3-629ac70ffc15";
+    const { transaction, update } = createFakeTransaction({
+      location: "client",
+      results: [
+        { id: itemId, householdId, name: "Milk" },
+        { id: otherItemId, householdId, normalizedName: "oat milk" },
+      ],
+    });
+
+    await expect(
+      mutators.shopping.rename.fn({
+        args: renameArgs,
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Shopping item name already exists");
+
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("rejects an item outside the supplied household", async () => {
+    const { transaction, update } = createFakeTransaction({
+      location: "server",
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "shopping", enabled: true },
+        undefined,
+      ],
+    });
+
+    await expect(
+      mutators.shopping.rename.fn({
+        args: renameArgs,
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Shopping item rename not allowed");
+
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("rejects a server rename before item lookup when membership is missing", async () => {
+    const { queries, transaction, update } = createFakeTransaction({
+      location: "server",
+      results: [undefined],
+    });
+
+    await expect(
+      mutators.shopping.rename.fn({
+        args: renameArgs,
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Household module mutation not allowed");
+
+    expect(queries).toHaveLength(1);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("authorizes server access and uses the authoritative timestamp", async () => {
+    const authoritativeUpdatedAt = 1_786_000_001_000;
+    vi.spyOn(Date, "now").mockReturnValue(authoritativeUpdatedAt);
+    const { queries, transaction, update } = createFakeTransaction({
+      location: "server",
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "shopping", enabled: true },
+        { id: itemId, householdId, name: "Milk" },
+        undefined,
+      ],
+    });
+
+    await mutators.shopping.rename.fn({
+      args: renameArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(queries).toHaveLength(4);
+    expect(update).toHaveBeenCalledWith({
+      id: itemId,
+      name: "Oat Milk",
+      normalizedName: "oat milk",
+      updatedAt: authoritativeUpdatedAt,
     });
   });
 });
