@@ -19,7 +19,7 @@ function LoginRoute() {
       footer={
         <>
           Need an account?{" "}
-          <Link to="/signup" className="text-accent hover:underline">
+          <Link to="/signup" className="text-primary hover:underline">
             Sign up
           </Link>
         </>

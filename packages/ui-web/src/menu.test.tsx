@@ -32,6 +32,6 @@ describe("Menu", () => {
 
     expect(markup).toContain('aria-hidden="true"');
     expect(markup).toContain("text-muted");
-    expect(markup).toContain('d="m4 6 4 4 4-4"');
+    expect(markup).toContain("lucide-chevron-down");
   });
 });

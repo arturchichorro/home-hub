@@ -1,5 +1,5 @@
 import { mutators } from "@home-hub/shared/zero/mutators";
-import { ErrorPopover, IconButton, Input } from "@home-hub/ui-web";
+import { ErrorPopover, IconButton, Input, Plus } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { type SubmitEvent, useId, useRef, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
@@ -7,22 +7,6 @@ import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 type AddShoppingItemFormProps = {
   householdId: string;
 };
-
-function PlusIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-4"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeWidth="2"
-    >
-      <path d="M12 5v14M5 12h14" />
-    </svg>
-  );
-}
 
 export function AddShoppingItemForm({ householdId }: AddShoppingItemFormProps) {
   const zero = useZero();
@@ -94,7 +78,7 @@ export function AddShoppingItemForm({ householdId }: AddShoppingItemFormProps) {
           type="submit"
           disabled={!mutationEnabled || name.trim().length === 0}
         >
-          <PlusIcon />
+          <Plus aria-hidden="true" className="size-4" />
         </IconButton>
       </form>
       <ErrorPopover

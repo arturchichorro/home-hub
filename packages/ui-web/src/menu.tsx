@@ -1,4 +1,5 @@
 import { Menu as BaseMenu } from "@base-ui/react/menu";
+import { Check, ChevronDown, type LucideProps } from "lucide-react";
 import type { ComponentProps } from "react";
 import { Button } from "./button";
 
@@ -23,7 +24,7 @@ export function MenuTrigger({ className, ...props }: MenuTriggerProps) {
   );
 }
 
-export type MenuChevronProps = ComponentProps<"svg">;
+export type MenuChevronProps = LucideProps;
 
 export function MenuChevron({ className, ...props }: MenuChevronProps) {
   const classes = ["size-4 shrink-0 text-muted", className]
@@ -31,19 +32,12 @@ export function MenuChevron({ className, ...props }: MenuChevronProps) {
     .join(" ");
 
   return (
-    <svg
+    <ChevronDown
       {...props}
       aria-hidden="true"
-      viewBox="0 0 16 16"
       className={classes}
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="1.75"
-    >
-      <path d="m4 6 4 4 4-4" />
-    </svg>
+      strokeWidth={1.75}
+    />
   );
 }
 
@@ -149,16 +143,7 @@ export function MenuRadioItem({
         keepMounted
         className="flex size-4 items-center justify-center text-primary data-unchecked:invisible"
       >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 16 16"
-          className="size-3"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path d="m3 8 3 3 7-7" />
-        </svg>
+        <Check aria-hidden="true" className="size-3" strokeWidth={2} />
       </BaseMenu.RadioItemIndicator>
       <span className="min-w-0 truncate">{children}</span>
     </BaseMenu.RadioItem>

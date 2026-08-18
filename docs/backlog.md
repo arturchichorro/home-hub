@@ -13,7 +13,6 @@ together before implementation begins.
 - [ ] Add quantities to shopping items
 - [ ] Add recipe ingredients to Shopping
 - [ ] Publish safe member profiles through Zero to prevent interface flashing
-- [ ] Replace one-off inline SVG icons with a shared icon library
 - [ ] Improve separation between database access, domain behavior, and transport code
 - [ ] Add module-specific documentation for Shopping and Recipes
 

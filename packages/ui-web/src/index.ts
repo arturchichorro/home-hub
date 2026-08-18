@@ -30,6 +30,21 @@ export {
   type IconButtonVariant,
 } from "./icon-button";
 export {
+  Archive,
+  BookOpen,
+  Check,
+  ChevronDown,
+  House,
+  LayoutGrid,
+  type LucideIcon,
+  type LucideProps,
+  Plus,
+  RotateCcw,
+  ShoppingBasket,
+  Users,
+  X,
+} from "./icons";
+export {
   InlineAlert,
   type InlineAlertProps,
   type InlineAlertVariant,

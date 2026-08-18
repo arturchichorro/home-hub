@@ -46,6 +46,12 @@ deployment applies tested forward migrations after an off-host backup.
 - [ ] Verify focused responsive, keyboard, accessible-name, and interface-build behavior
 - [ ] Update the design-system documentation and complete the UI checkpoint
 
+## Standardize web icons on Lucide
+
+- [x] Adopt `lucide-react` through the shared `ui-web` package
+- [x] Replace application, menu, select, and gallery icons with Lucide components
+- [x] Verify there are no remaining one-off SVG icons and complete the icon checkpoint
+
 ## Deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack

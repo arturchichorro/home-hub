@@ -220,6 +220,12 @@ Base UI owns:
 - labels, instructions, validation messages, and application-facing slots;
 - tests proving the wrapped behavior still works after composition and styling.
 
+`lucide-react` is the single icon library for the web application. `ui-web`
+owns the dependency and re-exports the individual, tree-shakable icons used by
+features; application code does not import the vendor package directly or add
+one-off SVG icon markup. Icons inside labeled controls are decorative and use
+`aria-hidden`, while the control supplies the accessible name.
+
 Base UI is a foundation, not an accessibility waiver. Feature code still
 provides meaningful labels and announcements, and Home Hub still verifies
 keyboard use, focus visibility, contrast, zoom, and screen-reader behavior.

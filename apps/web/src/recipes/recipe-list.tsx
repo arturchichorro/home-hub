@@ -2,12 +2,14 @@ import { queries } from "@home-hub/shared/zero/queries";
 import {
   Button,
   InlineAlert,
+  MenuChevron,
   MenuPopup,
   MenuRadioGroup,
   MenuRadioItem,
   MenuRoot,
   MenuTrigger,
   Panel,
+  Plus,
 } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { useEffect, useState } from "react";
@@ -66,7 +68,7 @@ export function RecipeList({
                 className="w-full max-w-sm justify-between!"
               >
                 <span className="truncate">{selectedRecipe.title}</span>
-                <span aria-hidden="true">⌄</span>
+                <MenuChevron />
               </MenuTrigger>
               <MenuPopup className="w-(--anchor-width)">
                 <MenuRadioGroup
@@ -84,7 +86,10 @@ export function RecipeList({
           </div>
         ) : null}
 
-        <Button onClick={() => setCreating(true)}>+ New recipe</Button>
+        <Button onClick={() => setCreating(true)}>
+          <Plus aria-hidden="true" className="size-4" />
+          New recipe
+        </Button>
       </div>
 
       {creating ? (

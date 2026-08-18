@@ -1,12 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { IconButton } from "./icon-button";
+import { X } from "./icons";
 
 describe("IconButton", () => {
   it("renders an accessible square ghost button by default", () => {
     const markup = renderToStaticMarkup(
       <IconButton aria-label="Archive item">
-        <span aria-hidden="true">×</span>
+        <X aria-hidden="true" />
       </IconButton>,
     );
 
@@ -23,7 +24,7 @@ describe("IconButton", () => {
         className="shrink-0"
         variant="danger"
       >
-        <span aria-hidden="true">×</span>
+        <X aria-hidden="true" />
       </IconButton>,
     );
 

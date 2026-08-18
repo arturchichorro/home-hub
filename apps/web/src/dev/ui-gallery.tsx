@@ -1,4 +1,5 @@
 import {
+  Archive,
   Button,
   ErrorPopover,
   Field,
@@ -7,6 +8,7 @@ import {
   IconButton,
   InlineAlert,
   Input,
+  MenuChevron,
   MenuItem,
   MenuPopup,
   MenuRadioGroup,
@@ -21,6 +23,7 @@ import {
   SelectTrigger,
   StatusIndicator,
   Switch,
+  X,
 } from "@home-hub/ui-web";
 import { type ReactNode, useRef, useState } from "react";
 
@@ -39,21 +42,6 @@ function GallerySection({ title, description, children }: GallerySectionProps) {
       </header>
       {children}
     </section>
-  );
-}
-
-function ArchiveIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M4 7h16M6 7v12h12V7M9 11h6M5 3h14l1 4H4l1-4Z" />
-    </svg>
   );
 }
 
@@ -93,10 +81,10 @@ export function UiGallery() {
             <Button disabled>Disabled</Button>
             <Button busy>Saving changes</Button>
             <IconButton aria-label="Archive item">
-              <ArchiveIcon />
+              <Archive aria-hidden="true" className="size-4" />
             </IconButton>
             <IconButton aria-label="Delete item" variant="danger">
-              <span aria-hidden="true">×</span>
+              <X aria-hidden="true" className="size-4" />
             </IconButton>
           </div>
         </GallerySection>
@@ -155,7 +143,7 @@ export function UiGallery() {
             <MenuRoot>
               <MenuTrigger>
                 {household}
-                <span aria-hidden="true">⌄</span>
+                <MenuChevron />
               </MenuTrigger>
               <MenuPopup>
                 <MenuRadioGroup value={household} onValueChange={setHousehold}>

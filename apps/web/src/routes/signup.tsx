@@ -19,7 +19,7 @@ function SignupRoute() {
       footer={
         <>
           Already have an account?{" "}
-          <Link to="/login" className="text-accent hover:underline">
+          <Link to="/login" className="text-primary hover:underline">
             Sign in
           </Link>
         </>

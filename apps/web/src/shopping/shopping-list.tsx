@@ -1,6 +1,12 @@
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
-import { IconButton, InlineAlert } from "@home-hub/ui-web";
+import {
+  Archive,
+  Check,
+  IconButton,
+  InlineAlert,
+  RotateCcw,
+} from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
@@ -13,58 +19,6 @@ type ShoppingListProps = {
 };
 
 type ShoppingItemStatus = "active" | "crossed" | "archived";
-
-function CrossIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-4"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-    >
-      <path d="m5 12 4 4L19 6" />
-    </svg>
-  );
-}
-
-function RestoreIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-4"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-    >
-      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
-      <path d="M3 3v5h5" />
-    </svg>
-  );
-}
-
-function ArchiveIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-4"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-    >
-      <path d="M4 7h16M6 7v12h12V7M9 11h6M5 3h14l1 4H4l1-4Z" />
-    </svg>
-  );
-}
 
 export function ShoppingList({ householdId }: ShoppingListProps) {
   const zero = useZero();
@@ -133,7 +87,11 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
                   setStatus(item.id, crossed ? "active" : "crossed")
                 }
               >
-                {crossed ? <RestoreIcon /> : <CrossIcon />}
+                {crossed ? (
+                  <RotateCcw aria-hidden="true" className="size-4" />
+                ) : (
+                  <Check aria-hidden="true" className="size-4" />
+                )}
               </IconButton>
               <IconButton
                 aria-label={`Archive ${item.name}`}
@@ -141,7 +99,7 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
                 disabled={!mutationEnabled}
                 onClick={() => setStatus(item.id, "archived")}
               >
-                <ArchiveIcon />
+                <Archive aria-hidden="true" className="size-4" />
               </IconButton>
             </li>
           );
@@ -157,7 +115,7 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
             disabled={archivedItems.length === 0}
             onClick={() => setShowArchived((visible) => !visible)}
           >
-            <ArchiveIcon />
+            <Archive aria-hidden="true" className="size-4" />
           </IconButton>
         </li>
 
@@ -179,7 +137,7 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
                   disabled={!mutationEnabled}
                   onClick={() => setStatus(item.id, "active")}
                 >
-                  <RestoreIcon />
+                  <RotateCcw aria-hidden="true" className="size-4" />
                 </IconButton>
               </li>
             ))

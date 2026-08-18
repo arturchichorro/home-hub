@@ -1,5 +1,6 @@
 import { queries } from "@home-hub/shared/zero/queries";
 import {
+  House,
   InlineAlert,
   MenuChevron,
   MenuItem,
@@ -22,24 +23,6 @@ type HouseholdSwitcherProps = {
   selectedHouseholdId?: string | undefined;
   onSelect: (householdId: string | undefined) => void;
 };
-
-function HouseIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-5"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="1.8"
-    >
-      <path d="m3 11 9-7 9 7" />
-      <path d="M5 10v10h14V10M9 20v-6h6v6" />
-    </svg>
-  );
-}
 
 export function HouseholdSwitcher({
   accessToken,
@@ -79,7 +62,7 @@ export function HouseholdSwitcher({
           className="size-10! min-w-0 p-0! sm:h-10! sm:w-auto! sm:max-w-full sm:justify-between! sm:px-4!"
         >
           <span className="sm:hidden">
-            <HouseIcon />
+            <House aria-hidden="true" className="size-5" />
           </span>
           <span className="hidden truncate sm:inline">
             {selectedHousehold?.name ?? "Choose household"}

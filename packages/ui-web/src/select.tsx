@@ -1,4 +1,5 @@
 import { Select as BaseSelect } from "@base-ui/react/select";
+import { Check, ChevronDown } from "lucide-react";
 import type { ComponentProps } from "react";
 
 export const SelectRoot = BaseSelect.Root;
@@ -38,18 +39,7 @@ export function SelectTrigger({
         {children}
       </BaseSelect.Value>
       <BaseSelect.Icon className="shrink-0 text-muted">
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 16 16"
-          className="size-4"
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="1.5"
-        >
-          <path d="m4 6 4 4 4-4" />
-        </svg>
+        <ChevronDown aria-hidden="true" className="size-4" strokeWidth={1.5} />
       </BaseSelect.Icon>
     </BaseSelect.Trigger>
   );
@@ -125,16 +115,7 @@ export function SelectItem({ children, className, ...props }: SelectItemProps) {
         keepMounted
         className="invisible flex size-4 items-center justify-center text-primary data-selected:visible"
       >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 16 16"
-          className="size-3"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path d="m3 8 3 3 7-7" />
-        </svg>
+        <Check aria-hidden="true" className="size-3" strokeWidth={2} />
       </BaseSelect.ItemIndicator>
       <BaseSelect.ItemText className="min-w-0 truncate">
         {children}
