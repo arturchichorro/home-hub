@@ -12,6 +12,7 @@ describe("Collapsible", () => {
     expect(markup).toContain("Ingredients");
     expect(markup).toContain("Tomatoes");
     expect(markup).toContain("data-open");
+    expect(markup).toContain("pt-1");
   });
 
   it("supports an initially closed section", () => {

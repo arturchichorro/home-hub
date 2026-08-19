@@ -89,14 +89,14 @@ export function RecipeLibrary({
         Recipes
       </h2>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {recipes.map((recipe) => (
           <Link
             key={recipe.id}
             to="/households/$householdId/recipes/$recipeId"
             params={{ householdId, recipeId: recipe.id }}
             preload="intent"
-            className="group min-h-72 overflow-hidden rounded-lg border border-border bg-surface outline-none transition-colors hover:border-subtle focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+            className="min-h-72 overflow-hidden rounded-lg border border-border bg-surface focus-visible:outline-2 focus-visible:outline-focus-ring"
           >
             <RecipeCardImage
               accessToken={accessToken}
@@ -105,10 +105,8 @@ export function RecipeLibrary({
               image={recipe.images[0]}
               onSessionExpired={onSessionExpired}
             />
-            <div className="grid gap-1 px-4 py-4">
-              <h3 className="font-semibold text-foreground group-hover:text-primary">
-                {recipe.title}
-              </h3>
+            <div className="space-y-1 p-4">
+              <h3 className="font-semibold">{recipe.title}</h3>
               <p className="line-clamp-2 text-sm text-muted">
                 {recipe.description || "No description yet."}
               </p>
@@ -120,7 +118,7 @@ export function RecipeLibrary({
           aria-label="Create recipe"
           title="Create recipe"
           variant="secondary"
-          className="h-full! min-h-72 w-full rounded-lg! border border-dashed border-border bg-surface hover:border-subtle"
+          className="min-h-72 w-full border border-dashed border-border"
           onClick={() => setCreating(true)}
         >
           <Plus aria-hidden="true" className="size-8" />

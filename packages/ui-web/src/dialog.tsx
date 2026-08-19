@@ -5,6 +5,7 @@ import { Button, type ButtonProps } from "./button";
 export const DialogRoot = BaseDialog.Root;
 
 export type DialogSize = "small" | "medium" | "large";
+export type DialogAppearance = "default" | "bare";
 
 type BaseDialogPopupProps = ComponentProps<typeof BaseDialog.Popup>;
 
@@ -13,6 +14,7 @@ export type DialogPopupProps = Omit<
   "children" | "className"
 > & {
   actions?: ReactNode;
+  appearance?: DialogAppearance;
   children: ReactNode;
   className?: string;
   description?: ReactNode;
@@ -28,6 +30,7 @@ const sizeClasses: Record<DialogSize, string> = {
 
 export function DialogPopup({
   actions,
+  appearance = "default",
   children,
   className,
   description,
@@ -36,9 +39,12 @@ export function DialogPopup({
   ...props
 }: DialogPopupProps) {
   const popupClasses = [
-    "w-full rounded-lg border border-border bg-raised p-6 text-foreground shadow-raised outline-none",
-    "transition-[opacity,transform] duration-[var(--motion-duration-fast)]",
-    "data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0",
+    appearance === "default"
+      ? "w-full rounded-lg border border-border bg-raised p-6 text-foreground shadow-raised outline-none"
+      : "relative w-full outline-none",
+    appearance === "default"
+      ? "transition-[opacity,transform] duration-[var(--motion-duration-fast)] data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0"
+      : undefined,
     sizeClasses[size],
     className,
   ]
@@ -50,7 +56,11 @@ export function DialogPopup({
       <BaseDialog.Backdrop className="fixed inset-0 z-40 bg-black/60 transition-opacity duration-[var(--motion-duration-fast)] data-starting-style:opacity-0 data-ending-style:opacity-0" />
       <BaseDialog.Viewport className="fixed inset-0 z-50 grid place-items-center overflow-y-auto p-4">
         <BaseDialog.Popup {...props} className={popupClasses}>
-          <BaseDialog.Title className="text-lg font-semibold">
+          <BaseDialog.Title
+            className={
+              appearance === "bare" ? "sr-only" : "text-lg font-semibold"
+            }
+          >
             {title}
           </BaseDialog.Title>
           {description ? (
@@ -58,7 +68,9 @@ export function DialogPopup({
               {description}
             </BaseDialog.Description>
           ) : null}
-          <div className="mt-5">{children}</div>
+          <div className={appearance === "default" ? "mt-5" : undefined}>
+            {children}
+          </div>
           {actions ? (
             <div className="mt-6 flex flex-wrap justify-end gap-3">
               {actions}

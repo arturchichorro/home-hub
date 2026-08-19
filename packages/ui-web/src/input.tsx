@@ -12,7 +12,7 @@ export type InputProps = Omit<
 };
 
 const inputBaseClasses = [
-  "min-w-0 text-base outline-none",
+  "min-w-0 outline-none",
   "data-disabled:cursor-not-allowed data-disabled:opacity-50",
   "transition-colors duration-[var(--motion-duration-fast)]",
 ].join(" ");

@@ -17,6 +17,17 @@ describe("Textarea", () => {
 
     expect(markup).toContain("border-0");
     expect(markup).toContain("bg-transparent");
+    expect(markup).toContain("field-sizing-content");
+    expect(markup).toContain("min-h-10");
     expect(markup).toContain("aria-invalid:ring-danger/40");
+  });
+
+  it("allows callers to set the font size without a conflicting default", () => {
+    const markup = renderToStaticMarkup(
+      <Textarea aria-label="Description" className="text-lg" />,
+    );
+
+    expect(markup).toContain("text-lg");
+    expect(markup).not.toContain("text-base");
   });
 });

@@ -29,4 +29,13 @@ describe("Input", () => {
     expect(markup).toContain("data-disabled");
     expect(markup).toContain("disabled");
   });
+
+  it("allows callers to set the font size without a conflicting default", () => {
+    const markup = renderToStaticMarkup(
+      <Input aria-label="Recipe title" className="text-2xl" />,
+    );
+
+    expect(markup).toContain("text-2xl");
+    expect(markup).not.toContain("text-base");
+  });
 });

@@ -70,6 +70,7 @@ export function AddRecipeIngredientForm({
           appearance="inline"
           aria-label="Ingredient name"
           autoComplete="off"
+          className="placeholder:text-sm"
           maxLength={150}
           placeholder="Add an ingredient"
           required
@@ -81,6 +82,7 @@ export function AddRecipeIngredientForm({
             appearance="inline"
             aria-label="Ingredient quantity"
             autoComplete="off"
+            className="placeholder:text-sm"
             maxLength={50}
             placeholder="Qty"
             value={quantity}
@@ -90,6 +92,7 @@ export function AddRecipeIngredientForm({
             appearance="inline"
             aria-label="Ingredient unit"
             autoComplete="off"
+            className="placeholder:text-sm"
             maxLength={50}
             placeholder="Unit"
             value={unit}

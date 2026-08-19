@@ -2,12 +2,7 @@ import {
   createRecipeImageUploadRequestSchema,
   recipeImageContentTypeSchema,
 } from "@home-hub/shared/recipe-images";
-import {
-  IconButton,
-  InlineAlert,
-  type InlineAlertVariant,
-  Plus,
-} from "@home-hub/ui-web";
+import { IconButton, ImagePlus, Plus } from "@home-hub/ui-web";
 import { type ChangeEvent, useRef, useState } from "react";
 import {
   confirmRecipeImageUpload,
@@ -18,19 +13,18 @@ import { readImageDimensions } from "./read-image-dimensions";
 
 type RecipeImageUploadFormProps = {
   accessToken: string;
+  appearance?: "primary" | "subtle";
+  cookLogId?: string;
   householdId: string;
   recipeId: string;
   position: number;
   onSessionExpired: () => void;
 };
 
-type UploadFeedback = {
-  text: string;
-  variant: InlineAlertVariant;
-};
-
 export function RecipeImageUploadForm({
   accessToken,
+  appearance = "primary",
+  cookLogId,
   householdId,
   recipeId,
   position,
@@ -38,7 +32,6 @@ export function RecipeImageUploadForm({
 }: RecipeImageUploadFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
-  const [feedback, setFeedback] = useState<UploadFeedback>();
 
   function chooseImage() {
     const input = fileInputRef.current;
@@ -57,21 +50,14 @@ export function RecipeImageUploadForm({
     if (!file || busy) return;
 
     setBusy(true);
-    setFeedback(undefined);
 
     try {
       const contentType = recipeImageContentTypeSchema.safeParse(file.type);
-      if (!contentType.success) {
-        setFeedback({
-          text: "Choose a JPEG, PNG, or WebP image.",
-          variant: "danger",
-        });
-        return;
-      }
+      if (!contentType.success) return;
 
       const dimensions = await readImageDimensions(file);
       const request = createRecipeImageUploadRequestSchema.safeParse({
-        cookLogId: null,
+        cookLogId: cookLogId ?? null,
         contentType: contentType.data,
         byteSize: file.size,
         width: dimensions.width,
@@ -79,13 +65,7 @@ export function RecipeImageUploadForm({
         position,
       });
 
-      if (!request.success) {
-        setFeedback({
-          text: "The image must be under 10 MiB and no larger than 16,384 pixels per side.",
-          variant: "danger",
-        });
-        return;
-      }
+      if (!request.success) return;
 
       const pending = await requestRecipeImageUpload({
         accessToken,
@@ -98,13 +78,7 @@ export function RecipeImageUploadForm({
         onSessionExpired();
         return;
       }
-      if (pending.kind !== "success") {
-        setFeedback({
-          text: "The image could not be prepared for upload.",
-          variant: "danger",
-        });
-        return;
-      }
+      if (pending.kind !== "success") return;
 
       await uploadRecipeImageObject({ file, upload: pending.upload });
       const confirmation = await confirmRecipeImageUpload({
@@ -116,22 +90,9 @@ export function RecipeImageUploadForm({
 
       if (confirmation.kind === "unauthorized") {
         onSessionExpired();
-      } else if (confirmation.kind === "success") {
-        setFeedback({
-          text: "Image uploaded. Waiting for synchronization…",
-          variant: "success",
-        });
-      } else {
-        setFeedback({
-          text: "The image could not be confirmed. Choose it again to retry.",
-          variant: "danger",
-        });
       }
     } catch {
-      setFeedback({
-        text: "The image could not be uploaded. Choose it again to retry.",
-        variant: "danger",
-      });
+      // Keep image uploads unobtrusive; the user can choose the image again.
     } finally {
       setBusy(false);
     }
@@ -147,25 +108,23 @@ export function RecipeImageUploadForm({
         tabIndex={-1}
         onChange={(event) => void uploadImage(event)}
       />
-      {feedback ? (
-        <InlineAlert
-          className="w-64"
-          role={feedback.variant === "danger" ? "alert" : "status"}
-          variant={feedback.variant}
-        >
-          {feedback.text}
-        </InlineAlert>
-      ) : null}
       <IconButton
         type="button"
-        aria-label="Add recipe image"
+        aria-label={cookLogId ? "Add image to cooking log" : "Add recipe image"}
         aria-busy={busy || undefined}
         busy={busy}
         disabled={busy}
-        className="size-8! rounded-full bg-raised shadow-md"
+        variant={appearance === "subtle" ? "ghost" : "primary"}
+        className={
+          appearance === "subtle" ? "size-6!" : "size-8! rounded-full shadow-md"
+        }
         onClick={chooseImage}
       >
-        <Plus aria-hidden="true" />
+        {cookLogId ? (
+          <ImagePlus aria-hidden="true" className="size-4" />
+        ) : (
+          <Plus aria-hidden="true" />
+        )}
       </IconButton>
     </div>
   );

@@ -3,16 +3,15 @@ import {
   cleanRecipeTitle,
 } from "@home-hub/shared/normalization";
 import { mutators } from "@home-hub/shared/zero/mutators";
-import { ErrorPopover, Input, Textarea } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import {
+  type ChangeEvent,
   type KeyboardEvent,
   useCallback,
   useEffect,
   useId,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
@@ -23,12 +22,11 @@ type RecipeDraft = {
   description: string;
 };
 
-type RecipeDetailsEditorProps = {
+type UseRecipeDetailsEditorOptions = {
   householdId: string;
   recipeId: string;
   currentTitle: string;
   currentDescription: string | null;
-  children?: ReactNode;
 };
 
 function cleanDraft(draft: RecipeDraft): RecipeDraft {
@@ -42,13 +40,12 @@ function draftsMatch(left: RecipeDraft, right: RecipeDraft) {
   return left.title === right.title && left.description === right.description;
 }
 
-export function RecipeDetailsEditor({
+export function useRecipeDetailsEditor({
   householdId,
   recipeId,
   currentTitle,
   currentDescription,
-  children,
-}: RecipeDetailsEditorProps) {
+}: UseRecipeDetailsEditorOptions) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
   const initialDraft = {
@@ -229,51 +226,38 @@ export function RecipeDetailsEditor({
     }
   }
 
-  return (
-    <div className="space-y-4">
-      <Input
-        ref={titleRef}
-        appearance="inline"
-        aria-label="Recipe title"
-        aria-busy={isSaving || undefined}
-        aria-invalid={error && errorField === "title" ? true : undefined}
-        aria-errormessage={
-          error && errorField === "title" ? errorId : undefined
-        }
-        className="text-2xl font-semibold"
-        disabled={!mutationEnabled}
-        maxLength={150}
-        value={draft.title}
-        onBlur={() => void saveDraft(true)}
-        onKeyDown={handleTitleKeyDown}
-        onValueChange={(value) => changeDraft("title", value)}
-      />
-      {children}
-      <Textarea
-        ref={descriptionRef}
-        appearance="inline"
-        aria-label="Recipe description"
-        aria-busy={isSaving || undefined}
-        aria-invalid={error && errorField === "description" ? true : undefined}
-        aria-errormessage={
-          error && errorField === "description" ? errorId : undefined
-        }
-        disabled={!mutationEnabled}
-        maxLength={5_000}
-        placeholder="Add a description…"
-        value={draft.description}
-        onBlur={() => void saveDraft(true)}
-        onChange={(event) => changeDraft("description", event.target.value)}
-        onKeyDown={handleDescriptionKeyDown}
-      />
-      <ErrorPopover
-        anchor={errorField === "title" ? titleRef : descriptionRef}
-        id={errorId}
-        open={error !== undefined}
-        onDismiss={() => setError(undefined)}
-      >
-        {error}
-      </ErrorPopover>
-    </div>
-  );
+  return {
+    titleProps: {
+      ref: titleRef,
+      "aria-busy": isSaving || undefined,
+      "aria-invalid": error && errorField === "title" ? true : undefined,
+      "aria-errormessage":
+        error && errorField === "title" ? errorId : undefined,
+      disabled: !mutationEnabled,
+      value: draft.title,
+      onBlur: () => void saveDraft(true),
+      onKeyDown: handleTitleKeyDown,
+      onValueChange: (value: string) => changeDraft("title", value),
+    },
+    descriptionProps: {
+      ref: descriptionRef,
+      "aria-busy": isSaving || undefined,
+      "aria-invalid": error && errorField === "description" ? true : undefined,
+      "aria-errormessage":
+        error && errorField === "description" ? errorId : undefined,
+      disabled: !mutationEnabled,
+      value: draft.description,
+      onBlur: () => void saveDraft(true),
+      onChange: (event: ChangeEvent<HTMLTextAreaElement>) =>
+        changeDraft("description", event.target.value),
+      onKeyDown: handleDescriptionKeyDown,
+    },
+    error,
+    errorPopoverProps: {
+      anchor: errorField === "title" ? titleRef : descriptionRef,
+      id: errorId,
+      open: error !== undefined,
+      onDismiss: () => setError(undefined),
+    },
+  };
 }

@@ -9,11 +9,11 @@ type AddRecipeCookLogFormProps = {
   recipeId: string;
 };
 
-function toLocalDateTimeValue(date: Date): string {
+function toLocalDateValue(date: Date): string {
   const localTime = new Date(
     date.getTime() - date.getTimezoneOffset() * 60_000,
   );
-  return localTime.toISOString().slice(0, 16);
+  return localTime.toISOString().slice(0, 10);
 }
 
 export function AddRecipeCookLogForm({
@@ -23,9 +23,10 @@ export function AddRecipeCookLogForm({
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
   const dateInputRef = useRef<HTMLInputElement>(null);
-  const [cookedAt, setCookedAt] = useState(() =>
-    toLocalDateTimeValue(new Date()),
-  );
+  const [cookedAt, setCookedAt] = useState(() => ({
+    value: toLocalDateValue(new Date()),
+    selected: false,
+  }));
   const [comment, setComment] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
@@ -35,11 +36,13 @@ export function AddRecipeCookLogForm({
     if (saving) return;
     setError(undefined);
 
-    const submittedCookedAt = cookedAt;
+    const submittedCookedAt = cookedAt.value;
     const submittedComment = comment;
-    const cookedAtTimestamp = new Date(submittedCookedAt).getTime();
+    const cookedAtTimestamp = new Date(
+      `${submittedCookedAt}T00:00:00`,
+    ).getTime();
     if (!Number.isFinite(cookedAtTimestamp)) {
-      setError("Choose a valid cooking date and time.");
+      setError("Choose a valid cooking date.");
       return;
     }
 
@@ -63,8 +66,8 @@ export function AddRecipeCookLogForm({
     }
 
     setCookedAt((current) =>
-      current === submittedCookedAt
-        ? toLocalDateTimeValue(new Date())
+      current.value === submittedCookedAt
+        ? { value: toLocalDateValue(new Date()), selected: false }
         : current,
     );
     setComment((current) => (current === submittedComment ? "" : current));
@@ -86,17 +89,19 @@ export function AddRecipeCookLogForm({
           <Input
             ref={dateInputRef}
             appearance="inline"
-            aria-label="Cooked at"
+            aria-label="Cooking date"
+            className={`text-sm ${cookedAt.selected ? "" : "text-muted"}`}
             name="cookedAt"
-            type="datetime-local"
+            type="date"
             required
-            value={cookedAt}
-            onValueChange={setCookedAt}
+            value={cookedAt.value}
+            onValueChange={(value) => setCookedAt({ value, selected: true })}
           />
         </div>
         <Input
           appearance="inline"
           aria-label="Cooking comment"
+          className="placeholder:text-sm"
           maxLength={1_000}
           placeholder="How did it go?"
           value={comment}

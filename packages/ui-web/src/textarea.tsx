@@ -11,7 +11,7 @@ export type TextareaProps = Omit<
 };
 
 const textareaBaseClasses = [
-  "min-w-0 text-base outline-none",
+  "min-w-0 outline-none",
   "disabled:cursor-not-allowed disabled:opacity-50",
   "transition-colors duration-[var(--motion-duration-fast)]",
 ].join(" ");
@@ -25,7 +25,7 @@ const fieldTextareaClasses = [
 ].join(" ");
 
 const inlineTextareaClasses = [
-  "min-h-24 w-full resize-none rounded-sm border-0 bg-transparent px-1 py-2 text-foreground",
+  "field-sizing-content min-h-10 w-full resize-none rounded-sm border-0 bg-transparent px-1 py-2 text-foreground",
   "placeholder:text-subtle enabled:cursor-text enabled:hover:bg-raised",
   "focus-visible:bg-raised focus-visible:ring-2 focus-visible:ring-focus-ring/40",
   "aria-invalid:ring-2 aria-invalid:ring-danger/40 disabled:cursor-default",
