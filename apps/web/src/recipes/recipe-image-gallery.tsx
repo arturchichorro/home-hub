@@ -1,140 +1,125 @@
+import { DragDropProvider } from "@dnd-kit/react";
+import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import type { RecipeImage } from "@home-hub/shared/zero/schema";
-import { Button, InlineAlert } from "@home-hub/ui-web";
-import { useEffect, useState } from "react";
-import { createRecipeImageReadUrl, deleteRecipeImage } from "./image-api";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ConfirmationPopover,
+  DialogClose,
+  DialogPopup,
+  DialogRoot,
+  IconButton,
+  InlineAlert,
+  Trash2,
+  X,
+} from "@home-hub/ui-web";
+import type { KeyboardEvent, ReactNode, Ref } from "react";
+import { getAdjacentRecipeImage } from "./recipe-image-navigation";
+import { useRecipeImageUrl } from "./use-recipe-image-url";
 
-type RecipeImageGalleryProps = {
+type RecipeImageContext = {
   accessToken: string;
   householdId: string;
   recipeId: string;
-  images: readonly RecipeImage[];
   onSessionExpired: () => void;
 };
 
-type RecipeImageCardProps = Omit<RecipeImageGalleryProps, "images"> & {
+type RecipeImageThumbnailProps = RecipeImageContext & {
   image: RecipeImage;
+  className?: string;
+  buttonRef?: Ref<HTMLButtonElement>;
+  containerRef?: Ref<HTMLLIElement>;
+  onOpen: (image: RecipeImage) => void;
 };
 
-function RecipeImageCard({
+export function RecipeImageThumbnail({
   accessToken,
   householdId,
   recipeId,
   image,
+  className,
+  buttonRef,
+  containerRef,
   onSessionExpired,
-}: RecipeImageCardProps) {
-  const [url, setUrl] = useState<string>();
-  const [error, setError] = useState<string>();
-  const [deleting, setDeleting] = useState(false);
-  const [deleted, setDeleted] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    setUrl(undefined);
-    setError(undefined);
-
-    void createRecipeImageReadUrl({
-      accessToken,
-      householdId,
-      recipeId,
-      imageId: image.id,
-    })
-      .then((result) => {
-        if (!active) return;
-        if (result.kind === "success") {
-          setUrl(result.url);
-        } else if (result.kind === "unauthorized") {
-          onSessionExpired();
-        } else {
-          setError("This image is not currently available.");
-        }
-      })
-      .catch(() => {
-        if (active) setError("The image could not be loaded.");
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [accessToken, householdId, image.id, onSessionExpired, recipeId]);
-
-  async function removeImage() {
-    if (deleting) return;
-
-    try {
-      setDeleting(true);
-      setError(undefined);
-      const result = await deleteRecipeImage({
-        accessToken,
-        householdId,
-        recipeId,
-        imageId: image.id,
-      });
-      if (result.kind === "unauthorized") {
-        onSessionExpired();
-        return;
-      }
-      if (result.kind === "forbidden") {
-        setError("You cannot delete this image.");
-        return;
-      }
-      setDeleted(true);
-    } catch {
-      setError("The image could not be deleted.");
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  if (deleted) {
-    return (
-      <li>
-        <InlineAlert role="status" variant="success">
-          Image deleted. Waiting for synchronization…
-        </InlineAlert>
-      </li>
-    );
-  }
+  onOpen,
+}: RecipeImageThumbnailProps) {
+  const { url, error } = useRecipeImageUrl({
+    accessToken,
+    householdId,
+    recipeId,
+    imageId: image.id,
+    onSessionExpired,
+  });
+  const classes = [
+    "aspect-square overflow-hidden rounded-lg bg-raised",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <li className="overflow-hidden rounded-md border border-border bg-surface">
+    <li ref={containerRef} className={`${classes} relative`}>
       {url ? (
-        <img
-          src={url}
-          alt="Uploaded view of the recipe"
-          width={image.width}
-          height={image.height}
-          loading="lazy"
-          className="aspect-video w-full object-cover"
-        />
-      ) : error ? null : (
-        <div className="flex aspect-video items-center justify-center bg-raised px-4">
-          <p className="text-sm text-muted">Loading image…</p>
+        <button
+          ref={buttonRef}
+          type="button"
+          className={`size-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-focus-ring ${buttonRef ? "touch-none" : ""}`}
+          aria-label="Open recipe image"
+          onClick={() => onOpen(image)}
+        >
+          <img
+            src={url}
+            alt=""
+            width={image.width ?? undefined}
+            height={image.height ?? undefined}
+            loading="lazy"
+            className="size-full object-cover"
+          />
+        </button>
+      ) : error ? (
+        <p className="grid size-full place-items-center p-3 text-center text-xs text-muted">
+          Image unavailable
+        </p>
+      ) : (
+        <div className="grid size-full animate-pulse place-items-center bg-raised">
+          <span className="sr-only">Loading image</span>
         </div>
       )}
-      <div className="grid gap-3 p-4">
-        {image.cookLogId ? (
-          <p className="text-sm text-muted">Attached to a cooking log.</p>
-        ) : (
-          <p className="text-sm text-muted">Recipe photo</p>
-        )}
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            size="compact"
-            variant="danger"
-            busy={deleting}
-            onClick={() => void removeImage()}
-          >
-            Delete image
-          </Button>
-        </div>
-        {error ? (
-          <InlineAlert role="alert" variant="danger">
-            {error}
-          </InlineAlert>
-        ) : null}
-      </div>
     </li>
+  );
+}
+
+type RecipeImageGalleryProps = RecipeImageContext & {
+  addControl: ReactNode;
+  images: readonly RecipeImage[];
+  onOpen: (image: RecipeImage) => void;
+  onReorder: (orderedImageIds: string[]) => void;
+};
+
+function SortableRecipeImageThumbnail({
+  image,
+  index,
+  disabled,
+  ...props
+}: Omit<RecipeImageThumbnailProps, "buttonRef" | "containerRef"> & {
+  disabled: boolean;
+  index: number;
+}) {
+  const sortable = useSortable({
+    id: image.id,
+    index,
+    type: "recipe-image",
+    accept: "recipe-image",
+    disabled,
+  });
+
+  return (
+    <RecipeImageThumbnail
+      {...props}
+      image={image}
+      buttonRef={sortable.handleRef}
+      containerRef={sortable.ref}
+    />
   );
 }
 
@@ -142,27 +127,164 @@ export function RecipeImageGallery({
   accessToken,
   householdId,
   recipeId,
+  addControl,
   images,
   onSessionExpired,
+  onOpen,
+  onReorder,
 }: RecipeImageGalleryProps) {
-  if (images.length === 0) {
-    return (
-      <p className="text-sm text-muted">There are no recipe images yet.</p>
-    );
+  const columnSize =
+    images.length > 3 ? "auto-cols-[30%]" : "auto-cols-[calc((100%-1.5rem)/3)]";
+
+  return (
+    <div className="relative min-h-28">
+      <DragDropProvider
+        onDragEnd={(event) => {
+          if (event.canceled) return;
+          const { source } = event.operation;
+          if (!isSortable(source) || source.initialIndex === source.index)
+            return;
+          const reordered = [...images];
+          const [moved] = reordered.splice(source.initialIndex, 1);
+          if (!moved) return;
+          reordered.splice(source.index, 0, moved);
+          onReorder(reordered.map((image) => image.id));
+        }}
+      >
+        <ul
+          className={`grid ${columnSize} grid-flow-col gap-3 overflow-x-auto`}
+        >
+          {images.map((image, index) => (
+            <SortableRecipeImageThumbnail
+              key={image.id}
+              accessToken={accessToken}
+              householdId={householdId}
+              recipeId={recipeId}
+              image={image}
+              index={index}
+              disabled={false}
+              onSessionExpired={onSessionExpired}
+              onOpen={onOpen}
+            />
+          ))}
+        </ul>
+      </DragDropProvider>
+      <div className="absolute right-2 bottom-2">{addControl}</div>
+    </div>
+  );
+}
+
+type RecipeImageViewerProps = RecipeImageContext & {
+  image: RecipeImage | undefined;
+  images: readonly RecipeImage[];
+  onDelete: (image: RecipeImage) => void;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (image: RecipeImage) => void;
+};
+
+export function RecipeImageViewer({
+  accessToken,
+  householdId,
+  recipeId,
+  image,
+  images,
+  onDelete,
+  onSessionExpired,
+  onOpenChange,
+  onSelect,
+}: RecipeImageViewerProps) {
+  const { url, error } = useRecipeImageUrl({
+    accessToken,
+    householdId,
+    recipeId,
+    imageId: image?.id,
+    onSessionExpired,
+  });
+  const canNavigate = images.length > 1;
+
+  function navigate(direction: -1 | 1) {
+    if (!image) return;
+    const nextImage = getAdjacentRecipeImage(images, image.id, direction);
+    if (nextImage) onSelect(nextImage);
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (!canNavigate) return;
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      navigate(-1);
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      navigate(1);
+    }
   }
 
   return (
-    <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {images.map((image) => (
-        <RecipeImageCard
-          key={image.id}
-          accessToken={accessToken}
-          householdId={householdId}
-          recipeId={recipeId}
-          image={image}
-          onSessionExpired={onSessionExpired}
-        />
-      ))}
-    </ul>
+    <DialogRoot open={image !== undefined} onOpenChange={onOpenChange}>
+      <DialogPopup
+        appearance="bare"
+        title="Image preview"
+        size="large"
+        onKeyDown={handleKeyDown}
+      >
+        <DialogClose
+          aria-label="Close image preview"
+          className="fixed! top-4 left-4 z-10 size-10! rounded-full p-0!"
+        >
+          <X aria-hidden="true" />
+        </DialogClose>
+        {image ? (
+          <ConfirmationPopover
+            title="Delete picture?"
+            description="This permanently removes the picture."
+            trigger={
+              <IconButton
+                aria-label="Delete picture"
+                className="fixed! top-4 right-4 z-10 rounded-full"
+                variant="secondary"
+              >
+                <Trash2 aria-hidden="true" />
+              </IconButton>
+            }
+            onConfirm={() => onDelete(image)}
+          />
+        ) : null}
+        {url ? (
+          <img
+            src={url}
+            alt="Recipe"
+            width={image?.width ?? undefined}
+            height={image?.height ?? undefined}
+            className="max-h-[90vh] w-full object-contain"
+          />
+        ) : error ? (
+          <InlineAlert role="alert" variant="danger">
+            This image is not currently available.
+          </InlineAlert>
+        ) : (
+          <div className="aspect-video animate-pulse rounded-md bg-surface" />
+        )}
+        {canNavigate ? (
+          <>
+            <IconButton
+              aria-label="Previous image"
+              className="fixed! top-1/2 left-4 z-10 -translate-y-1/2 rounded-full"
+              variant="secondary"
+              onClick={() => navigate(-1)}
+            >
+              <ChevronLeft aria-hidden="true" />
+            </IconButton>
+            <IconButton
+              aria-label="Next image"
+              className="fixed! top-1/2 right-4 z-10 -translate-y-1/2 rounded-full"
+              variant="secondary"
+              onClick={() => navigate(1)}
+            >
+              <ChevronRight aria-hidden="true" />
+            </IconButton>
+          </>
+        ) : null}
+      </DialogPopup>
+    </DialogRoot>
   );
 }

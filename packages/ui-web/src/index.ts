@@ -4,7 +4,13 @@ export {
   type ButtonSize,
   type ButtonVariant,
 } from "./button";
+export { Collapsible, type CollapsibleProps } from "./collapsible";
 export {
+  ConfirmationPopover,
+  type ConfirmationPopoverProps,
+} from "./confirmation-popover";
+export {
+  type DialogAppearance,
   DialogClose,
   type DialogCloseProps,
   DialogPopup,
@@ -31,16 +37,23 @@ export {
 } from "./icon-button";
 export {
   Archive,
+  ArrowLeft,
   BookOpen,
+  Calendar,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  GripVertical,
   House,
+  ImagePlus,
   LayoutGrid,
   type LucideIcon,
   type LucideProps,
   Plus,
   RotateCcw,
   ShoppingBasket,
+  Trash2,
   Users,
   X,
 } from "./icons";
@@ -88,3 +101,8 @@ export {
   type StatusIndicatorVariant,
 } from "./status-indicator";
 export { Switch, type SwitchProps } from "./switch";
+export {
+  Textarea,
+  type TextareaAppearance,
+  type TextareaProps,
+} from "./textarea";

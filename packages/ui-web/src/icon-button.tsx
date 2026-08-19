@@ -1,7 +1,7 @@
-import type { ReactNode } from "react";
+import { forwardRef, type ReactNode } from "react";
 import { Button, type ButtonProps } from "./button";
 
-export type IconButtonVariant = "ghost" | "danger";
+export type IconButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 export type IconButtonProps = Omit<
   ButtonProps,
@@ -12,14 +12,18 @@ export type IconButtonProps = Omit<
   variant?: IconButtonVariant;
 };
 
-export function IconButton({
-  variant = "ghost",
-  className,
-  ...props
-}: IconButtonProps) {
-  const classes = ["size-10! p-0!", className].filter(Boolean).join(" ");
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
+  function IconButton({ variant = "ghost", className, ...props }, ref) {
+    const classes = ["size-10! p-0!", className].filter(Boolean).join(" ");
 
-  return (
-    <Button {...props} variant={variant} size="compact" className={classes} />
-  );
-}
+    return (
+      <Button
+        {...props}
+        ref={ref}
+        variant={variant}
+        size="compact"
+        className={classes}
+      />
+    );
+  },
+);

@@ -1,14 +1,21 @@
 export type { LucideIcon, LucideProps } from "lucide-react";
 export {
   Archive,
+  ArrowLeft,
   BookOpen,
+  Calendar,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  GripVertical,
   House,
+  ImagePlus,
   LayoutGrid,
   Plus,
   RotateCcw,
   ShoppingBasket,
+  Trash2,
   Users,
   X,
 } from "lucide-react";

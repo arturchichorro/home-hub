@@ -31,4 +31,15 @@ describe("IconButton", () => {
     expect(markup).toContain("bg-danger");
     expect(markup).toContain("shrink-0");
   });
+
+  it("supports a high-contrast primary variant", () => {
+    const markup = renderToStaticMarkup(
+      <IconButton aria-label="Add image" variant="primary">
+        <X aria-hidden="true" />
+      </IconButton>,
+    );
+
+    expect(markup).toContain("bg-primary");
+    expect(markup).toContain("text-on-primary");
+  });
 });

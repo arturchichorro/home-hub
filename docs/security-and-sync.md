@@ -244,8 +244,8 @@ Shared mutators provide the optimistic client behavior. Server execution adds au
 3. Validate mutation arguments at runtime.
 4. Check membership and the relevant enabled module setting for the supplied
    household inside the mutation transaction.
-5. Verify targeted shopping rows and referenced recipe and image rows belong to
-   the same household.
+5. Verify targeted shopping rows and referenced recipe, ingredient, cooking-log,
+   and image rows belong to the same household and recipe.
 6. Execute the operation idempotently.
 7. Return errors that do not reveal whether a foreign row exists.
 
@@ -305,6 +305,9 @@ only previously synchronized Zero rows persist in the local cache.
 
 Only confirmed image metadata may be synchronized or receive a signed read URL.
 Abandoned pending rows and their possible objects are cleanup candidates.
+Signed read URLs are cached only in browser memory, partitioned by access token,
+household, recipe, and image. They are never persisted; entries refresh before
+expiry and are invalidated when an image is deleted.
 
 Image deletion is idempotent and deletes the R2 object before hard-deleting its
 PostgreSQL metadata. Authorization and metadata reads happen in a short

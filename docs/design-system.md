@@ -230,9 +230,14 @@ Base UI is a foundation, not an accessibility waiver. Feature code still
 provides meaningful labels and announcements, and Home Hub still verifies
 keyboard use, focus visibility, contrast, zoom, and screen-reader behavior.
 
+Keep Tailwind usage direct and economical. Prefer a small set of layout,
+spacing, and semantic-color utilities over long strings of decorative or
+breakpoint-specific overrides. Move genuinely repeated interaction styling
+into a shared primitive instead of repeating it across feature components.
+
 The first web vocabulary is intentionally limited to Button, IconButton,
-Input, Field, Select, Switch, Menu, Dialog, Panel, InlineAlert, ErrorPopover,
-StatusIndicator, and divided-list presentation. Add Tooltip, Toast, Combobox,
+Input, Textarea, Field, Select, Switch, Menu, Dialog, Collapsible, Panel,
+InlineAlert, ErrorPopover, StatusIndicator, and divided-list presentation. Add Tooltip, Toast, Combobox,
 or dedicated Sheet only when a working screen requires them. Route-navigation
 links, application shell composition, shopping rows, recipe content, and
 household-management rows remain feature or application components.
@@ -305,6 +310,14 @@ Input owns presentation and control-state styling, not labels, validation
 rules, debouncing, persistence, or domain behavior. Inputs still require an
 accessible name, either through Field or an explicit label.
 
+### Textarea
+
+Textarea is the shared multiline text-control foundation. It mirrors Input's
+`field` and borderless `inline` appearances so conventional forms and direct
+content editing keep the same interaction states and visual language. Field's
+textarea control composes this primitive rather than defining a separate
+style.
+
 ### Field
 
 A Field contains a persistent label, control, optional description, and
@@ -356,8 +369,9 @@ household may open a Dialog from their menu items.
 ### Dialog
 
 A Dialog contains a portal, backdrop, popup, title, optional description,
-content, action area, and close control. Initial sizes are `small` for focused
-forms or confirmation and `medium` for household creation or joining.
+content, action area, and close control. Sizes are `small` for focused forms or
+confirmation, `medium` for household creation or joining, and `large` for
+image viewing.
 
 Support opening, open, closing, busy, and server-error states. Focus moves into
 the dialog, remains contained while modal, and returns to the trigger after
@@ -367,6 +381,14 @@ submitting dialog must not disappear accidentally if doing so would lose work.
 Use Dialog for login-independent focused tasks and confirmations without
 changing the current module. Do not use it for long household settings or the
 entire recipe screen. A dedicated mobile sheet remains deferred until needed.
+
+### Collapsible
+
+Collapsible combines a labeled trigger and panel. It is open by default when
+its content is part of the page's primary flow, but the user can close it to
+reduce visual density. Use it for independent sections such as recipe
+ingredients and cooking history; use Accordion only if sections later need to
+be mutually exclusive.
 
 ### Panel
 
@@ -466,10 +488,12 @@ screens instead of shrinking labels or forcing page-level horizontal scroll.
 
 ### Feature layouts
 
-The recipe selector and New recipe action stack below `sm` and share a row from
-`sm`. Recipe content stays in one centered column. Images use their stored
-aspect ratio and never exceed the content width. Ingredient and cooking-history
-rows may reflow into stacked label/value groups on narrow screens.
+The recipe library uses one card column by default, two from `sm`, and three
+from `lg`. The create action occupies the same grid footprint as a recipe card.
+Recipe detail remains one column at every width. The directly editable title
+and description precede a single-row, horizontally scrolling gallery and
+collapsible Ingredients and Cooking history sections. Images crop only in
+cards and thumbnails; the viewer preserves the full stored aspect ratio.
 
 Household settings remains one column at every size. Section actions align with
 their headings when space permits and move below them when it does not.
@@ -533,15 +557,33 @@ mutation-disabled, and optimistic mutation states.
 
 ### Recipes
 
-Recipes uses one screen rather than separate index and detail pages. A recipe
-selector near the top chooses the current recipe, and a New recipe action sits
-alongside it. The selected recipe's title and description, confirmed images,
-ingredients, and cooking history render below. Image upload, retry,
-confirmation, signed-read, and deletion remain part of this screen.
+Recipes separates its card library at `/recipes` from addressable detail pages
+at `/recipes/$recipeId`. Cards show the first confirmed image, title, and at
+most two description lines. The card-sized plus action opens title-only recipe
+creation and then navigates to the new detail page.
 
-The selected recipe should be represented in the route's typed search state so
-refreshing or sharing the URL preserves selection without creating a separate
-list/detail information architecture.
+Recipe detail starts with its directly editable accent-colored title and
+description, followed by the complete confirmed-image gallery. The gallery
+stays to one horizontal row and reveals part of the next image when more than
+three are available, making its horizontal scrolling apparent without a count
+badge. A small plus-only, immediate upload control sits over its lower-right
+edge. Drag handles reorder the gallery across pointer, touch, and keyboard
+input; the first image is the recipe-card cover. Every thumbnail opens the same
+large viewer, where image deletion uses a compact confirmation popover.
+Ingredients and Cooking history follow as independently closable sections.
+Ingredients use a compact add row with name, quantity, and unit, immediate
+delete actions, and drag handles for reordering. Cooking
+history is newest first, begins with a date-only add row, and includes compact
+linked image thumbnails for each entry. Each completed cooking entry also
+exposes its own smaller, low-emphasis image-upload control and a confirmed
+delete action in the entry row. Deleting an entry preserves its pictures in the
+general recipe gallery.
+
+The image viewer is an intentionally bare modal: the image is centered without
+panel chrome, with only close, previous, and next controls. Side-centered
+previous and next controls loop across the complete gallery when opened there,
+or only across one cooking log's images when opened from that entry. The left
+and right arrow keys provide the same navigation.
 
 ### Household settings
 
@@ -564,7 +606,7 @@ The current screens justify these reusable primitives or behaviors:
 - divided list and action row;
 - empty, loading, unavailable, and disconnected states.
 
-Application-shell composition, recipe cards, shopping rows, member rows,
+Application-shell composition, recipe cards, recipe image viewers, shopping rows, member rows,
 invitation rows, image galleries, and cooking-history entries remain in their
 feature folders. The UI package supplies primitives; it does not own domain
 language, authorization rules, queries, or mutations.
@@ -583,6 +625,6 @@ authoritative server rejection without removing the user's unsaved form input.
 ## Deferred refinements
 
 The initial design intentionally leaves room for later refinement of visual
-detail, recipe presentation, richer image galleries, responsive menu behavior,
-and additional account actions. Add them when a working screen reveals a real
-need rather than pre-designing every future variation.
+detail, recipe management actions, responsive menu behavior, and additional
+account actions. Add them when a working screen reveals a real need rather than
+pre-designing every future variation.

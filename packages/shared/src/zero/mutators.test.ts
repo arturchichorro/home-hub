@@ -11,6 +11,7 @@ const itemId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const recipeId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 const ingredientId = "5944cb0d-931a-4723-b981-77eacb122314";
 const cookLogId = "e467b00a-5f80-4c13-aa5b-d2e59996dd82";
+const imageId = "b5b8a5ea-89cb-4c31-a93d-33049ab11c73";
 const optimisticUpdatedAt = 1_786_000_000_000;
 
 const setStatusArgs = {
@@ -40,6 +41,14 @@ const createRecipeArgs = {
   title: "Tomato Soup",
   description: "A simple soup.",
   optimisticTimestamp: optimisticUpdatedAt,
+};
+
+const updateRecipeArgs = {
+  householdId,
+  recipeId,
+  title: "Roasted Tomato Soup",
+  description: "Even better the next day.",
+  optimisticUpdatedAt,
 };
 
 const addRecipeIngredientArgs = {
@@ -85,16 +94,26 @@ function createFakeTransaction({
   const insert = vi.fn(async () => undefined);
   const update = vi.fn(async () => undefined);
   const recipeInsert = vi.fn(async () => undefined);
+  const recipeUpdate = vi.fn(async () => undefined);
   const ingredientInsert = vi.fn(async () => undefined);
+  const ingredientUpdate = vi.fn(async () => undefined);
+  const ingredientDelete = vi.fn(async () => undefined);
   const cookLogInsert = vi.fn(async () => undefined);
+  const cookLogDelete = vi.fn(async () => undefined);
+  const imageUpdate = vi.fn(async () => undefined);
 
   const transaction = {
     clientID: "client-id",
     location,
     mutate: {
-      recipeCookLogs: { insert: cookLogInsert },
-      recipeIngredients: { insert: ingredientInsert },
-      recipes: { insert: recipeInsert },
+      recipeCookLogs: { delete: cookLogDelete, insert: cookLogInsert },
+      recipeImages: { update: imageUpdate },
+      recipeIngredients: {
+        delete: ingredientDelete,
+        insert: ingredientInsert,
+        update: ingredientUpdate,
+      },
+      recipes: { insert: recipeInsert, update: recipeUpdate },
       shoppingItems: { insert, update },
     },
     mutationID: 1,
@@ -104,10 +123,15 @@ function createFakeTransaction({
 
   return {
     cookLogInsert,
+    cookLogDelete,
+    imageUpdate,
+    ingredientDelete,
     ingredientInsert,
+    ingredientUpdate,
     insert,
     queries,
     recipeInsert,
+    recipeUpdate,
     transaction,
     update,
   };
@@ -240,6 +264,100 @@ describe("shopping.setStatus mutator", () => {
       id: itemId,
       status: "active",
       updatedAt: 1_786_000_002_000,
+    });
+  });
+});
+
+describe("recipes.update mutator", () => {
+  it("is registered with a stable name", () => {
+    expect(mutators.recipes.update.mutatorName).toBe("recipes.update");
+  });
+
+  it("optimistically updates a cached household recipe", async () => {
+    const { queries, recipeUpdate, transaction } = createFakeTransaction({
+      location: "client",
+      results: [{ id: recipeId, householdId }],
+    });
+
+    await mutators.recipes.update.fn({
+      args: updateRecipeArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(queries).toHaveLength(1);
+    expect(recipeUpdate).toHaveBeenCalledWith({
+      id: recipeId,
+      title: "Roasted Tomato Soup",
+      description: "Even better the next day.",
+      updatedAt: optimisticUpdatedAt,
+    });
+  });
+
+  it("rejects a server mutation before looking up the recipe when membership is missing", async () => {
+    const { queries, recipeUpdate, transaction } = createFakeTransaction({
+      location: "server",
+      results: [undefined],
+    });
+
+    await expect(
+      mutators.recipes.update.fn({
+        args: updateRecipeArgs,
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Household module mutation not allowed");
+
+    expect(queries).toHaveLength(1);
+    expect(recipeUpdate).not.toHaveBeenCalled();
+  });
+
+  it("rejects a recipe outside the supplied household", async () => {
+    const { queries, recipeUpdate, transaction } = createFakeTransaction({
+      location: "server",
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+        undefined,
+      ],
+    });
+
+    await expect(
+      mutators.recipes.update.fn({
+        args: updateRecipeArgs,
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Recipe update not allowed");
+
+    expect(queries).toHaveLength(3);
+    expect(recipeUpdate).not.toHaveBeenCalled();
+  });
+
+  it("authorizes the recipe and uses the server timestamp", async () => {
+    const authoritativeTimestamp = 1_786_000_001_000;
+    vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
+    const { queries, recipeUpdate, transaction } = createFakeTransaction({
+      location: "server",
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+        { id: recipeId, householdId },
+      ],
+    });
+
+    await mutators.recipes.update.fn({
+      args: updateRecipeArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(queries).toHaveLength(3);
+    expect(recipeUpdate).toHaveBeenCalledWith({
+      id: recipeId,
+      title: "Roasted Tomato Soup",
+      description: "Even better the next day.",
+      updatedAt: authoritativeTimestamp,
     });
   });
 });
@@ -783,6 +901,128 @@ describe("recipes.addCookLog mutator", () => {
       comment: "Made it less spicy.",
       createdAt: authoritativeTimestamp,
       updatedAt: authoritativeTimestamp,
+    });
+  });
+});
+
+describe("recipe organization mutators", () => {
+  it("optimistically deletes only a scoped ingredient", async () => {
+    const { ingredientDelete, transaction } = createFakeTransaction({
+      location: "client",
+      results: [{ id: ingredientId, householdId, recipeId }],
+    });
+
+    await mutators.recipes.deleteIngredient.fn({
+      args: { householdId, recipeId, ingredientId },
+      ctx,
+      tx: transaction,
+    });
+
+    expect(ingredientDelete).toHaveBeenCalledWith({ id: ingredientId });
+  });
+
+  it("rejects ingredient deletion outside the recipe", async () => {
+    const { ingredientDelete, transaction } = createFakeTransaction({
+      location: "server",
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+        undefined,
+      ],
+    });
+
+    await expect(
+      mutators.recipes.deleteIngredient.fn({
+        args: { householdId, recipeId, ingredientId },
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Recipe ingredient deletion not allowed");
+    expect(ingredientDelete).not.toHaveBeenCalled();
+  });
+
+  it("optimistically reorders scoped ingredients", async () => {
+    const secondIngredientId = "4a7bb0d3-e2d9-4907-98b8-9865473785b0";
+    const { ingredientUpdate, transaction } = createFakeTransaction({
+      location: "client",
+      results: [
+        { id: secondIngredientId, householdId, recipeId },
+        { id: ingredientId, householdId, recipeId },
+      ],
+    });
+
+    await mutators.recipes.reorderIngredients.fn({
+      args: {
+        householdId,
+        recipeId,
+        orderedIngredientIds: [secondIngredientId, ingredientId],
+        optimisticUpdatedAt,
+      },
+      ctx,
+      tx: transaction,
+    });
+
+    expect(ingredientUpdate).toHaveBeenNthCalledWith(1, {
+      id: secondIngredientId,
+      position: 0,
+      updatedAt: optimisticUpdatedAt,
+    });
+    expect(ingredientUpdate).toHaveBeenNthCalledWith(2, {
+      id: ingredientId,
+      position: 1,
+      updatedAt: optimisticUpdatedAt,
+    });
+  });
+
+  it("preserves cooking-log pictures before optimistically deleting the log", async () => {
+    const { cookLogDelete, imageUpdate, transaction } = createFakeTransaction({
+      location: "client",
+      results: [
+        { id: cookLogId, householdId, recipeId },
+        [{ id: imageId, cookLogId }],
+      ],
+    });
+
+    await mutators.recipes.deleteCookLog.fn({
+      args: { householdId, recipeId, cookLogId },
+      ctx,
+      tx: transaction,
+    });
+
+    expect(imageUpdate).toHaveBeenCalledWith({ id: imageId, cookLogId: null });
+    expect(cookLogDelete).toHaveBeenCalledWith({ id: cookLogId });
+  });
+
+  it("optimistically reorders scoped images", async () => {
+    const secondImageId = "aed36f2e-cdf5-434a-85dc-35e3f3d783cc";
+    const { imageUpdate, transaction } = createFakeTransaction({
+      location: "client",
+      results: [
+        { id: secondImageId, householdId, recipeId },
+        { id: imageId, householdId, recipeId },
+      ],
+    });
+
+    await mutators.recipes.reorderImages.fn({
+      args: {
+        householdId,
+        recipeId,
+        orderedImageIds: [secondImageId, imageId],
+        optimisticUpdatedAt,
+      },
+      ctx,
+      tx: transaction,
+    });
+
+    expect(imageUpdate).toHaveBeenNthCalledWith(1, {
+      id: secondImageId,
+      position: 0,
+      updatedAt: optimisticUpdatedAt,
+    });
+    expect(imageUpdate).toHaveBeenNthCalledWith(2, {
+      id: imageId,
+      position: 1,
+      updatedAt: optimisticUpdatedAt,
     });
   });
 });

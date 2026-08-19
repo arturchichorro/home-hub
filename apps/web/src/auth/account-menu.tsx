@@ -38,7 +38,7 @@ export function AccountMenu({ onLoggedOut, username }: AccountMenuProps) {
         <span className="truncate">{username}</span>
         <MenuChevron />
       </MenuTrigger>
-      <MenuPopup align="end">
+      <MenuPopup align="end" className="min-w-32!">
         <MenuItem
           closeOnClick={false}
           disabled={isLoggingOut}

@@ -55,7 +55,7 @@ const moduleDefinitions: readonly ModuleDefinition[] = [
 
 function getCurrentModule(pathname: string): ModuleKey {
   if (pathname.endsWith("/shopping")) return "shopping";
-  if (pathname.endsWith("/recipes")) return "recipes";
+  if (pathname.includes("/recipes")) return "recipes";
   return "household";
 }
 
