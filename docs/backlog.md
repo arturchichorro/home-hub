@@ -10,7 +10,6 @@ together before implementation begins.
 ## Improvements
 
 - [ ] Open last opened household on app start (through local storage or something)
-- [ ] Add quantities to shopping items
 - [ ] Add recipe ingredients to Shopping
 - [ ] Publish safe member profiles through Zero to prevent interface flashing
 - [ ] Improve separation between database access, domain behavior, and transport code
