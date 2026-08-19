@@ -145,6 +145,29 @@ describe("recipe queries", () => {
           moduleAccessCondition("recipes"),
         ],
       },
+      related: [
+        {
+          correlation: {
+            childField: ["householdId", "recipeId"],
+            parentField: ["householdId", "id"],
+          },
+          subquery: {
+            alias: "images",
+            table: "recipeImages",
+            limit: 1,
+            where: {
+              type: "simple",
+              left: { type: "column", name: "confirmedAt" },
+              op: "IS NOT",
+              right: { type: "literal", value: null },
+            },
+            orderBy: [
+              ["position", "asc"],
+              ["id", "asc"],
+            ],
+          },
+        },
+      ],
     });
   });
 

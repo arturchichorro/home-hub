@@ -4,6 +4,7 @@ import {
   createRecipeCookLogMutationSchema,
   createRecipeIngredientMutationSchema,
   createRecipeMutationSchema,
+  updateRecipeMutationSchema,
 } from "../recipes";
 import {
   addShoppingItemMutationSchema,
@@ -156,6 +157,37 @@ const createRecipe = defineHomeHubMutator(
   },
 );
 
+const updateRecipe = defineHomeHubMutator(
+  updateRecipeMutationSchema,
+  async ({ args, ctx, tx }) => {
+    await requireServerHouseholdModuleAccess({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+      moduleKey: "recipes",
+    });
+
+    const recipe = await tx.run(
+      zql.recipes
+        .where("id", args.recipeId)
+        .where("householdId", args.householdId)
+        .one(),
+    );
+
+    if (!recipe) {
+      throw new Error("Recipe update not allowed");
+    }
+
+    await tx.mutate.recipes.update({
+      id: args.recipeId,
+      title: args.title,
+      description: args.description,
+      updatedAt:
+        tx.location === "server" ? Date.now() : args.optimisticUpdatedAt,
+    });
+  },
+);
+
 const addRecipeIngredient = defineHomeHubMutator(
   createRecipeIngredientMutationSchema,
   async ({ args, ctx, tx }) => {
@@ -239,6 +271,7 @@ export const mutators = defineHomeHubMutators({
   },
   recipes: {
     create: createRecipe,
+    update: updateRecipe,
     addIngredient: addRecipeIngredient,
     addCookLog: addRecipeCookLog,
   },

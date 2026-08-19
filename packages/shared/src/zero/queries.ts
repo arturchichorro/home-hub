@@ -71,6 +71,13 @@ const recipesByHousehold = defineHomeHubQuery(
             setting.where("moduleKey", "recipes").where("enabled", true),
           ),
       )
+      .related("images", (image) =>
+        image
+          .where("confirmedAt", "IS NOT", null)
+          .orderBy("position", "asc")
+          .orderBy("id", "asc")
+          .limit(1),
+      )
       .orderBy("title", "asc")
       .orderBy("id", "asc"),
 );

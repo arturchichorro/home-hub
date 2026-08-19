@@ -1,6 +1,7 @@
 import { Field as BaseField } from "@base-ui/react/field";
 import { type ComponentProps, forwardRef, type ReactNode } from "react";
 import { Input, type InputProps } from "./input";
+import { Textarea, type TextareaProps } from "./textarea";
 
 type BaseFieldRootProps = ComponentProps<typeof BaseField.Root>;
 
@@ -70,28 +71,16 @@ export const FieldControl = forwardRef<HTMLInputElement, FieldControlProps>(
 );
 
 export type FieldTextareaProps = Omit<
-  ComponentProps<"textarea">,
-  "className"
-> & {
-  className?: string;
-};
+  TextareaProps,
+  "appearance" | "className"
+> & { className?: string };
 
 export function FieldTextarea({ className, ...props }: FieldTextareaProps) {
-  const classes = [
-    "w-full rounded-md border border-border bg-surface text-base text-foreground outline-none",
-    "placeholder:text-subtle enabled:hover:border-subtle",
-    "focus-visible:border-focus-ring focus-visible:ring-2 focus-visible:ring-focus-ring/30",
-    "data-invalid:border-danger data-invalid:focus-visible:ring-danger/30",
-    "data-disabled:cursor-not-allowed data-disabled:opacity-50",
-    "read-only:cursor-default read-only:bg-raised",
-    "transition-colors duration-[var(--motion-duration-fast)]",
-    "min-h-24 resize-y px-3 py-2",
-    className,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   return (
-    <BaseField.Control render={<textarea {...props} className={classes} />} />
+    <BaseField.Control
+      render={
+        <Textarea {...props} appearance="field" className={className ?? ""} />
+      }
+    />
   );
 }

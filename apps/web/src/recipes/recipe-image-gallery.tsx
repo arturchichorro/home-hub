@@ -1,168 +1,159 @@
 import type { RecipeImage } from "@home-hub/shared/zero/schema";
-import { Button, InlineAlert } from "@home-hub/ui-web";
-import { useEffect, useState } from "react";
-import { createRecipeImageReadUrl, deleteRecipeImage } from "./image-api";
+import {
+  DialogClose,
+  DialogPopup,
+  DialogRoot,
+  InlineAlert,
+} from "@home-hub/ui-web";
+import type { ReactNode } from "react";
+import { useRecipeImageUrl } from "./use-recipe-image-url";
 
-type RecipeImageGalleryProps = {
+type RecipeImageContext = {
   accessToken: string;
   householdId: string;
   recipeId: string;
-  images: readonly RecipeImage[];
   onSessionExpired: () => void;
 };
 
-type RecipeImageCardProps = Omit<RecipeImageGalleryProps, "images"> & {
+type RecipeImageThumbnailProps = RecipeImageContext & {
   image: RecipeImage;
+  className?: string;
+  onOpen: (image: RecipeImage) => void;
 };
 
-function RecipeImageCard({
+export function RecipeImageThumbnail({
   accessToken,
   householdId,
   recipeId,
   image,
+  className,
   onSessionExpired,
-}: RecipeImageCardProps) {
-  const [url, setUrl] = useState<string>();
-  const [error, setError] = useState<string>();
-  const [deleting, setDeleting] = useState(false);
-  const [deleted, setDeleted] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    setUrl(undefined);
-    setError(undefined);
-
-    void createRecipeImageReadUrl({
-      accessToken,
-      householdId,
-      recipeId,
-      imageId: image.id,
-    })
-      .then((result) => {
-        if (!active) return;
-        if (result.kind === "success") {
-          setUrl(result.url);
-        } else if (result.kind === "unauthorized") {
-          onSessionExpired();
-        } else {
-          setError("This image is not currently available.");
-        }
-      })
-      .catch(() => {
-        if (active) setError("The image could not be loaded.");
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [accessToken, householdId, image.id, onSessionExpired, recipeId]);
-
-  async function removeImage() {
-    if (deleting) return;
-
-    try {
-      setDeleting(true);
-      setError(undefined);
-      const result = await deleteRecipeImage({
-        accessToken,
-        householdId,
-        recipeId,
-        imageId: image.id,
-      });
-      if (result.kind === "unauthorized") {
-        onSessionExpired();
-        return;
-      }
-      if (result.kind === "forbidden") {
-        setError("You cannot delete this image.");
-        return;
-      }
-      setDeleted(true);
-    } catch {
-      setError("The image could not be deleted.");
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  if (deleted) {
-    return (
-      <li>
-        <InlineAlert role="status" variant="success">
-          Image deleted. Waiting for synchronization…
-        </InlineAlert>
-      </li>
-    );
-  }
+  onOpen,
+}: RecipeImageThumbnailProps) {
+  const { url, error } = useRecipeImageUrl({
+    accessToken,
+    householdId,
+    recipeId,
+    imageId: image.id,
+    onSessionExpired,
+  });
+  const classes = [
+    "aspect-square overflow-hidden rounded-lg bg-raised",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <li className="overflow-hidden rounded-md border border-border bg-surface">
+    <li className={classes}>
       {url ? (
-        <img
-          src={url}
-          alt="Uploaded view of the recipe"
-          width={image.width}
-          height={image.height}
-          loading="lazy"
-          className="aspect-video w-full object-cover"
-        />
-      ) : error ? null : (
-        <div className="flex aspect-video items-center justify-center bg-raised px-4">
-          <p className="text-sm text-muted">Loading image…</p>
+        <button
+          type="button"
+          className="size-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-focus-ring"
+          aria-label="Open recipe image"
+          onClick={() => onOpen(image)}
+        >
+          <img
+            src={url}
+            alt=""
+            width={image.width ?? undefined}
+            height={image.height ?? undefined}
+            loading="lazy"
+            className="size-full object-cover"
+          />
+        </button>
+      ) : error ? (
+        <p className="grid size-full place-items-center p-3 text-center text-xs text-muted">
+          Image unavailable
+        </p>
+      ) : (
+        <div className="grid size-full animate-pulse place-items-center bg-raised">
+          <span className="sr-only">Loading image</span>
         </div>
       )}
-      <div className="grid gap-3 p-4">
-        {image.cookLogId ? (
-          <p className="text-sm text-muted">Attached to a cooking log.</p>
-        ) : (
-          <p className="text-sm text-muted">Recipe photo</p>
-        )}
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            size="compact"
-            variant="danger"
-            busy={deleting}
-            onClick={() => void removeImage()}
-          >
-            Delete image
-          </Button>
-        </div>
-        {error ? (
-          <InlineAlert role="alert" variant="danger">
-            {error}
-          </InlineAlert>
-        ) : null}
-      </div>
     </li>
   );
 }
+
+type RecipeImageGalleryProps = RecipeImageContext & {
+  addControl: ReactNode;
+  images: readonly RecipeImage[];
+  onOpen: (image: RecipeImage) => void;
+};
 
 export function RecipeImageGallery({
   accessToken,
   householdId,
   recipeId,
+  addControl,
   images,
   onSessionExpired,
+  onOpen,
 }: RecipeImageGalleryProps) {
-  if (images.length === 0) {
-    return (
-      <p className="text-sm text-muted">There are no recipe images yet.</p>
-    );
-  }
+  return (
+    <div className="relative min-h-28">
+      <ul className="grid auto-cols-[calc((100%-1.5rem)/3)] grid-flow-col gap-3 overflow-x-auto">
+        {images.map((image) => (
+          <RecipeImageThumbnail
+            key={image.id}
+            accessToken={accessToken}
+            householdId={householdId}
+            recipeId={recipeId}
+            image={image}
+            onSessionExpired={onSessionExpired}
+            onOpen={onOpen}
+          />
+        ))}
+      </ul>
+      <div className="absolute right-2 bottom-2">{addControl}</div>
+    </div>
+  );
+}
+
+type RecipeImageViewerProps = RecipeImageContext & {
+  image: RecipeImage | undefined;
+  onOpenChange: (open: boolean) => void;
+};
+
+export function RecipeImageViewer({
+  accessToken,
+  householdId,
+  recipeId,
+  image,
+  onSessionExpired,
+  onOpenChange,
+}: RecipeImageViewerProps) {
+  const { url, error } = useRecipeImageUrl({
+    accessToken,
+    householdId,
+    recipeId,
+    imageId: image?.id,
+    onSessionExpired,
+  });
 
   return (
-    <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {images.map((image) => (
-        <RecipeImageCard
-          key={image.id}
-          accessToken={accessToken}
-          householdId={householdId}
-          recipeId={recipeId}
-          image={image}
-          onSessionExpired={onSessionExpired}
-        />
-      ))}
-    </ul>
+    <DialogRoot open={image !== undefined} onOpenChange={onOpenChange}>
+      <DialogPopup
+        title="Recipe photo"
+        size="large"
+        actions={<DialogClose>Close</DialogClose>}
+      >
+        {url ? (
+          <img
+            src={url}
+            alt="Recipe"
+            width={image?.width ?? undefined}
+            height={image?.height ?? undefined}
+            className="max-h-[75vh] w-full rounded-md object-contain"
+          />
+        ) : error ? (
+          <InlineAlert role="alert" variant="danger">
+            This image is not currently available.
+          </InlineAlert>
+        ) : (
+          <div className="aspect-video animate-pulse rounded-md bg-surface" />
+        )}
+      </DialogPopup>
+    </DialogRoot>
   );
 }

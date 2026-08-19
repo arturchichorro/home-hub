@@ -4,6 +4,7 @@ export {
   type ButtonSize,
   type ButtonVariant,
 } from "./button";
+export { Collapsible, type CollapsibleProps } from "./collapsible";
 export {
   DialogClose,
   type DialogCloseProps,
@@ -32,6 +33,7 @@ export {
 export {
   Archive,
   BookOpen,
+  Calendar,
   Check,
   ChevronDown,
   House,
@@ -88,3 +90,8 @@ export {
   type StatusIndicatorVariant,
 } from "./status-indicator";
 export { Switch, type SwitchProps } from "./switch";
+export {
+  Textarea,
+  type TextareaAppearance,
+  type TextareaProps,
+} from "./textarea";

@@ -42,6 +42,14 @@ const createRecipeArgs = {
   optimisticTimestamp: optimisticUpdatedAt,
 };
 
+const updateRecipeArgs = {
+  householdId,
+  recipeId,
+  title: "Roasted Tomato Soup",
+  description: "Even better the next day.",
+  optimisticUpdatedAt,
+};
+
 const addRecipeIngredientArgs = {
   ingredientId,
   householdId,
@@ -85,6 +93,7 @@ function createFakeTransaction({
   const insert = vi.fn(async () => undefined);
   const update = vi.fn(async () => undefined);
   const recipeInsert = vi.fn(async () => undefined);
+  const recipeUpdate = vi.fn(async () => undefined);
   const ingredientInsert = vi.fn(async () => undefined);
   const cookLogInsert = vi.fn(async () => undefined);
 
@@ -94,7 +103,7 @@ function createFakeTransaction({
     mutate: {
       recipeCookLogs: { insert: cookLogInsert },
       recipeIngredients: { insert: ingredientInsert },
-      recipes: { insert: recipeInsert },
+      recipes: { insert: recipeInsert, update: recipeUpdate },
       shoppingItems: { insert, update },
     },
     mutationID: 1,
@@ -108,6 +117,7 @@ function createFakeTransaction({
     insert,
     queries,
     recipeInsert,
+    recipeUpdate,
     transaction,
     update,
   };
@@ -240,6 +250,100 @@ describe("shopping.setStatus mutator", () => {
       id: itemId,
       status: "active",
       updatedAt: 1_786_000_002_000,
+    });
+  });
+});
+
+describe("recipes.update mutator", () => {
+  it("is registered with a stable name", () => {
+    expect(mutators.recipes.update.mutatorName).toBe("recipes.update");
+  });
+
+  it("optimistically updates a cached household recipe", async () => {
+    const { queries, recipeUpdate, transaction } = createFakeTransaction({
+      location: "client",
+      results: [{ id: recipeId, householdId }],
+    });
+
+    await mutators.recipes.update.fn({
+      args: updateRecipeArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(queries).toHaveLength(1);
+    expect(recipeUpdate).toHaveBeenCalledWith({
+      id: recipeId,
+      title: "Roasted Tomato Soup",
+      description: "Even better the next day.",
+      updatedAt: optimisticUpdatedAt,
+    });
+  });
+
+  it("rejects a server mutation before looking up the recipe when membership is missing", async () => {
+    const { queries, recipeUpdate, transaction } = createFakeTransaction({
+      location: "server",
+      results: [undefined],
+    });
+
+    await expect(
+      mutators.recipes.update.fn({
+        args: updateRecipeArgs,
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Household module mutation not allowed");
+
+    expect(queries).toHaveLength(1);
+    expect(recipeUpdate).not.toHaveBeenCalled();
+  });
+
+  it("rejects a recipe outside the supplied household", async () => {
+    const { queries, recipeUpdate, transaction } = createFakeTransaction({
+      location: "server",
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+        undefined,
+      ],
+    });
+
+    await expect(
+      mutators.recipes.update.fn({
+        args: updateRecipeArgs,
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Recipe update not allowed");
+
+    expect(queries).toHaveLength(3);
+    expect(recipeUpdate).not.toHaveBeenCalled();
+  });
+
+  it("authorizes the recipe and uses the server timestamp", async () => {
+    const authoritativeTimestamp = 1_786_000_001_000;
+    vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
+    const { queries, recipeUpdate, transaction } = createFakeTransaction({
+      location: "server",
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+        { id: recipeId, householdId },
+      ],
+    });
+
+    await mutators.recipes.update.fn({
+      args: updateRecipeArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(queries).toHaveLength(3);
+    expect(recipeUpdate).toHaveBeenCalledWith({
+      id: recipeId,
+      title: "Roasted Tomato Soup",
+      description: "Even better the next day.",
+      updatedAt: authoritativeTimestamp,
     });
   });
 });

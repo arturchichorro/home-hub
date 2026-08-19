@@ -4,7 +4,7 @@ import { Button, type ButtonProps } from "./button";
 
 export const DialogRoot = BaseDialog.Root;
 
-export type DialogSize = "small" | "medium";
+export type DialogSize = "small" | "medium" | "large";
 
 type BaseDialogPopupProps = ComponentProps<typeof BaseDialog.Popup>;
 
@@ -23,6 +23,7 @@ export type DialogPopupProps = Omit<
 const sizeClasses: Record<DialogSize, string> = {
   small: "max-w-sm",
   medium: "max-w-lg",
+  large: "max-w-5xl",
 };
 
 export function DialogPopup({

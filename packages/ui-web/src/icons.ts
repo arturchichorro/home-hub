@@ -2,6 +2,7 @@ export type { LucideIcon, LucideProps } from "lucide-react";
 export {
   Archive,
   BookOpen,
+  Calendar,
   Check,
   ChevronDown,
   House,
