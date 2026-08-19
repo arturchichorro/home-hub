@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
 import { createRecipeImageReadUrl } from "./image-api";
+import {
+  getOrCreateRecipeImageUrl,
+  readCachedRecipeImageUrl,
+  recipeImageUrlCacheKey,
+} from "./recipe-image-url-cache";
 
 type UseRecipeImageUrlOptions = {
   accessToken: string;
@@ -15,6 +20,12 @@ type RecipeImageUrlState = {
   url: string | undefined;
 };
 
+type InternalRecipeImageUrlState = {
+  error: boolean;
+  key: string | undefined;
+  url: string | undefined;
+};
+
 export function useRecipeImageUrl({
   accessToken,
   householdId,
@@ -22,39 +33,74 @@ export function useRecipeImageUrl({
   onSessionExpired,
   recipeId,
 }: UseRecipeImageUrlOptions): RecipeImageUrlState {
-  const [url, setUrl] = useState<string>();
-  const [error, setError] = useState(false);
+  const identity = imageId
+    ? { accessToken, householdId, imageId, recipeId }
+    : undefined;
+  const key = identity ? recipeImageUrlCacheKey(identity) : undefined;
+  const cached = identity ? readCachedRecipeImageUrl(identity) : undefined;
+  const [state, setState] = useState<InternalRecipeImageUrlState>(() => ({
+    error: false,
+    key,
+    url: cached?.url,
+  }));
+  const stateMatches = state.key === key;
+  const url = cached?.url ?? (stateMatches ? state.url : undefined);
+  const error = stateMatches ? state.error : false;
 
   useEffect(() => {
     let active = true;
-    setUrl(undefined);
-    setError(false);
+    let refreshTimeout: ReturnType<typeof setTimeout> | undefined;
 
-    if (!imageId) return () => undefined;
+    if (!imageId) {
+      setState({ error: false, key: undefined, url: undefined });
+      return () => undefined;
+    }
 
-    void createRecipeImageReadUrl({
-      accessToken,
-      householdId,
-      recipeId,
-      imageId,
-    })
-      .then((result) => {
-        if (!active) return;
+    const currentIdentity = { accessToken, householdId, imageId, recipeId };
+    const currentKey = recipeImageUrlCacheKey(currentIdentity);
 
-        if (result.kind === "success") {
-          setUrl(result.url);
-        } else if (result.kind === "unauthorized") {
-          onSessionExpired();
-        } else {
-          setError(true);
+    function scheduleRefresh(refreshAt: number) {
+      refreshTimeout = setTimeout(
+        () => void loadUrl(),
+        Math.max(0, refreshAt - Date.now()),
+      );
+    }
+
+    async function loadUrl() {
+      const currentCached = readCachedRecipeImageUrl(currentIdentity);
+      if (currentCached) {
+        if (active) {
+          setState({ error: false, key: currentKey, url: currentCached.url });
+          scheduleRefresh(currentCached.refreshAt);
         }
-      })
-      .catch(() => {
-        if (active) setError(true);
-      });
+        return;
+      }
+
+      if (active) setState({ error: false, key: currentKey, url: undefined });
+
+      const result = await getOrCreateRecipeImageUrl(currentIdentity, () =>
+        createRecipeImageReadUrl(currentIdentity),
+      );
+      if (!active) return;
+
+      if (result.kind === "success") {
+        setState({ error: false, key: currentKey, url: result.url });
+        const nextCached = readCachedRecipeImageUrl(currentIdentity);
+        if (nextCached) scheduleRefresh(nextCached.refreshAt);
+      } else if (result.kind === "unauthorized") {
+        onSessionExpired();
+      } else {
+        setState({ error: true, key: currentKey, url: undefined });
+      }
+    }
+
+    void loadUrl().catch(() => {
+      if (active) setState({ error: true, key: currentKey, url: undefined });
+    });
 
     return () => {
       active = false;
+      if (refreshTimeout !== undefined) clearTimeout(refreshTimeout);
     };
   }, [accessToken, householdId, imageId, onSessionExpired, recipeId]);
 

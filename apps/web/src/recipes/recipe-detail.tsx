@@ -23,6 +23,7 @@ import {
   RecipeImageViewer,
 } from "./recipe-image-gallery";
 import { RecipeImageUploadForm } from "./recipe-image-upload-form";
+import { invalidateRecipeImageUrl } from "./recipe-image-url-cache";
 import { RecipeIngredientList } from "./recipe-ingredient-list";
 import { useRecipeDetailsEditor } from "./use-recipe-details-editor";
 
@@ -141,7 +142,11 @@ export function RecipeDetail({
         imageId: image.id,
       });
       if (deletion.kind === "unauthorized") onSessionExpired();
-      if (deletion.kind !== "success") restoreImage();
+      if (deletion.kind === "success") {
+        invalidateRecipeImageUrl({ householdId, recipeId, imageId: image.id });
+      } else {
+        restoreImage();
+      }
     } catch {
       restoreImage();
     }

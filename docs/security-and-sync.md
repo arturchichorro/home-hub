@@ -305,6 +305,9 @@ only previously synchronized Zero rows persist in the local cache.
 
 Only confirmed image metadata may be synchronized or receive a signed read URL.
 Abandoned pending rows and their possible objects are cleanup candidates.
+Signed read URLs are cached only in browser memory, partitioned by access token,
+household, recipe, and image. They are never persisted; entries refresh before
+expiry and are invalidated when an image is deleted.
 
 Image deletion is idempotent and deletes the R2 object before hard-deleting its
 PostgreSQL metadata. Authorization and metadata reads happen in a short

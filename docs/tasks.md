@@ -77,6 +77,7 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Reorder gallery pictures with accessible horizontal drag-and-drop, keeping the first picture as the recipe cover
 - [x] Delete pictures through a compact confirmation popover and remove their stored objects
 - [x] Delete cooking logs through a compact confirmation popover while preserving their pictures as general recipe pictures
+- [x] Reuse expiring signed image URLs across route and component remounts without crossing sessions
 - [x] Verify optimistic, authorization, failure, drag, keyboard, touch, cover-image, and storage-cleanup behavior
 - [ ] Update the system documentation and complete the recipe-operations checkpoint
 
