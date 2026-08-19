@@ -244,8 +244,8 @@ Shared mutators provide the optimistic client behavior. Server execution adds au
 3. Validate mutation arguments at runtime.
 4. Check membership and the relevant enabled module setting for the supplied
    household inside the mutation transaction.
-5. Verify targeted shopping rows and referenced recipe and image rows belong to
-   the same household.
+5. Verify targeted shopping rows and referenced recipe, ingredient, cooking-log,
+   and image rows belong to the same household and recipe.
 6. Execute the operation idempotently.
 7. Return errors that do not reveal whether a foreign row exists.
 

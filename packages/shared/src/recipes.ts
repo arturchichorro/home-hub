@@ -112,3 +112,45 @@ export const createRecipeCookLogMutationSchema = z
 export type CreateRecipeCookLogMutationInput = z.infer<
   typeof createRecipeCookLogMutationSchema
 >;
+
+const orderedIdsSchema = z
+  .array(z.uuid())
+  .min(1)
+  .max(500)
+  .refine((ids) => new Set(ids).size === ids.length, {
+    message: "Ordered IDs must be unique",
+  });
+
+export const deleteRecipeIngredientMutationSchema = z
+  .object({
+    ingredientId: z.uuid(),
+    householdId: z.uuid(),
+    recipeId: z.uuid(),
+  })
+  .strict();
+
+export const reorderRecipeIngredientsMutationSchema = z
+  .object({
+    householdId: z.uuid(),
+    recipeId: z.uuid(),
+    orderedIngredientIds: orderedIdsSchema,
+    optimisticUpdatedAt: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const deleteRecipeCookLogMutationSchema = z
+  .object({
+    cookLogId: z.uuid(),
+    householdId: z.uuid(),
+    recipeId: z.uuid(),
+  })
+  .strict();
+
+export const reorderRecipeImagesMutationSchema = z
+  .object({
+    householdId: z.uuid(),
+    recipeId: z.uuid(),
+    orderedImageIds: orderedIdsSchema,
+    optimisticUpdatedAt: z.number().int().nonnegative(),
+  })
+  .strict();

@@ -68,6 +68,18 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Verify loading, empty, optimistic, upload, failure, responsive, keyboard, and accessible-name behavior
 - [x] Update the design-system documentation and complete the Recipes UI checkpoint
 
+## Add recipe-detail organization and deletion
+
+- [x] Define validated optimistic mutations for ingredient deletion and ingredient, image, and cooking-log reordering
+- [x] Enforce household, recipe, ingredient, image, and cooking-log ownership boundaries
+- [x] Delete ingredients immediately and optimistically
+- [x] Reorder ingredients with accessible drag-and-drop
+- [x] Reorder gallery pictures with accessible horizontal drag-and-drop, keeping the first picture as the recipe cover
+- [x] Delete pictures through a compact confirmation popover and remove their stored objects
+- [x] Delete cooking logs through a compact confirmation popover while preserving their pictures as general recipe pictures
+- [x] Verify optimistic, authorization, failure, drag, keyboard, touch, cover-image, and storage-cleanup behavior
+- [ ] Update the system documentation and complete the recipe-operations checkpoint
+
 ## Deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack

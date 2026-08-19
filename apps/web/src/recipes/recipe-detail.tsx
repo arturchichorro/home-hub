@@ -1,22 +1,29 @@
+import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import type { RecipeImage } from "@home-hub/shared/zero/schema";
 import {
   Collapsible,
+  ConfirmationPopover,
   ErrorPopover,
+  IconButton,
   InlineAlert,
   Input,
   Textarea,
+  Trash2,
 } from "@home-hub/ui-web";
-import { useQuery } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useState } from "react";
+import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { AddRecipeCookLogForm } from "./add-recipe-cook-log-form";
 import { AddRecipeIngredientForm } from "./add-recipe-ingredient-form";
+import { deleteRecipeImage } from "./image-api";
 import {
   RecipeImageGallery,
   RecipeImageThumbnail,
   RecipeImageViewer,
 } from "./recipe-image-gallery";
 import { RecipeImageUploadForm } from "./recipe-image-upload-form";
+import { RecipeIngredientList } from "./recipe-ingredient-list";
 import { useRecipeDetailsEditor } from "./use-recipe-details-editor";
 
 type RecipeDetailProps = {
@@ -36,7 +43,12 @@ export function RecipeDetail({
   recipeId,
   onSessionExpired,
 }: RecipeDetailProps) {
+  const zero = useZero();
+  const mutationEnabled = useZeroMutationEnabled();
   const [selectedImage, setSelectedImage] = useState<RecipeImage>();
+  const [hiddenImageIds, setHiddenImageIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [selectedCookLogId, setSelectedCookLogId] = useState<string | null>(
     null,
   );
@@ -79,13 +91,60 @@ export function RecipeDetail({
       (highestPosition, image) => Math.max(highestPosition, image.position),
       -1,
     ) + 1;
+  const visibleImages = recipe.images.filter(
+    (image) => !hiddenImageIds.has(image.id),
+  );
   const viewerImages = selectedCookLogId
-    ? recipe.images.filter((image) => image.cookLogId === selectedCookLogId)
-    : recipe.images;
+    ? visibleImages.filter((image) => image.cookLogId === selectedCookLogId)
+    : visibleImages;
 
   function openGalleryImage(image: RecipeImage) {
     setSelectedCookLogId(null);
     setSelectedImage(image);
+  }
+
+  function reorderImages(orderedImageIds: string[]) {
+    if (!mutationEnabled) return;
+    zero.mutate(
+      mutators.recipes.reorderImages({
+        householdId,
+        recipeId,
+        orderedImageIds,
+        optimisticUpdatedAt: Date.now(),
+      }),
+    );
+  }
+
+  function deleteCookLog(cookLogId: string) {
+    if (!mutationEnabled) return;
+    zero.mutate(
+      mutators.recipes.deleteCookLog({ householdId, recipeId, cookLogId }),
+    );
+  }
+
+  async function deleteImage(image: RecipeImage) {
+    setHiddenImageIds((current) => new Set(current).add(image.id));
+    setSelectedImage(undefined);
+
+    const restoreImage = () =>
+      setHiddenImageIds((current) => {
+        const next = new Set(current);
+        next.delete(image.id);
+        return next;
+      });
+
+    try {
+      const deletion = await deleteRecipeImage({
+        accessToken,
+        householdId,
+        recipeId,
+        imageId: image.id,
+      });
+      if (deletion.kind === "unauthorized") onSessionExpired();
+      if (deletion.kind !== "success") restoreImage();
+    } catch {
+      restoreImage();
+    }
   }
 
   return (
@@ -109,9 +168,10 @@ export function RecipeDetail({
         accessToken={accessToken}
         householdId={householdId}
         recipeId={recipeId}
-        images={recipe.images}
+        images={visibleImages}
         onSessionExpired={onSessionExpired}
         onOpen={openGalleryImage}
+        onReorder={reorderImages}
         addControl={
           <RecipeImageUploadForm
             accessToken={accessToken}
@@ -133,21 +193,11 @@ export function RecipeDetail({
         {recipe.ingredients.length === 0 ? (
           <p className="text-sm text-muted">There are no ingredients yet.</p>
         ) : (
-          <ol className="divide-y border-t divide-border border-border">
-            {recipe.ingredients.map((ingredient) => (
-              <li
-                key={ingredient.id}
-                className="flex justify-between gap-4 p-2"
-              >
-                <span>{ingredient.name}</span>
-                <span className="text-sm text-muted">
-                  {[ingredient.quantity, ingredient.unit]
-                    .filter(Boolean)
-                    .join(" ") || ""}
-                </span>
-              </li>
-            ))}
-          </ol>
+          <RecipeIngredientList
+            householdId={householdId}
+            recipeId={recipeId}
+            ingredients={recipe.ingredients}
+          />
         )}
       </Collapsible>
 
@@ -159,15 +209,15 @@ export function RecipeDetail({
               This recipe has not been cooked yet.
             </p>
           ) : (
-            <ul className="divide-y divide-border">
+            <ul>
               {recipe.cookLogs.map((cookLog) => {
                 const cookedAt = new Date(cookLog.cookedAt);
-                const images = recipe.images.filter(
+                const images = visibleImages.filter(
                   (image) => image.cookLogId === cookLog.id,
                 );
 
                 return (
-                  <li key={cookLog.id} className="space-y-3 py-5">
+                  <li key={cookLog.id} className="py-2">
                     <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
                       <time
                         dateTime={cookedAt.toISOString()}
@@ -178,15 +228,31 @@ export function RecipeDetail({
                       <p className="whitespace-pre-wrap text-sm text-muted">
                         {cookLog.comment || "No comment"}
                       </p>
-                      <RecipeImageUploadForm
-                        accessToken={accessToken}
-                        appearance="subtle"
-                        cookLogId={cookLog.id}
-                        householdId={householdId}
-                        recipeId={recipeId}
-                        position={nextImagePosition}
-                        onSessionExpired={onSessionExpired}
-                      />
+                      <div className="flex items-center gap-1">
+                        <RecipeImageUploadForm
+                          accessToken={accessToken}
+                          appearance="subtle"
+                          cookLogId={cookLog.id}
+                          householdId={householdId}
+                          recipeId={recipeId}
+                          position={nextImagePosition}
+                          onSessionExpired={onSessionExpired}
+                        />
+                        <ConfirmationPopover
+                          title="Delete cooking log?"
+                          description="Its pictures will remain in the recipe gallery."
+                          trigger={
+                            <IconButton
+                              aria-label="Delete cooking log"
+                              className="size-7!"
+                              disabled={!mutationEnabled}
+                            >
+                              <Trash2 aria-hidden="true" className="size-4" />
+                            </IconButton>
+                          }
+                          onConfirm={() => deleteCookLog(cookLog.id)}
+                        />
+                      </div>
                     </div>
                     {images.length > 0 ? (
                       <ul className="flex min-w-0 gap-2 overflow-x-auto">
@@ -221,6 +287,7 @@ export function RecipeDetail({
         recipeId={recipeId}
         image={selectedImage}
         images={viewerImages}
+        onDelete={(image) => void deleteImage(image)}
         onSessionExpired={onSessionExpired}
         onSelect={setSelectedImage}
         onOpenChange={(open) => {

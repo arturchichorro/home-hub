@@ -4,6 +4,8 @@ import {
   createRecipeCookLogMutationSchema,
   createRecipeIngredientMutationSchema,
   createRecipeMutationSchema,
+  reorderRecipeImagesMutationSchema,
+  reorderRecipeIngredientsMutationSchema,
   updateRecipeMutationSchema,
 } from "./recipes";
 
@@ -287,6 +289,39 @@ describe("createRecipeCookLogMutationSchema", () => {
       createRecipeCookLogMutationSchema.safeParse({
         ...cookLogInput,
         userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe.each([
+  [
+    "ingredients",
+    reorderRecipeIngredientsMutationSchema,
+    "orderedIngredientIds",
+  ],
+  ["images", reorderRecipeImagesMutationSchema, "orderedImageIds"],
+] as const)("reorder recipe %s schema", (_name, schema, orderedIdsKey) => {
+  const entityId = "5944cb0d-931a-4723-b981-77eacb122314";
+
+  it("accepts a unique ordered ID list", () => {
+    expect(
+      schema.safeParse({
+        householdId: input.householdId,
+        recipeId: input.recipeId,
+        [orderedIdsKey]: [entityId],
+        optimisticUpdatedAt: input.optimisticTimestamp,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects duplicate IDs", () => {
+    expect(
+      schema.safeParse({
+        householdId: input.householdId,
+        recipeId: input.recipeId,
+        [orderedIdsKey]: [entityId, entityId],
+        optimisticUpdatedAt: input.optimisticTimestamp,
       }).success,
     ).toBe(false);
   });

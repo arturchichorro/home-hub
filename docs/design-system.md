@@ -567,20 +567,23 @@ description, followed by the complete confirmed-image gallery. The gallery
 stays to one horizontal row and reveals part of the next image when more than
 three are available, making its horizontal scrolling apparent without a count
 badge. A small plus-only, immediate upload control sits over its lower-right
-edge. Every thumbnail opens the same large viewer.
+edge. Drag handles reorder the gallery across pointer, touch, and keyboard
+input; the first image is the recipe-card cover. Every thumbnail opens the same
+large viewer, where image deletion uses a compact confirmation popover.
 Ingredients and Cooking history follow as independently closable sections.
-Ingredients use a compact add row with name, quantity, and unit. Cooking
+Ingredients use a compact add row with name, quantity, and unit, immediate
+delete actions, and drag handles for reordering. Cooking
 history is newest first, begins with a date-only add row, and includes compact
 linked image thumbnails for each entry. Each completed cooking entry also
-exposes its own smaller, low-emphasis image-upload control in the entry row.
+exposes its own smaller, low-emphasis image-upload control and a confirmed
+delete action in the entry row. Deleting an entry preserves its pictures in the
+general recipe gallery.
 
 The image viewer is an intentionally bare modal: the image is centered without
 panel chrome, with only close, previous, and next controls. Side-centered
 previous and next controls loop across the complete gallery when opened there,
 or only across one cooking log's images when opened from that entry. The left
 and right arrow keys provide the same navigation.
-Deletion and additional editing controls are intentionally absent from this
-pass.
 
 ### Household settings
 

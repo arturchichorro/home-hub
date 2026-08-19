@@ -1,15 +1,19 @@
+import { DragDropProvider } from "@dnd-kit/react";
+import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import type { RecipeImage } from "@home-hub/shared/zero/schema";
 import {
   ChevronLeft,
   ChevronRight,
+  ConfirmationPopover,
   DialogClose,
   DialogPopup,
   DialogRoot,
   IconButton,
   InlineAlert,
+  Trash2,
   X,
 } from "@home-hub/ui-web";
-import type { KeyboardEvent, ReactNode } from "react";
+import type { KeyboardEvent, ReactNode, Ref } from "react";
 import { getAdjacentRecipeImage } from "./recipe-image-navigation";
 import { useRecipeImageUrl } from "./use-recipe-image-url";
 
@@ -23,6 +27,8 @@ type RecipeImageContext = {
 type RecipeImageThumbnailProps = RecipeImageContext & {
   image: RecipeImage;
   className?: string;
+  buttonRef?: Ref<HTMLButtonElement>;
+  containerRef?: Ref<HTMLLIElement>;
   onOpen: (image: RecipeImage) => void;
 };
 
@@ -32,6 +38,8 @@ export function RecipeImageThumbnail({
   recipeId,
   image,
   className,
+  buttonRef,
+  containerRef,
   onSessionExpired,
   onOpen,
 }: RecipeImageThumbnailProps) {
@@ -50,11 +58,12 @@ export function RecipeImageThumbnail({
     .join(" ");
 
   return (
-    <li className={classes}>
+    <li ref={containerRef} className={`${classes} relative`}>
       {url ? (
         <button
+          ref={buttonRef}
           type="button"
-          className="size-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-focus-ring"
+          className={`size-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-focus-ring ${buttonRef ? "touch-none" : ""}`}
           aria-label="Open recipe image"
           onClick={() => onOpen(image)}
         >
@@ -84,7 +93,35 @@ type RecipeImageGalleryProps = RecipeImageContext & {
   addControl: ReactNode;
   images: readonly RecipeImage[];
   onOpen: (image: RecipeImage) => void;
+  onReorder: (orderedImageIds: string[]) => void;
 };
+
+function SortableRecipeImageThumbnail({
+  image,
+  index,
+  disabled,
+  ...props
+}: Omit<RecipeImageThumbnailProps, "buttonRef" | "containerRef"> & {
+  disabled: boolean;
+  index: number;
+}) {
+  const sortable = useSortable({
+    id: image.id,
+    index,
+    type: "recipe-image",
+    accept: "recipe-image",
+    disabled,
+  });
+
+  return (
+    <RecipeImageThumbnail
+      {...props}
+      image={image}
+      buttonRef={sortable.handleRef}
+      containerRef={sortable.ref}
+    />
+  );
+}
 
 export function RecipeImageGallery({
   accessToken,
@@ -94,25 +131,44 @@ export function RecipeImageGallery({
   images,
   onSessionExpired,
   onOpen,
+  onReorder,
 }: RecipeImageGalleryProps) {
   const columnSize =
     images.length > 3 ? "auto-cols-[30%]" : "auto-cols-[calc((100%-1.5rem)/3)]";
 
   return (
     <div className="relative min-h-28">
-      <ul className={`grid ${columnSize} grid-flow-col gap-3 overflow-x-auto`}>
-        {images.map((image) => (
-          <RecipeImageThumbnail
-            key={image.id}
-            accessToken={accessToken}
-            householdId={householdId}
-            recipeId={recipeId}
-            image={image}
-            onSessionExpired={onSessionExpired}
-            onOpen={onOpen}
-          />
-        ))}
-      </ul>
+      <DragDropProvider
+        onDragEnd={(event) => {
+          if (event.canceled) return;
+          const { source } = event.operation;
+          if (!isSortable(source) || source.initialIndex === source.index)
+            return;
+          const reordered = [...images];
+          const [moved] = reordered.splice(source.initialIndex, 1);
+          if (!moved) return;
+          reordered.splice(source.index, 0, moved);
+          onReorder(reordered.map((image) => image.id));
+        }}
+      >
+        <ul
+          className={`grid ${columnSize} grid-flow-col gap-3 overflow-x-auto`}
+        >
+          {images.map((image, index) => (
+            <SortableRecipeImageThumbnail
+              key={image.id}
+              accessToken={accessToken}
+              householdId={householdId}
+              recipeId={recipeId}
+              image={image}
+              index={index}
+              disabled={false}
+              onSessionExpired={onSessionExpired}
+              onOpen={onOpen}
+            />
+          ))}
+        </ul>
+      </DragDropProvider>
       <div className="absolute right-2 bottom-2">{addControl}</div>
     </div>
   );
@@ -121,6 +177,7 @@ export function RecipeImageGallery({
 type RecipeImageViewerProps = RecipeImageContext & {
   image: RecipeImage | undefined;
   images: readonly RecipeImage[];
+  onDelete: (image: RecipeImage) => void;
   onOpenChange: (open: boolean) => void;
   onSelect: (image: RecipeImage) => void;
 };
@@ -131,6 +188,7 @@ export function RecipeImageViewer({
   recipeId,
   image,
   images,
+  onDelete,
   onSessionExpired,
   onOpenChange,
   onSelect,
@@ -175,6 +233,22 @@ export function RecipeImageViewer({
         >
           <X aria-hidden="true" />
         </DialogClose>
+        {image ? (
+          <ConfirmationPopover
+            title="Delete picture?"
+            description="This permanently removes the picture."
+            trigger={
+              <IconButton
+                aria-label="Delete picture"
+                className="fixed! top-4 right-4 z-10 rounded-full"
+                variant="secondary"
+              >
+                <Trash2 aria-hidden="true" />
+              </IconButton>
+            }
+            onConfirm={() => onDelete(image)}
+          />
+        ) : null}
         {url ? (
           <img
             src={url}

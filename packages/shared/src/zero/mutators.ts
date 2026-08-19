@@ -4,6 +4,10 @@ import {
   createRecipeCookLogMutationSchema,
   createRecipeIngredientMutationSchema,
   createRecipeMutationSchema,
+  deleteRecipeCookLogMutationSchema,
+  deleteRecipeIngredientMutationSchema,
+  reorderRecipeImagesMutationSchema,
+  reorderRecipeIngredientsMutationSchema,
   updateRecipeMutationSchema,
 } from "../recipes";
 import {
@@ -263,6 +267,124 @@ const addRecipeCookLog = defineHomeHubMutator(
   },
 );
 
+const deleteRecipeIngredient = defineHomeHubMutator(
+  deleteRecipeIngredientMutationSchema,
+  async ({ args, ctx, tx }) => {
+    await requireServerHouseholdModuleAccess({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+      moduleKey: "recipes",
+    });
+
+    const ingredient = await tx.run(
+      zql.recipeIngredients
+        .where("id", args.ingredientId)
+        .where("householdId", args.householdId)
+        .where("recipeId", args.recipeId)
+        .one(),
+    );
+    if (!ingredient) throw new Error("Recipe ingredient deletion not allowed");
+
+    await tx.mutate.recipeIngredients.delete({ id: args.ingredientId });
+  },
+);
+
+const reorderRecipeIngredients = defineHomeHubMutator(
+  reorderRecipeIngredientsMutationSchema,
+  async ({ args, ctx, tx }) => {
+    await requireServerHouseholdModuleAccess({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+      moduleKey: "recipes",
+    });
+
+    const timestamp =
+      tx.location === "server" ? Date.now() : args.optimisticUpdatedAt;
+    for (const [
+      position,
+      ingredientId,
+    ] of args.orderedIngredientIds.entries()) {
+      const ingredient = await tx.run(
+        zql.recipeIngredients
+          .where("id", ingredientId)
+          .where("householdId", args.householdId)
+          .where("recipeId", args.recipeId)
+          .one(),
+      );
+      if (!ingredient) throw new Error("Recipe ingredient reorder not allowed");
+      await tx.mutate.recipeIngredients.update({
+        id: ingredientId,
+        position,
+        updatedAt: timestamp,
+      });
+    }
+  },
+);
+
+const deleteRecipeCookLog = defineHomeHubMutator(
+  deleteRecipeCookLogMutationSchema,
+  async ({ args, ctx, tx }) => {
+    await requireServerHouseholdModuleAccess({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+      moduleKey: "recipes",
+    });
+
+    const cookLog = await tx.run(
+      zql.recipeCookLogs
+        .where("id", args.cookLogId)
+        .where("householdId", args.householdId)
+        .where("recipeId", args.recipeId)
+        .one(),
+    );
+    if (!cookLog) throw new Error("Recipe cooking log deletion not allowed");
+
+    const images = await tx.run(
+      zql.recipeImages
+        .where("householdId", args.householdId)
+        .where("recipeId", args.recipeId)
+        .where("cookLogId", args.cookLogId),
+    );
+    for (const image of images) {
+      await tx.mutate.recipeImages.update({ id: image.id, cookLogId: null });
+    }
+    await tx.mutate.recipeCookLogs.delete({ id: args.cookLogId });
+  },
+);
+
+const reorderRecipeImages = defineHomeHubMutator(
+  reorderRecipeImagesMutationSchema,
+  async ({ args, ctx, tx }) => {
+    await requireServerHouseholdModuleAccess({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+      moduleKey: "recipes",
+    });
+
+    const timestamp =
+      tx.location === "server" ? Date.now() : args.optimisticUpdatedAt;
+    for (const [position, imageId] of args.orderedImageIds.entries()) {
+      const image = await tx.run(
+        zql.recipeImages
+          .where("id", imageId)
+          .where("householdId", args.householdId)
+          .where("recipeId", args.recipeId)
+          .one(),
+      );
+      if (!image) throw new Error("Recipe image reorder not allowed");
+      await tx.mutate.recipeImages.update({
+        id: imageId,
+        position,
+        updatedAt: timestamp,
+      });
+    }
+  },
+);
+
 export const mutators = defineHomeHubMutators({
   shopping: {
     add: addShoppingItem,
@@ -273,6 +395,10 @@ export const mutators = defineHomeHubMutators({
     create: createRecipe,
     update: updateRecipe,
     addIngredient: addRecipeIngredient,
+    deleteIngredient: deleteRecipeIngredient,
+    reorderIngredients: reorderRecipeIngredients,
     addCookLog: addRecipeCookLog,
+    deleteCookLog: deleteRecipeCookLog,
+    reorderImages: reorderRecipeImages,
   },
 });

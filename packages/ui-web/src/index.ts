@@ -6,6 +6,10 @@ export {
 } from "./button";
 export { Collapsible, type CollapsibleProps } from "./collapsible";
 export {
+  ConfirmationPopover,
+  type ConfirmationPopoverProps,
+} from "./confirmation-popover";
+export {
   type DialogAppearance,
   DialogClose,
   type DialogCloseProps,
@@ -40,6 +44,7 @@ export {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  GripVertical,
   House,
   ImagePlus,
   LayoutGrid,
@@ -48,6 +53,7 @@ export {
   Plus,
   RotateCcw,
   ShoppingBasket,
+  Trash2,
   Users,
   X,
 } from "./icons";

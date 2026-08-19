@@ -173,7 +173,8 @@ store an empty description as `null`.
 
 Quantity remains text so values such as `½`, `2–3`, and `to taste` are
 representable. Position must be nonnegative. Positions are indexed but not
-unique; order equal positions by row ID for deterministic display.
+unique; order equal positions by row ID for deterministic display. Reordering
+renumbers the visible ingredient collection from zero.
 
 ### `recipe_cook_logs`
 
@@ -186,7 +187,8 @@ unique; order equal positions by row ID for deterministic display.
 
 Each row represents one cooking event. Multiple events may have the same
 `cooked_at` value. Initial logs do not attribute who cooked or recorded the
-event.
+event. Deleting a cooking log first clears its images' `cook_log_id`, preserving
+those images as general recipe pictures.
 
 ### `recipe_images`
 
@@ -206,7 +208,8 @@ Every image belongs to one recipe and may optionally provide context for one
 cooking log from that same recipe. Cooking-log images remain part of the
 recipe's overall image collection. Enforce the optional cooking-log
 relationship with the household and recipe IDs so it cannot cross tenant or
-recipe boundaries.
+recipe boundaries. Reordering renumbers confirmed images from zero; the lowest
+position is the recipe cover.
 
 Object keys are server-controlled, unique, and independent of public
 hostnames. Create pending metadata before issuing a presigned upload;
