@@ -9,6 +9,8 @@ together before implementation begins.
 
 ## Improvements
 
+- [ ] Improve recipes UI
+- [ ] Move app header to a sidebar instead
 - [ ] Open last opened household on app start (through local storage or something)
 - [ ] Add recipe ingredients to Shopping
 - [ ] Publish safe member profiles through Zero to prevent interface flashing
