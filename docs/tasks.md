@@ -66,6 +66,8 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Redesign cooking history with a compact calendar-based add row, newest-first entries, comments, and linked image thumbnails
 - [x] Keep recipe, ingredient, cooking-log, and image deletion or additional editing actions out of this pass
 - [x] Verify loading, empty, optimistic, upload, failure, responsive, keyboard, and accessible-name behavior
+- [ ] Improve the look of the ingredients list (might require change of table schema)
+- [ ] Improve the look of the cook logs list (try to make each cook log fit in one row maybe)
 - [x] Update the design-system documentation and complete the Recipes UI checkpoint
 
 ## Add recipe-detail organization and deletion
