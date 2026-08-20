@@ -4,6 +4,7 @@ import { mutators } from "@home-hub/shared/zero/mutators";
 import type { RecipeIngredient } from "@home-hub/shared/zero/schema";
 import {
   Button,
+  ContextMenuItem,
   ContextMenuPopup,
   ContextMenuRoot,
   ContextMenuTrigger,
@@ -11,8 +12,8 @@ import {
   IconButton,
   InlineAlert,
   Input,
+  Scale,
   Textarea,
-  X,
 } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { type SubmitEvent, useState } from "react";
@@ -108,30 +109,23 @@ function RecipeIngredientRow({
         >
           <GripVertical aria-hidden="true" className="size-4" />
         </IconButton>
-        <span className="min-w-0 flex-1">
-          <RecipeIngredientNameInput
-            currentName={ingredient.name}
-            householdId={householdId}
-            ingredientId={ingredient.id}
-            recipeId={recipeId}
-          />
-          {ingredient.note ? (
-            <span className="block truncate text-xs text-muted">
-              {ingredient.note}
-            </span>
-          ) : null}
-        </span>
+        <RecipeIngredientNameInput
+          currentName={ingredient.name}
+          householdId={householdId}
+          ingredientId={ingredient.id}
+          recipeId={recipeId}
+        />
         {ingredient.amount ? (
-          <span className="text-sm text-muted">{ingredient.amount}</span>
+          <span className="flex h-7 shrink-0 items-center gap-1 text-xs text-muted">
+            <Scale aria-hidden="true" className="size-3.5" />
+            {ingredient.amount}
+          </span>
         ) : null}
-        <IconButton
-          aria-label={`Delete ${ingredient.name}`}
-          className="size-7!"
-          disabled={disabled}
-          onClick={() => onDelete(ingredient.id)}
-        >
-          <X aria-hidden="true" className="size-4" />
-        </IconButton>
+        {ingredient.note ? (
+          <span className="h-7 min-w-0 flex-1 truncate text-xs leading-7 text-muted">
+            - {ingredient.note}
+          </span>
+        ) : null}
       </ContextMenuTrigger>
       <ContextMenuPopup
         aria-label={`Edit ${ingredient.name}`}
@@ -193,6 +187,13 @@ function RecipeIngredientRow({
             Save
           </Button>
         </form>
+        <ContextMenuItem
+          disabled={disabled}
+          variant="danger"
+          onClick={() => onDelete(ingredient.id)}
+        >
+          Delete ingredient
+        </ContextMenuItem>
       </ContextMenuPopup>
     </ContextMenuRoot>
   );
@@ -260,7 +261,7 @@ export function RecipeIngredientList({
         );
       }}
     >
-      <ol className="divide-y border-t divide-border border-border">
+      <ol className="divide-y divide-border">
         {ingredients.map((ingredient, index) => (
           <RecipeIngredientRow
             key={ingredient.id}

@@ -575,10 +575,12 @@ input; the first image is the recipe-card cover. Every thumbnail opens the same
 large viewer, where image deletion uses a compact confirmation popover.
 Ingredients and Cooking history follow as independently closable sections.
 Ingredients use a name-only add row, directly editable names with debounced
-saves, immediate delete actions, and drag handles for reordering. Right click
-or long press opens a compact Base UI context menu for adding or editing the
-optional free-text amount and note; saved metadata is shown directly in the
-row. Cooking history is newest first, begins with a date-only add row, and uses
+saves, and drag handles for reordering. Each ingredient stays on one line: an
+optional Weight icon and amount precede the name, while an optional muted note
+truncates at the row edge. Right click or long press opens a compact Base UI
+context menu for adding or editing the optional free-text amount and note or
+immediately deleting the ingredient. Cooking history is newest first, begins
+with a date-only add row, and uses
 the same debounced inline editing for each entry's comment. It includes compact
 linked image thumbnails for each entry.
 Each completed cooking entry also

@@ -3,6 +3,40 @@ import type { ComponentProps } from "react";
 
 export const ContextMenuRoot = BaseContextMenu.Root;
 
+export type ContextMenuItemVariant = "default" | "danger";
+
+type BaseContextMenuItemProps = ComponentProps<typeof BaseContextMenu.Item>;
+
+export type ContextMenuItemProps = Omit<
+  BaseContextMenuItemProps,
+  "className"
+> & {
+  className?: string;
+  variant?: ContextMenuItemVariant;
+};
+
+const itemVariantClasses: Record<ContextMenuItemVariant, string> = {
+  default: "text-foreground data-highlighted:bg-surface",
+  danger: "text-danger data-highlighted:bg-danger/10",
+};
+
+export function ContextMenuItem({
+  className,
+  variant = "default",
+  ...props
+}: ContextMenuItemProps) {
+  const classes = [
+    "flex min-h-9 cursor-default select-none items-center rounded-sm px-3 py-2 text-sm outline-none",
+    "data-disabled:opacity-50",
+    itemVariantClasses[variant],
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return <BaseContextMenu.Item {...props} className={classes} />;
+}
+
 type BaseContextMenuTriggerProps = ComponentProps<
   typeof BaseContextMenu.Trigger
 >;

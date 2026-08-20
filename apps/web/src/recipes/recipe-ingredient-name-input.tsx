@@ -55,7 +55,7 @@ export function RecipeIngredientNameInput({
         aria-busy={editor.isSaving || undefined}
         aria-invalid={editor.error ? true : undefined}
         aria-errormessage={editor.error ? editor.errorId : undefined}
-        className="h-7! px-1"
+        className="field-sizing-content h-7! min-w-0 flex-initial! px-1 leading-7"
         disabled={!mutationEnabled}
         maxLength={150}
         value={editor.value}

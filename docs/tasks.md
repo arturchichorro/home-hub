@@ -106,6 +106,7 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Enforce household, recipe, ingredient, and cooking-log ownership boundaries
 - [x] Add debounced inline editors with blur saves, reversion, and error popovers
 - [x] Give every directly editable recipe field a seamless appearance with no hover or focus restyling
+- [x] Keep ingredient rows to one line and move immediate deletion into their context menu
 - [x] Keep ingredient metadata editing, deletion, reordering, and image actions unchanged
 - [x] Verify normalization, authorization, optimistic updates, and interface type safety
 - [x] Update the design-system documentation and complete the inline-editing checkpoint
