@@ -100,6 +100,15 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Verify validation, authorization, optimistic updates, UI primitives, and workspace checks
 - [x] Update the design-system documentation and complete the ingredient-entry checkpoint
 
+## Edit recipe ingredient names and cooking-log comments
+
+- [x] Add separate, validated optimistic mutations for ingredient names and cooking-log comments
+- [x] Enforce household, recipe, ingredient, and cooking-log ownership boundaries
+- [x] Add debounced inline editors with blur saves, reversion, and error popovers
+- [x] Keep ingredient metadata editing, deletion, reordering, and image actions unchanged
+- [x] Verify normalization, authorization, optimistic updates, and interface type safety
+- [x] Update the design-system documentation and complete the inline-editing checkpoint
+
 ## Deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack

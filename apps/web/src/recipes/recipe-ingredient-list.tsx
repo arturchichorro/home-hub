@@ -17,6 +17,7 @@ import {
 import { useZero } from "@rocicorp/zero/react";
 import { type SubmitEvent, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import { RecipeIngredientNameInput } from "./recipe-ingredient-name-input";
 
 type RecipeIngredientListProps = {
   householdId: string;
@@ -26,6 +27,7 @@ type RecipeIngredientListProps = {
 
 type RecipeIngredientRowProps = {
   disabled: boolean;
+  householdId: string;
   index: number;
   ingredient: RecipeIngredient;
   onDelete: (ingredientId: string) => void;
@@ -34,14 +36,17 @@ type RecipeIngredientRowProps = {
     amount: string,
     note: string,
   ) => Promise<boolean>;
+  recipeId: string;
 };
 
 function RecipeIngredientRow({
   disabled,
+  householdId,
   index,
   ingredient,
   onDelete,
   onUpdate,
+  recipeId,
 }: RecipeIngredientRowProps) {
   const amountInputId = `ingredient-${ingredient.id}-amount`;
   const noteInputId = `ingredient-${ingredient.id}-note`;
@@ -104,7 +109,12 @@ function RecipeIngredientRow({
           <GripVertical aria-hidden="true" className="size-4" />
         </IconButton>
         <span className="min-w-0 flex-1">
-          <span className="block">{ingredient.name}</span>
+          <RecipeIngredientNameInput
+            currentName={ingredient.name}
+            householdId={householdId}
+            ingredientId={ingredient.id}
+            recipeId={recipeId}
+          />
           {ingredient.note ? (
             <span className="block truncate text-xs text-muted">
               {ingredient.note}
@@ -255,10 +265,12 @@ export function RecipeIngredientList({
           <RecipeIngredientRow
             key={ingredient.id}
             disabled={!mutationEnabled}
+            householdId={householdId}
             index={index}
             ingredient={ingredient}
             onDelete={deleteIngredient}
             onUpdate={updateIngredient}
+            recipeId={recipeId}
           />
         ))}
       </ol>

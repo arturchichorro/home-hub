@@ -102,6 +102,16 @@ export type UpdateRecipeIngredientMutationInput = z.infer<
   typeof updateRecipeIngredientMutationSchema
 >;
 
+export const renameRecipeIngredientMutationSchema = z
+  .object({
+    ingredientId: z.uuid(),
+    householdId: z.uuid(),
+    recipeId: z.uuid(),
+    name: recipeIngredientNameSchema,
+    optimisticUpdatedAt: z.number().int().nonnegative(),
+  })
+  .strict();
+
 export const createRecipeCookLogMutationSchema = z
   .object({
     cookLogId: z.uuid(),
@@ -116,6 +126,16 @@ export const createRecipeCookLogMutationSchema = z
 export type CreateRecipeCookLogMutationInput = z.infer<
   typeof createRecipeCookLogMutationSchema
 >;
+
+export const updateRecipeCookLogMutationSchema = z
+  .object({
+    cookLogId: z.uuid(),
+    householdId: z.uuid(),
+    recipeId: z.uuid(),
+    comment: recipeCookLogCommentSchema,
+    optimisticUpdatedAt: z.number().int().nonnegative(),
+  })
+  .strict();
 
 const orderedIdsSchema = z
   .array(z.uuid())

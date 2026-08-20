@@ -17,6 +17,7 @@ import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { AddRecipeCookLogForm } from "./add-recipe-cook-log-form";
 import { AddRecipeIngredientForm } from "./add-recipe-ingredient-form";
 import { deleteRecipeImage } from "./image-api";
+import { RecipeCookLogCommentInput } from "./recipe-cook-log-comment-input";
 import {
   RecipeImageGallery,
   RecipeImageThumbnail,
@@ -230,9 +231,12 @@ export function RecipeDetail({
                       >
                         {dateFormatter.format(cookedAt)}
                       </time>
-                      <p className="whitespace-pre-wrap text-sm text-muted">
-                        {cookLog.comment || "No comment"}
-                      </p>
+                      <RecipeCookLogCommentInput
+                        cookLogId={cookLog.id}
+                        currentComment={cookLog.comment}
+                        householdId={householdId}
+                        recipeId={recipeId}
+                      />
                       <div className="flex items-center gap-1">
                         <RecipeImageUploadForm
                           accessToken={accessToken}

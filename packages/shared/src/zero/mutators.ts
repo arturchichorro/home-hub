@@ -6,8 +6,10 @@ import {
   createRecipeMutationSchema,
   deleteRecipeCookLogMutationSchema,
   deleteRecipeIngredientMutationSchema,
+  renameRecipeIngredientMutationSchema,
   reorderRecipeImagesMutationSchema,
   reorderRecipeIngredientsMutationSchema,
+  updateRecipeCookLogMutationSchema,
   updateRecipeIngredientMutationSchema,
   updateRecipeMutationSchema,
 } from "../recipes";
@@ -260,6 +262,34 @@ const updateRecipeIngredient = defineHomeHubMutator(
   },
 );
 
+const renameRecipeIngredient = defineHomeHubMutator(
+  renameRecipeIngredientMutationSchema,
+  async ({ args, ctx, tx }) => {
+    await requireServerHouseholdModuleAccess({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+      moduleKey: "recipes",
+    });
+
+    const ingredient = await tx.run(
+      zql.recipeIngredients
+        .where("id", args.ingredientId)
+        .where("householdId", args.householdId)
+        .where("recipeId", args.recipeId)
+        .one(),
+    );
+    if (!ingredient) throw new Error("Recipe ingredient rename not allowed");
+
+    await tx.mutate.recipeIngredients.update({
+      id: args.ingredientId,
+      name: args.name,
+      updatedAt:
+        tx.location === "server" ? Date.now() : args.optimisticUpdatedAt,
+    });
+  },
+);
+
 const addRecipeCookLog = defineHomeHubMutator(
   createRecipeCookLogMutationSchema,
   async ({ args, ctx, tx }) => {
@@ -292,6 +322,34 @@ const addRecipeCookLog = defineHomeHubMutator(
       cookedAt: args.cookedAt,
       createdAt: timestamp,
       updatedAt: timestamp,
+    });
+  },
+);
+
+const updateRecipeCookLog = defineHomeHubMutator(
+  updateRecipeCookLogMutationSchema,
+  async ({ args, ctx, tx }) => {
+    await requireServerHouseholdModuleAccess({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+      moduleKey: "recipes",
+    });
+
+    const cookLog = await tx.run(
+      zql.recipeCookLogs
+        .where("id", args.cookLogId)
+        .where("householdId", args.householdId)
+        .where("recipeId", args.recipeId)
+        .one(),
+    );
+    if (!cookLog) throw new Error("Recipe cooking log update not allowed");
+
+    await tx.mutate.recipeCookLogs.update({
+      id: args.cookLogId,
+      comment: args.comment,
+      updatedAt:
+        tx.location === "server" ? Date.now() : args.optimisticUpdatedAt,
     });
   },
 );
@@ -425,9 +483,11 @@ export const mutators = defineHomeHubMutators({
     update: updateRecipe,
     addIngredient: addRecipeIngredient,
     updateIngredient: updateRecipeIngredient,
+    renameIngredient: renameRecipeIngredient,
     deleteIngredient: deleteRecipeIngredient,
     reorderIngredients: reorderRecipeIngredients,
     addCookLog: addRecipeCookLog,
+    updateCookLog: updateRecipeCookLog,
     deleteCookLog: deleteRecipeCookLog,
     reorderImages: reorderRecipeImages,
   },

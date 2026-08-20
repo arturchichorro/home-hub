@@ -4,8 +4,10 @@ import {
   createRecipeCookLogMutationSchema,
   createRecipeIngredientMutationSchema,
   createRecipeMutationSchema,
+  renameRecipeIngredientMutationSchema,
   reorderRecipeImagesMutationSchema,
   reorderRecipeIngredientsMutationSchema,
+  updateRecipeCookLogMutationSchema,
   updateRecipeIngredientMutationSchema,
   updateRecipeMutationSchema,
 } from "./recipes";
@@ -269,6 +271,35 @@ describe("updateRecipeIngredientMutationSchema", () => {
   });
 });
 
+describe("renameRecipeIngredientMutationSchema", () => {
+  it("cleans a valid ingredient name", () => {
+    expect(
+      renameRecipeIngredientMutationSchema.parse({
+        ingredientId: ingredientInput.ingredientId,
+        householdId: ingredientInput.householdId,
+        recipeId: ingredientInput.recipeId,
+        name: "  Fresh   Basil  ",
+        optimisticUpdatedAt: input.optimisticTimestamp,
+      }).name,
+    ).toBe("Fresh Basil");
+  });
+
+  it.each(["   ", "a".repeat(151)])(
+    "rejects the invalid ingredient name %j",
+    (name) => {
+      expect(
+        renameRecipeIngredientMutationSchema.safeParse({
+          ingredientId: ingredientInput.ingredientId,
+          householdId: ingredientInput.householdId,
+          recipeId: ingredientInput.recipeId,
+          name,
+          optimisticUpdatedAt: input.optimisticTimestamp,
+        }).success,
+      ).toBe(false);
+    },
+  );
+});
+
 const cookLogInput = {
   cookLogId: "5944cb0d-931a-4723-b981-77eacb122314",
   householdId: input.householdId,
@@ -337,6 +368,43 @@ describe("createRecipeCookLogMutationSchema", () => {
       createRecipeCookLogMutationSchema.safeParse({
         ...cookLogInput,
         userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("updateRecipeCookLogMutationSchema", () => {
+  const updateInput = {
+    cookLogId: cookLogInput.cookLogId,
+    householdId: cookLogInput.householdId,
+    recipeId: cookLogInput.recipeId,
+    comment: cookLogInput.comment,
+    optimisticUpdatedAt: input.optimisticTimestamp,
+  };
+
+  it("cleans a valid comment", () => {
+    expect(
+      updateRecipeCookLogMutationSchema.parse({
+        ...updateInput,
+        comment: "  Made it less spicy.  ",
+      }),
+    ).toEqual(updateInput);
+  });
+
+  it.each([null, "  \n  "])("normalizes comment %j to null", (comment) => {
+    expect(
+      updateRecipeCookLogMutationSchema.parse({
+        ...updateInput,
+        comment,
+      }).comment,
+    ).toBeNull();
+  });
+
+  it("rejects an overlong comment", () => {
+    expect(
+      updateRecipeCookLogMutationSchema.safeParse({
+        ...updateInput,
+        comment: "a".repeat(1_001),
       }).success,
     ).toBe(false);
   });
