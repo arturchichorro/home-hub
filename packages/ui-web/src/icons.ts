@@ -14,6 +14,7 @@ export {
   LayoutGrid,
   Plus,
   RotateCcw,
+  Scale,
   ShoppingBasket,
   Trash2,
   Users,

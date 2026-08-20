@@ -36,11 +36,7 @@ export function cleanRecipeIngredientName(value: string): string {
   return cleanSingleLineText(value);
 }
 
-export function cleanRecipeIngredientQuantity(value: string): string | null {
-  return cleanNullableSingleLineText(value);
-}
-
-export function cleanRecipeIngredientUnit(value: string): string | null {
+export function cleanRecipeIngredientAmount(value: string): string | null {
   return cleanNullableSingleLineText(value);
 }
 

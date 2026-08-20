@@ -2,7 +2,7 @@ import {
   createRecipeImageUploadRequestSchema,
   recipeImageContentTypeSchema,
 } from "@home-hub/shared/recipe-images";
-import { IconButton, ImagePlus, Plus } from "@home-hub/ui-web";
+import { IconButton, ImagePlus } from "@home-hub/ui-web";
 import { type ChangeEvent, useRef, useState } from "react";
 import {
   confirmRecipeImageUpload,
@@ -120,11 +120,7 @@ export function RecipeImageUploadForm({
         }
         onClick={chooseImage}
       >
-        {cookLogId ? (
-          <ImagePlus aria-hidden="true" className="size-4" />
-        ) : (
-          <Plus aria-hidden="true" />
-        )}
+        <ImagePlus aria-hidden="true" className="size-4" />
       </IconButton>
     </div>
   );

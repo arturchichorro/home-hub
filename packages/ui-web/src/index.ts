@@ -10,6 +10,16 @@ export {
   type ConfirmationPopoverProps,
 } from "./confirmation-popover";
 export {
+  ContextMenuItem,
+  type ContextMenuItemProps,
+  type ContextMenuItemVariant,
+  ContextMenuPopup,
+  type ContextMenuPopupProps,
+  ContextMenuRoot,
+  ContextMenuTrigger,
+  type ContextMenuTriggerProps,
+} from "./context-menu";
+export {
   type DialogAppearance,
   DialogClose,
   type DialogCloseProps,
@@ -52,6 +62,7 @@ export {
   type LucideProps,
   Plus,
   RotateCcw,
+  Scale,
   ShoppingBasket,
   Trash2,
   Users,

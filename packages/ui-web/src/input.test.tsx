@@ -20,6 +20,18 @@ describe("Input", () => {
     expect(markup).toContain("aria-invalid:ring-danger/40");
   });
 
+  it("renders a seamless appearance without interaction styling", () => {
+    const markup = renderToStaticMarkup(
+      <Input aria-label="Recipe title" appearance="seamless" />,
+    );
+
+    expect(markup).toContain("border-0");
+    expect(markup).toContain("bg-transparent");
+    expect(markup).not.toContain("hover:");
+    expect(markup).not.toContain("focus-visible:");
+    expect(markup).not.toContain("aria-invalid:ring");
+  });
+
   it("preserves caller classes and Base UI state attributes", () => {
     const markup = renderToStaticMarkup(
       <Input aria-label="Name" className="text-muted" disabled />,

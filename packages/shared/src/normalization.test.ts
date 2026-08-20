@@ -3,10 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   cleanRecipeCookLogComment,
   cleanRecipeDescription,
+  cleanRecipeIngredientAmount,
   cleanRecipeIngredientName,
   cleanRecipeIngredientNote,
-  cleanRecipeIngredientQuantity,
-  cleanRecipeIngredientUnit,
   cleanRecipeTitle,
   cleanShoppingItemName,
   normalizeShoppingItemName,
@@ -28,12 +27,13 @@ describe("recipe text cleaning", () => {
     expect(cleanRecipeDescription("  \n  ")).toBeNull();
   });
 
-  it("cleans ingredient single-line fields", () => {
+  it("cleans ingredient name and amount as single-line fields", () => {
     expect(cleanRecipeIngredientName("  Ｆｒｅｓｈ   Basil  ")).toBe(
       "Fresh Basil",
     );
-    expect(cleanRecipeIngredientQuantity("  1   1/2  ")).toBe("1 1/2");
-    expect(cleanRecipeIngredientUnit("  cups  ")).toBe("cups");
+    expect(cleanRecipeIngredientAmount("  1   1/2   cups  ")).toBe(
+      "1 1/2 cups",
+    );
   });
 
   it("preserves lines in ingredient notes", () => {
@@ -43,8 +43,7 @@ describe("recipe text cleaning", () => {
   });
 
   it("stores empty optional ingredient text as null", () => {
-    expect(cleanRecipeIngredientQuantity("  ")).toBeNull();
-    expect(cleanRecipeIngredientUnit("  \n  ")).toBeNull();
+    expect(cleanRecipeIngredientAmount("  \n  ")).toBeNull();
     expect(cleanRecipeIngredientNote("  \n  ")).toBeNull();
   });
 

@@ -4,8 +4,11 @@ import {
   createRecipeCookLogMutationSchema,
   createRecipeIngredientMutationSchema,
   createRecipeMutationSchema,
+  renameRecipeIngredientMutationSchema,
   reorderRecipeImagesMutationSchema,
   reorderRecipeIngredientsMutationSchema,
+  updateRecipeCookLogMutationSchema,
+  updateRecipeIngredientMutationSchema,
   updateRecipeMutationSchema,
 } from "./recipes";
 
@@ -138,9 +141,6 @@ const ingredientInput = {
   householdId: input.householdId,
   recipeId: input.recipeId,
   name: "Fresh Basil",
-  quantity: "1 1/2",
-  unit: "cups",
-  note: "Add after blending.",
   position: 0,
   optimisticTimestamp: input.optimisticTimestamp,
 };
@@ -151,24 +151,9 @@ describe("createRecipeIngredientMutationSchema", () => {
       createRecipeIngredientMutationSchema.parse({
         ...ingredientInput,
         name: "  Ｆｒｅｓｈ   Basil  ",
-        quantity: "  1   1/2  ",
-        unit: "  cups  ",
-        note: "  Add after blending.  ",
       }),
     ).toEqual(ingredientInput);
   });
-
-  it.each(["quantity", "unit", "note"] as const)(
-    "normalizes an empty %s to null",
-    (field) => {
-      expect(
-        createRecipeIngredientMutationSchema.parse({
-          ...ingredientInput,
-          [field]: "  \n  ",
-        })[field],
-      ).toBeNull();
-    },
-  );
 
   it.each(["ingredientId", "householdId", "recipeId"] as const)(
     "rejects an invalid %s",
@@ -185,9 +170,6 @@ describe("createRecipeIngredientMutationSchema", () => {
   it.each([
     ["name", "   "],
     ["name", "a".repeat(151)],
-    ["quantity", "a".repeat(51)],
-    ["unit", "a".repeat(51)],
-    ["note", "a".repeat(501)],
   ] as const)("rejects an invalid %s", (field, value) => {
     expect(
       createRecipeIngredientMutationSchema.safeParse({
@@ -219,6 +201,103 @@ describe("createRecipeIngredientMutationSchema", () => {
       }).success,
     ).toBe(false);
   });
+});
+
+const updateIngredientInput = {
+  ingredientId: ingredientInput.ingredientId,
+  householdId: ingredientInput.householdId,
+  recipeId: ingredientInput.recipeId,
+  amount: "1 1/2 cups",
+  note: "Add after blending.",
+  optimisticUpdatedAt: input.optimisticTimestamp,
+};
+
+describe("updateRecipeIngredientMutationSchema", () => {
+  it("cleans optional amount and note text", () => {
+    expect(
+      updateRecipeIngredientMutationSchema.parse({
+        ...updateIngredientInput,
+        amount: "  1   1/2   cups  ",
+        note: "  Add after blending.  ",
+      }),
+    ).toEqual(updateIngredientInput);
+  });
+
+  it.each(["amount", "note"] as const)(
+    "normalizes an empty %s to null",
+    (field) => {
+      expect(
+        updateRecipeIngredientMutationSchema.parse({
+          ...updateIngredientInput,
+          [field]: "  \n  ",
+        })[field],
+      ).toBeNull();
+    },
+  );
+
+  it.each(["ingredientId", "householdId", "recipeId"] as const)(
+    "rejects an invalid %s",
+    (field) => {
+      expect(
+        updateRecipeIngredientMutationSchema.safeParse({
+          ...updateIngredientInput,
+          [field]: "not-a-uuid",
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    ["amount", "a".repeat(101)],
+    ["note", "a".repeat(501)],
+    ["optimisticUpdatedAt", -1],
+    ["optimisticUpdatedAt", 1.5],
+  ] as const)("rejects an invalid %s", (field, value) => {
+    expect(
+      updateRecipeIngredientMutationSchema.safeParse({
+        ...updateIngredientInput,
+        [field]: value,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects extra properties", () => {
+    expect(
+      updateRecipeIngredientMutationSchema.safeParse({
+        ...updateIngredientInput,
+        name: "Fresh Basil",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("renameRecipeIngredientMutationSchema", () => {
+  it("cleans a valid ingredient name", () => {
+    expect(
+      renameRecipeIngredientMutationSchema.parse({
+        ingredientId: ingredientInput.ingredientId,
+        householdId: ingredientInput.householdId,
+        recipeId: ingredientInput.recipeId,
+        name: "  Fresh   Basil  ",
+        optimisticUpdatedAt: input.optimisticTimestamp,
+      }).name,
+    ).toBe("Fresh Basil");
+  });
+
+  it.each(["   ", "a".repeat(151)])(
+    "rejects the invalid ingredient name %j",
+    (name) => {
+      expect(
+        renameRecipeIngredientMutationSchema.safeParse({
+          ingredientId: ingredientInput.ingredientId,
+          householdId: ingredientInput.householdId,
+          recipeId: ingredientInput.recipeId,
+          name,
+          optimisticUpdatedAt: input.optimisticTimestamp,
+        }).success,
+      ).toBe(false);
+    },
+  );
 });
 
 const cookLogInput = {
@@ -289,6 +368,43 @@ describe("createRecipeCookLogMutationSchema", () => {
       createRecipeCookLogMutationSchema.safeParse({
         ...cookLogInput,
         userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("updateRecipeCookLogMutationSchema", () => {
+  const updateInput = {
+    cookLogId: cookLogInput.cookLogId,
+    householdId: cookLogInput.householdId,
+    recipeId: cookLogInput.recipeId,
+    comment: cookLogInput.comment,
+    optimisticUpdatedAt: input.optimisticTimestamp,
+  };
+
+  it("cleans a valid comment", () => {
+    expect(
+      updateRecipeCookLogMutationSchema.parse({
+        ...updateInput,
+        comment: "  Made it less spicy.  ",
+      }),
+    ).toEqual(updateInput);
+  });
+
+  it.each([null, "  \n  "])("normalizes comment %j to null", (comment) => {
+    expect(
+      updateRecipeCookLogMutationSchema.parse({
+        ...updateInput,
+        comment,
+      }).comment,
+    ).toBeNull();
+  });
+
+  it("rejects an overlong comment", () => {
+    expect(
+      updateRecipeCookLogMutationSchema.safeParse({
+        ...updateInput,
+        comment: "a".repeat(1_001),
       }).success,
     ).toBe(false);
   });

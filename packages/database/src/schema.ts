@@ -209,8 +209,7 @@ export const recipeIngredients = pgTable(
     householdId: uuid("household_id").notNull(),
     recipeId: uuid("recipe_id").notNull(),
     name: text("name").notNull(),
-    quantity: text("quantity"),
-    unit: text("unit"),
+    amount: text("amount"),
     note: text("note"),
     position: integer("position").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })

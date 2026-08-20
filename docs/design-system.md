@@ -303,8 +303,11 @@ substitute for the accessible name.
 Input is the Base UI-backed text-control foundation. Its `field` appearance is
 used by FieldControl for conventional forms; its borderless `inline`
 appearance supports direct editing inside rows while preserving visible focus,
-disabled, and invalid states. Feature code consumes this Home Hub primitive
-rather than styling raw text inputs independently.
+disabled, and invalid states. Its `seamless` appearance is reserved for content
+that should look continuously editable: it has no hover, focus, or invalid
+surface treatment, leaving the text caret and error popover as feedback.
+Feature code consumes this Home Hub primitive rather than styling raw text
+inputs independently.
 
 Input owns presentation and control-state styling, not labels, validation
 rules, debouncing, persistence, or domain behavior. Inputs still require an
@@ -313,10 +316,10 @@ accessible name, either through Field or an explicit label.
 ### Textarea
 
 Textarea is the shared multiline text-control foundation. It mirrors Input's
-`field` and borderless `inline` appearances so conventional forms and direct
-content editing keep the same interaction states and visual language. Field's
-textarea control composes this primitive rather than defining a separate
-style.
+`field`, borderless `inline`, and visually unchanged `seamless` appearances so
+conventional forms and direct content editing keep the same visual language.
+Field's textarea control composes this primitive rather than defining a
+separate style.
 
 ### Field
 
@@ -571,10 +574,16 @@ edge. Drag handles reorder the gallery across pointer, touch, and keyboard
 input; the first image is the recipe-card cover. Every thumbnail opens the same
 large viewer, where image deletion uses a compact confirmation popover.
 Ingredients and Cooking history follow as independently closable sections.
-Ingredients use a compact add row with name, quantity, and unit, immediate
-delete actions, and drag handles for reordering. Cooking
-history is newest first, begins with a date-only add row, and includes compact
-linked image thumbnails for each entry. Each completed cooking entry also
+Ingredients use a name-only add row, directly editable names with debounced
+saves, and drag handles for reordering. Each ingredient stays on one line: an
+optional Weight icon and amount precede the name, while an optional muted note
+truncates at the row edge. Right click or long press opens a compact Base UI
+context menu for adding or editing the optional free-text amount and note or
+immediately deleting the ingredient. Cooking history is newest first, begins
+with a date-only add row, and uses
+the same debounced inline editing for each entry's comment. It includes compact
+linked image thumbnails for each entry.
+Each completed cooking entry also
 exposes its own smaller, low-emphasis image-upload control and a confirmed
 delete action in the entry row. Deleting an entry preserves its pictures in the
 general recipe gallery.

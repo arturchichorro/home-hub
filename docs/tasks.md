@@ -66,6 +66,8 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Redesign cooking history with a compact calendar-based add row, newest-first entries, comments, and linked image thumbnails
 - [x] Keep recipe, ingredient, cooking-log, and image deletion or additional editing actions out of this pass
 - [x] Verify loading, empty, optimistic, upload, failure, responsive, keyboard, and accessible-name behavior
+- [ ] Improve the look of the ingredients list (might require change of table schema)
+- [ ] Improve the look of the cook logs list (try to make each cook log fit in one row maybe)
 - [x] Update the design-system documentation and complete the Recipes UI checkpoint
 
 ## Add recipe-detail organization and deletion
@@ -80,6 +82,34 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Reuse expiring signed image URLs across route and component remounts without crossing sessions
 - [x] Verify optimistic, authorization, failure, drag, keyboard, touch, cover-image, and storage-cleanup behavior
 - [ ] Update the system documentation and complete the recipe-operations checkpoint
+
+## Simplify recipe ingredient amounts
+
+- [x] Replace the separate optional quantity and unit fields with one optional amount field
+- [x] Preserve existing ingredient measurements by joining quantity and unit during migration
+- [x] Update the ingredient add row and list to use the single amount field
+- [x] Verify normalization, optimistic insertion, authorization, migration SQL, and workspace checks
+- [x] Update the system documentation and complete the ingredient-amount checkpoint
+
+## Simplify recipe ingredient entry
+
+- [x] Create ingredients from their required name only
+- [x] Add a scoped optimistic mutation for optional amount and note updates
+- [x] Add a Base UI-backed context menu editor to every ingredient row
+- [x] Preserve immediate deletion and accessible drag-and-drop reordering
+- [x] Verify validation, authorization, optimistic updates, UI primitives, and workspace checks
+- [x] Update the design-system documentation and complete the ingredient-entry checkpoint
+
+## Edit recipe ingredient names and cooking-log comments
+
+- [x] Add separate, validated optimistic mutations for ingredient names and cooking-log comments
+- [x] Enforce household, recipe, ingredient, and cooking-log ownership boundaries
+- [x] Add debounced inline editors with blur saves, reversion, and error popovers
+- [x] Give every directly editable recipe field a seamless appearance with no hover or focus restyling
+- [x] Keep ingredient rows to one line and move immediate deletion into their context menu
+- [x] Keep ingredient metadata editing, deletion, reordering, and image actions unchanged
+- [x] Verify normalization, authorization, optimistic updates, and interface type safety
+- [x] Update the design-system documentation and complete the inline-editing checkpoint
 
 ## Deploy to and migrate onto the Raspberry Pi
 

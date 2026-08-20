@@ -1,6 +1,6 @@
 import { type ComponentProps, forwardRef } from "react";
 
-export type TextareaAppearance = "field" | "inline";
+export type TextareaAppearance = "field" | "inline" | "seamless";
 
 export type TextareaProps = Omit<
   ComponentProps<"textarea">,
@@ -31,9 +31,15 @@ const inlineTextareaClasses = [
   "aria-invalid:ring-2 aria-invalid:ring-danger/40 disabled:cursor-default",
 ].join(" ");
 
+const seamlessTextareaClasses = [
+  "field-sizing-content min-h-10 w-full resize-none border-0 bg-transparent px-1 py-2 text-foreground",
+  "placeholder:text-subtle enabled:cursor-text disabled:cursor-default",
+].join(" ");
+
 const appearanceClasses: Record<TextareaAppearance, string> = {
   field: fieldTextareaClasses,
   inline: inlineTextareaClasses,
+  seamless: seamlessTextareaClasses,
 };
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
