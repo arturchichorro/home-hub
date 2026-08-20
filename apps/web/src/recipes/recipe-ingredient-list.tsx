@@ -47,9 +47,7 @@ function RecipeIngredientRow({
         <GripVertical aria-hidden="true" className="size-4" />
       </IconButton>
       <span className="min-w-0 flex-1">{ingredient.name}</span>
-      <span className="text-sm text-muted">
-        {[ingredient.quantity, ingredient.unit].filter(Boolean).join(" ")}
-      </span>
+      <span className="text-sm text-muted">{ingredient.amount}</span>
       <IconButton
         aria-label={`Delete ${ingredient.name}`}
         className="size-7!"

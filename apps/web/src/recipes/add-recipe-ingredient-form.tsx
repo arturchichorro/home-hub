@@ -18,8 +18,7 @@ export function AddRecipeIngredientForm({
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
   const [name, setName] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [unit, setUnit] = useState("");
+  const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -29,7 +28,7 @@ export function AddRecipeIngredientForm({
 
     setSaving(true);
     setError(undefined);
-    const submitted = { name, quantity, unit };
+    const submitted = { name, amount };
     const mutation = zero.mutate(
       mutators.recipes.addIngredient({
         ingredientId: crypto.randomUUID(),
@@ -50,8 +49,7 @@ export function AddRecipeIngredientForm({
     }
 
     setName((current) => (current === submitted.name ? "" : current));
-    setQuantity((current) => (current === submitted.quantity ? "" : current));
-    setUnit((current) => (current === submitted.unit ? "" : current));
+    setAmount((current) => (current === submitted.amount ? "" : current));
 
     const serverResult = await mutation.server;
     if (serverResult.type === "error") {
@@ -64,7 +62,7 @@ export function AddRecipeIngredientForm({
     <div className="grid gap-2">
       <form
         onSubmit={handleSubmit}
-        className="grid min-h-6 grid-cols-[minmax(0,1fr)_2.75rem] items-center gap-1 px-1 sm:grid-cols-[minmax(0,1fr)_10rem_2.75rem]"
+        className="grid min-h-6 grid-cols-[minmax(0,1fr)_7rem_2.75rem] items-center gap-1 px-1 sm:grid-cols-[minmax(0,1fr)_10rem_2.75rem]"
       >
         <Input
           appearance="inline"
@@ -77,34 +75,22 @@ export function AddRecipeIngredientForm({
           value={name}
           onValueChange={setName}
         />
-        <div className="col-span-2 grid grid-cols-2 gap-1 sm:col-span-1">
-          <Input
-            appearance="inline"
-            aria-label="Ingredient quantity"
-            autoComplete="off"
-            className="placeholder:text-sm"
-            maxLength={50}
-            placeholder="Qty"
-            value={quantity}
-            onValueChange={setQuantity}
-          />
-          <Input
-            appearance="inline"
-            aria-label="Ingredient unit"
-            autoComplete="off"
-            className="placeholder:text-sm"
-            maxLength={50}
-            placeholder="Unit"
-            value={unit}
-            onValueChange={setUnit}
-          />
-        </div>
+        <Input
+          appearance="inline"
+          aria-label="Ingredient amount"
+          autoComplete="off"
+          className="placeholder:text-sm"
+          maxLength={100}
+          placeholder="Amount"
+          value={amount}
+          onValueChange={setAmount}
+        />
         <IconButton
           type="submit"
           aria-label="Add ingredient"
           busy={saving}
           disabled={!mutationEnabled || saving}
-          className="col-start-2 row-start-1 sm:col-start-3"
+          className="col-start-3 row-start-1"
         >
           <Plus aria-hidden="true" />
         </IconButton>

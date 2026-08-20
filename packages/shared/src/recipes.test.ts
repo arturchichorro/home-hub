@@ -138,8 +138,7 @@ const ingredientInput = {
   householdId: input.householdId,
   recipeId: input.recipeId,
   name: "Fresh Basil",
-  quantity: "1 1/2",
-  unit: "cups",
+  amount: "1 1/2 cups",
   note: "Add after blending.",
   position: 0,
   optimisticTimestamp: input.optimisticTimestamp,
@@ -151,14 +150,13 @@ describe("createRecipeIngredientMutationSchema", () => {
       createRecipeIngredientMutationSchema.parse({
         ...ingredientInput,
         name: "  Ｆｒｅｓｈ   Basil  ",
-        quantity: "  1   1/2  ",
-        unit: "  cups  ",
+        amount: "  1   1/2   cups  ",
         note: "  Add after blending.  ",
       }),
     ).toEqual(ingredientInput);
   });
 
-  it.each(["quantity", "unit", "note"] as const)(
+  it.each(["amount", "note"] as const)(
     "normalizes an empty %s to null",
     (field) => {
       expect(
@@ -185,8 +183,7 @@ describe("createRecipeIngredientMutationSchema", () => {
   it.each([
     ["name", "   "],
     ["name", "a".repeat(151)],
-    ["quantity", "a".repeat(51)],
-    ["unit", "a".repeat(51)],
+    ["amount", "a".repeat(101)],
     ["note", "a".repeat(501)],
   ] as const)("rejects an invalid %s", (field, value) => {
     expect(

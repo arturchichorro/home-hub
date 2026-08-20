@@ -2,10 +2,9 @@ import * as z from "zod";
 import {
   cleanRecipeCookLogComment,
   cleanRecipeDescription,
+  cleanRecipeIngredientAmount,
   cleanRecipeIngredientName,
   cleanRecipeIngredientNote,
-  cleanRecipeIngredientQuantity,
-  cleanRecipeIngredientUnit,
   cleanRecipeTitle,
 } from "./normalization";
 
@@ -52,19 +51,12 @@ const recipeIngredientNameSchema = z
   .transform(cleanRecipeIngredientName)
   .pipe(z.string().min(1).max(150));
 
-const recipeIngredientQuantitySchema = z
+const recipeIngredientAmountSchema = z
   .union([z.string(), z.null()])
   .transform((value) =>
-    value === null ? null : cleanRecipeIngredientQuantity(value),
+    value === null ? null : cleanRecipeIngredientAmount(value),
   )
-  .pipe(z.string().max(50).nullable());
-
-const recipeIngredientUnitSchema = z
-  .union([z.string(), z.null()])
-  .transform((value) =>
-    value === null ? null : cleanRecipeIngredientUnit(value),
-  )
-  .pipe(z.string().max(50).nullable());
+  .pipe(z.string().max(100).nullable());
 
 const recipeIngredientNoteSchema = z
   .union([z.string(), z.null()])
@@ -86,8 +78,7 @@ export const createRecipeIngredientMutationSchema = z
     householdId: z.uuid(),
     recipeId: z.uuid(),
     name: recipeIngredientNameSchema,
-    quantity: recipeIngredientQuantitySchema,
-    unit: recipeIngredientUnitSchema,
+    amount: recipeIngredientAmountSchema,
     note: recipeIngredientNoteSchema,
     position: z.number().int().nonnegative(),
     optimisticTimestamp: z.number().int().nonnegative(),

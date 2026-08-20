@@ -83,6 +83,14 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Verify optimistic, authorization, failure, drag, keyboard, touch, cover-image, and storage-cleanup behavior
 - [ ] Update the system documentation and complete the recipe-operations checkpoint
 
+## Simplify recipe ingredient amounts
+
+- [x] Replace the separate optional quantity and unit fields with one optional amount field
+- [x] Preserve existing ingredient measurements by joining quantity and unit during migration
+- [x] Update the ingredient add row and list to use the single amount field
+- [x] Verify normalization, optimistic insertion, authorization, migration SQL, and workspace checks
+- [x] Update the system documentation and complete the ingredient-amount checkpoint
+
 ## Deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack

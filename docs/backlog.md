@@ -9,7 +9,6 @@ together before implementation begins.
 
 ## Improvements
 
-- [ ] Remove unit from ingredients table
 - [ ] Move app header to a sidebar instead, similar to linear
 - [ ] Open last opened household on app start (through local storage or something)
 - [ ] Add recipe ingredients to Shopping

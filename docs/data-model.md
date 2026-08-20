@@ -165,16 +165,16 @@ store an empty description as `null`.
 - `household_id`
 - `recipe_id`
 - `name`
-- `quantity`: nullable text
-- `unit`: nullable text
+- `amount`: nullable text
 - `note`: nullable text
 - `position`: integer
 - `created_at`, `updated_at`
 
-Quantity remains text so values such as `½`, `2–3`, and `to taste` are
-representable. Position must be nonnegative. Positions are indexed but not
-unique; order equal positions by row ID for deterministic display. Reordering
-renumbers the visible ingredient collection from zero.
+Amount remains text so combined measurements such as `12g`, `1 ½ cups`, `2–3`,
+and `to taste` are representable without requiring a separate unit input.
+Position must be nonnegative. Positions are indexed but not unique; order equal
+positions by row ID for deterministic display. Reordering renumbers the visible
+ingredient collection from zero.
 
 ### `recipe_cook_logs`
 

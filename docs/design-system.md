@@ -571,7 +571,7 @@ edge. Drag handles reorder the gallery across pointer, touch, and keyboard
 input; the first image is the recipe-card cover. Every thumbnail opens the same
 large viewer, where image deletion uses a compact confirmation popover.
 Ingredients and Cooking history follow as independently closable sections.
-Ingredients use a compact add row with name, quantity, and unit, immediate
+Ingredients use a compact add row with name and a free-text amount, immediate
 delete actions, and drag handles for reordering. Cooking
 history is newest first, begins with a date-only add row, and includes compact
 linked image thumbnails for each entry. Each completed cooking entry also
