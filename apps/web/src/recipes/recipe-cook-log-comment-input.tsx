@@ -48,7 +48,7 @@ export function RecipeCookLogCommentInput({
     <>
       <Textarea
         ref={textareaRef}
-        appearance="inline"
+        appearance="seamless"
         aria-label="Cooking log comment"
         aria-busy={editor.isSaving || undefined}
         aria-invalid={editor.error ? true : undefined}

@@ -303,8 +303,11 @@ substitute for the accessible name.
 Input is the Base UI-backed text-control foundation. Its `field` appearance is
 used by FieldControl for conventional forms; its borderless `inline`
 appearance supports direct editing inside rows while preserving visible focus,
-disabled, and invalid states. Feature code consumes this Home Hub primitive
-rather than styling raw text inputs independently.
+disabled, and invalid states. Its `seamless` appearance is reserved for content
+that should look continuously editable: it has no hover, focus, or invalid
+surface treatment, leaving the text caret and error popover as feedback.
+Feature code consumes this Home Hub primitive rather than styling raw text
+inputs independently.
 
 Input owns presentation and control-state styling, not labels, validation
 rules, debouncing, persistence, or domain behavior. Inputs still require an
@@ -313,10 +316,10 @@ accessible name, either through Field or an explicit label.
 ### Textarea
 
 Textarea is the shared multiline text-control foundation. It mirrors Input's
-`field` and borderless `inline` appearances so conventional forms and direct
-content editing keep the same interaction states and visual language. Field's
-textarea control composes this primitive rather than defining a separate
-style.
+`field`, borderless `inline`, and visually unchanged `seamless` appearances so
+conventional forms and direct content editing keep the same visual language.
+Field's textarea control composes this primitive rather than defining a
+separate style.
 
 ### Field
 

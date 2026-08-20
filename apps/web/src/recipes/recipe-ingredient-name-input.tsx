@@ -50,7 +50,7 @@ export function RecipeIngredientNameInput({
     <>
       <Input
         ref={inputRef}
-        appearance="inline"
+        appearance="seamless"
         aria-label="Ingredient name"
         aria-busy={editor.isSaving || undefined}
         aria-invalid={editor.error ? true : undefined}

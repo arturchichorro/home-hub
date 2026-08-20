@@ -157,14 +157,14 @@ export function RecipeDetail({
     <article className="grid gap-2" aria-busy={result.type !== "complete"}>
       <Input
         {...editor.titleProps}
-        appearance="inline"
+        appearance="seamless"
         aria-label="Recipe title"
         className="text-2xl font-semibold text-primary"
         maxLength={150}
       />
       <Textarea
         {...editor.descriptionProps}
-        appearance="inline"
+        appearance="seamless"
         aria-label="Recipe description"
         maxLength={5_000}
         placeholder="Add a description…"

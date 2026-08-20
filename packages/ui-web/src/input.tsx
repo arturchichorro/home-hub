@@ -1,7 +1,7 @@
 import { Input as BaseInput } from "@base-ui/react/input";
 import { type ComponentProps, forwardRef } from "react";
 
-export type InputAppearance = "field" | "inline";
+export type InputAppearance = "field" | "inline" | "seamless";
 
 export type InputProps = Omit<
   ComponentProps<typeof BaseInput>,
@@ -33,9 +33,15 @@ const inlineInputClasses = [
   "disabled:cursor-default",
 ].join(" ");
 
+const seamlessInputClasses = [
+  "h-10 flex-1 border-0 bg-transparent px-1",
+  "enabled:cursor-text disabled:cursor-default",
+].join(" ");
+
 const appearanceClasses: Record<InputAppearance, string> = {
   field: fieldInputClasses,
   inline: inlineInputClasses,
+  seamless: seamlessInputClasses,
 };
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
