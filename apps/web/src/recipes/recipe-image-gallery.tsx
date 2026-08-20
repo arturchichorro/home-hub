@@ -1,3 +1,8 @@
+import {
+  PointerActivationConstraints,
+  PointerSensor,
+  type Sensors,
+} from "@dnd-kit/dom";
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import type { RecipeImage } from "@home-hub/shared/zero/schema";
@@ -16,6 +21,30 @@ import {
 import type { KeyboardEvent, ReactNode, Ref } from "react";
 import { getAdjacentRecipeImage } from "./recipe-image-navigation";
 import { useRecipeImageUrl } from "./use-recipe-image-url";
+
+const recipeImagePointerSensor = PointerSensor.configure({
+  activationConstraints(event) {
+    if (event.pointerType === "mouse") {
+      return [new PointerActivationConstraints.Distance({ value: 5 })];
+    }
+    if (event.pointerType === "touch") {
+      return [
+        new PointerActivationConstraints.Delay({ value: 250, tolerance: 5 }),
+      ];
+    }
+    return [
+      new PointerActivationConstraints.Delay({ value: 200, tolerance: 10 }),
+      new PointerActivationConstraints.Distance({ value: 5 }),
+    ];
+  },
+});
+
+function recipeImageSensors(defaults: Sensors): Sensors {
+  return [
+    ...defaults.filter((sensor) => sensor !== PointerSensor),
+    recipeImagePointerSensor,
+  ];
+}
 
 type RecipeImageContext = {
   accessToken: string;
@@ -139,6 +168,7 @@ export function RecipeImageGallery({
   return (
     <div className="relative min-h-28">
       <DragDropProvider
+        sensors={recipeImageSensors}
         onDragEnd={(event) => {
           if (event.canceled) return;
           const { source } = event.operation;
