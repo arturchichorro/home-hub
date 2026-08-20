@@ -91,6 +91,15 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Verify normalization, optimistic insertion, authorization, migration SQL, and workspace checks
 - [x] Update the system documentation and complete the ingredient-amount checkpoint
 
+## Simplify recipe ingredient entry
+
+- [x] Create ingredients from their required name only
+- [x] Add a scoped optimistic mutation for optional amount and note updates
+- [x] Add a Base UI-backed context menu editor to every ingredient row
+- [x] Preserve immediate deletion and accessible drag-and-drop reordering
+- [x] Verify validation, authorization, optimistic updates, UI primitives, and workspace checks
+- [x] Update the design-system documentation and complete the ingredient-entry checkpoint
+
 ## Deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack

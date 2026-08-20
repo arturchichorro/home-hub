@@ -6,6 +6,7 @@ import {
   createRecipeMutationSchema,
   reorderRecipeImagesMutationSchema,
   reorderRecipeIngredientsMutationSchema,
+  updateRecipeIngredientMutationSchema,
   updateRecipeMutationSchema,
 } from "./recipes";
 
@@ -138,8 +139,6 @@ const ingredientInput = {
   householdId: input.householdId,
   recipeId: input.recipeId,
   name: "Fresh Basil",
-  amount: "1 1/2 cups",
-  note: "Add after blending.",
   position: 0,
   optimisticTimestamp: input.optimisticTimestamp,
 };
@@ -150,23 +149,9 @@ describe("createRecipeIngredientMutationSchema", () => {
       createRecipeIngredientMutationSchema.parse({
         ...ingredientInput,
         name: "  Ｆｒｅｓｈ   Basil  ",
-        amount: "  1   1/2   cups  ",
-        note: "  Add after blending.  ",
       }),
     ).toEqual(ingredientInput);
   });
-
-  it.each(["amount", "note"] as const)(
-    "normalizes an empty %s to null",
-    (field) => {
-      expect(
-        createRecipeIngredientMutationSchema.parse({
-          ...ingredientInput,
-          [field]: "  \n  ",
-        })[field],
-      ).toBeNull();
-    },
-  );
 
   it.each(["ingredientId", "householdId", "recipeId"] as const)(
     "rejects an invalid %s",
@@ -183,8 +168,6 @@ describe("createRecipeIngredientMutationSchema", () => {
   it.each([
     ["name", "   "],
     ["name", "a".repeat(151)],
-    ["amount", "a".repeat(101)],
-    ["note", "a".repeat(501)],
   ] as const)("rejects an invalid %s", (field, value) => {
     expect(
       createRecipeIngredientMutationSchema.safeParse({
@@ -213,6 +196,74 @@ describe("createRecipeIngredientMutationSchema", () => {
       createRecipeIngredientMutationSchema.safeParse({
         ...ingredientInput,
         userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+const updateIngredientInput = {
+  ingredientId: ingredientInput.ingredientId,
+  householdId: ingredientInput.householdId,
+  recipeId: ingredientInput.recipeId,
+  amount: "1 1/2 cups",
+  note: "Add after blending.",
+  optimisticUpdatedAt: input.optimisticTimestamp,
+};
+
+describe("updateRecipeIngredientMutationSchema", () => {
+  it("cleans optional amount and note text", () => {
+    expect(
+      updateRecipeIngredientMutationSchema.parse({
+        ...updateIngredientInput,
+        amount: "  1   1/2   cups  ",
+        note: "  Add after blending.  ",
+      }),
+    ).toEqual(updateIngredientInput);
+  });
+
+  it.each(["amount", "note"] as const)(
+    "normalizes an empty %s to null",
+    (field) => {
+      expect(
+        updateRecipeIngredientMutationSchema.parse({
+          ...updateIngredientInput,
+          [field]: "  \n  ",
+        })[field],
+      ).toBeNull();
+    },
+  );
+
+  it.each(["ingredientId", "householdId", "recipeId"] as const)(
+    "rejects an invalid %s",
+    (field) => {
+      expect(
+        updateRecipeIngredientMutationSchema.safeParse({
+          ...updateIngredientInput,
+          [field]: "not-a-uuid",
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    ["amount", "a".repeat(101)],
+    ["note", "a".repeat(501)],
+    ["optimisticUpdatedAt", -1],
+    ["optimisticUpdatedAt", 1.5],
+  ] as const)("rejects an invalid %s", (field, value) => {
+    expect(
+      updateRecipeIngredientMutationSchema.safeParse({
+        ...updateIngredientInput,
+        [field]: value,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects extra properties", () => {
+    expect(
+      updateRecipeIngredientMutationSchema.safeParse({
+        ...updateIngredientInput,
+        name: "Fresh Basil",
       }).success,
     ).toBe(false);
   });

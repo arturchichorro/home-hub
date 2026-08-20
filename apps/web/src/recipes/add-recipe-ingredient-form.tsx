@@ -18,7 +18,6 @@ export function AddRecipeIngredientForm({
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
   const [name, setName] = useState("");
-  const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -28,14 +27,13 @@ export function AddRecipeIngredientForm({
 
     setSaving(true);
     setError(undefined);
-    const submitted = { name, amount };
+    const submittedName = name;
     const mutation = zero.mutate(
       mutators.recipes.addIngredient({
         ingredientId: crypto.randomUUID(),
         householdId,
         recipeId,
-        ...submitted,
-        note: null,
+        name: submittedName,
         position,
         optimisticTimestamp: Date.now(),
       }),
@@ -48,8 +46,7 @@ export function AddRecipeIngredientForm({
       return;
     }
 
-    setName((current) => (current === submitted.name ? "" : current));
-    setAmount((current) => (current === submitted.amount ? "" : current));
+    setName((current) => (current === submittedName ? "" : current));
 
     const serverResult = await mutation.server;
     if (serverResult.type === "error") {
@@ -62,7 +59,7 @@ export function AddRecipeIngredientForm({
     <div className="grid gap-2">
       <form
         onSubmit={handleSubmit}
-        className="grid min-h-6 grid-cols-[minmax(0,1fr)_7rem_2.75rem] items-center gap-1 px-1 sm:grid-cols-[minmax(0,1fr)_10rem_2.75rem]"
+        className="grid min-h-6 grid-cols-[minmax(0,1fr)_2.75rem] items-center gap-1 px-1"
       >
         <Input
           appearance="inline"
@@ -75,22 +72,12 @@ export function AddRecipeIngredientForm({
           value={name}
           onValueChange={setName}
         />
-        <Input
-          appearance="inline"
-          aria-label="Ingredient amount"
-          autoComplete="off"
-          className="placeholder:text-sm"
-          maxLength={100}
-          placeholder="Amount"
-          value={amount}
-          onValueChange={setAmount}
-        />
         <IconButton
           type="submit"
           aria-label="Add ingredient"
           busy={saving}
           disabled={!mutationEnabled || saving}
-          className="col-start-3 row-start-1"
+          className="col-start-2 row-start-1"
         >
           <Plus aria-hidden="true" />
         </IconButton>

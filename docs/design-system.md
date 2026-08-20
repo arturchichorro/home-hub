@@ -571,10 +571,12 @@ edge. Drag handles reorder the gallery across pointer, touch, and keyboard
 input; the first image is the recipe-card cover. Every thumbnail opens the same
 large viewer, where image deletion uses a compact confirmation popover.
 Ingredients and Cooking history follow as independently closable sections.
-Ingredients use a compact add row with name and a free-text amount, immediate
-delete actions, and drag handles for reordering. Cooking
-history is newest first, begins with a date-only add row, and includes compact
-linked image thumbnails for each entry. Each completed cooking entry also
+Ingredients use a name-only add row, immediate delete actions, and drag handles
+for reordering. Right click or long press opens a compact Base UI context menu
+for adding or editing the optional free-text amount and note; saved metadata is
+shown directly in the row. Cooking history is newest first, begins with a
+date-only add row, and includes compact linked image thumbnails for each entry.
+Each completed cooking entry also
 exposes its own smaller, low-emphasis image-upload control and a confirmed
 delete action in the entry row. Deleting an entry preserves its pictures in the
 general recipe gallery.

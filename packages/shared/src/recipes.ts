@@ -78,8 +78,6 @@ export const createRecipeIngredientMutationSchema = z
     householdId: z.uuid(),
     recipeId: z.uuid(),
     name: recipeIngredientNameSchema,
-    amount: recipeIngredientAmountSchema,
-    note: recipeIngredientNoteSchema,
     position: z.number().int().nonnegative(),
     optimisticTimestamp: z.number().int().nonnegative(),
   })
@@ -87,6 +85,21 @@ export const createRecipeIngredientMutationSchema = z
 
 export type CreateRecipeIngredientMutationInput = z.infer<
   typeof createRecipeIngredientMutationSchema
+>;
+
+export const updateRecipeIngredientMutationSchema = z
+  .object({
+    ingredientId: z.uuid(),
+    householdId: z.uuid(),
+    recipeId: z.uuid(),
+    amount: recipeIngredientAmountSchema,
+    note: recipeIngredientNoteSchema,
+    optimisticUpdatedAt: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export type UpdateRecipeIngredientMutationInput = z.infer<
+  typeof updateRecipeIngredientMutationSchema
 >;
 
 export const createRecipeCookLogMutationSchema = z

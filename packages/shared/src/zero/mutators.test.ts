@@ -56,10 +56,17 @@ const addRecipeIngredientArgs = {
   householdId,
   recipeId,
   name: "Fresh Basil",
-  amount: "1 1/2 cups",
-  note: "Add after blending.",
   position: 0,
   optimisticTimestamp: optimisticUpdatedAt,
+};
+
+const updateRecipeIngredientArgs = {
+  ingredientId,
+  householdId,
+  recipeId,
+  amount: "1 1/2 cups",
+  note: "Add after blending.",
+  optimisticUpdatedAt,
 };
 
 const addRecipeCookLogArgs = {
@@ -721,8 +728,8 @@ describe("recipes.addIngredient mutator", () => {
       householdId,
       recipeId,
       name: "Fresh Basil",
-      amount: "1 1/2 cups",
-      note: "Add after blending.",
+      amount: null,
+      note: null,
       position: 0,
       createdAt: optimisticUpdatedAt,
       updatedAt: optimisticUpdatedAt,
@@ -793,10 +800,85 @@ describe("recipes.addIngredient mutator", () => {
       householdId,
       recipeId,
       name: "Fresh Basil",
-      amount: "1 1/2 cups",
-      note: "Add after blending.",
+      amount: null,
+      note: null,
       position: 0,
       createdAt: authoritativeTimestamp,
+      updatedAt: authoritativeTimestamp,
+    });
+  });
+});
+
+describe("recipes.updateIngredient mutator", () => {
+  it("is registered with a stable name", () => {
+    expect(mutators.recipes.updateIngredient.mutatorName).toBe(
+      "recipes.updateIngredient",
+    );
+  });
+
+  it("optimistically updates amount and note for a scoped ingredient", async () => {
+    const { ingredientUpdate, queries, transaction } = createFakeTransaction({
+      location: "client",
+      results: [{ id: ingredientId, householdId, recipeId }],
+    });
+
+    await mutators.recipes.updateIngredient.fn({
+      args: updateRecipeIngredientArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(queries).toHaveLength(1);
+    expect(ingredientUpdate).toHaveBeenCalledWith({
+      id: ingredientId,
+      amount: "1 1/2 cups",
+      note: "Add after blending.",
+      updatedAt: optimisticUpdatedAt,
+    });
+  });
+
+  it("rejects an ingredient outside the supplied recipe", async () => {
+    const { ingredientUpdate, transaction } = createFakeTransaction({
+      location: "server",
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+        undefined,
+      ],
+    });
+
+    await expect(
+      mutators.recipes.updateIngredient.fn({
+        args: updateRecipeIngredientArgs,
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Recipe ingredient update not allowed");
+    expect(ingredientUpdate).not.toHaveBeenCalled();
+  });
+
+  it("uses the authoritative server timestamp", async () => {
+    const authoritativeTimestamp = 1_786_000_001_000;
+    vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
+    const { ingredientUpdate, transaction } = createFakeTransaction({
+      location: "server",
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+        { id: ingredientId, householdId, recipeId },
+      ],
+    });
+
+    await mutators.recipes.updateIngredient.fn({
+      args: updateRecipeIngredientArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(ingredientUpdate).toHaveBeenCalledWith({
+      id: ingredientId,
+      amount: "1 1/2 cups",
+      note: "Add after blending.",
       updatedAt: authoritativeTimestamp,
     });
   });

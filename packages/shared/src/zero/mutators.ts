@@ -8,6 +8,7 @@ import {
   deleteRecipeIngredientMutationSchema,
   reorderRecipeImagesMutationSchema,
   reorderRecipeIngredientsMutationSchema,
+  updateRecipeIngredientMutationSchema,
   updateRecipeMutationSchema,
 } from "../recipes";
 import {
@@ -221,11 +222,40 @@ const addRecipeIngredient = defineHomeHubMutator(
       householdId: args.householdId,
       recipeId: args.recipeId,
       name: args.name,
-      amount: args.amount,
-      note: args.note,
+      amount: null,
+      note: null,
       position: args.position,
       createdAt: timestamp,
       updatedAt: timestamp,
+    });
+  },
+);
+
+const updateRecipeIngredient = defineHomeHubMutator(
+  updateRecipeIngredientMutationSchema,
+  async ({ args, ctx, tx }) => {
+    await requireServerHouseholdModuleAccess({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+      moduleKey: "recipes",
+    });
+
+    const ingredient = await tx.run(
+      zql.recipeIngredients
+        .where("id", args.ingredientId)
+        .where("householdId", args.householdId)
+        .where("recipeId", args.recipeId)
+        .one(),
+    );
+    if (!ingredient) throw new Error("Recipe ingredient update not allowed");
+
+    await tx.mutate.recipeIngredients.update({
+      id: args.ingredientId,
+      amount: args.amount,
+      note: args.note,
+      updatedAt:
+        tx.location === "server" ? Date.now() : args.optimisticUpdatedAt,
     });
   },
 );
@@ -394,6 +424,7 @@ export const mutators = defineHomeHubMutators({
     create: createRecipe,
     update: updateRecipe,
     addIngredient: addRecipeIngredient,
+    updateIngredient: updateRecipeIngredient,
     deleteIngredient: deleteRecipeIngredient,
     reorderIngredients: reorderRecipeIngredients,
     addCookLog: addRecipeCookLog,

@@ -2,8 +2,20 @@ import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import type { RecipeIngredient } from "@home-hub/shared/zero/schema";
-import { GripVertical, IconButton, X } from "@home-hub/ui-web";
+import {
+  Button,
+  ContextMenuPopup,
+  ContextMenuRoot,
+  ContextMenuTrigger,
+  GripVertical,
+  IconButton,
+  InlineAlert,
+  Input,
+  Textarea,
+  X,
+} from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
+import { type SubmitEvent, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 type RecipeIngredientListProps = {
@@ -17,6 +29,11 @@ type RecipeIngredientRowProps = {
   index: number;
   ingredient: RecipeIngredient;
   onDelete: (ingredientId: string) => void;
+  onUpdate: (
+    ingredientId: string,
+    amount: string,
+    note: string,
+  ) => Promise<boolean>;
 };
 
 function RecipeIngredientRow({
@@ -24,7 +41,15 @@ function RecipeIngredientRow({
   index,
   ingredient,
   onDelete,
+  onUpdate,
 }: RecipeIngredientRowProps) {
+  const amountInputId = `ingredient-${ingredient.id}-amount`;
+  const noteInputId = `ingredient-${ingredient.id}-note`;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [amount, setAmount] = useState(ingredient.amount ?? "");
+  const [note, setNote] = useState(ingredient.note ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string>();
   const sortable = useSortable({
     id: ingredient.id,
     index,
@@ -33,30 +58,133 @@ function RecipeIngredientRow({
     disabled,
   });
 
+  function handleOpenChange(open: boolean) {
+    if (open) {
+      setAmount(ingredient.amount ?? "");
+      setNote(ingredient.note ?? "");
+      setError(undefined);
+    }
+    setMenuOpen(open);
+  }
+
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setError(undefined);
+    const updated = await onUpdate(ingredient.id, amount, note);
+    setSaving(false);
+    if (updated) {
+      setMenuOpen(false);
+    } else {
+      setError("The ingredient could not be updated.");
+    }
+  }
+
   return (
-    <li
-      ref={sortable.ref}
-      className={`flex items-center gap-1 p-2 ${sortable.isDragging ? "opacity-60" : ""}`}
+    <ContextMenuRoot
+      disabled={disabled}
+      open={menuOpen}
+      onOpenChange={handleOpenChange}
     >
-      <IconButton
-        ref={sortable.handleRef}
-        aria-label={`Reorder ${ingredient.name}`}
-        className="size-7! touch-none cursor-grab"
-        disabled={disabled}
+      <ContextMenuTrigger
+        render={
+          <li
+            ref={sortable.ref}
+            className={`flex items-center gap-1 p-2 ${sortable.isDragging ? "opacity-60" : ""}`}
+          />
+        }
       >
-        <GripVertical aria-hidden="true" className="size-4" />
-      </IconButton>
-      <span className="min-w-0 flex-1">{ingredient.name}</span>
-      <span className="text-sm text-muted">{ingredient.amount}</span>
-      <IconButton
-        aria-label={`Delete ${ingredient.name}`}
-        className="size-7!"
-        disabled={disabled}
-        onClick={() => onDelete(ingredient.id)}
+        <IconButton
+          ref={sortable.handleRef}
+          aria-label={`Reorder ${ingredient.name}`}
+          className="size-7! touch-none cursor-grab"
+          disabled={disabled}
+        >
+          <GripVertical aria-hidden="true" className="size-4" />
+        </IconButton>
+        <span className="min-w-0 flex-1">
+          <span className="block">{ingredient.name}</span>
+          {ingredient.note ? (
+            <span className="block truncate text-xs text-muted">
+              {ingredient.note}
+            </span>
+          ) : null}
+        </span>
+        {ingredient.amount ? (
+          <span className="text-sm text-muted">{ingredient.amount}</span>
+        ) : null}
+        <IconButton
+          aria-label={`Delete ${ingredient.name}`}
+          className="size-7!"
+          disabled={disabled}
+          onClick={() => onDelete(ingredient.id)}
+        >
+          <X aria-hidden="true" className="size-4" />
+        </IconButton>
+      </ContextMenuTrigger>
+      <ContextMenuPopup
+        aria-label={`Edit ${ingredient.name}`}
+        onKeyDown={(event) => {
+          const target = event.target as HTMLElement;
+          if (
+            (target.tagName === "INPUT" || target.tagName === "TEXTAREA") &&
+            event.key !== "Escape" &&
+            event.key !== "Tab"
+          ) {
+            event.preventBaseUIHandler();
+          }
+        }}
       >
-        <X aria-hidden="true" className="size-4" />
-      </IconButton>
-    </li>
+        <form className="grid gap-3 p-2" onSubmit={handleSubmit}>
+          <label
+            htmlFor={amountInputId}
+            className="grid gap-1 text-xs text-muted"
+          >
+            Amount
+            <Input
+              id={amountInputId}
+              aria-label="Ingredient amount"
+              autoComplete="off"
+              maxLength={100}
+              placeholder="For example, 200 g"
+              value={amount}
+              onValueChange={setAmount}
+            />
+          </label>
+          <label
+            htmlFor={noteInputId}
+            className="grid gap-1 text-xs text-muted"
+          >
+            Note
+            <Textarea
+              id={noteInputId}
+              aria-label="Ingredient note"
+              className="field-sizing-content min-h-10! resize-none! text-sm"
+              maxLength={500}
+              placeholder="Optional note"
+              rows={1}
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          </label>
+          {error ? (
+            <InlineAlert role="alert" variant="danger">
+              {error}
+            </InlineAlert>
+          ) : null}
+          <Button
+            type="submit"
+            busy={saving}
+            disabled={disabled || saving}
+            size="compact"
+            className="justify-self-end"
+          >
+            Save
+          </Button>
+        </form>
+      </ContextMenuPopup>
+    </ContextMenuRoot>
   );
 }
 
@@ -77,6 +205,28 @@ export function RecipeIngredientList({
         ingredientId,
       }),
     );
+  }
+
+  async function updateIngredient(
+    ingredientId: string,
+    amount: string,
+    note: string,
+  ) {
+    if (!mutationEnabled) return false;
+    const mutation = zero.mutate(
+      mutators.recipes.updateIngredient({
+        householdId,
+        recipeId,
+        ingredientId,
+        amount,
+        note,
+        optimisticUpdatedAt: Date.now(),
+      }),
+    );
+    const clientResult = await mutation.client;
+    if (clientResult.type === "error") return false;
+    void mutation.server;
+    return true;
   }
 
   return (
@@ -108,6 +258,7 @@ export function RecipeIngredientList({
             index={index}
             ingredient={ingredient}
             onDelete={deleteIngredient}
+            onUpdate={updateIngredient}
           />
         ))}
       </ol>
