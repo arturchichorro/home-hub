@@ -491,12 +491,8 @@ screens instead of shrinking labels or forcing page-level horizontal scroll.
 
 ### Feature layouts
 
-The recipe library uses one card column by default, two from `sm`, and three
-from `lg`. The create action occupies the same grid footprint as a recipe card.
-Recipe detail remains one column at every width. The directly editable title
-and description precede a single-row, horizontally scrolling gallery and
-collapsible Ingredients and Cooking history sections. Images crop only in
-cards and thumbnails; the viewer preserves the full stored aspect ratio.
+Recipes layout and interaction rules are documented in the
+[Recipes module interface](./recipes/#interface).
 
 Household settings remains one column at every size. Section actions align with
 their headings when space permits and move below them when it does not.
@@ -550,63 +546,13 @@ technology and status announcements.
 
 ### Shopping
 
-Shopping is one divided list. Its first row is a borderless add-item input with
-a plus action. Active items follow in creation order, then crossed items in
-creation order. Each item row provides active/crossed and archive actions. A
-persistent archive-icon row follows current items; archived item rows remain
-hidden until that row is toggled open and then appear directly below it with a
-restore action. The screen also needs loading, synchronization error,
-mutation-disabled, and optimistic mutation states.
+See the [Shopping module interface](./shopping/#interface) for its add, current,
+crossed, archive, editing, and synchronization-state behavior.
 
 ### Recipes
 
-Recipes separates its card library at `/recipes` from addressable detail pages
-at `/recipes/$recipeId`. Cards show the first confirmed image, title, and at
-most two description lines. The card-sized plus action opens title-only recipe
-creation and then navigates to the new detail page.
-
-Recipe detail starts with its directly editable accent-colored title and
-description, followed by the complete confirmed-image gallery. The gallery
-stays to one horizontal row and reveals part of the next image when more than
-three are available, making its horizontal scrolling apparent without a count
-badge. A small plus-only, immediate upload control sits over its lower-right
-edge. Drag handles reorder the gallery across pointer, touch, and keyboard
-input; the first image is the recipe-card cover. Every thumbnail opens the same
-large viewer, where image deletion uses a compact confirmation popover.
-Ingredients and Cooking history follow as independently closable sections.
-Ingredients end with a muted, full-width Add ingredient row. Activating it
-inserts a focused, name-only draft directly above it inside the same divided
-list. The draft is a UI-only `creating` variant of the normal ingredient row,
-preassigned the ID used by its eventual optimistic insert and using a disabled
-drag handle until saved. This preserves row identity when it becomes a saved
-ingredient without persisting incomplete records. The trigger remains visible
-below the draft; activating it again keeps focus on the existing draft. Draft
-names save after the standard debounce, on blur, or on Enter. Submitting or
-blurring an empty name dismisses the draft without creating a record. Only the
-compact plus-and-label control receives hover treatment, not the full row.
-Ingredient names use
-debounced inline editing, and drag handles support reordering. Each ingredient
-stays on one line: an
-optional free-text amount and muted note follow the name and use the same
-debounced inline editing. A non-editable Scale icon precedes a saved amount,
-and a non-editable ` - ` separator precedes a saved note. Clearing either
-optional value stores it as `null`. Note editors remain constrained by the row
-and scroll internally rather than expanding the ingredient list or page.
-The row ends with compact add-amount, add-note, and delete actions; each add
-action is hidden while its value exists, and otherwise reveals and focuses its
-editor. Cooking history is newest first, begins with a date-only add row, and
-uses the same debounced inline editing for each entry's comment. It includes
-compact linked image thumbnails for each entry.
-Each completed cooking entry also
-exposes its own smaller, low-emphasis image-upload control and a confirmed
-delete action in the entry row. Deleting an entry preserves its pictures in the
-general recipe gallery.
-
-The image viewer is an intentionally bare modal: the image is centered without
-panel chrome, with only close, previous, and next controls. Side-centered
-previous and next controls loop across the complete gallery when opened there,
-or only across one cooking log's images when opened from that entry. The left
-and right arrow keys provide the same navigation.
+See the [Recipes module interface](./recipes/#interface) for its library,
+detail, gallery, ingredient, cooking-history, editing, and viewer behavior.
 
 ### Household settings
 

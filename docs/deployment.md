@@ -47,11 +47,10 @@ WebSocket traffic to `zero-cache`. Production configuration must keep the
 `/api/auth` refresh-cookie path, Zero callback URLs, and
 `VITE_ZERO_CACHE_URL` aligned with this routing. The browser uses the same
 origin for the SPA and API, so production does not require cross-origin API
-access. Direct recipe-image uploads and reads use the separate R2 origin, so
-the recipe-image bucket allows `GET` and `PUT` from
-`https://home.achichorro.com` and `http://127.0.0.1:5173`, with
-`Content-Type` allowed and `ETag` exposed. The private backup bucket does not
-use this browser CORS policy.
+access. Direct recipe-image uploads and reads use the separate R2 origin; its
+module-specific CORS policy is documented in
+[Recipes image storage and security](./recipes/#image-storage-and-security).
+The private backup bucket does not use this browser CORS policy.
 
 ## Persistent state
 

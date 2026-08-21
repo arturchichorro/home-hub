@@ -302,3 +302,11 @@ the backlog.
 - [x] Dismiss empty submissions without creating an ingredient record
 - [x] Verify creation, empty-submission, type, test, and formatting behavior
 - [x] Update the design-system documentation and complete the creation-row checkpoint
+
+## Add module-specific documentation for Shopping and Recipes
+
+- [x] Create `docs/recipes` and consolidate Recipes product, interface, data, synchronization, and image-security documentation
+- [x] Replace extracted Recipes detail in cross-cutting documents with links to the module reference
+- [x] Create `docs/shopping` and consolidate Shopping product, interface, data, and synchronization documentation
+- [x] Replace extracted Shopping detail in cross-cutting documents with links to the module reference
+- [x] Update the documentation index and complete the module-documentation checkpoint

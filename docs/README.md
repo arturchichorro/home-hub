@@ -16,6 +16,13 @@ Connected changes should appear immediately and converge across clients. Previou
 - [Backlog](./backlog.md) contains optional improvements and possible future modules.
 - Subject documents in this directory describe the currently implemented system and accepted decisions.
 
+## Module documentation
+
+- [Recipes](./recipes/) owns Recipes behavior, interface composition, data,
+  synchronization, and image security.
+- [Shopping](./shopping/) owns Shopping behavior, interface composition, data,
+  and synchronization.
+
 ## Useful commands
 
 ### Local database

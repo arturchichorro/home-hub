@@ -13,7 +13,6 @@ synchronization rules are defined in
   order.
 - Store timestamps in UTC using PostgreSQL `timestamptz`.
 - Give every synchronized household-owned row a direct `household_id`, even when it is reachable through another foreign key.
-- Use independent IDs for recipe ingredient, cooking-log, and image rows so concurrent edits address stable records.
 - Enforce invariants in PostgreSQL as well as in application code.
 - Do not migrate legacy data; this is a fresh data model.
 
@@ -125,108 +124,28 @@ Vocabulary default to disabled. Disabling a module retains all of its rows.
 Core household and membership behavior has no module setting and cannot be
 disabled.
 
-### `shopping_items`
+### Shopping module tables
 
-- `id`
-- `household_id`
-- `name`
-- `normalized_name`
-- `status`: `active | crossed | archived`
-- `created_at`, `updated_at`
+Shopping owns `shopping_items`. Its columns, normalization, uniqueness, and
+status-transition rules are documented in the
+[Shopping module data model](./shopping/#data-model).
 
-Store `name` as a display value after Unicode NFKC normalization, whitespace
-folding, and trimming while preserving casing. It must contain 1–100
-characters after cleaning. Derive `normalized_name` from that display value by
-lowercasing it, and enforce uniqueness on
-`(household_id, normalized_name)`.
+### Recipes module tables
 
-Use explicit status transitions rather than deletion for normal shopping-list
-behavior. Any status may be changed to any other valid status; setting the
-current status again is an idempotent no-op. Re-adding a crossed or archived
-name reactivates the existing row rather than inserting a duplicate.
-
-### `recipes`
-
-- `id`
-- `household_id`
-- `title`
-- `description`
-- `created_at`, `updated_at`
-
-Recipe titles do not need to be unique within a household. Normalize titles
-with Unicode NFKC, fold whitespace, trim, preserve casing, and require 1–150
-characters. Store `description` as nullable text, trim its boundaries while
-preserving internal spaces and line breaks, limit it to 5,000 characters, and
-store an empty description as `null`.
-
-### `recipe_ingredients`
-
-- `id`
-- `household_id`
-- `recipe_id`
-- `name`
-- `amount`: nullable text
-- `note`: nullable text
-- `position`: integer
-- `created_at`, `updated_at`
-
-Amount remains text so combined measurements such as `12g`, `1 ½ cups`, `2–3`,
-and `to taste` are representable without requiring a separate unit input.
-Position must be nonnegative. Positions are indexed but not unique; order equal
-positions by row ID for deterministic display. Reordering renumbers the visible
-ingredient collection from zero.
-
-### `recipe_cook_logs`
-
-- `id`
-- `household_id`
-- `recipe_id`
-- `cooked_at`: timestamp with time zone
-- `comment`: nullable text
-- `created_at`, `updated_at`
-
-Each row represents one cooking event. Multiple events may have the same
-`cooked_at` value. Initial logs do not attribute who cooked or recorded the
-event. Deleting a cooking log first clears its images' `cook_log_id`, preserving
-those images as general recipe pictures.
-
-### `recipe_images`
-
-- `id`
-- `household_id`
-- `recipe_id`
-- `cook_log_id`, nullable
-- `object_key`
-- `content_type`
-- `byte_size`
-- `width`, `height`: display dimensions supplied by the browser
-- `position`: integer
-- `confirmed_at`, nullable
-- `created_at`, `updated_at`
-
-Every image belongs to one recipe and may optionally provide context for one
-cooking log from that same recipe. Cooking-log images remain part of the
-recipe's overall image collection. Enforce the optional cooking-log
-relationship with the household and recipe IDs so it cannot cross tenant or
-recipe boundaries. Reordering renumbers confirmed images from zero; the lowest
-position is the recipe cover.
-
-Object keys are server-controlled, unique, and independent of public
-hostnames. Create pending metadata before issuing a presigned upload;
-`confirmed_at` remains null until the API verifies the R2 object and its type
-and size. Only confirmed images are readable or synchronized. Position must be
-nonnegative. Width and height are layout metadata rather than trusted security
-properties; constrain each to 1–16,384 pixels.
+Recipes owns `recipes`, `recipe_ingredients`, `recipe_cook_logs`, and
+`recipe_images`. Their columns, constraints, normalization, ordering, and image
+metadata lifecycle are documented in the
+[Recipes module data model](./recipes/#data-model).
 
 ## Schema invariants
 
 - A household has at most one owner row; application transactions ensure it
   always has exactly one owner.
 - A user has at most one membership in a household.
-- Shopping names are unique by normalized name within a household.
-- Recipe ingredients, cooking logs, and images cannot reference records from a
-  different household; image-to-cook-log references also remain within one
-  recipe.
+- Shopping names are unique by normalized name within a household; see the
+  [Shopping module data model](./shopping/#data-model).
+- Recipes references cannot cross household or recipe boundaries; see the
+  [Recipes module data model](./recipes/#data-model).
 - Module settings are unique by household and stable module key.
 
 The transactions that preserve these invariants, including their explicit

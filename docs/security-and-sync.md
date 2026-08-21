@@ -1,10 +1,11 @@
 # Security and synchronization
 
-This is the canonical source for authentication, authorization, tenant
-isolation, transaction-locking requirements, synchronization behavior, and
-storage security. Other documents should link here instead of restating these
-rules. Runtime structure belongs in [Architecture](./architecture.md), and
-table structure belongs in [Data model](./data-model.md).
+This is the canonical source for cross-cutting authentication, authorization,
+tenant isolation, transaction-locking requirements, and synchronization
+behavior. Module-specific rules live in the [Recipes](./recipes/) and
+[Shopping](./shopping/) documentation. Runtime structure belongs in
+[Architecture](./architecture.md), and shared table structure belongs in
+[Data model](./data-model.md).
 
 ## Trust model
 
@@ -249,13 +250,9 @@ Shared mutators provide the optimistic client behavior. Server execution adds au
 6. Execute the operation idempotently.
 7. Return errors that do not reveal whether a foreign row exists.
 
-The first implemented mutator changes a shopping item's status. Its client run
-uses a client timestamp only to present the optimistic result immediately. Its
-server run repeats the membership and item-household checks inside the database
-transaction and replaces that timestamp with server time. PostgreSQL remains
-the source of truth; if the authoritative run rejects the mutation, Zero
-removes or rebases the speculative client result as it reconciles with server
-state.
+Shopping-specific creation, rename, transition, normalization, and conflict
+rules are documented in
+[Shopping synchronization and authorization](./shopping/#synchronization-and-authorization).
 
 Synced mutators must never change authentication records, household ownership,
 membership, roles, invites, or module settings. Those remain online-only API
@@ -265,8 +262,9 @@ commands.
 
 ### Connected
 
-Allow optimistic mutations for shopping rows, recipes, recipe ingredient rows,
-and confirmed image metadata.
+Allow the optimistic module mutations documented by
+[Shopping](./shopping/#synchronization-and-authorization) and
+[Recipes](./recipes/#synchronization-and-authorization).
 
 ### Connecting
 
@@ -288,34 +286,12 @@ only previously synchronized Zero rows persist in the local cache.
 
 - Scalar values use the last write accepted by PostgreSQL.
 - Independently created rows survive because they have stable client-generated IDs.
-- Status transitions set an explicit target status, allow movement between any
-  valid statuses, and are idempotent when the target is already current.
-- Concurrent duplicate shopping-item names are resolved using normalized-name
-  uniqueness. Adding an existing name targets and reactivates the canonical
-  shopping row rather than creating a duplicate.
+- Module-specific conflict rules are documented in
+  [Shopping](./shopping/#synchronization-and-authorization) and
+  [Recipes](./recipes/#synchronization-and-authorization).
 
-## R2 upload security
+## Module storage security
 
-1. The authenticated browser requests permission for a specific recipe, image ID, optional cooking log, content type, and size.
-2. The API verifies household membership, that Recipes is enabled, recipe ownership, and any cooking-log relationship.
-3. The API constructs `households/{householdId}/recipes/{recipeId}/{imageId}` and creates pending metadata in PostgreSQL.
-4. The API returns a short-lived presigned `PUT` URL bound to an allowed content type.
-5. The browser uploads directly to R2.
-6. The browser confirms completion. The API verifies the object's type and size before marking the metadata confirmed.
-
-Only confirmed image metadata may be synchronized or receive a signed read URL.
-Abandoned pending rows and their possible objects are cleanup candidates.
-Signed read URLs are cached only in browser memory, partitioned by access token,
-household, recipe, and image. They are never persisted; entries refresh before
-expiry and are invalidated when an image is deleted.
-
-Image deletion is idempotent and deletes the R2 object before hard-deleting its
-PostgreSQL metadata. Authorization and metadata reads happen in a short
-transaction, the R2 request happens with no database locks held, and a second
-transaction reauthorizes and locks the row before deleting it. If R2 deletion
-fails, metadata remains untouched. If the database step fails after R2
-deletion, retrying repeats the idempotent object deletion and can finish the
-metadata cleanup. A transactional outbox may replace this deliberately simple
-recovery policy if background jobs are introduced later.
-
-Support JPEG, PNG, and WebP initially, with a 10 MiB maximum. Treat presigned URLs as bearer credentials. R2 credentials must never be placed in a `VITE_` environment variable.
+The Recipes module owns the complete presigned upload, signed read, deletion,
+cache-partitioning, file-type, and size rules. See
+[Recipes image storage and security](./recipes/#image-storage-and-security).

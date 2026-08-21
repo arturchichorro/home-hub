@@ -101,7 +101,7 @@ token sessions; invitations as account-creation credentials.
 The API authorizes recipe images and issues short-lived presigned URLs. Image
 bytes move directly between clients and R2; PostgreSQL stores metadata and
 server-controlled object keys. See
-[Security and synchronization](./security-and-sync.md#r2-upload-security).
+[Recipes image storage and security](./recipes/#image-storage-and-security).
 
 **Alternatives:** proxying image bytes through the API; storing uploads on the
 application host; persisting public or signed URLs.
