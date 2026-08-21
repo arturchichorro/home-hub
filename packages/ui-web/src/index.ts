@@ -60,6 +60,7 @@ export {
   LayoutGrid,
   type LucideIcon,
   type LucideProps,
+  MessageSquare,
   Plus,
   RotateCcw,
   Scale,

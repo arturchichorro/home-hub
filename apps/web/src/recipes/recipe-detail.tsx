@@ -8,6 +8,7 @@ import {
   IconButton,
   InlineAlert,
   Input,
+  MessageSquare,
   Textarea,
   Trash2,
 } from "@home-hub/ui-web";
@@ -53,6 +54,8 @@ export function RecipeDetail({
   const [selectedCookLogId, setSelectedCookLogId] = useState<string | null>(
     null,
   );
+  const [editingCookLogCommentId, setEditingCookLogCommentId] =
+    useState<string>();
   const [recipe, result] = useQuery(
     queries.recipes.detail({ householdId, recipeId }),
   );
@@ -205,9 +208,11 @@ export function RecipeDetail({
             <ul>
               {recipe.cookLogs.map((cookLog) => {
                 const cookedAt = new Date(cookLog.cookedAt);
+                const cookedAtLabel = dateFormatter.format(cookedAt);
                 const images = visibleImages.filter(
                   (image) => image.cookLogId === cookLog.id,
                 );
+                const editingComment = editingCookLogCommentId === cookLog.id;
 
                 return (
                   <li key={cookLog.id} className="py-2">
@@ -216,15 +221,42 @@ export function RecipeDetail({
                         dateTime={cookedAt.toISOString()}
                         className="text-sm font-medium"
                       >
-                        {dateFormatter.format(cookedAt)}
+                        {cookedAtLabel}
                       </time>
-                      <RecipeCookLogCommentInput
-                        cookLogId={cookLog.id}
-                        currentComment={cookLog.comment}
-                        householdId={householdId}
-                        recipeId={recipeId}
-                      />
+                      <div className="min-w-0">
+                        {cookLog.comment !== null || editingComment ? (
+                          <RecipeCookLogCommentInput
+                            cookLogId={cookLog.id}
+                            currentComment={cookLog.comment}
+                            focusOnMount={
+                              editingComment && cookLog.comment === null
+                            }
+                            householdId={householdId}
+                            recipeId={recipeId}
+                            onBlur={() => setEditingCookLogCommentId(undefined)}
+                            onFocus={() =>
+                              setEditingCookLogCommentId(cookLog.id)
+                            }
+                          />
+                        ) : null}
+                      </div>
                       <div className="flex items-center gap-1">
+                        {cookLog.comment === null && !editingComment ? (
+                          <IconButton
+                            type="button"
+                            aria-label={`Add comment to cooking log from ${cookedAtLabel}`}
+                            className="size-7!"
+                            disabled={!mutationEnabled}
+                            onClick={() =>
+                              setEditingCookLogCommentId(cookLog.id)
+                            }
+                          >
+                            <MessageSquare
+                              aria-hidden="true"
+                              className="size-4"
+                            />
+                          </IconButton>
+                        ) : null}
                         <RecipeImageUploadForm
                           accessToken={accessToken}
                           appearance="subtle"

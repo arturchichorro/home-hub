@@ -12,6 +12,7 @@ export {
   House,
   ImagePlus,
   LayoutGrid,
+  MessageSquare,
   Plus,
   RotateCcw,
   Scale,

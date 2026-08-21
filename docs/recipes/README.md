@@ -90,10 +90,12 @@ trigger row.
 ### Cooking history
 
 Cooking history is ordered newest first and begins with a date-only add row.
-Each entry has an inline-editable comment and compact linked image thumbnails.
-It also provides a smaller, low-emphasis image-upload control and a confirmed
-delete action. Deleting a cooking log preserves its pictures by detaching them
-from the log and leaving them in the general recipe gallery.
+An entry with a comment displays it as seamless inline-editable text. An entry
+without one shows a comment action on the right instead of empty placeholder
+text; activating it reveals and focuses the comment editor. Each entry also has
+compact linked image thumbnails, a smaller low-emphasis image-upload control,
+and a confirmed delete action. Deleting a cooking log preserves its pictures
+by detaching them from the log and leaving them in the general recipe gallery.
 
 The Recipes interface must represent loading, empty, synchronization-error,
 mutation-disabled, optimistic, upload-progress, upload-failure, and destructive
