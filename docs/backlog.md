@@ -9,12 +9,18 @@ together before implementation begins.
 
 ## Improvements
 
+- [ ] Add user profile pictures and use base ui's Avatar
+- [ ] Allow to append already uploaded recipe image to a cook log
+- [ ] Add recipe ratings table, could be used to say "overall 5*", "ease to cook 3*", etc; could add to the ui
+- [ ] Add order to recipes (to order recipe list)
+- [ ] While typing (e.g. recipe description), input keeps being trimmed (on debounce) which removes spaces the user just typed
 - [ ] Move app header to a sidebar instead, similar to linear
 - [ ] Open last opened household on app start (through local storage or something)
 - [ ] Add recipe ingredients to Shopping
 - [ ] Publish safe member profiles through Zero to prevent interface flashing
 - [ ] Improve separation between database access, domain behavior, and transport code
-- [ ] Add module-specific documentation for Shopping and Recipes
+- [ ] Add image pipeline to convert images to webp for displaying in the app (maybe a proper cdn?) - I want to keep the original image too though (maybe enableable for certain users?)
+- [ ] Add user comments to cook logs (recipes)
 
 ## Future modules and capabilities
 

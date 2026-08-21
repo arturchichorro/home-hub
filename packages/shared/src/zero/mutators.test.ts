@@ -859,6 +859,34 @@ describe("recipes.updateIngredient mutator", () => {
     });
   });
 
+  it.each([
+    ["amount", { amount: null }],
+    ["note", { note: null }],
+  ] as const)("clears only the supplied %s", async (_field, patch) => {
+    const { ingredientUpdate, transaction } = createFakeTransaction({
+      location: "client",
+      results: [{ id: ingredientId, householdId, recipeId }],
+    });
+
+    await mutators.recipes.updateIngredient.fn({
+      args: {
+        ingredientId,
+        householdId,
+        recipeId,
+        ...patch,
+        optimisticUpdatedAt,
+      },
+      ctx,
+      tx: transaction,
+    });
+
+    expect(ingredientUpdate).toHaveBeenCalledWith({
+      id: ingredientId,
+      ...patch,
+      updatedAt: optimisticUpdatedAt,
+    });
+  });
+
   it("rejects an ingredient outside the supplied recipe", async () => {
     const { ingredientUpdate, transaction } = createFakeTransaction({
       location: "server",

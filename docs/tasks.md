@@ -26,32 +26,6 @@ commit changes unless explicitly asked for that specific action. CI rehearses
 the committed migration history on a disposable database, and the production
 deployment applies tested forward migrations after an off-host backup.
 
-## Edit shopping item names
-
-- [x] Define and validate an optimistic rename mutation
-- [x] Enforce household, module, item, and normalized-name uniqueness boundaries
-- [x] Add accessible editing controls for current and archived items
-- [x] Verify normalization, authorization, duplicate rejection, and the interface build
-- [x] Refine editing to use row-style inputs, debounced saves, and an error popover
-- [x] Standardize application inputs on a Base UI-backed `ui-web` primitive
-- [x] Complete the shopping-item editing checkpoint and commit
-
-## Refine the shopping and application-shell interface
-
-- [x] Make the top bar sticky and non-wrapping, with compact mobile branding, household trigger, and connection status
-- [x] Refine menu triggers and make the household picker content-sized
-- [x] Move enabled household modules into a menu beside the household picker
-- [x] Present add-item, current, crossed, archive-toggle, and expanded archived rows as one shopping list
-- [x] Keep archived items hidden until the archive row is toggled open
-- [x] Verify focused responsive, keyboard, accessible-name, and interface-build behavior
-- [x] Update the design-system documentation and complete the UI checkpoint
-
-## Standardize web icons on Lucide
-
-- [x] Adopt `lucide-react` through the shared `ui-web` package
-- [x] Replace application, menu, select, and gallery icons with Lucide components
-- [x] Verify there are no remaining one-off SVG icons and complete the icon checkpoint
-
 ## Improve the Recipes interface
 
 - [x] Split the recipe library and recipe detail into `/recipes` and `/recipes/$recipeId` routes
@@ -82,34 +56,6 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Reuse expiring signed image URLs across route and component remounts without crossing sessions
 - [x] Verify optimistic, authorization, failure, drag, keyboard, touch, cover-image, and storage-cleanup behavior
 - [ ] Update the system documentation and complete the recipe-operations checkpoint
-
-## Simplify recipe ingredient amounts
-
-- [x] Replace the separate optional quantity and unit fields with one optional amount field
-- [x] Preserve existing ingredient measurements by joining quantity and unit during migration
-- [x] Update the ingredient add row and list to use the single amount field
-- [x] Verify normalization, optimistic insertion, authorization, migration SQL, and workspace checks
-- [x] Update the system documentation and complete the ingredient-amount checkpoint
-
-## Simplify recipe ingredient entry
-
-- [x] Create ingredients from their required name only
-- [x] Add a scoped optimistic mutation for optional amount and note updates
-- [x] Add a Base UI-backed context menu editor to every ingredient row
-- [x] Preserve immediate deletion and accessible drag-and-drop reordering
-- [x] Verify validation, authorization, optimistic updates, UI primitives, and workspace checks
-- [x] Update the design-system documentation and complete the ingredient-entry checkpoint
-
-## Edit recipe ingredient names and cooking-log comments
-
-- [x] Add separate, validated optimistic mutations for ingredient names and cooking-log comments
-- [x] Enforce household, recipe, ingredient, and cooking-log ownership boundaries
-- [x] Add debounced inline editors with blur saves, reversion, and error popovers
-- [x] Give every directly editable recipe field a seamless appearance with no hover or focus restyling
-- [x] Keep ingredient rows to one line and move immediate deletion into their context menu
-- [x] Keep ingredient metadata editing, deletion, reordering, and image actions unchanged
-- [x] Verify normalization, authorization, optimistic updates, and interface type safety
-- [x] Update the design-system documentation and complete the inline-editing checkpoint
 
 ## Deploy to and migrate onto the Raspberry Pi
 

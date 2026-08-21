@@ -4,10 +4,13 @@ import type { RecipeImage } from "@home-hub/shared/zero/schema";
 import {
   Collapsible,
   ConfirmationPopover,
+  CookingPot,
   ErrorPopover,
+  History,
   IconButton,
   InlineAlert,
   Input,
+  MessageSquare,
   Textarea,
   Trash2,
 } from "@home-hub/ui-web";
@@ -15,7 +18,6 @@ import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { AddRecipeCookLogForm } from "./add-recipe-cook-log-form";
-import { AddRecipeIngredientForm } from "./add-recipe-ingredient-form";
 import { deleteRecipeImage } from "./image-api";
 import { RecipeCookLogCommentInput } from "./recipe-cook-log-comment-input";
 import {
@@ -54,6 +56,8 @@ export function RecipeDetail({
   const [selectedCookLogId, setSelectedCookLogId] = useState<string | null>(
     null,
   );
+  const [editingCookLogCommentId, setEditingCookLogCommentId] =
+    useState<string>();
   const [recipe, result] = useQuery(
     queries.recipes.detail({ householdId, recipeId }),
   );
@@ -82,12 +86,6 @@ export function RecipeDetail({
 
   if (!recipe) return null;
 
-  const nextIngredientPosition =
-    recipe.ingredients.reduce(
-      (highestPosition, ingredient) =>
-        Math.max(highestPosition, ingredient.position),
-      -1,
-    ) + 1;
   const nextImagePosition =
     recipe.images.reduce(
       (highestPosition, image) => Math.max(highestPosition, image.position),
@@ -190,24 +188,32 @@ export function RecipeDetail({
       />
       <ErrorPopover {...editor.errorPopoverProps}>{editor.error}</ErrorPopover>
 
-      <Collapsible title="Ingredients">
-        <AddRecipeIngredientForm
-          householdId={householdId}
-          recipeId={recipeId}
-          position={nextIngredientPosition}
-        />
+      <Collapsible
+        title={
+          <span className="flex items-center gap-2">
+            <CookingPot aria-hidden="true" className="size-5" />
+            Ingredients
+          </span>
+        }
+      >
         {recipe.ingredients.length === 0 ? (
           <p className="text-sm text-muted">There are no ingredients yet.</p>
-        ) : (
-          <RecipeIngredientList
-            householdId={householdId}
-            recipeId={recipeId}
-            ingredients={recipe.ingredients}
-          />
-        )}
+        ) : null}
+        <RecipeIngredientList
+          householdId={householdId}
+          recipeId={recipeId}
+          ingredients={recipe.ingredients}
+        />
       </Collapsible>
 
-      <Collapsible title="Cooking history">
+      <Collapsible
+        title={
+          <span className="flex items-center gap-2">
+            <History aria-hidden="true" className="size-5" />
+            Cooking history
+          </span>
+        }
+      >
         <div className="space-y-4">
           <AddRecipeCookLogForm householdId={householdId} recipeId={recipeId} />
           {recipe.cookLogs.length === 0 ? (
@@ -218,9 +224,11 @@ export function RecipeDetail({
             <ul>
               {recipe.cookLogs.map((cookLog) => {
                 const cookedAt = new Date(cookLog.cookedAt);
+                const cookedAtLabel = dateFormatter.format(cookedAt);
                 const images = visibleImages.filter(
                   (image) => image.cookLogId === cookLog.id,
                 );
+                const editingComment = editingCookLogCommentId === cookLog.id;
 
                 return (
                   <li key={cookLog.id} className="py-2">
@@ -229,15 +237,42 @@ export function RecipeDetail({
                         dateTime={cookedAt.toISOString()}
                         className="text-sm font-medium"
                       >
-                        {dateFormatter.format(cookedAt)}
+                        {cookedAtLabel}
                       </time>
-                      <RecipeCookLogCommentInput
-                        cookLogId={cookLog.id}
-                        currentComment={cookLog.comment}
-                        householdId={householdId}
-                        recipeId={recipeId}
-                      />
+                      <div className="min-w-0">
+                        {cookLog.comment !== null || editingComment ? (
+                          <RecipeCookLogCommentInput
+                            cookLogId={cookLog.id}
+                            currentComment={cookLog.comment}
+                            focusOnMount={
+                              editingComment && cookLog.comment === null
+                            }
+                            householdId={householdId}
+                            recipeId={recipeId}
+                            onBlur={() => setEditingCookLogCommentId(undefined)}
+                            onFocus={() =>
+                              setEditingCookLogCommentId(cookLog.id)
+                            }
+                          />
+                        ) : null}
+                      </div>
                       <div className="flex items-center gap-1">
+                        {cookLog.comment === null && !editingComment ? (
+                          <IconButton
+                            type="button"
+                            aria-label={`Add comment to cooking log from ${cookedAtLabel}`}
+                            className="size-7!"
+                            disabled={!mutationEnabled}
+                            onClick={() =>
+                              setEditingCookLogCommentId(cookLog.id)
+                            }
+                          >
+                            <MessageSquare
+                              aria-hidden="true"
+                              className="size-4"
+                            />
+                          </IconButton>
+                        ) : null}
                         <RecipeImageUploadForm
                           accessToken={accessToken}
                           appearance="subtle"

@@ -235,6 +235,35 @@ describe("updateRecipeIngredientMutationSchema", () => {
     },
   );
 
+  it("accepts an amount-only patch", () => {
+    expect(
+      updateRecipeIngredientMutationSchema.parse({
+        ingredientId: updateIngredientInput.ingredientId,
+        householdId: updateIngredientInput.householdId,
+        recipeId: updateIngredientInput.recipeId,
+        amount: "  200   g  ",
+        optimisticUpdatedAt: updateIngredientInput.optimisticUpdatedAt,
+      }),
+    ).toEqual({
+      ingredientId: updateIngredientInput.ingredientId,
+      householdId: updateIngredientInput.householdId,
+      recipeId: updateIngredientInput.recipeId,
+      amount: "200 g",
+      optimisticUpdatedAt: updateIngredientInput.optimisticUpdatedAt,
+    });
+  });
+
+  it("rejects a patch without an amount or note", () => {
+    expect(
+      updateRecipeIngredientMutationSchema.safeParse({
+        ingredientId: updateIngredientInput.ingredientId,
+        householdId: updateIngredientInput.householdId,
+        recipeId: updateIngredientInput.recipeId,
+        optimisticUpdatedAt: updateIngredientInput.optimisticUpdatedAt,
+      }).success,
+    ).toBe(false);
+  });
+
   it.each(["ingredientId", "householdId", "recipeId"] as const)(
     "rejects an invalid %s",
     (field) => {

@@ -191,17 +191,9 @@ require an explicit staged migration and rollback plan.
 
 Image bytes travel directly between the browser and R2 through short-lived presigned URLs. The API stores only metadata and never writes uploaded files to its filesystem.
 
-The web client keeps an access-token-scoped, in-memory cache of signed recipe
-image read URLs. Cards, galleries, and viewers share cached URLs and in-flight
-requests across component and route remounts, then refresh shortly before
-expiry. Successful deletion invalidates every cached session entry for that
-image.
-
-Because those transfers go from the browser to the R2 origin rather than the
-application origin, the recipe-image bucket permits `GET` and `PUT` from
-`https://home.achichorro.com` and the local Vite origin. This bucket CORS
-policy does not expose the bucket publicly; access still requires a valid
-short-lived presigned URL.
+Recipes-specific URL caching, upload, deletion, and bucket CORS rules are
+documented in
+[Recipes image storage and security](./recipes/#image-storage-and-security).
 
 ## Configuration
 
