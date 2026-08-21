@@ -226,3 +226,79 @@ the backlog.
 - [x] Document how to investigate failures while keeping the equivalent local verification commands available
 - [x] Rehearse the full migration history in CI and apply tested forward migrations automatically after a production backup
 - [x] Complete the Phase 19 checkpoint and commit
+
+## Edit shopping item names
+
+- [x] Define and validate an optimistic rename mutation
+- [x] Enforce household, module, item, and normalized-name uniqueness boundaries
+- [x] Add accessible editing controls for current and archived items
+- [x] Verify normalization, authorization, duplicate rejection, and the interface build
+- [x] Refine editing to use row-style inputs, debounced saves, and an error popover
+- [x] Standardize application inputs on a Base UI-backed `ui-web` primitive
+- [x] Complete the shopping-item editing checkpoint and commit
+
+## Refine the shopping and application-shell interface
+
+- [x] Make the top bar sticky and non-wrapping, with compact mobile branding, household trigger, and connection status
+- [x] Refine menu triggers and make the household picker content-sized
+- [x] Move enabled household modules into a menu beside the household picker
+- [x] Present add-item, current, crossed, archive-toggle, and expanded archived rows as one shopping list
+- [x] Keep archived items hidden until the archive row is toggled open
+- [x] Verify focused responsive, keyboard, accessible-name, and interface-build behavior
+- [x] Update the design-system documentation and complete the UI checkpoint
+
+## Standardize web icons on Lucide
+
+- [x] Adopt `lucide-react` through the shared `ui-web` package
+- [x] Replace application, menu, select, and gallery icons with Lucide components
+- [x] Verify there are no remaining one-off SVG icons and complete the icon checkpoint
+
+## Simplify recipe ingredient amounts
+
+- [x] Replace the separate optional quantity and unit fields with one optional amount field
+- [x] Preserve existing ingredient measurements by joining quantity and unit during migration
+- [x] Update the ingredient add row and list to use the single amount field
+- [x] Verify normalization, optimistic insertion, authorization, migration SQL, and workspace checks
+- [x] Update the system documentation and complete the ingredient-amount checkpoint
+
+## Simplify recipe ingredient entry
+
+- [x] Create ingredients from their required name only
+- [x] Add a scoped optimistic mutation for optional amount and note updates
+- [x] Add a Base UI-backed context menu editor to every ingredient row
+- [x] Preserve immediate deletion and accessible drag-and-drop reordering
+- [x] Verify validation, authorization, optimistic updates, UI primitives, and workspace checks
+- [x] Update the design-system documentation and complete the ingredient-entry checkpoint
+
+## Edit recipe ingredient names and cooking-log comments
+
+- [x] Add separate, validated optimistic mutations for ingredient names and cooking-log comments
+- [x] Enforce household, recipe, ingredient, and cooking-log ownership boundaries
+- [x] Add debounced inline editors with blur saves, reversion, and error popovers
+- [x] Give every directly editable recipe field a seamless appearance with no hover or focus restyling
+- [x] Keep ingredient rows to one line and move immediate deletion into their context menu
+- [x] Keep ingredient metadata editing, deletion, reordering, and image actions unchanged
+- [x] Verify normalization, authorization, optimistic updates, and interface type safety
+- [x] Update the design-system documentation and complete the inline-editing checkpoint
+
+## Expose recipe ingredient actions inline
+
+- [x] Replace the ingredient context menu with conditional amount, note, and delete icon actions
+- [x] Reveal and focus empty amount and note editors without dismissing them during the initial debounce
+- [x] Save amount and note independently, normalizing cleared values to `null`
+- [x] Verify patch validation, authorization, nullable updates, types, tests, and formatting
+- [x] Update the design-system documentation and complete the inline-actions checkpoint
+
+## Progressively reveal recipe ingredient creation
+
+- [x] Move ingredient creation below the existing ingredient list
+- [x] Replace the persistent input with a muted Add ingredient trigger row
+- [x] Reveal and focus an ingredient-name draft row when activated
+- [x] Keep the trigger and draft inside the divided list with a disabled draft drag handle and compact hover target
+- [x] Keep the Add ingredient trigger below an open draft and save valid drafts on debounce, blur, or Enter
+- [x] Model creation as a stable UI-only ingredient row keyed by its eventual record ID
+- [x] Keep repeated Add ingredient activation focused on the existing blank draft
+- [x] Preserve name-input focus while an autosaved draft transitions to its saved row
+- [x] Dismiss empty submissions without creating an ingredient record
+- [x] Verify creation, empty-submission, type, test, and formatting behavior
+- [x] Update the design-system documentation and complete the creation-row checkpoint
