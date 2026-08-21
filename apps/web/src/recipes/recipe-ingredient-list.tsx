@@ -3,21 +3,19 @@ import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import type { RecipeIngredient } from "@home-hub/shared/zero/schema";
 import {
-  Button,
-  ContextMenuItem,
-  ContextMenuPopup,
-  ContextMenuRoot,
-  ContextMenuTrigger,
   GripVertical,
   IconButton,
-  InlineAlert,
-  Input,
   Scale,
-  Textarea,
+  StickyNote,
+  Trash2,
 } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
-import { type SubmitEvent, useState } from "react";
+import { useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import {
+  RecipeIngredientAmountInput,
+  RecipeIngredientNoteInput,
+} from "./recipe-ingredient-detail-inputs";
 import { RecipeIngredientNameInput } from "./recipe-ingredient-name-input";
 
 type RecipeIngredientListProps = {
@@ -32,11 +30,6 @@ type RecipeIngredientRowProps = {
   index: number;
   ingredient: RecipeIngredient;
   onDelete: (ingredientId: string) => void;
-  onUpdate: (
-    ingredientId: string,
-    amount: string,
-    note: string,
-  ) => Promise<boolean>;
   recipeId: string;
 };
 
@@ -46,16 +39,10 @@ function RecipeIngredientRow({
   index,
   ingredient,
   onDelete,
-  onUpdate,
   recipeId,
 }: RecipeIngredientRowProps) {
-  const amountInputId = `ingredient-${ingredient.id}-amount`;
-  const noteInputId = `ingredient-${ingredient.id}-note`;
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [amount, setAmount] = useState(ingredient.amount ?? "");
-  const [note, setNote] = useState(ingredient.note ?? "");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string>();
+  const [editingAmount, setEditingAmount] = useState(false);
+  const [editingNote, setEditingNote] = useState(false);
   const sortable = useSortable({
     id: ingredient.id,
     index,
@@ -64,138 +51,92 @@ function RecipeIngredientRow({
     disabled,
   });
 
-  function handleOpenChange(open: boolean) {
-    if (open) {
-      setAmount(ingredient.amount ?? "");
-      setNote(ingredient.note ?? "");
-      setError(undefined);
-    }
-    setMenuOpen(open);
-  }
-
-  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (saving) return;
-    setSaving(true);
-    setError(undefined);
-    const updated = await onUpdate(ingredient.id, amount, note);
-    setSaving(false);
-    if (updated) {
-      setMenuOpen(false);
-    } else {
-      setError("The ingredient could not be updated.");
-    }
-  }
-
   return (
-    <ContextMenuRoot
-      disabled={disabled}
-      open={menuOpen}
-      onOpenChange={handleOpenChange}
+    <li
+      ref={sortable.ref}
+      className={`flex items-center gap-1 p-2 ${sortable.isDragging ? "opacity-60" : ""}`}
     >
-      <ContextMenuTrigger
-        render={
-          <li
-            ref={sortable.ref}
-            className={`flex items-center gap-1 p-2 ${sortable.isDragging ? "opacity-60" : ""}`}
+      <IconButton
+        ref={sortable.handleRef}
+        aria-label={`Reorder ${ingredient.name}`}
+        className="size-7! touch-none cursor-grab"
+        disabled={disabled}
+      >
+        <GripVertical aria-hidden="true" className="size-4" />
+      </IconButton>
+      <RecipeIngredientNameInput
+        currentName={ingredient.name}
+        householdId={householdId}
+        ingredientId={ingredient.id}
+        recipeId={recipeId}
+      />
+      {ingredient.amount !== null || editingAmount ? (
+        <div className="flex h-7 shrink-0 items-center gap-1">
+          <Scale aria-hidden="true" className="size-3.5 shrink-0 text-muted" />
+          <RecipeIngredientAmountInput
+            currentAmount={ingredient.amount}
+            focusOnMount={editingAmount && ingredient.amount === null}
+            householdId={householdId}
+            ingredientId={ingredient.id}
+            recipeId={recipeId}
+            onBlur={() => setEditingAmount(false)}
+            onFocus={() => setEditingAmount(true)}
           />
-        }
-      >
+        </div>
+      ) : null}
+      {ingredient.note !== null || editingNote ? (
+        <div className="flex h-7 min-w-0 flex-1 items-center gap-1">
+          <span
+            aria-hidden="true"
+            className="h-7 shrink-0 text-xs leading-7 text-muted"
+          >
+            -
+          </span>
+          <RecipeIngredientNoteInput
+            currentNote={ingredient.note}
+            focusOnMount={editingNote && ingredient.note === null}
+            householdId={householdId}
+            ingredientId={ingredient.id}
+            recipeId={recipeId}
+            onBlur={() => setEditingNote(false)}
+            onFocus={() => setEditingNote(true)}
+          />
+        </div>
+      ) : null}
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        {ingredient.amount === null && !editingAmount ? (
+          <IconButton
+            type="button"
+            aria-label={`Add amount to ${ingredient.name}`}
+            className="size-7!"
+            disabled={disabled}
+            onClick={() => setEditingAmount(true)}
+          >
+            <Scale aria-hidden="true" className="size-4" />
+          </IconButton>
+        ) : null}
+        {ingredient.note === null && !editingNote ? (
+          <IconButton
+            type="button"
+            aria-label={`Add note to ${ingredient.name}`}
+            className="size-7!"
+            disabled={disabled}
+            onClick={() => setEditingNote(true)}
+          >
+            <StickyNote aria-hidden="true" className="size-4" />
+          </IconButton>
+        ) : null}
         <IconButton
-          ref={sortable.handleRef}
-          aria-label={`Reorder ${ingredient.name}`}
-          className="size-7! touch-none cursor-grab"
+          type="button"
+          aria-label={`Delete ${ingredient.name}`}
+          className="size-7!"
           disabled={disabled}
-        >
-          <GripVertical aria-hidden="true" className="size-4" />
-        </IconButton>
-        <RecipeIngredientNameInput
-          currentName={ingredient.name}
-          householdId={householdId}
-          ingredientId={ingredient.id}
-          recipeId={recipeId}
-        />
-        {ingredient.amount ? (
-          <span className="flex h-7 shrink-0 items-center gap-1 text-xs text-muted">
-            <Scale aria-hidden="true" className="size-3.5" />
-            {ingredient.amount}
-          </span>
-        ) : null}
-        {ingredient.note ? (
-          <span className="h-7 min-w-0 flex-1 truncate text-xs leading-7 text-muted">
-            - {ingredient.note}
-          </span>
-        ) : null}
-      </ContextMenuTrigger>
-      <ContextMenuPopup
-        aria-label={`Edit ${ingredient.name}`}
-        onKeyDown={(event) => {
-          const target = event.target as HTMLElement;
-          if (
-            (target.tagName === "INPUT" || target.tagName === "TEXTAREA") &&
-            event.key !== "Escape" &&
-            event.key !== "Tab"
-          ) {
-            event.preventBaseUIHandler();
-          }
-        }}
-      >
-        <form className="grid gap-3 p-2" onSubmit={handleSubmit}>
-          <label
-            htmlFor={amountInputId}
-            className="grid gap-1 text-xs text-muted"
-          >
-            Amount
-            <Input
-              id={amountInputId}
-              aria-label="Ingredient amount"
-              autoComplete="off"
-              maxLength={100}
-              placeholder="For example, 200 g"
-              value={amount}
-              onValueChange={setAmount}
-            />
-          </label>
-          <label
-            htmlFor={noteInputId}
-            className="grid gap-1 text-xs text-muted"
-          >
-            Note
-            <Textarea
-              id={noteInputId}
-              aria-label="Ingredient note"
-              className="field-sizing-content min-h-10! resize-none! text-sm"
-              maxLength={500}
-              placeholder="Optional note"
-              rows={1}
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-            />
-          </label>
-          {error ? (
-            <InlineAlert role="alert" variant="danger">
-              {error}
-            </InlineAlert>
-          ) : null}
-          <Button
-            type="submit"
-            busy={saving}
-            disabled={disabled || saving}
-            size="compact"
-            className="justify-self-end"
-          >
-            Save
-          </Button>
-        </form>
-        <ContextMenuItem
-          disabled={disabled}
-          variant="danger"
           onClick={() => onDelete(ingredient.id)}
         >
-          Delete ingredient
-        </ContextMenuItem>
-      </ContextMenuPopup>
-    </ContextMenuRoot>
+          <Trash2 aria-hidden="true" className="size-4" />
+        </IconButton>
+      </div>
+    </li>
   );
 }
 
@@ -216,28 +157,6 @@ export function RecipeIngredientList({
         ingredientId,
       }),
     );
-  }
-
-  async function updateIngredient(
-    ingredientId: string,
-    amount: string,
-    note: string,
-  ) {
-    if (!mutationEnabled) return false;
-    const mutation = zero.mutate(
-      mutators.recipes.updateIngredient({
-        householdId,
-        recipeId,
-        ingredientId,
-        amount,
-        note,
-        optimisticUpdatedAt: Date.now(),
-      }),
-    );
-    const clientResult = await mutation.client;
-    if (clientResult.type === "error") return false;
-    void mutation.server;
-    return true;
   }
 
   return (
@@ -270,7 +189,6 @@ export function RecipeIngredientList({
             index={index}
             ingredient={ingredient}
             onDelete={deleteIngredient}
-            onUpdate={updateIngredient}
             recipeId={recipeId}
           />
         ))}

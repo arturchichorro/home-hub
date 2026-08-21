@@ -576,13 +576,15 @@ large viewer, where image deletion uses a compact confirmation popover.
 Ingredients and Cooking history follow as independently closable sections.
 Ingredients use a name-only add row, directly editable names with debounced
 saves, and drag handles for reordering. Each ingredient stays on one line: an
-optional Weight icon and amount precede the name, while an optional muted note
-truncates at the row edge. Right click or long press opens a compact Base UI
-context menu for adding or editing the optional free-text amount and note or
-immediately deleting the ingredient. Cooking history is newest first, begins
-with a date-only add row, and uses
-the same debounced inline editing for each entry's comment. It includes compact
-linked image thumbnails for each entry.
+optional free-text amount and muted note follow the name and use the same
+debounced inline editing. A non-editable Scale icon precedes a saved amount,
+and a non-editable ` - ` separator precedes a saved note. Clearing either
+optional value stores it as `null`.
+The row ends with compact add-amount, add-note, and delete actions; each add
+action is hidden while its value exists, and otherwise reveals and focuses its
+editor. Cooking history is newest first, begins with a date-only add row, and
+uses the same debounced inline editing for each entry's comment. It includes
+compact linked image thumbnails for each entry.
 Each completed cooking entry also
 exposes its own smaller, low-emphasis image-upload control and a confirmed
 delete action in the entry row. Deleting an entry preserves its pictures in the

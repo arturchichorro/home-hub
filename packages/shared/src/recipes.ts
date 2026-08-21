@@ -92,11 +92,14 @@ export const updateRecipeIngredientMutationSchema = z
     ingredientId: z.uuid(),
     householdId: z.uuid(),
     recipeId: z.uuid(),
-    amount: recipeIngredientAmountSchema,
-    note: recipeIngredientNoteSchema,
+    amount: recipeIngredientAmountSchema.optional(),
+    note: recipeIngredientNoteSchema.optional(),
     optimisticUpdatedAt: z.number().int().nonnegative(),
   })
-  .strict();
+  .strict()
+  .refine((value) => value.amount !== undefined || value.note !== undefined, {
+    message: "An ingredient amount or note update is required",
+  });
 
 export type UpdateRecipeIngredientMutationInput = z.infer<
   typeof updateRecipeIngredientMutationSchema

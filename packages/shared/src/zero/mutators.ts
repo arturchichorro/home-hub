@@ -252,13 +252,20 @@ const updateRecipeIngredient = defineHomeHubMutator(
     );
     if (!ingredient) throw new Error("Recipe ingredient update not allowed");
 
-    await tx.mutate.recipeIngredients.update({
+    const update: {
+      id: string;
+      amount?: string | null;
+      note?: string | null;
+      updatedAt: number;
+    } = {
       id: args.ingredientId,
-      amount: args.amount,
-      note: args.note,
       updatedAt:
         tx.location === "server" ? Date.now() : args.optimisticUpdatedAt,
-    });
+    };
+    if (args.amount !== undefined) update.amount = args.amount;
+    if (args.note !== undefined) update.note = args.note;
+
+    await tx.mutate.recipeIngredients.update(update);
   },
 );
 

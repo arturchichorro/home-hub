@@ -111,6 +111,14 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Verify normalization, authorization, optimistic updates, and interface type safety
 - [x] Update the design-system documentation and complete the inline-editing checkpoint
 
+## Expose recipe ingredient actions inline
+
+- [x] Replace the ingredient context menu with conditional amount, note, and delete icon actions
+- [x] Reveal and focus empty amount and note editors without dismissing them during the initial debounce
+- [x] Save amount and note independently, normalizing cleared values to `null`
+- [x] Verify patch validation, authorization, nullable updates, types, tests, and formatting
+- [x] Update the design-system documentation and complete the inline-actions checkpoint
+
 ## Deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack

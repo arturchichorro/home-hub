@@ -64,6 +64,7 @@ export {
   RotateCcw,
   Scale,
   ShoppingBasket,
+  StickyNote,
   Trash2,
   Users,
   X,
