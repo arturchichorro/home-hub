@@ -9,6 +9,8 @@ together before implementation begins.
 
 ## Improvements
 
+- [ ] Add user profile pictures and use base ui's Avatar
+- [ ] Allow to append already uploaded recipe image to a cook log
 - [ ] Add recipe ratings table, could be used to say "overall 5*", "ease to cook 3*", etc; could add to the ui
 - [ ] Add order to recipes (to order recipe list)
 - [ ] While typing (e.g. recipe description), input keeps being trimmed (on debounce) which removes spaces the user just typed
