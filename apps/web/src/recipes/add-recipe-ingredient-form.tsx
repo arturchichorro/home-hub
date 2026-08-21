@@ -171,12 +171,12 @@ export function AddRecipeIngredientTriggerRow({
 
   return (
     <li>
-      <div className="p-2">
+      <div className="p-2.5">
         <Button
           type="button"
           variant="ghost"
           disabled={!mutationEnabled}
-          className="h-7! px-1! font-normal text-muted"
+          className="h-7! px-1.5! ml-2 font-normal text-muted"
           onClick={onActivate}
           onPointerDown={(event) => {
             if (draftActive) event.preventDefault();
