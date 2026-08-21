@@ -19,6 +19,7 @@ together before implementation begins.
 - [ ] Improve separation between database access, domain behavior, and transport code
 - [ ] Add image pipeline to convert images to webp for displaying in the app (maybe a proper cdn?) - I want to keep the original image too though (maybe enableable for certain users?)
 - [ ] Add module-specific documentation for Shopping and Recipes
+- [ ] Add user comments to cook logs (recipes)
 
 ## Future modules and capabilities
 
