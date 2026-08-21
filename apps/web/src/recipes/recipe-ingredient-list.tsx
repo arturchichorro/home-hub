@@ -133,7 +133,7 @@ function RecipeIngredientRow({
             </div>
           ) : null}
           {ingredient.note !== null || editingNote ? (
-            <div className="flex h-7 min-w-0 flex-1 items-center gap-1">
+            <div className="flex h-7 min-w-0 flex-1 items-center gap-1 overflow-hidden">
               <span
                 aria-hidden="true"
                 className="h-7 shrink-0 text-xs leading-7 text-muted"

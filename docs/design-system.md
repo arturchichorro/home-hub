@@ -590,7 +590,8 @@ stays on one line: an
 optional free-text amount and muted note follow the name and use the same
 debounced inline editing. A non-editable Scale icon precedes a saved amount,
 and a non-editable ` - ` separator precedes a saved note. Clearing either
-optional value stores it as `null`.
+optional value stores it as `null`. Note editors remain constrained by the row
+and scroll internally rather than expanding the ingredient list or page.
 The row ends with compact add-amount, add-note, and delete actions; each add
 action is hidden while its value exists, and otherwise reveals and focuses its
 editor. Cooking history is newest first, begins with a date-only add row, and

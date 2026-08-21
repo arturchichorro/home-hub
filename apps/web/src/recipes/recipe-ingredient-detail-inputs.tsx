@@ -146,7 +146,7 @@ export function RecipeIngredientNoteInput({
         aria-busy={editor.isSaving || undefined}
         aria-invalid={editor.error ? true : undefined}
         aria-errormessage={editor.error ? editor.errorId : undefined}
-        className="h-7! min-h-7! min-w-20 flex-1 overflow-hidden py-0! text-xs leading-7 text-muted whitespace-nowrap"
+        className="field-sizing-fixed! h-7! min-h-7! min-w-0 flex-1 overflow-x-auto overflow-y-hidden py-0! text-xs leading-7 text-muted whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         disabled={!mutationEnabled}
         maxLength={500}
         placeholder="Note"
