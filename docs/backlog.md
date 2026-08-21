@@ -17,6 +17,7 @@ together before implementation begins.
 - [ ] Add recipe ingredients to Shopping
 - [ ] Publish safe member profiles through Zero to prevent interface flashing
 - [ ] Improve separation between database access, domain behavior, and transport code
+- [ ] Add image pipeline to convert images to webp for displaying in the app (maybe a proper cdn?) - I want to keep the original image too though (maybe enableable for certain users?)
 - [ ] Add module-specific documentation for Shopping and Recipes
 
 ## Future modules and capabilities
