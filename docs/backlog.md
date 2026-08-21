@@ -9,6 +9,7 @@ together before implementation begins.
 
 ## Improvements
 
+- [ ] While typing (e.g. recipe description), input keeps being trimmed (on debounce) which removes spaces the user just typed
 - [ ] Move app header to a sidebar instead, similar to linear
 - [ ] Open last opened household on app start (through local storage or something)
 - [ ] Add recipe ingredients to Shopping
