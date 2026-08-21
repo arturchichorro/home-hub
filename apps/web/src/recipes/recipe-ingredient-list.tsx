@@ -10,7 +10,7 @@ import {
   Trash2,
 } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
   RecipeIngredientAmountInput,
@@ -19,6 +19,7 @@ import {
 import { RecipeIngredientNameInput } from "./recipe-ingredient-name-input";
 
 type RecipeIngredientListProps = {
+  addRow: ReactNode;
   householdId: string;
   ingredients: readonly RecipeIngredient[];
   recipeId: string;
@@ -141,6 +142,7 @@ function RecipeIngredientRow({
 }
 
 export function RecipeIngredientList({
+  addRow,
   householdId,
   ingredients,
   recipeId,
@@ -192,6 +194,7 @@ export function RecipeIngredientList({
             recipeId={recipeId}
           />
         ))}
+        {addRow}
       </ol>
     </DragDropProvider>
   );

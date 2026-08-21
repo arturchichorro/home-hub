@@ -574,8 +574,16 @@ edge. Drag handles reorder the gallery across pointer, touch, and keyboard
 input; the first image is the recipe-card cover. Every thumbnail opens the same
 large viewer, where image deletion uses a compact confirmation popover.
 Ingredients and Cooking history follow as independently closable sections.
-Ingredients use a name-only add row, directly editable names with debounced
-saves, and drag handles for reordering. Each ingredient stays on one line: an
+Ingredients end with a muted, full-width Add ingredient row. Activating it
+inserts a focused, name-only draft directly above it inside the same divided
+list, using a disabled drag handle until the ingredient is saved. The trigger
+remains visible below the draft. Draft names save after the standard debounce,
+on blur, or on Enter. Submitting or blurring an empty name dismisses the draft
+without creating a record. Only the compact plus-and-label control receives
+hover treatment, not the full row.
+Ingredient names use
+debounced inline editing, and drag handles support reordering. Each ingredient
+stays on one line: an
 optional free-text amount and muted note follow the name and use the same
 debounced inline editing. A non-editable Scale icon precedes a saved amount,
 and a non-editable ` - ` separator precedes a saved note. Clearing either

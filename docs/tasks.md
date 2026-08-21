@@ -119,6 +119,17 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Verify patch validation, authorization, nullable updates, types, tests, and formatting
 - [x] Update the design-system documentation and complete the inline-actions checkpoint
 
+## Progressively reveal recipe ingredient creation
+
+- [x] Move ingredient creation below the existing ingredient list
+- [x] Replace the persistent input with a muted Add ingredient trigger row
+- [x] Reveal and focus an ingredient-name draft row when activated
+- [x] Keep the trigger and draft inside the divided list with a disabled draft drag handle and compact hover target
+- [x] Keep the Add ingredient trigger below an open draft and save valid drafts on debounce, blur, or Enter
+- [x] Dismiss empty submissions without creating an ingredient record
+- [x] Verify creation, empty-submission, type, test, and formatting behavior
+- [x] Update the design-system documentation and complete the creation-row checkpoint
+
 ## Deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack

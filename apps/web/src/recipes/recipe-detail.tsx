@@ -191,20 +191,21 @@ export function RecipeDetail({
       <ErrorPopover {...editor.errorPopoverProps}>{editor.error}</ErrorPopover>
 
       <Collapsible title="Ingredients">
-        <AddRecipeIngredientForm
-          householdId={householdId}
-          recipeId={recipeId}
-          position={nextIngredientPosition}
-        />
         {recipe.ingredients.length === 0 ? (
           <p className="text-sm text-muted">There are no ingredients yet.</p>
-        ) : (
-          <RecipeIngredientList
-            householdId={householdId}
-            recipeId={recipeId}
-            ingredients={recipe.ingredients}
-          />
-        )}
+        ) : null}
+        <RecipeIngredientList
+          householdId={householdId}
+          recipeId={recipeId}
+          ingredients={recipe.ingredients}
+          addRow={
+            <AddRecipeIngredientForm
+              householdId={householdId}
+              recipeId={recipeId}
+              position={nextIngredientPosition}
+            />
+          }
+        />
       </Collapsible>
 
       <Collapsible title="Cooking history">
