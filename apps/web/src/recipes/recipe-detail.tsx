@@ -4,7 +4,9 @@ import type { RecipeImage } from "@home-hub/shared/zero/schema";
 import {
   Collapsible,
   ConfirmationPopover,
+  CookingPot,
   ErrorPopover,
+  History,
   IconButton,
   InlineAlert,
   Input,
@@ -186,7 +188,14 @@ export function RecipeDetail({
       />
       <ErrorPopover {...editor.errorPopoverProps}>{editor.error}</ErrorPopover>
 
-      <Collapsible title="Ingredients">
+      <Collapsible
+        title={
+          <span className="flex items-center gap-2">
+            <CookingPot aria-hidden="true" className="size-5" />
+            Ingredients
+          </span>
+        }
+      >
         {recipe.ingredients.length === 0 ? (
           <p className="text-sm text-muted">There are no ingredients yet.</p>
         ) : null}
@@ -197,7 +206,14 @@ export function RecipeDetail({
         />
       </Collapsible>
 
-      <Collapsible title="Cooking history">
+      <Collapsible
+        title={
+          <span className="flex items-center gap-2">
+            <History aria-hidden="true" className="size-5" />
+            Cooking history
+          </span>
+        }
+      >
         <div className="space-y-4">
           <AddRecipeCookLogForm householdId={householdId} recipeId={recipeId} />
           {recipe.cookLogs.length === 0 ? (

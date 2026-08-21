@@ -4,7 +4,10 @@ import { ChevronDown } from "./icons";
 
 type BaseRootProps = ComponentProps<typeof BaseCollapsible.Root>;
 
-export type CollapsibleProps = Omit<BaseRootProps, "children" | "className"> & {
+export type CollapsibleProps = Omit<
+  BaseRootProps,
+  "children" | "className" | "title"
+> & {
   children: ReactNode;
   className?: string;
   title: ReactNode;
