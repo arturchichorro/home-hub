@@ -576,11 +576,14 @@ large viewer, where image deletion uses a compact confirmation popover.
 Ingredients and Cooking history follow as independently closable sections.
 Ingredients end with a muted, full-width Add ingredient row. Activating it
 inserts a focused, name-only draft directly above it inside the same divided
-list, using a disabled drag handle until the ingredient is saved. The trigger
-remains visible below the draft. Draft names save after the standard debounce,
-on blur, or on Enter. Submitting or blurring an empty name dismisses the draft
-without creating a record. Only the compact plus-and-label control receives
-hover treatment, not the full row.
+list. The draft is a UI-only `creating` variant of the normal ingredient row,
+preassigned the ID used by its eventual optimistic insert and using a disabled
+drag handle until saved. This preserves row identity when it becomes a saved
+ingredient without persisting incomplete records. The trigger remains visible
+below the draft; activating it again keeps focus on the existing draft. Draft
+names save after the standard debounce, on blur, or on Enter. Submitting or
+blurring an empty name dismisses the draft without creating a record. Only the
+compact plus-and-label control receives hover treatment, not the full row.
 Ingredient names use
 debounced inline editing, and drag handles support reordering. Each ingredient
 stays on one line: an

@@ -126,6 +126,9 @@ deployment applies tested forward migrations after an off-host backup.
 - [x] Reveal and focus an ingredient-name draft row when activated
 - [x] Keep the trigger and draft inside the divided list with a disabled draft drag handle and compact hover target
 - [x] Keep the Add ingredient trigger below an open draft and save valid drafts on debounce, blur, or Enter
+- [x] Model creation as a stable UI-only ingredient row keyed by its eventual record ID
+- [x] Keep repeated Add ingredient activation focused on the existing blank draft
+- [x] Preserve name-input focus while an autosaved draft transitions to its saved row
 - [x] Dismiss empty submissions without creating an ingredient record
 - [x] Verify creation, empty-submission, type, test, and formatting behavior
 - [x] Update the design-system documentation and complete the creation-row checkpoint

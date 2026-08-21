@@ -2,12 +2,13 @@ import { cleanRecipeIngredientName } from "@home-hub/shared/normalization";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { ErrorPopover, Input } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { useDebouncedTextEditor } from "./use-debounced-text-editor";
 
 type RecipeIngredientNameInputProps = {
   currentName: string;
+  focusOnMount?: boolean;
   householdId: string;
   ingredientId: string;
   recipeId: string;
@@ -15,6 +16,7 @@ type RecipeIngredientNameInputProps = {
 
 export function RecipeIngredientNameInput({
   currentName,
+  focusOnMount = false,
   householdId,
   ingredientId,
   recipeId,
@@ -45,6 +47,10 @@ export function RecipeIngredientNameInput({
       return result.type === "success";
     },
   });
+
+  useEffect(() => {
+    if (focusOnMount) inputRef.current?.focus();
+  }, [focusOnMount]);
 
   return (
     <>

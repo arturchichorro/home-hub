@@ -15,7 +15,6 @@ import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { AddRecipeCookLogForm } from "./add-recipe-cook-log-form";
-import { AddRecipeIngredientForm } from "./add-recipe-ingredient-form";
 import { deleteRecipeImage } from "./image-api";
 import { RecipeCookLogCommentInput } from "./recipe-cook-log-comment-input";
 import {
@@ -82,12 +81,6 @@ export function RecipeDetail({
 
   if (!recipe) return null;
 
-  const nextIngredientPosition =
-    recipe.ingredients.reduce(
-      (highestPosition, ingredient) =>
-        Math.max(highestPosition, ingredient.position),
-      -1,
-    ) + 1;
   const nextImagePosition =
     recipe.images.reduce(
       (highestPosition, image) => Math.max(highestPosition, image.position),
@@ -198,13 +191,6 @@ export function RecipeDetail({
           householdId={householdId}
           recipeId={recipeId}
           ingredients={recipe.ingredients}
-          addRow={
-            <AddRecipeIngredientForm
-              householdId={householdId}
-              recipeId={recipeId}
-              position={nextIngredientPosition}
-            />
-          }
         />
       </Collapsible>
 

@@ -2,8 +2,7 @@ import { cleanRecipeIngredientName } from "@home-hub/shared/normalization";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import {
   Button,
-  GripVertical,
-  IconButton,
+  ErrorPopover,
   InlineAlert,
   Input,
   Plus,
@@ -14,30 +13,37 @@ import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 const autosaveDelayMs = 600;
 
-type AddRecipeIngredientFormProps = {
+type RecipeIngredientDraftNameFormProps = {
+  focusRequest: number;
   householdId: string;
-  recipeId: string;
+  ingredientId: string;
+  onCancel: () => void;
+  onServerError: (message: string) => void;
   position: number;
+  recipeId: string;
 };
 
-export function AddRecipeIngredientForm({
+export function RecipeIngredientDraftNameForm({
+  focusRequest,
   householdId,
-  recipeId,
+  ingredientId,
+  onCancel,
+  onServerError,
   position,
-}: AddRecipeIngredientFormProps) {
+  recipeId,
+}: RecipeIngredientDraftNameFormProps) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
   const inputRef = useRef<HTMLInputElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const savingRef = useRef(false);
-  const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
 
   useEffect(() => {
-    if (creating) inputRef.current?.focus();
-  }, [creating]);
+    if (focusRequest >= 0) inputRef.current?.focus();
+  }, [focusRequest]);
 
   useEffect(
     () => () => {
@@ -60,11 +66,7 @@ export function AddRecipeIngredientForm({
 
     const submittedName = cleanRecipeIngredientName(rawName);
     if (submittedName.length === 0) {
-      if (dismissEmpty) {
-        setName("");
-        setError(undefined);
-        setCreating(false);
-      }
+      if (dismissEmpty) onCancel();
       return;
     }
     if (!mutationEnabled) {
@@ -77,7 +79,7 @@ export function AddRecipeIngredientForm({
     setError(undefined);
     const mutation = zero.mutate(
       mutators.recipes.addIngredient({
-        ingredientId: crypto.randomUUID(),
+        ingredientId,
         householdId,
         recipeId,
         name: submittedName,
@@ -94,15 +96,10 @@ export function AddRecipeIngredientForm({
       return;
     }
 
-    setName("");
-    setCreating(false);
-
     const serverResult = await mutation.server;
     if (serverResult.type === "error") {
-      setError("The ingredient could not be saved.");
+      onServerError("The ingredient could not be saved.");
     }
-    savingRef.current = false;
-    setSaving(false);
   }
 
   function changeName(value: string) {
@@ -120,76 +117,80 @@ export function AddRecipeIngredientForm({
     void saveDraft(name, true);
   }
 
-  function cancelDraft() {
-    clearScheduledSave();
-    setName("");
-    setError(undefined);
-    setCreating(false);
-  }
+  const errorId = `ingredient-${ingredientId}-error`;
 
   return (
-    <>
-      {creating ? (
-        <li>
-          <form className="flex items-center gap-1 p-2" onSubmit={handleSubmit}>
-            <IconButton
-              aria-label="Reordering is available after the ingredient is saved"
-              className="size-7! cursor-default"
-              disabled
-            >
-              <GripVertical aria-hidden="true" className="size-4" />
-            </IconButton>
-            <Input
-              ref={inputRef}
-              appearance="seamless"
-              aria-label="Ingredient name"
-              aria-busy={saving || undefined}
-              autoComplete="off"
-              className="field-sizing-content h-7! min-w-0 flex-initial! px-1 leading-7"
-              disabled={!mutationEnabled || saving}
-              enterKeyHint="done"
-              maxLength={150}
-              placeholder="Ingredient name"
-              value={name}
-              onBlur={() => void saveDraft(name, true)}
-              onKeyDown={(event) => {
-                if (event.key !== "Escape") return;
-                event.preventDefault();
-                cancelDraft();
-              }}
-              onValueChange={changeName}
-            />
-          </form>
-          {error ? (
-            <InlineAlert className="m-2 mt-0" role="alert" variant="danger">
-              {error}
-            </InlineAlert>
-          ) : null}
-        </li>
+    <form className="min-w-0" onSubmit={handleSubmit}>
+      <Input
+        ref={inputRef}
+        appearance="seamless"
+        aria-label="Ingredient name"
+        aria-busy={saving || undefined}
+        aria-invalid={error ? true : undefined}
+        aria-errormessage={error ? errorId : undefined}
+        autoComplete="off"
+        className="field-sizing-content h-7! min-w-0 flex-initial! px-1 leading-7"
+        disabled={!mutationEnabled}
+        enterKeyHint="done"
+        maxLength={150}
+        placeholder="Ingredient name"
+        value={name}
+        onBlur={() => void saveDraft(name, true)}
+        onKeyDown={(event) => {
+          if (event.key !== "Escape") return;
+          event.preventDefault();
+          clearScheduledSave();
+          onCancel();
+        }}
+        onValueChange={changeName}
+      />
+      <ErrorPopover
+        anchor={inputRef}
+        id={errorId}
+        open={error !== undefined}
+        onDismiss={() => setError(undefined)}
+      >
+        {error}
+      </ErrorPopover>
+    </form>
+  );
+}
+
+type AddRecipeIngredientTriggerRowProps = {
+  draftActive: boolean;
+  error?: string | undefined;
+  onActivate: () => void;
+};
+
+export function AddRecipeIngredientTriggerRow({
+  draftActive,
+  error,
+  onActivate,
+}: AddRecipeIngredientTriggerRowProps) {
+  const mutationEnabled = useZeroMutationEnabled();
+
+  return (
+    <li>
+      <div className="p-2">
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={!mutationEnabled}
+          className="h-7! px-1! font-normal text-muted"
+          onClick={onActivate}
+          onPointerDown={(event) => {
+            if (draftActive) event.preventDefault();
+          }}
+        >
+          <Plus aria-hidden="true" className="size-4" />
+          Add ingredient
+        </Button>
+      </div>
+      {error ? (
+        <InlineAlert className="m-2 mt-0" role="alert" variant="danger">
+          {error}
+        </InlineAlert>
       ) : null}
-      <li>
-        <div className="p-2">
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={!mutationEnabled}
-            className="h-7! px-1! font-normal text-muted"
-            onClick={() => {
-              if (!creating) setName("");
-              setError(undefined);
-              setCreating(true);
-            }}
-          >
-            <Plus aria-hidden="true" className="size-4" />
-            Add ingredient
-          </Button>
-        </div>
-        {!creating && error ? (
-          <InlineAlert className="m-2 mt-0" role="alert" variant="danger">
-            {error}
-          </InlineAlert>
-        ) : null}
-      </li>
-    </>
+    </li>
   );
 }
