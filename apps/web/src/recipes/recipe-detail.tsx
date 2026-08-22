@@ -221,7 +221,7 @@ export function RecipeDetail({
               This recipe has not been cooked yet.
             </p>
           ) : (
-            <ul>
+            <ul className="list-disc pl-5">
               {recipe.cookLogs.map((cookLog) => {
                 const cookedAt = new Date(cookLog.cookedAt);
                 const cookedAtLabel = dateFormatter.format(cookedAt);
@@ -229,94 +229,110 @@ export function RecipeDetail({
                   (image) => image.cookLogId === cookLog.id,
                 );
                 const editingComment = editingCookLogCommentId === cookLog.id;
+                const hasCommentEditor =
+                  cookLog.comment !== null || editingComment;
+
+                const commentInput = hasCommentEditor ? (
+                  <RecipeCookLogCommentInput
+                    cookLogId={cookLog.id}
+                    currentComment={cookLog.comment}
+                    focusOnMount={editingComment && cookLog.comment === null}
+                    householdId={householdId}
+                    recipeId={recipeId}
+                    onBlur={() => setEditingCookLogCommentId(undefined)}
+                    onFocus={() => setEditingCookLogCommentId(cookLog.id)}
+                  />
+                ) : null;
+
+                const actions = (
+                  <div className="flex shrink-0 items-center gap-1">
+                    {cookLog.comment === null && !editingComment ? (
+                      <IconButton
+                        type="button"
+                        aria-label={`Add comment to cooking log from ${cookedAtLabel}`}
+                        className="size-7!"
+                        disabled={!mutationEnabled}
+                        onClick={() => setEditingCookLogCommentId(cookLog.id)}
+                      >
+                        <MessageSquare aria-hidden="true" className="size-4" />
+                      </IconButton>
+                    ) : null}
+                    <RecipeImageUploadForm
+                      accessToken={accessToken}
+                      appearance="subtle"
+                      cookLogId={cookLog.id}
+                      householdId={householdId}
+                      recipeId={recipeId}
+                      position={nextImagePosition}
+                      onSessionExpired={onSessionExpired}
+                    />
+                    <ConfirmationPopover
+                      title="Delete cooking log?"
+                      description="Its pictures will remain in the recipe gallery."
+                      trigger={
+                        <IconButton
+                          aria-label="Delete cooking log"
+                          className="size-7!"
+                          disabled={!mutationEnabled}
+                        >
+                          <Trash2 aria-hidden="true" className="size-4" />
+                        </IconButton>
+                      }
+                      onConfirm={() => deleteCookLog(cookLog.id)}
+                    />
+                  </div>
+                );
 
                 return (
-                  <li key={cookLog.id} className="py-2">
-                    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
-                      <time
-                        dateTime={cookedAt.toISOString()}
-                        className="text-sm font-medium"
-                      >
-                        {cookedAtLabel}
-                      </time>
-                      <div className="min-w-0">
-                        {cookLog.comment !== null || editingComment ? (
-                          <RecipeCookLogCommentInput
-                            cookLogId={cookLog.id}
-                            currentComment={cookLog.comment}
-                            focusOnMount={
-                              editingComment && cookLog.comment === null
-                            }
-                            householdId={householdId}
-                            recipeId={recipeId}
-                            onBlur={() => setEditingCookLogCommentId(undefined)}
-                            onFocus={() =>
-                              setEditingCookLogCommentId(cookLog.id)
-                            }
-                          />
-                        ) : null}
+                  <li key={cookLog.id} className="py-1 text-sm">
+                    {images.length === 0 ? (
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex min-w-0 flex-1 items-center">
+                          <span className="shrink-0 font-medium">
+                            Cooked on{" "}
+                            <time dateTime={cookedAt.toISOString()}>
+                              {cookedAtLabel}
+                            </time>
+                            {hasCommentEditor ? ":" : null}
+                          </span>
+                          {commentInput}
+                        </div>
+                        {actions}
                       </div>
-                      <div className="flex items-center gap-1">
-                        {cookLog.comment === null && !editingComment ? (
-                          <IconButton
-                            type="button"
-                            aria-label={`Add comment to cooking log from ${cookedAtLabel}`}
-                            className="size-7!"
-                            disabled={!mutationEnabled}
-                            onClick={() =>
-                              setEditingCookLogCommentId(cookLog.id)
-                            }
-                          >
-                            <MessageSquare
-                              aria-hidden="true"
-                              className="size-4"
-                            />
-                          </IconButton>
-                        ) : null}
-                        <RecipeImageUploadForm
-                          accessToken={accessToken}
-                          appearance="subtle"
-                          cookLogId={cookLog.id}
-                          householdId={householdId}
-                          recipeId={recipeId}
-                          position={nextImagePosition}
-                          onSessionExpired={onSessionExpired}
-                        />
-                        <ConfirmationPopover
-                          title="Delete cooking log?"
-                          description="Its pictures will remain in the recipe gallery."
-                          trigger={
-                            <IconButton
-                              aria-label="Delete cooking log"
-                              className="size-7!"
-                              disabled={!mutationEnabled}
-                            >
-                              <Trash2 aria-hidden="true" className="size-4" />
-                            </IconButton>
-                          }
-                          onConfirm={() => deleteCookLog(cookLog.id)}
-                        />
+                    ) : (
+                      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                        <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-2">
+                          <span className="pt-3 font-medium">
+                            Cooked on{" "}
+                            <time dateTime={cookedAt.toISOString()}>
+                              {cookedAtLabel}
+                            </time>
+                            :
+                          </span>
+                          <div className="min-w-0">
+                            <ul className="flex min-w-0 gap-2 overflow-x-auto">
+                              {images.map((image) => (
+                                <RecipeImageThumbnail
+                                  key={image.id}
+                                  accessToken={accessToken}
+                                  householdId={householdId}
+                                  recipeId={recipeId}
+                                  image={image}
+                                  className="size-12 shrink-0"
+                                  onSessionExpired={onSessionExpired}
+                                  onOpen={(image) => {
+                                    setSelectedCookLogId(cookLog.id);
+                                    setSelectedImage(image);
+                                  }}
+                                />
+                              ))}
+                            </ul>
+                            {commentInput}
+                          </div>
+                        </div>
+                        {actions}
                       </div>
-                    </div>
-                    {images.length > 0 ? (
-                      <ul className="flex min-w-0 gap-2 overflow-x-auto">
-                        {images.map((image) => (
-                          <RecipeImageThumbnail
-                            key={image.id}
-                            accessToken={accessToken}
-                            householdId={householdId}
-                            recipeId={recipeId}
-                            image={image}
-                            className="size-12 shrink-0"
-                            onSessionExpired={onSessionExpired}
-                            onOpen={(image) => {
-                              setSelectedCookLogId(cookLog.id);
-                              setSelectedImage(image);
-                            }}
-                          />
-                        ))}
-                      </ul>
-                    ) : null}
+                    )}
                   </li>
                 );
               })}
