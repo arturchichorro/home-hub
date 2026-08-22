@@ -24,38 +24,9 @@ type RecipeCookingHistoryListProps = {
   onSessionExpired: () => void;
 };
 
-type CookLogGroup = {
-  date: Date;
-  logs: [RecipeCookLog, ...RecipeCookLog[]];
-};
-
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
 });
-
-function localDateKey(date: Date): string {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-}
-
-function groupCookLogsByDay(
-  cookLogs: readonly RecipeCookLog[],
-): CookLogGroup[] {
-  const groups = new Map<string, CookLogGroup>();
-
-  for (const cookLog of cookLogs) {
-    const date = new Date(cookLog.cookedAt);
-    const key = localDateKey(date);
-    const group = groups.get(key);
-
-    if (group) {
-      group.logs.push(cookLog);
-    } else {
-      groups.set(key, { date, logs: [cookLog] });
-    }
-  }
-
-  return [...groups.values()];
-}
 
 export function RecipeCookingHistoryList({
   accessToken,
@@ -71,7 +42,6 @@ export function RecipeCookingHistoryList({
   const mutationEnabled = useZeroMutationEnabled();
   const [editingCommentCookLogId, setEditingCommentCookLogId] =
     useState<string>();
-  const groups = groupCookLogsByDay(cookLogs);
 
   function deleteCookLog(cookLogId: string) {
     if (!mutationEnabled) return;
@@ -81,49 +51,37 @@ export function RecipeCookingHistoryList({
   }
 
   return (
-    <ul className="list-disc pl-5">
-      {groups.map(({ date, logs }) => {
-        const cookLogIds = logs.map((cookLog) => cookLog.id);
-        const cookLogIdSet = new Set(cookLogIds);
-        const groupImages = images.filter(
-          (image) =>
-            image.cookLogId !== null && cookLogIdSet.has(image.cookLogId),
+    <ul className="list-disc pl-5 divide-y divide-border">
+      {cookLogs.map((cookLog) => {
+        const date = new Date(cookLog.cookedAt);
+        const cookLogImages = images.filter(
+          (image) => image.cookLogId === cookLog.id,
         );
-        const editingCommentLog = logs.find(
-          (cookLog) => cookLog.id === editingCommentCookLogId,
-        );
-        const displayedCommentLog =
-          editingCommentLog ?? logs.find((cookLog) => cookLog.comment !== null);
-        const actionTargetLog = displayedCommentLog ?? logs[0];
         const dateLabel = dateFormatter.format(date);
-        const hasCommentEditor = displayedCommentLog !== undefined;
-        const cookedLabel =
-          logs.length > 1 ? `Cooked ${logs.length}x on` : "Cooked on";
+        const editingComment = editingCommentCookLogId === cookLog.id;
+        const hasCommentEditor = cookLog.comment !== null || editingComment;
 
-        const commentInput = displayedCommentLog ? (
+        const commentInput = hasCommentEditor ? (
           <RecipeCookLogCommentInput
-            cookLogId={displayedCommentLog.id}
-            currentComment={displayedCommentLog.comment}
-            focusOnMount={
-              displayedCommentLog.id === editingCommentCookLogId &&
-              displayedCommentLog.comment === null
-            }
+            cookLogId={cookLog.id}
+            currentComment={cookLog.comment}
+            focusOnMount={editingComment && cookLog.comment === null}
             householdId={householdId}
             recipeId={recipeId}
             onBlur={() => setEditingCommentCookLogId(undefined)}
-            onFocus={() => setEditingCommentCookLogId(displayedCommentLog.id)}
+            onFocus={() => setEditingCommentCookLogId(cookLog.id)}
           />
         ) : null;
 
         const actions = (
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-2">
             {!hasCommentEditor ? (
               <IconButton
                 type="button"
                 aria-label={`Add comment to cooking log from ${dateLabel}`}
                 className="size-7!"
                 disabled={!mutationEnabled}
-                onClick={() => setEditingCommentCookLogId(actionTargetLog.id)}
+                onClick={() => setEditingCommentCookLogId(cookLog.id)}
               >
                 <MessageSquare aria-hidden="true" className="size-4" />
               </IconButton>
@@ -131,7 +89,7 @@ export function RecipeCookingHistoryList({
             <RecipeImageUploadForm
               accessToken={accessToken}
               appearance="subtle"
-              cookLogId={actionTargetLog.id}
+              cookLogId={cookLog.id}
               householdId={householdId}
               recipeId={recipeId}
               position={nextImagePosition}
@@ -149,53 +107,42 @@ export function RecipeCookingHistoryList({
                   <Trash2 aria-hidden="true" className="size-4" />
                 </IconButton>
               }
-              onConfirm={() => deleteCookLog(actionTargetLog.id)}
+              onConfirm={() => deleteCookLog(cookLog.id)}
             />
           </div>
         );
 
         return (
-          <li key={localDateKey(date)} className="py-1 text-sm">
-            {groupImages.length === 0 ? (
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex min-w-0 flex-1 items-center">
-                  <span className="shrink-0 font-medium">
-                    {cookedLabel}{" "}
+          <li key={cookLog.id} className="py-1 text-sm">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex min-w-0 flex-1 items-center">
+                <span className="shrink-0 text-muted">
+                  Cooked on{" "}
+                  <span className="font-bold text-on-primary">
                     <time dateTime={date.toISOString()}>{dateLabel}</time>
-                    {hasCommentEditor ? ":" : null}
                   </span>
-                  {commentInput}
-                </div>
-                {actions}
+                  {hasCommentEditor ? ":" : null}
+                </span>
+                {commentInput}
               </div>
-            ) : (
-              <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-2">
-                  <span className="pt-3 font-medium">
-                    {cookedLabel}{" "}
-                    <time dateTime={date.toISOString()}>{dateLabel}</time>:
-                  </span>
-                  <div className="min-w-0">
-                    <ul className="flex min-w-0 gap-2 overflow-x-auto">
-                      {groupImages.map((image) => (
-                        <RecipeImageThumbnail
-                          key={image.id}
-                          accessToken={accessToken}
-                          householdId={householdId}
-                          recipeId={recipeId}
-                          image={image}
-                          className="size-12 shrink-0"
-                          onSessionExpired={onSessionExpired}
-                          onOpen={(image) => onOpenImage(image, cookLogIds)}
-                        />
-                      ))}
-                    </ul>
-                    {commentInput}
-                  </div>
-                </div>
-                {actions}
-              </div>
-            )}
+              {actions}
+            </div>
+            {cookLogImages.length > 0 ? (
+              <ul className="mt-1 flex min-w-0 gap-2 overflow-x-auto">
+                {cookLogImages.map((image) => (
+                  <RecipeImageThumbnail
+                    key={image.id}
+                    accessToken={accessToken}
+                    householdId={householdId}
+                    recipeId={recipeId}
+                    image={image}
+                    className="size-12 shrink-0"
+                    onSessionExpired={onSessionExpired}
+                    onOpen={(image) => onOpenImage(image, [cookLog.id])}
+                  />
+                ))}
+              </ul>
+            ) : null}
           </li>
         );
       })}
