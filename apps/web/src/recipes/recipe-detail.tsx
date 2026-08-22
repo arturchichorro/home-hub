@@ -197,10 +197,10 @@ export function RecipeDetail({
           </span>
         }
       >
-        <div className="space-y-4">
+        <div>
           <AddRecipeCookLogForm householdId={householdId} recipeId={recipeId} />
           {recipe.cookLogs.length === 0 ? (
-            <p className="text-sm text-muted">
+            <p className="border-t border-border py-2 text-sm text-muted">
               This recipe has not been cooked yet.
             </p>
           ) : (

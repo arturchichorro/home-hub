@@ -51,7 +51,7 @@ export function RecipeCookingHistoryList({
   }
 
   return (
-    <ul className="list-disc pl-5 divide-y divide-border">
+    <ul className="list-disc divide-y divide-border pl-5">
       {cookLogs.map((cookLog) => {
         const date = new Date(cookLog.cookedAt);
         const cookLogImages = images.filter(
@@ -113,7 +113,10 @@ export function RecipeCookingHistoryList({
         );
 
         return (
-          <li key={cookLog.id} className="py-1 text-sm">
+          <li
+            key={cookLog.id}
+            className="first:border-t first:border-border py-1 text-sm"
+          >
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex min-w-0 flex-1 items-center">
                 <span className="shrink-0 text-muted">
