@@ -51,7 +51,7 @@ export function RecipeCookingHistoryList({
   }
 
   return (
-    <ul className="list-disc divide-y divide-border pl-5">
+    <ul className="max-w-full min-w-0 list-disc divide-y divide-border overflow-hidden pl-5">
       {cookLogs.map((cookLog) => {
         const date = new Date(cookLog.cookedAt);
         const cookLogImages = images.filter(
@@ -115,7 +115,7 @@ export function RecipeCookingHistoryList({
         return (
           <li
             key={cookLog.id}
-            className="first:border-t first:border-border py-1 text-sm"
+            className="max-w-full min-w-0 first:border-t first:border-border py-1 text-sm"
           >
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex min-w-0 flex-1 items-center">
@@ -131,7 +131,7 @@ export function RecipeCookingHistoryList({
               {actions}
             </div>
             {cookLogImages.length > 0 ? (
-              <ul className="mt-1 mb-2 flex min-w-0 gap-2 overflow-x-auto">
+              <ul className="mt-1 mb-2 flex w-full max-w-full min-w-0 gap-2 overflow-x-auto overscroll-x-contain">
                 {cookLogImages.map((image) => (
                   <RecipeImageThumbnail
                     key={image.id}

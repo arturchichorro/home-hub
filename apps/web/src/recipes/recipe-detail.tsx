@@ -190,6 +190,7 @@ export function RecipeDetail({
       </Collapsible>
 
       <Collapsible
+        className="min-w-0"
         title={
           <span className="flex items-center gap-2">
             <History aria-hidden="true" className="size-5" />
@@ -197,7 +198,7 @@ export function RecipeDetail({
           </span>
         }
       >
-        <div>
+        <div className="min-w-0">
           <AddRecipeCookLogForm householdId={householdId} recipeId={recipeId} />
           {recipe.cookLogs.length === 0 ? (
             <p className="border-t border-border py-2 text-sm text-muted">
