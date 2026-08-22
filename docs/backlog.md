@@ -29,6 +29,7 @@ together before implementation begins.
 - [ ] Personal todo or wish lists
 - [ ] Multiple household lists, after reconsidering the current product non-goal - UI inspired by Gkeep
 - [ ] Goals
+- [ ] Sports logs, similar to recipe page (workouts page? idk)
 - [ ] Household finance
 - [ ] Friend list with timestamped notes
 - [ ] Turn home hub web into a PWA
