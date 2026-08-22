@@ -96,11 +96,14 @@ export function RecipeCookingHistoryList({
               onSessionExpired={onSessionExpired}
             />
             <ConfirmationPopover
-              title="Delete cooking log?"
-              description="Its pictures will remain in the recipe gallery."
+              message={
+                cookLogImages.length > 0
+                  ? "Delete entry? Its pictures will remain in the recipe gallery."
+                  : "Are you sure you want to delete this entry?"
+              }
               trigger={
                 <IconButton
-                  aria-label="Delete cooking log"
+                  aria-label="Delete entry"
                   className="size-7!"
                   disabled={!mutationEnabled}
                 >
