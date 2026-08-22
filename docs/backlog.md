@@ -21,6 +21,7 @@ together before implementation begins.
 - [ ] Improve separation between database access, domain behavior, and transport code
 - [ ] Add image pipeline to convert images to webp for displaying in the app (maybe a proper cdn?) - I want to keep the original image too though (maybe enableable for certain users?)
 - [ ] Add user comments to cook logs (recipes)
+- [ ] Check and fix flashing of pictures (maybe increase signing duration?)
 
 ## Future modules and capabilities
 
