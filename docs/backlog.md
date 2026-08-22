@@ -22,6 +22,7 @@ together before implementation begins.
 - [ ] Add image pipeline to convert images to webp for displaying in the app (maybe a proper cdn?) - I want to keep the original image too though (maybe enableable for certain users?)
 - [ ] Add user comments to cook logs (recipes)
 - [ ] Check and fix flashing of pictures (maybe increase signing duration?)
+- [ ] After having multiple lists, add the possibility to assign people to a list item (e.g. todo list, go to commune, Artur)
 
 ## Future modules and capabilities
 
