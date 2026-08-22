@@ -128,7 +128,7 @@ export function RecipeCookingHistoryList({
               {actions}
             </div>
             {cookLogImages.length > 0 ? (
-              <ul className="mt-1 flex min-w-0 gap-2 overflow-x-auto">
+              <ul className="mt-1 mb-2 flex min-w-0 gap-2 overflow-x-auto">
                 {cookLogImages.map((image) => (
                   <RecipeImageThumbnail
                     key={image.id}
