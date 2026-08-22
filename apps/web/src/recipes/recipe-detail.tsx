@@ -3,28 +3,20 @@ import { queries } from "@home-hub/shared/zero/queries";
 import type { RecipeImage } from "@home-hub/shared/zero/schema";
 import {
   Collapsible,
-  ConfirmationPopover,
   CookingPot,
   ErrorPopover,
   History,
-  IconButton,
   InlineAlert,
   Input,
-  MessageSquare,
   Textarea,
-  Trash2,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { AddRecipeCookLogForm } from "./add-recipe-cook-log-form";
 import { deleteRecipeImage } from "./image-api";
-import { RecipeCookLogCommentInput } from "./recipe-cook-log-comment-input";
-import {
-  RecipeImageGallery,
-  RecipeImageThumbnail,
-  RecipeImageViewer,
-} from "./recipe-image-gallery";
+import { RecipeCookingHistoryList } from "./recipe-cooking-history-list";
+import { RecipeImageGallery, RecipeImageViewer } from "./recipe-image-gallery";
 import { RecipeImageUploadForm } from "./recipe-image-upload-form";
 import { invalidateRecipeImageUrl } from "./recipe-image-url-cache";
 import { RecipeIngredientList } from "./recipe-ingredient-list";
@@ -36,10 +28,6 @@ type RecipeDetailProps = {
   recipeId: string;
   onSessionExpired: () => void;
 };
-
-const dateFormatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-});
 
 export function RecipeDetail({
   accessToken,
@@ -53,11 +41,9 @@ export function RecipeDetail({
   const [hiddenImageIds, setHiddenImageIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const [selectedCookLogId, setSelectedCookLogId] = useState<string | null>(
-    null,
-  );
-  const [editingCookLogCommentId, setEditingCookLogCommentId] =
-    useState<string>();
+  const [selectedCookLogIds, setSelectedCookLogIds] = useState<
+    readonly string[] | null
+  >(null);
   const [recipe, result] = useQuery(
     queries.recipes.detail({ householdId, recipeId }),
   );
@@ -94,12 +80,16 @@ export function RecipeDetail({
   const visibleImages = recipe.images.filter(
     (image) => !hiddenImageIds.has(image.id),
   );
-  const viewerImages = selectedCookLogId
-    ? visibleImages.filter((image) => image.cookLogId === selectedCookLogId)
+  const viewerImages = selectedCookLogIds
+    ? visibleImages.filter(
+        (image) =>
+          image.cookLogId !== null &&
+          selectedCookLogIds.includes(image.cookLogId),
+      )
     : visibleImages;
 
   function openGalleryImage(image: RecipeImage) {
-    setSelectedCookLogId(null);
+    setSelectedCookLogIds(null);
     setSelectedImage(image);
   }
 
@@ -112,13 +102,6 @@ export function RecipeDetail({
         orderedImageIds,
         optimisticUpdatedAt: Date.now(),
       }),
-    );
-  }
-
-  function deleteCookLog(cookLogId: string) {
-    if (!mutationEnabled) return;
-    zero.mutate(
-      mutators.recipes.deleteCookLog({ householdId, recipeId, cookLogId }),
     );
   }
 
@@ -207,6 +190,7 @@ export function RecipeDetail({
       </Collapsible>
 
       <Collapsible
+        className="min-w-0"
         title={
           <span className="flex items-center gap-2">
             <History aria-hidden="true" className="size-5" />
@@ -214,113 +198,26 @@ export function RecipeDetail({
           </span>
         }
       >
-        <div className="space-y-4">
+        <div className="min-w-0">
           <AddRecipeCookLogForm householdId={householdId} recipeId={recipeId} />
           {recipe.cookLogs.length === 0 ? (
-            <p className="text-sm text-muted">
+            <p className="border-t border-border py-2 text-sm text-muted">
               This recipe has not been cooked yet.
             </p>
           ) : (
-            <ul>
-              {recipe.cookLogs.map((cookLog) => {
-                const cookedAt = new Date(cookLog.cookedAt);
-                const cookedAtLabel = dateFormatter.format(cookedAt);
-                const images = visibleImages.filter(
-                  (image) => image.cookLogId === cookLog.id,
-                );
-                const editingComment = editingCookLogCommentId === cookLog.id;
-
-                return (
-                  <li key={cookLog.id} className="py-2">
-                    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
-                      <time
-                        dateTime={cookedAt.toISOString()}
-                        className="text-sm font-medium"
-                      >
-                        {cookedAtLabel}
-                      </time>
-                      <div className="min-w-0">
-                        {cookLog.comment !== null || editingComment ? (
-                          <RecipeCookLogCommentInput
-                            cookLogId={cookLog.id}
-                            currentComment={cookLog.comment}
-                            focusOnMount={
-                              editingComment && cookLog.comment === null
-                            }
-                            householdId={householdId}
-                            recipeId={recipeId}
-                            onBlur={() => setEditingCookLogCommentId(undefined)}
-                            onFocus={() =>
-                              setEditingCookLogCommentId(cookLog.id)
-                            }
-                          />
-                        ) : null}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {cookLog.comment === null && !editingComment ? (
-                          <IconButton
-                            type="button"
-                            aria-label={`Add comment to cooking log from ${cookedAtLabel}`}
-                            className="size-7!"
-                            disabled={!mutationEnabled}
-                            onClick={() =>
-                              setEditingCookLogCommentId(cookLog.id)
-                            }
-                          >
-                            <MessageSquare
-                              aria-hidden="true"
-                              className="size-4"
-                            />
-                          </IconButton>
-                        ) : null}
-                        <RecipeImageUploadForm
-                          accessToken={accessToken}
-                          appearance="subtle"
-                          cookLogId={cookLog.id}
-                          householdId={householdId}
-                          recipeId={recipeId}
-                          position={nextImagePosition}
-                          onSessionExpired={onSessionExpired}
-                        />
-                        <ConfirmationPopover
-                          title="Delete cooking log?"
-                          description="Its pictures will remain in the recipe gallery."
-                          trigger={
-                            <IconButton
-                              aria-label="Delete cooking log"
-                              className="size-7!"
-                              disabled={!mutationEnabled}
-                            >
-                              <Trash2 aria-hidden="true" className="size-4" />
-                            </IconButton>
-                          }
-                          onConfirm={() => deleteCookLog(cookLog.id)}
-                        />
-                      </div>
-                    </div>
-                    {images.length > 0 ? (
-                      <ul className="flex min-w-0 gap-2 overflow-x-auto">
-                        {images.map((image) => (
-                          <RecipeImageThumbnail
-                            key={image.id}
-                            accessToken={accessToken}
-                            householdId={householdId}
-                            recipeId={recipeId}
-                            image={image}
-                            className="size-12 shrink-0"
-                            onSessionExpired={onSessionExpired}
-                            onOpen={(image) => {
-                              setSelectedCookLogId(cookLog.id);
-                              setSelectedImage(image);
-                            }}
-                          />
-                        ))}
-                      </ul>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ul>
+            <RecipeCookingHistoryList
+              accessToken={accessToken}
+              cookLogs={recipe.cookLogs}
+              householdId={householdId}
+              images={visibleImages}
+              nextImagePosition={nextImagePosition}
+              recipeId={recipeId}
+              onOpenImage={(image, cookLogIds) => {
+                setSelectedCookLogIds(cookLogIds);
+                setSelectedImage(image);
+              }}
+              onSessionExpired={onSessionExpired}
+            />
           )}
         </div>
       </Collapsible>

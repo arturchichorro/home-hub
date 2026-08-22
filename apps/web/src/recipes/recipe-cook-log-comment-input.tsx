@@ -1,6 +1,6 @@
 import { cleanRecipeCookLogComment } from "@home-hub/shared/normalization";
 import { mutators } from "@home-hub/shared/zero/mutators";
-import { ErrorPopover, Textarea } from "@home-hub/ui-web";
+import { ErrorPopover, Input } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { useEffect, useRef } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
@@ -27,7 +27,7 @@ export function RecipeCookLogCommentInput({
 }: RecipeCookLogCommentInputProps) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const editor = useDebouncedTextEditor({
     currentValue: currentComment ?? "",
     failureError: "The cooking log comment could not be saved.",
@@ -51,23 +51,22 @@ export function RecipeCookLogCommentInput({
   });
 
   useEffect(() => {
-    if (focusOnMount) textareaRef.current?.focus();
+    if (focusOnMount) inputRef.current?.focus();
   }, [focusOnMount]);
 
   return (
     <>
-      <Textarea
-        ref={textareaRef}
+      <Input
+        ref={inputRef}
         appearance="seamless"
         aria-label="Cooking log comment"
         aria-busy={editor.isSaving || undefined}
         aria-invalid={editor.error ? true : undefined}
         aria-errormessage={editor.error ? editor.errorId : undefined}
-        className="min-h-7! py-1 text-sm text-muted"
+        className="h-7! w-full py-1 text-sm text-muted"
         disabled={!mutationEnabled}
         maxLength={1_000}
         placeholder="Comment"
-        rows={1}
         value={editor.value}
         onBlur={() => {
           editor.handleBlur();
@@ -75,10 +74,10 @@ export function RecipeCookLogCommentInput({
         }}
         onChange={(event) => editor.changeValue(event.target.value)}
         onFocus={onFocus}
-        onKeyDown={(event) => editor.handleKeyDown(event, false)}
+        onKeyDown={(event) => editor.handleKeyDown(event, true)}
       />
       <ErrorPopover
-        anchor={textareaRef}
+        anchor={inputRef}
         id={editor.errorId}
         open={editor.error !== undefined}
         onDismiss={editor.dismissError}
