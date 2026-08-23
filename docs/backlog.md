@@ -38,3 +38,4 @@ together before implementation begins.
 ## Ideia
 
 - [ ] Open a part of the app to the public with limited operations (like a no log in public recipes page) and see what happens
+- [ ] Open the recipes part to the people in the house (Germoir), require no log in
