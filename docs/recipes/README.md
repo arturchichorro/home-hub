@@ -48,11 +48,13 @@ form controls.
 
 ### Images
 
-The gallery stays on one horizontally scrolling row and reveals part of the
-next image when more than three images are available. A small plus-only upload
-control overlays its lower-right edge. Drag handles reorder confirmed images
-with pointer, touch, or keyboard input; the first image is the recipe-card
-cover. Images crop only in cards and thumbnails.
+The gallery stays on one horizontally scrolling row and extends through the
+page's right padding while scrolling. Matching trailing space lets the final
+image settle back inside the normal page inset at the end of the strip. The row
+reveals part of the next image when additional pictures are available. An Add
+picture row follows the gallery. Drag handles reorder confirmed images with
+pointer, touch, or keyboard input; the first image is the recipe-card cover.
+Images crop only in cards and thumbnails.
 
 Every thumbnail opens the same bare modal viewer. The viewer preserves the
 stored aspect ratio and shows only close, previous, and next controls. Previous

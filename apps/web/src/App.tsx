@@ -26,7 +26,7 @@ function App({
       />
 
       <div className="min-w-0 lg:col-start-2 lg:row-start-1">
-        <main className="mx-auto max-w-6xl px-4 pt-6 pb-8 sm:px-6 lg:px-8">
+        <main className="w-full px-4 pt-6 pb-8 sm:px-6 lg:px-8">
           {children}
         </main>
       </div>

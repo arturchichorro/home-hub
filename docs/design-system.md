@@ -450,9 +450,8 @@ intermediate widths should flow naturally.
 ### Application shell
 
 The application canvas fills the viewport. From `lg`, a 17rem sidebar remains
-fixed at the left edge and module content fills the remaining width, centered
-at a maximum width of 72rem. Use 16px inline page padding by default, 24px from
-`sm`, and 32px from `lg`.
+fixed at the left edge and module content fills all remaining width. Use 16px
+inline page padding by default, 24px from `sm`, and 32px from `lg`.
 
 The desktop sidebar shows the Home Hub wordmark and full connection state at
 the top. Every household is a default-open disclosure containing its enabled
