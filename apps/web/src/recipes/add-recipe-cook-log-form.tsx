@@ -9,6 +9,13 @@ type AddRecipeCookLogFormProps = {
   recipeId: string;
 };
 
+function toLocalDateValue(date: Date): string {
+  const localTime = new Date(
+    date.getTime() - date.getTimezoneOffset() * 60_000,
+  );
+  return localTime.toISOString().slice(0, 10);
+}
+
 export function AddRecipeCookLogForm({
   householdId,
   recipeId,
@@ -18,6 +25,7 @@ export function AddRecipeCookLogForm({
   const dateInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
+  const today = toLocalDateValue(new Date());
 
   function openDatePicker() {
     const input = dateInputRef.current;
@@ -36,6 +44,10 @@ export function AddRecipeCookLogForm({
     if (!selectedDate || saving || !mutationEnabled) return;
 
     setError(undefined);
+    if (selectedDate > today) {
+      setError("Cooking date cannot be in the future.");
+      return;
+    }
     const cookedAtTimestamp = new Date(`${selectedDate}T00:00:00`).getTime();
     if (!Number.isFinite(cookedAtTimestamp)) {
       setError("Choose a valid cooking date.");
@@ -75,6 +87,7 @@ export function AddRecipeCookLogForm({
         className="sr-only"
         type="date"
         aria-label="Cooking date"
+        max={today}
         tabIndex={-1}
         onChange={(event) => void addCookLog(event)}
       />
