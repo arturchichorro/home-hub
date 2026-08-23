@@ -5,6 +5,7 @@ import {
   CookingPot,
   ErrorPopover,
   History,
+  Images,
   InlineAlert,
   Input,
   Textarea,
@@ -150,24 +151,35 @@ export function RecipeDetail({
         placeholder="Add a description…"
         rows={1}
       />
-      <RecipeImageGallery
-        accessToken={accessToken}
-        householdId={householdId}
-        recipeId={recipeId}
-        images={visibleImages}
-        onSessionExpired={onSessionExpired}
-        onOpen={openGalleryImage}
-        onReorder={reorderImages}
-        addControl={
+      <section className="min-w-0">
+        <div className="flex items-center gap-2">
+          <h2 className="flex items-center gap-2 py-3 font-semibold">
+            <Images aria-hidden="true" className="size-5" />
+            Pictures
+          </h2>
           <RecipeImageUploadForm
             accessToken={accessToken}
+            appearance="subtle"
             householdId={householdId}
             recipeId={recipeId}
             position={nextImagePosition}
             onSessionExpired={onSessionExpired}
           />
-        }
-      />
+        </div>
+        {visibleImages.length > 0 ? (
+          <div className="pt-1 pb-4">
+            <RecipeImageGallery
+              accessToken={accessToken}
+              householdId={householdId}
+              recipeId={recipeId}
+              images={visibleImages}
+              onSessionExpired={onSessionExpired}
+              onOpen={openGalleryImage}
+              onReorder={reorderImages}
+            />
+          </div>
+        ) : null}
+      </section>
       <ErrorPopover {...editor.errorPopoverProps}>{editor.error}</ErrorPopover>
 
       <section>

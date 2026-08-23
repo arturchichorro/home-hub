@@ -13,6 +13,7 @@ export {
   History,
   House,
   ImagePlus,
+  Images,
   LayoutGrid,
   MessageSquare,
   Plus,

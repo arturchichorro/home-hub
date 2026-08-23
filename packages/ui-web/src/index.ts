@@ -59,6 +59,7 @@ export {
   History,
   House,
   ImagePlus,
+  Images,
   LayoutGrid,
   type LucideIcon,
   type LucideProps,

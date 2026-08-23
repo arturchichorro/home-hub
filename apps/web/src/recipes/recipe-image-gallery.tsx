@@ -18,7 +18,7 @@ import {
   Trash2,
   X,
 } from "@home-hub/ui-web";
-import type { KeyboardEvent, ReactNode, Ref } from "react";
+import type { KeyboardEvent, Ref } from "react";
 import { getAdjacentRecipeImage } from "./recipe-image-navigation";
 import { useRecipeImageUrl } from "./use-recipe-image-url";
 
@@ -119,7 +119,6 @@ export function RecipeImageThumbnail({
 }
 
 type RecipeImageGalleryProps = RecipeImageContext & {
-  addControl: ReactNode;
   images: readonly RecipeImage[];
   onOpen: (image: RecipeImage) => void;
   onReorder: (orderedImageIds: string[]) => void;
@@ -156,7 +155,6 @@ export function RecipeImageGallery({
   accessToken,
   householdId,
   recipeId,
-  addControl,
   images,
   onSessionExpired,
   onOpen,
@@ -166,7 +164,7 @@ export function RecipeImageGallery({
     images.length > 3 ? "auto-cols-[30%]" : "auto-cols-[calc((100%-1.5rem)/3)]";
 
   return (
-    <div className="relative min-h-28">
+    <div className="min-w-0">
       <DragDropProvider
         sensors={recipeImageSensors}
         onDragEnd={(event) => {
@@ -199,7 +197,6 @@ export function RecipeImageGallery({
           ))}
         </ul>
       </DragDropProvider>
-      <div className="absolute right-2 bottom-2">{addControl}</div>
     </div>
   );
 }
