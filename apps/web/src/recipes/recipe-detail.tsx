@@ -179,9 +179,6 @@ export function RecipeDetail({
           </span>
         }
       >
-        {recipe.ingredients.length === 0 ? (
-          <p className="text-sm text-muted">There are no ingredients yet.</p>
-        ) : null}
         <RecipeIngredientList
           householdId={householdId}
           recipeId={recipeId}
@@ -200,11 +197,7 @@ export function RecipeDetail({
       >
         <div className="min-w-0">
           <AddRecipeCookLogForm householdId={householdId} recipeId={recipeId} />
-          {recipe.cookLogs.length === 0 ? (
-            <p className="border-t border-border py-2 text-sm text-muted">
-              This recipe has not been cooked yet.
-            </p>
-          ) : (
+          {recipe.cookLogs.length > 0 && (
             <RecipeCookingHistoryList
               accessToken={accessToken}
               cookLogs={recipe.cookLogs}
