@@ -459,7 +459,7 @@ the top. Every household is a default-open disclosure containing its enabled
 modules, with Household settings always available. Join and Create household
 actions sit above the current-user menu at the bottom.
 
-Below `lg`, the sidebar is hidden inside a Base UI Drawer. A sticky icon button
+Below `lg`, the sidebar is hidden inside a Base UI Drawer. A floating icon button
 and an edge swipe open it; swipe dismissal, backdrop dismissal, Escape, focus
 management, and modal semantics follow the Drawer primitive. Inside the mobile
 drawer, the connection label is visually hidden so only its colored dot appears

@@ -295,15 +295,21 @@ export function AppSidebar({
         onOpenChange={setMobileOpen}
         swipeDirection="left"
       >
-        <div className="sticky top-0 z-40 flex h-14 items-center border-b border-border bg-canvas px-3 lg:hidden">
-          <Drawer.Trigger
-            render={
-              <IconButton aria-label="Open navigation">
-                <PanelLeft aria-hidden="true" className="size-5" />
-              </IconButton>
-            }
-          />
-        </div>
+        <Drawer.Trigger
+          render={
+            <IconButton
+              aria-label="Open navigation"
+              variant="secondary"
+              className="fixed! z-40 border border-border bg-surface shadow-raised lg:hidden"
+              style={{
+                bottom: "max(0.75rem, env(safe-area-inset-bottom))",
+                left: "max(0.75rem, env(safe-area-inset-left))",
+              }}
+            >
+              <PanelLeft aria-hidden="true" className="size-5" />
+            </IconButton>
+          }
+        />
         <Drawer.SwipeArea className="fixed inset-y-0 left-0 z-30 w-5 lg:hidden" />
         <Drawer.Portal>
           <Drawer.Backdrop className="fixed inset-0 z-50 bg-black/50 opacity-100 transition-opacity duration-[var(--motion-duration-normal)] data-ending-style:opacity-0 data-starting-style:opacity-0 lg:hidden" />
