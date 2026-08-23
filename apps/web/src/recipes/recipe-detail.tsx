@@ -2,7 +2,6 @@ import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import type { RecipeImage } from "@home-hub/shared/zero/schema";
 import {
-  Collapsible,
   CookingPot,
   ErrorPopover,
   History,
@@ -171,31 +170,26 @@ export function RecipeDetail({
       />
       <ErrorPopover {...editor.errorPopoverProps}>{editor.error}</ErrorPopover>
 
-      <Collapsible
-        title={
-          <span className="flex items-center gap-2">
-            <CookingPot aria-hidden="true" className="size-5" />
-            Ingredients
-          </span>
-        }
-      >
-        <RecipeIngredientList
-          householdId={householdId}
-          recipeId={recipeId}
-          ingredients={recipe.ingredients}
-        />
-      </Collapsible>
+      <section>
+        <h2 className="flex items-center gap-2 py-3 font-semibold">
+          <CookingPot aria-hidden="true" className="size-5" />
+          Ingredients
+        </h2>
+        <div className="pt-1 pb-4">
+          <RecipeIngredientList
+            householdId={householdId}
+            recipeId={recipeId}
+            ingredients={recipe.ingredients}
+          />
+        </div>
+      </section>
 
-      <Collapsible
-        className="min-w-0"
-        title={
-          <span className="flex items-center gap-2">
-            <History aria-hidden="true" className="size-5" />
-            Cooking history
-          </span>
-        }
-      >
-        <div className="min-w-0">
+      <section className="min-w-0">
+        <h2 className="flex items-center gap-2 py-3 font-semibold">
+          <History aria-hidden="true" className="size-5" />
+          Cooking history
+        </h2>
+        <div className="min-w-0 pt-1 pb-4">
           <AddRecipeCookLogForm householdId={householdId} recipeId={recipeId} />
           {recipe.cookLogs.length > 0 && (
             <RecipeCookingHistoryList
@@ -213,7 +207,7 @@ export function RecipeDetail({
             />
           )}
         </div>
-      </Collapsible>
+      </section>
 
       <RecipeImageViewer
         accessToken={accessToken}
