@@ -452,6 +452,8 @@ intermediate widths should flow naturally.
 The application canvas fills the viewport. From `lg`, a 17rem sidebar remains
 fixed at the left edge and module content fills all remaining width. Use 16px
 inline page padding by default, 24px from `sm`, and 32px from `lg`.
+The document boundary uses the canvas color and suppresses vertical overscroll,
+so scrolling cannot reveal a differently colored area above or below the app.
 
 The desktop sidebar shows the Home Hub wordmark and full connection state at
 the top. Every household is a default-open disclosure containing its enabled

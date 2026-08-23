@@ -2,3 +2,15 @@
 @import "@home-hub/ui-web/tokens.css";
 
 @source "../../../packages/ui-web/src";
+
+html,
+body {
+  min-height: 100%;
+  overscroll-behavior-y: none;
+  background: var(--color-canvas);
+}
+
+#root {
+  min-height: 100svh;
+  background: var(--color-canvas);
+}
