@@ -980,6 +980,28 @@ describe("recipes.addCookLog mutator", () => {
     expect(mutators.recipes.addCookLog.mutatorName).toBe("recipes.addCookLog");
   });
 
+  it("rejects a cooking date in the future", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(optimisticUpdatedAt);
+    const { cookLogInsert, queries, transaction } = createFakeTransaction({
+      location: "client",
+      results: [],
+    });
+
+    await expect(
+      mutators.recipes.addCookLog.fn({
+        args: {
+          ...addRecipeCookLogArgs,
+          cookedAt: optimisticUpdatedAt + 1,
+        },
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Cooking date cannot be in the future");
+
+    expect(queries).toHaveLength(0);
+    expect(cookLogInsert).not.toHaveBeenCalled();
+  });
+
   it("optimistically records cooking for a cached household recipe", async () => {
     const { cookLogInsert, queries, transaction } = createFakeTransaction({
       location: "client",

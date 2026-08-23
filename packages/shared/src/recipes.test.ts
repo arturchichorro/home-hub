@@ -378,6 +378,15 @@ describe("createRecipeCookLogMutationSchema", () => {
     ).toBe(false);
   });
 
+  it("rejects a cooking date in the future", () => {
+    expect(
+      createRecipeCookLogMutationSchema.safeParse({
+        ...cookLogInput,
+        cookedAt: Date.now() + 60_000,
+      }).success,
+    ).toBe(false);
+  });
+
   it.each([
     ["cookedAt", -1],
     ["cookedAt", 1.5],

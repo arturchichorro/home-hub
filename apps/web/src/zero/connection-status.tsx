@@ -22,7 +22,13 @@ function getConnectionPresentation(connectionState: ConnectionState): {
   }
 }
 
-export function ZeroConnectionStatus() {
+type ZeroConnectionStatusProps = {
+  compact?: boolean;
+};
+
+export function ZeroConnectionStatus({
+  compact = false,
+}: ZeroConnectionStatusProps) {
   const connectionState = useConnectionState();
   const presentation = getConnectionPresentation(connectionState);
 
@@ -30,7 +36,8 @@ export function ZeroConnectionStatus() {
     <StatusIndicator
       live
       label={presentation.label}
-      labelClassName="sr-only sm:not-sr-only"
+      {...(compact ? { labelClassName: "sr-only" } : {})}
+      size="compact"
       variant={presentation.variant}
     />
   );

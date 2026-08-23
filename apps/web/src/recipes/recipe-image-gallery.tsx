@@ -18,7 +18,7 @@ import {
   Trash2,
   X,
 } from "@home-hub/ui-web";
-import type { KeyboardEvent, ReactNode, Ref } from "react";
+import type { KeyboardEvent, Ref } from "react";
 import { getAdjacentRecipeImage } from "./recipe-image-navigation";
 import { useRecipeImageUrl } from "./use-recipe-image-url";
 
@@ -119,7 +119,6 @@ export function RecipeImageThumbnail({
 }
 
 type RecipeImageGalleryProps = RecipeImageContext & {
-  addControl: ReactNode;
   images: readonly RecipeImage[];
   onOpen: (image: RecipeImage) => void;
   onReorder: (orderedImageIds: string[]) => void;
@@ -156,17 +155,13 @@ export function RecipeImageGallery({
   accessToken,
   householdId,
   recipeId,
-  addControl,
   images,
   onSessionExpired,
   onOpen,
   onReorder,
 }: RecipeImageGalleryProps) {
-  const columnSize =
-    images.length > 3 ? "auto-cols-[30%]" : "auto-cols-[calc((100%-1.5rem)/3)]";
-
   return (
-    <div className="relative min-h-28">
+    <div className="min-w-0">
       <DragDropProvider
         sensors={recipeImageSensors}
         onDragEnd={(event) => {
@@ -181,9 +176,7 @@ export function RecipeImageGallery({
           onReorder(reordered.map((image) => image.id));
         }}
       >
-        <ul
-          className={`grid ${columnSize} grid-flow-col gap-3 overflow-x-auto`}
-        >
+        <ul className="-mr-4 grid auto-cols-[20%] grid-flow-col gap-3 overflow-x-auto pr-4 sm:-mr-6 sm:pr-6 lg:-mr-8 lg:pr-8">
           {images.map((image, index) => (
             <SortableRecipeImageThumbnail
               key={image.id}
@@ -199,7 +192,6 @@ export function RecipeImageGallery({
           ))}
         </ul>
       </DragDropProvider>
-      <div className="absolute right-2 bottom-2">{addControl}</div>
     </div>
   );
 }

@@ -307,6 +307,10 @@ const addRecipeCookLog = defineHomeHubMutator(
       moduleKey: "recipes",
     });
 
+    if (args.cookedAt > Date.now()) {
+      throw new Error("Recipe cooking log date cannot be in the future");
+    }
+
     const recipe = await tx.run(
       zql.recipes
         .where("id", args.recipeId)

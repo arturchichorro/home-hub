@@ -2,10 +2,10 @@ import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import type { RecipeImage } from "@home-hub/shared/zero/schema";
 import {
-  Collapsible,
   CookingPot,
   ErrorPopover,
   History,
+  Images,
   InlineAlert,
   Input,
   Textarea,
@@ -151,60 +151,57 @@ export function RecipeDetail({
         placeholder="Add a description…"
         rows={1}
       />
-      <RecipeImageGallery
-        accessToken={accessToken}
-        householdId={householdId}
-        recipeId={recipeId}
-        images={visibleImages}
-        onSessionExpired={onSessionExpired}
-        onOpen={openGalleryImage}
-        onReorder={reorderImages}
-        addControl={
-          <RecipeImageUploadForm
-            accessToken={accessToken}
-            householdId={householdId}
-            recipeId={recipeId}
-            position={nextImagePosition}
-            onSessionExpired={onSessionExpired}
-          />
-        }
-      />
-      <ErrorPopover {...editor.errorPopoverProps}>{editor.error}</ErrorPopover>
-
-      <Collapsible
-        title={
-          <span className="flex items-center gap-2">
-            <CookingPot aria-hidden="true" className="size-5" />
-            Ingredients
-          </span>
-        }
-      >
-        {recipe.ingredients.length === 0 ? (
-          <p className="text-sm text-muted">There are no ingredients yet.</p>
+      <section className="min-w-0">
+        <h2 className="flex items-center gap-2 py-3 font-semibold">
+          <Images aria-hidden="true" className="size-5" />
+          Pictures
+        </h2>
+        {visibleImages.length > 0 ? (
+          <div className="pt-1">
+            <RecipeImageGallery
+              accessToken={accessToken}
+              householdId={householdId}
+              recipeId={recipeId}
+              images={visibleImages}
+              onSessionExpired={onSessionExpired}
+              onOpen={openGalleryImage}
+              onReorder={reorderImages}
+            />
+          </div>
         ) : null}
-        <RecipeIngredientList
+        <RecipeImageUploadForm
+          accessToken={accessToken}
+          appearance="row"
           householdId={householdId}
           recipeId={recipeId}
-          ingredients={recipe.ingredients}
+          position={nextImagePosition}
+          onSessionExpired={onSessionExpired}
         />
-      </Collapsible>
+      </section>
+      <ErrorPopover {...editor.errorPopoverProps}>{editor.error}</ErrorPopover>
 
-      <Collapsible
-        className="min-w-0"
-        title={
-          <span className="flex items-center gap-2">
-            <History aria-hidden="true" className="size-5" />
-            Cooking history
-          </span>
-        }
-      >
-        <div className="min-w-0">
+      <section>
+        <h2 className="flex items-center gap-2 py-3 font-semibold">
+          <CookingPot aria-hidden="true" className="size-5" />
+          Ingredients
+        </h2>
+        <div className="pt-1 pb-4">
+          <RecipeIngredientList
+            householdId={householdId}
+            recipeId={recipeId}
+            ingredients={recipe.ingredients}
+          />
+        </div>
+      </section>
+
+      <section className="min-w-0">
+        <h2 className="flex items-center gap-2 py-3 font-semibold">
+          <History aria-hidden="true" className="size-5" />
+          Cooking history
+        </h2>
+        <div className="min-w-0 pt-1 pb-4">
           <AddRecipeCookLogForm householdId={householdId} recipeId={recipeId} />
-          {recipe.cookLogs.length === 0 ? (
-            <p className="border-t border-border py-2 text-sm text-muted">
-              This recipe has not been cooked yet.
-            </p>
-          ) : (
+          {recipe.cookLogs.length > 0 && (
             <RecipeCookingHistoryList
               accessToken={accessToken}
               cookLogs={recipe.cookLogs}
@@ -220,7 +217,7 @@ export function RecipeDetail({
             />
           )}
         </div>
-      </Collapsible>
+      </section>
 
       <RecipeImageViewer
         accessToken={accessToken}

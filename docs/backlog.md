@@ -14,7 +14,6 @@ together before implementation begins.
 - [ ] Add recipe ratings table, could be used to say "overall 5*", "ease to cook 3*", etc; could add to the ui
 - [ ] Add order to recipes (to order recipe list)
 - [ ] While typing (e.g. recipe description), input keeps being trimmed (on debounce) which removes spaces the user just typed
-- [ ] Move app header to a sidebar instead, similar to linear
 - [ ] Open last opened household on app start (through local storage or something)
 - [ ] Add recipe ingredients to Shopping
 - [ ] Publish safe member profiles through Zero to prevent interface flashing
@@ -22,6 +21,7 @@ together before implementation begins.
 - [ ] Add image pipeline to convert images to webp for displaying in the app (maybe a proper cdn?) - I want to keep the original image too though (maybe enableable for certain users?)
 - [ ] Add user comments to cook logs (recipes)
 - [ ] Check and fix flashing of pictures (maybe increase signing duration?)
+- [ ] After having multiple lists, add the possibility to assign people to a list item (e.g. todo list, go to commune, Artur)
 
 ## Future modules and capabilities
 

@@ -449,30 +449,30 @@ intermediate widths should flow naturally.
 
 ### Application shell
 
-The application canvas fills the viewport. The top bar may span the available
-width, while primary module content is centered at a maximum width of 48rem.
-Use 16px inline page padding by default, 24px from `sm`, and 32px from `lg`.
+The application canvas fills the viewport. From `lg`, a 17rem sidebar remains
+fixed at the left edge and module content fills all remaining width. Use 16px
+inline page padding by default, 24px from `sm`, and 32px from `lg`.
+The document boundary uses the canvas color and suppresses vertical overscroll,
+so scrolling cannot reveal a differently colored area above or below the app.
 
-The top bar is sticky and never wraps. At `sm` and above, it presents the
-wordmark, content-sized household selector, and module menu on the left, with
-connection state and account menu on the right. Below `sm`, the same single row
-uses the compact `HH` wordmark, an icon-only household trigger, the module
-trigger, connection dot, and a width-limited account menu. The connection label
-is visually hidden on the narrow layout but remains its accessible name and
-live-region content.
+The desktop sidebar shows the Home Hub wordmark and full connection state at
+the top. Every household is a default-open disclosure containing its enabled
+modules, with Household settings always available. Join and Create household
+actions sit above the current-user menu at the bottom.
 
-Household and account surfaces are anchored menus or popovers on larger
-screens. On narrow screens they may use a modal sheet with the same options and
-ordering. Start with whichever Base UI primitive yields the simplest complete,
-keyboard-accessible behavior; visual transformation between popover and sheet
-is a later refinement if it complicates the working version.
+Below `lg`, the sidebar is hidden inside a Base UI Drawer. A floating icon button
+and an edge swipe open it; swipe dismissal, backdrop dismissal, Escape, focus
+management, and modal semantics follow the Drawer primitive. Inside the mobile
+drawer, the connection label is visually hidden so only its colored dot appears
+beside Home Hub, while the full label remains its accessible name and live-region
+content.
 
 ### Module navigation
 
-Module navigation uses an icon trigger beside the household selector. Its menu
-contains enabled household modules with icons and text labels, indicates the
-current destination, and places Household last. Household remains available
-regardless of module settings.
+Module navigation is grouped by household in the sidebar. Each default-open
+household disclosure contains enabled modules with icons and text labels,
+indicates the current destination, and places Settings last. Settings remains
+available regardless of module settings.
 
 ### Content and forms
 
@@ -513,27 +513,19 @@ and session-restoration states.
 
 ### Authenticated shell
 
-The persistent top bar contains:
+The persistent desktop sidebar contains:
 
-- the Home Hub wordmark, shortened visually to `HH` below `sm`;
-- the selected-household control;
-- a module-menu control beside the household control;
-- a connection indicator using text and color, with its text visually hidden
-  but still accessible below `sm`;
-- the current username and an account menu, initially containing logout.
+- the Home Hub wordmark and connection indicator;
+- every household as a default-open collapsible;
+- enabled module links below each household, plus Settings;
+- icon-labelled Join household and Create household actions;
+- the current username and an account menu containing logout.
 
-The household control opens a household-selection surface. It lists current
-memberships and ends with actions to join a household using an invite link or
-code and to create a household. The initial product retains unaddressed opaque
-invites, so it does not show an incoming-invitation inbox. Outgoing pending
-invites remain visible to the owner in household settings.
-
-The module menu shows enabled household modules as icon-and-label choices.
-Household settings is always present and always last, and the current route is
-represented as the selected choice.
-
-On narrow screens, top-bar menus may become modal sheets or drawers while
-preserving the same information architecture.
+The initial product retains unaddressed opaque invites, so it does not show an
+incoming-invitation inbox. Outgoing pending invites remain visible to the owner
+in household settings. Below `lg`, the same navigation is hidden in a Drawer;
+only its trigger remains in the page chrome. The mobile connection indicator
+shows only the dot beside Home Hub while preserving its accessible label.
 
 ### Connection state
 
