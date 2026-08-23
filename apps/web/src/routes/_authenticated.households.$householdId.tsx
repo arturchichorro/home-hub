@@ -17,13 +17,14 @@ export const Route = createFileRoute("/_authenticated/households/$householdId")(
 
 function HouseholdRoute() {
   const { householdId } = Route.useParams();
-  const { onSessionExpired, session } = Route.useRouteContext();
+  const { onLoggedOut, onSessionExpired, session } = Route.useRouteContext();
 
   return (
     <App
       accessToken={session.accessToken}
       householdId={householdId}
       username={session.user.username}
+      onLoggedOut={onLoggedOut}
       onSessionExpired={onSessionExpired}
     >
       <HouseholdWorkspace householdId={householdId} />

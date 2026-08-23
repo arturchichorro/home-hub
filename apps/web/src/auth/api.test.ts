@@ -4,6 +4,7 @@ import {
   login,
   logout,
   refreshAccessToken,
+  refreshSession,
   restoreSession,
   signup,
 } from "./api";
@@ -67,6 +68,37 @@ describe("refreshAccessToken", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("refreshSession", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("replaces an expired access token while preserving the user", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ accessToken: "replacement-token" }),
+    );
+
+    await expect(
+      refreshSession({ user, accessToken: "expired-token" }),
+    ).resolves.toEqual({ user, accessToken: "replacement-token" });
+  });
+
+  it("returns null when the refresh session is no longer valid", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ error: "Invalid refresh token" }, { status: 401 }),
+    );
+
+    await expect(
+      refreshSession({ user, accessToken: "expired-token" }),
+    ).resolves.toBeNull();
   });
 });
 

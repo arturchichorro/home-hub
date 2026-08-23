@@ -1,7 +1,7 @@
 import type { Zero } from "@rocicorp/zero";
 import { RouterProvider } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Session } from "./auth/api";
+import { refreshSession, type Session } from "./auth/api";
 import { createAppRouter } from "./router";
 
 type RootProps = {
@@ -22,9 +22,26 @@ export function Root({ initialSession }: RootProps) {
         : currentSession,
     );
   }, []);
-  const onSessionExpired = useCallback(() => {
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+  const onLoggedOut = useCallback(() => {
     setZero(undefined);
     setSession(null);
+  }, []);
+  const onSessionExpired = useCallback(() => {
+    const expiredSession = sessionRef.current;
+    if (!expiredSession) return;
+
+    void refreshSession(expiredSession)
+      .then((refreshedSession) => {
+        if (sessionRef.current !== expiredSession) return;
+        if (!refreshedSession) setZero(undefined);
+        setSession(refreshedSession);
+      })
+      .catch(() => {
+        // Keep the current session during transient refresh failures. Zero and
+        // subsequent authenticated requests will retry the refresh flow.
+      });
   }, []);
   const [router] = useState(() =>
     createAppRouter({
@@ -32,6 +49,7 @@ export function Root({ initialSession }: RootProps) {
       zero: undefined,
       onAuthenticated,
       onAccessTokenRefreshed,
+      onLoggedOut,
       onSessionExpired,
       onZeroReady: setZero,
     }),
@@ -58,6 +76,7 @@ export function Root({ initialSession }: RootProps) {
         zero,
         onAuthenticated,
         onAccessTokenRefreshed,
+        onLoggedOut,
         onSessionExpired,
         onZeroReady: setZero,
       }}

@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthenticatedLayout() {
-  const { onAccessTokenRefreshed, onSessionExpired, onZeroReady, session } =
+  const { onAccessTokenRefreshed, onLoggedOut, onZeroReady, session } =
     Route.useRouteContext();
 
   return (
@@ -24,7 +24,7 @@ function AuthenticatedLayout() {
       userId={session.user.id}
       accessToken={session.accessToken}
       onAccessTokenRefreshed={onAccessTokenRefreshed}
-      onSessionExpired={onSessionExpired}
+      onSessionExpired={onLoggedOut}
       onReady={onZeroReady}
     >
       <Outlet />

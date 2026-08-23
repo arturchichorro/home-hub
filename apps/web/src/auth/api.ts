@@ -58,6 +58,16 @@ export function refreshAccessToken(): Promise<RefreshAccessTokenResult> {
   return activeRefreshRequest;
 }
 
+export async function refreshSession(
+  session: Session,
+): Promise<Session | null> {
+  const result = await refreshAccessToken();
+
+  return result.kind === "unauthorized"
+    ? null
+    : { ...session, accessToken: result.accessToken };
+}
+
 export async function restoreSession(): Promise<Session | null> {
   const refreshResult = await refreshAccessToken();
 

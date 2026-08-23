@@ -10,12 +10,13 @@ export const Route = createFileRoute("/_authenticated/")({
 });
 
 function HomeRoute() {
-  const { onSessionExpired, session } = Route.useRouteContext();
+  const { onLoggedOut, onSessionExpired, session } = Route.useRouteContext();
 
   return (
     <App
       accessToken={session.accessToken}
       username={session.user.username}
+      onLoggedOut={onLoggedOut}
       onSessionExpired={onSessionExpired}
     />
   );

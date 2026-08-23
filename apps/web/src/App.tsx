@@ -5,6 +5,7 @@ type AppProps = {
   accessToken: string;
   children?: ReactNode;
   householdId?: string;
+  onLoggedOut: () => void;
   onSessionExpired: () => void;
   username: string;
 };
@@ -13,6 +14,7 @@ function App({
   accessToken,
   children,
   householdId,
+  onLoggedOut,
   onSessionExpired,
   username,
 }: AppProps) {
@@ -22,6 +24,7 @@ function App({
         accessToken={accessToken}
         householdId={householdId}
         username={username}
+        onLoggedOut={onLoggedOut}
         onSessionExpired={onSessionExpired}
       />
 

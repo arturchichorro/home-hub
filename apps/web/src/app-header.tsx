@@ -7,6 +7,7 @@ import { ZeroConnectionStatus } from "./zero/connection-status";
 type AppHeaderProps = {
   accessToken: string;
   householdId?: string | undefined;
+  onLoggedOut: () => void;
   onSessionExpired: () => void;
   username: string;
 };
@@ -14,6 +15,7 @@ type AppHeaderProps = {
 export function AppHeader({
   accessToken,
   householdId,
+  onLoggedOut,
   onSessionExpired,
   username,
 }: AppHeaderProps) {
@@ -53,7 +55,7 @@ export function AppHeader({
         </div>
         <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-4">
           <ZeroConnectionStatus />
-          <AccountMenu username={username} onLoggedOut={onSessionExpired} />
+          <AccountMenu username={username} onLoggedOut={onLoggedOut} />
         </div>
       </div>
     </header>
