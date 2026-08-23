@@ -160,9 +160,6 @@ export function RecipeImageGallery({
   onOpen,
   onReorder,
 }: RecipeImageGalleryProps) {
-  const columnSize =
-    images.length > 3 ? "auto-cols-[30%]" : "auto-cols-[calc((100%-1.5rem)/3)]";
-
   return (
     <div className="min-w-0">
       <DragDropProvider
@@ -179,9 +176,7 @@ export function RecipeImageGallery({
           onReorder(reordered.map((image) => image.id));
         }}
       >
-        <ul
-          className={`grid ${columnSize} grid-flow-col gap-3 overflow-x-auto`}
-        >
+        <ul className="grid auto-cols-[30%] grid-flow-col gap-3 overflow-x-auto">
           {images.map((image, index) => (
             <SortableRecipeImageThumbnail
               key={image.id}
