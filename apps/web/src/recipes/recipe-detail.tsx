@@ -152,22 +152,12 @@ export function RecipeDetail({
         rows={1}
       />
       <section className="min-w-0">
-        <div className="flex items-center gap-2">
-          <h2 className="flex items-center gap-2 py-3 font-semibold">
-            <Images aria-hidden="true" className="size-5" />
-            Pictures
-          </h2>
-          <RecipeImageUploadForm
-            accessToken={accessToken}
-            appearance="subtle"
-            householdId={householdId}
-            recipeId={recipeId}
-            position={nextImagePosition}
-            onSessionExpired={onSessionExpired}
-          />
-        </div>
+        <h2 className="flex items-center gap-2 py-3 font-semibold">
+          <Images aria-hidden="true" className="size-5" />
+          Pictures
+        </h2>
         {visibleImages.length > 0 ? (
-          <div className="pt-1 pb-4">
+          <div className="pt-1">
             <RecipeImageGallery
               accessToken={accessToken}
               householdId={householdId}
@@ -179,6 +169,14 @@ export function RecipeDetail({
             />
           </div>
         ) : null}
+        <RecipeImageUploadForm
+          accessToken={accessToken}
+          appearance="row"
+          householdId={householdId}
+          recipeId={recipeId}
+          position={nextImagePosition}
+          onSessionExpired={onSessionExpired}
+        />
       </section>
       <ErrorPopover {...editor.errorPopoverProps}>{editor.error}</ErrorPopover>
 

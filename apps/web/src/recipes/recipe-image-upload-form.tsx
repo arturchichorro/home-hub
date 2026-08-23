@@ -2,7 +2,7 @@ import {
   createRecipeImageUploadRequestSchema,
   recipeImageContentTypeSchema,
 } from "@home-hub/shared/recipe-images";
-import { IconButton, ImagePlus } from "@home-hub/ui-web";
+import { Button, IconButton, ImagePlus, Plus } from "@home-hub/ui-web";
 import { type ChangeEvent, useRef, useState } from "react";
 import {
   confirmRecipeImageUpload,
@@ -13,7 +13,7 @@ import { readImageDimensions } from "./read-image-dimensions";
 
 type RecipeImageUploadFormProps = {
   accessToken: string;
-  appearance?: "primary" | "subtle";
+  appearance?: "primary" | "row" | "subtle";
   cookLogId?: string;
   householdId: string;
   recipeId: string;
@@ -99,7 +99,11 @@ export function RecipeImageUploadForm({
   }
 
   return (
-    <div className="flex flex-col items-end gap-2">
+    <div
+      className={
+        appearance === "row" ? undefined : "flex flex-col items-end gap-2"
+      }
+    >
       <input
         ref={fileInputRef}
         className="sr-only"
@@ -108,20 +112,41 @@ export function RecipeImageUploadForm({
         tabIndex={-1}
         onChange={(event) => void uploadImage(event)}
       />
-      <IconButton
-        type="button"
-        aria-label={cookLogId ? "Add image to cooking log" : "Add recipe image"}
-        aria-busy={busy || undefined}
-        busy={busy}
-        disabled={busy}
-        variant={appearance === "subtle" ? "ghost" : "primary"}
-        className={
-          appearance === "subtle" ? "size-6!" : "size-8! rounded-full shadow-md"
-        }
-        onClick={chooseImage}
-      >
-        <ImagePlus aria-hidden="true" className="size-4" />
-      </IconButton>
+      {appearance === "row" ? (
+        <div className="p-2.5">
+          <Button
+            type="button"
+            variant="ghost"
+            aria-busy={busy || undefined}
+            busy={busy}
+            disabled={busy}
+            className="h-7! px-1.5! ml-2 font-normal text-muted"
+            onClick={chooseImage}
+          >
+            <Plus aria-hidden="true" className="size-4" />
+            Add picture
+          </Button>
+        </div>
+      ) : (
+        <IconButton
+          type="button"
+          aria-label={
+            cookLogId ? "Add image to cooking log" : "Add recipe image"
+          }
+          aria-busy={busy || undefined}
+          busy={busy}
+          disabled={busy}
+          variant={appearance === "subtle" ? "ghost" : "primary"}
+          className={
+            appearance === "subtle"
+              ? "size-6!"
+              : "size-8! rounded-full shadow-md"
+          }
+          onClick={chooseImage}
+        >
+          <ImagePlus aria-hidden="true" className="size-4" />
+        </IconButton>
+      )}
     </div>
   );
 }
