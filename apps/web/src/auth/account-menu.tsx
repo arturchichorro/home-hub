@@ -11,10 +11,15 @@ import { logout } from "./api";
 
 type AccountMenuProps = {
   onLoggedOut: () => void;
+  triggerClassName?: string | undefined;
   username: string;
 };
 
-export function AccountMenu({ onLoggedOut, username }: AccountMenuProps) {
+export function AccountMenu({
+  onLoggedOut,
+  triggerClassName,
+  username,
+}: AccountMenuProps) {
   const [error, setError] = useState<string>();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -34,7 +39,11 @@ export function AccountMenu({ onLoggedOut, username }: AccountMenuProps) {
 
   return (
     <MenuRoot>
-      <MenuTrigger className="min-w-0 max-w-[30vw] px-3! sm:max-w-48 sm:px-4!">
+      <MenuTrigger
+        className={
+          triggerClassName ?? "min-w-0 max-w-[30vw] px-3! sm:max-w-48 sm:px-4!"
+        }
+      >
         <span className="truncate">{username}</span>
         <MenuChevron />
       </MenuTrigger>

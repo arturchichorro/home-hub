@@ -1,3 +1,4 @@
+export { Drawer } from "@base-ui/react/drawer";
 export {
   Button,
   type ButtonProps,
@@ -58,18 +59,22 @@ export {
   GripVertical,
   History,
   House,
+  HousePlus,
   ImagePlus,
   Images,
   LayoutGrid,
   type LucideIcon,
   type LucideProps,
   MessageSquare,
+  PanelLeft,
   Plus,
   RotateCcw,
   Scale,
+  Settings,
   ShoppingBasket,
   StickyNote,
   Trash2,
+  UserPlus,
   Users,
   X,
 } from "./icons";

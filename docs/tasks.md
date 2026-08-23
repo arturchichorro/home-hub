@@ -26,6 +26,15 @@ commit changes unless explicitly asked for that specific action. CI rehearses
 the committed migration history on a disposable database, and the production
 deployment applies tested forward migrations after an off-host backup.
 
+## Replace the authenticated header with a sidebar
+
+- [x] Build a persistent Linear-style desktop sidebar and give the selected module the remaining content area
+- [x] Show Home Hub and synchronization state at the top and the current-user menu at the bottom
+- [x] List every household as a default-open collapsible with its enabled modules and settings
+- [x] Add icon-labelled Join household and Create household actions near the bottom
+- [x] Use Base UI Drawer for a hidden mobile sidebar with button, edge-swipe opening, and swipe dismissal
+- [x] Verify navigation, responsive layout, loading, empty, active, keyboard, and accessible-name behavior
+
 ## Improve the Recipes interface
 
 - [x] Split the recipe library and recipe detail into `/recipes` and `/recipes/$recipeId` routes

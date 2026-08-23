@@ -142,7 +142,12 @@ Zero owns synchronized browser data, reactive queries, optimistic changes, recon
 
 Create one Zero client for the authenticated route tree and keep its non-authentication provider options referentially stable. Publish that client through TanStack Router context so route loaders can run the same named queries used by their screens. Route loaders warm Zero's cache; screen components remain reactive through `useQuery`, and Zero owns freshness and query deduplication.
 
-Household module navigation belongs to the route that owns it. The household index route chooses the first enabled module, and each optional module route redirects only when its completed settings query says that module is disabled. The persistent household layout renders navigation and its outlet but does not perform global fallback redirects.
+The authenticated application shell owns household and module navigation. It
+reactively lists every current membership and each household's enabled modules;
+Household settings remains available independently of optional module settings.
+The household index route chooses the first enabled module, and each optional
+module route redirects only when its completed settings query says that module
+is disabled. The shell does not perform global fallback redirects.
 
 There will be no PowerSync, TanStack DB, Redux persistence layer, or custom offline mutation queue.
 
