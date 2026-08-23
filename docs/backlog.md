@@ -17,6 +17,7 @@ together before implementation begins.
 - [ ] Open last opened household on app start (through local storage or something)
 - [ ] Add recipe ingredients to Shopping
 - [ ] Publish safe member profiles through Zero to prevent interface flashing
+- [ ] In any page of the app, we could display where we are (e.g. "Germoir 83 > Recipes > Carbonara" or "Germoir 83 > Lists > Shopping") something like that
 - [ ] Improve separation between database access, domain behavior, and transport code
 - [ ] Add image pipeline to convert images to webp for displaying in the app (maybe a proper cdn?) - I want to keep the original image too though (maybe enableable for certain users?)
 - [ ] Add user comments to cook logs (recipes)
