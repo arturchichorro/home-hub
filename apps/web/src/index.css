@@ -6,7 +6,7 @@
 html,
 body {
   min-height: 100%;
-  overscroll-behavior-y: none;
+  overscroll-behavior: none;
   background: var(--color-canvas);
 }
 
