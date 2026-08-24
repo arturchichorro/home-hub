@@ -266,6 +266,7 @@ describe("add shopping item service", () => {
       {
         target: [shoppingItems.householdId, shoppingItems.normalizedName],
         set: {
+          sortKey: expect.anything(),
           status: "active",
           updatedAt: expect.any(Date),
         },
@@ -301,6 +302,7 @@ describe("add shopping item service", () => {
       {
         target: [shoppingItems.householdId, shoppingItems.normalizedName],
         set: {
+          sortKey: expect.anything(),
           status: "active",
           updatedAt: expect.any(Date),
         },
