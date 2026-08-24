@@ -53,13 +53,13 @@ function RecipeCardImage({
         width={image?.width ?? undefined}
         height={image?.height ?? undefined}
         loading="lazy"
-        className="aspect-[4/3] w-full object-cover"
+        className="h-full w-full object-cover"
       />
     );
   }
 
   return (
-    <div className="flex aspect-[4/3] w-full items-center justify-center bg-raised text-subtle">
+    <div className="flex h-full w-full items-center justify-center bg-raised text-subtle">
       <BookOpen
         aria-hidden="true"
         className={imageState.loading ? "size-8 animate-pulse" : "size-8"}
@@ -124,32 +124,31 @@ export function RecipeLibrary({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 xl:grid-cols-5 lg:gap-x-5">
         {recipes.map((recipe) => (
           <Link
             key={recipe.id}
             to="/households/$householdId/recipes/$recipeId"
             params={{ householdId, recipeId: recipe.id }}
             preload="intent"
-            className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface outline-none transition-colors duration-[var(--motion-duration-fast)] hover:border-subtle focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+            className="block min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
           >
-            <div className="overflow-hidden">
-              <RecipeCardImage
-                accessToken={accessToken}
-                householdId={householdId}
-                recipeId={recipe.id}
-                image={recipe.images[0]}
-                onSessionExpired={onSessionExpired}
-              />
+            <div className="w-full">
+              <div className="aspect-3/2 w-full overflow-hidden rounded-md">
+                <RecipeCardImage
+                  accessToken={accessToken}
+                  householdId={householdId}
+                  recipeId={recipe.id}
+                  image={recipe.images[0]}
+                  onSessionExpired={onSessionExpired}
+                />
+              </div>
             </div>
-            <div className="flex min-h-32 flex-col p-4">
-              <h2 className="truncate text-lg font-semibold">{recipe.title}</h2>
-              {recipe.description ? (
-                <p className="mt-1 line-clamp-2 text-sm text-muted">
-                  {recipe.description}
-                </p>
-              ) : null}
-              <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 pt-4 text-xs text-subtle">
+            <div className="min-w-0 flex flex-col gap-2 mt-2">
+              <h2 className="line-clamp-2 text-sm font-semibold sm:text-base">
+                {recipe.title}
+              </h2>
+              <div className="flex flex-wrap items-center gap-x-3 text-xs text-subtle">
                 <span className="inline-flex items-center gap-1.5">
                   <CookingPot aria-hidden="true" className="size-3.5" />
                   {recipe.ingredients.length}{" "}
