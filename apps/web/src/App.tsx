@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { AppBreadcrumbHeader } from "./app-breadcrumb-header";
 import { AppSidebar } from "./app-sidebar";
 
 type AppProps = {
@@ -16,16 +18,32 @@ function App({
   onSessionExpired,
   username,
 }: AppProps) {
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const desktopQuery = window.matchMedia("(min-width: 64rem)");
+    const closeOnDesktop = () => {
+      if (desktopQuery.matches) setMobileSidebarOpen(false);
+    };
+
+    closeOnDesktop();
+    desktopQuery.addEventListener("change", closeOnDesktop);
+    return () => desktopQuery.removeEventListener("change", closeOnDesktop);
+  }, []);
+
   return (
     <div className="min-h-svh bg-canvas font-sans text-foreground lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
       <AppSidebar
         accessToken={accessToken}
+        mobileOpen={mobileSidebarOpen}
         username={username}
+        onMobileOpenChange={setMobileSidebarOpen}
         onLoggedOut={onLoggedOut}
         onSessionExpired={onSessionExpired}
       />
 
       <div className="min-w-0 lg:col-start-2 lg:row-start-1">
+        <AppBreadcrumbHeader onOpenSidebar={() => setMobileSidebarOpen(true)} />
         <main className="w-full px-4 pt-6 pb-8 sm:px-6 lg:px-8">
           {children}
         </main>

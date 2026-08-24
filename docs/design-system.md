@@ -460,12 +460,17 @@ the top. Every household is a default-open disclosure containing its enabled
 modules, with Household settings always available. Join and Create household
 actions sit above the current-user menu at the bottom.
 
-Below `lg`, the sidebar is hidden inside a Base UI Drawer. A floating icon button
-and an edge swipe open it; swipe dismissal, backdrop dismissal, Escape, focus
-management, and modal semantics follow the Drawer primitive. Inside the mobile
-drawer, the connection label is visually hidden so only its colored dot appears
-beside Home Hub, while the full label remains its accessible name and live-region
-content.
+A sticky breadcrumb header remains above the content at every width and shows
+the route hierarchy using live names, such as Household > Recipes > Recipe.
+The household crumb links directly to its Settings page and becomes plain text
+there to avoid a redundant navigation. Other ancestor crumbs are links; the
+current page is text. Below `lg`, an icon before the breadcrumbs opens the
+sidebar inside a Base UI Drawer, while an edge swipe provides the same action.
+The icon is absent when the desktop sidebar is visible. Swipe dismissal,
+backdrop dismissal, Escape, focus management, and modal semantics follow the
+Drawer primitive. Inside the mobile drawer, the connection label is visually
+hidden so only its colored dot appears beside Home Hub, while the full label
+remains its accessible name and live-region content.
 
 ### Module navigation
 
@@ -523,9 +528,11 @@ The persistent desktop sidebar contains:
 
 The initial product retains unaddressed opaque invites, so it does not show an
 incoming-invitation inbox. Outgoing pending invites remain visible to the owner
-in household settings. Below `lg`, the same navigation is hidden in a Drawer;
-only its trigger remains in the page chrome. The mobile connection indicator
-shows only the dot beside Home Hub while preserving its accessible label.
+in household settings. The sticky breadcrumb header remains visible beside the
+desktop sidebar and above the mobile content. Below `lg`, the same sidebar
+navigation is hidden in a Drawer and its trigger appears before the breadcrumbs.
+The mobile connection indicator shows only the dot beside Home Hub while
+preserving its accessible label.
 
 ### Connection state
 
