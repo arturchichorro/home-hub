@@ -176,7 +176,7 @@ export function RecipeImageGallery({
           onReorder(reordered.map((image) => image.id));
         }}
       >
-        <ul className="-mr-4 grid auto-cols-[20%] grid-flow-col gap-3 overflow-x-auto pr-4 sm:-mr-6 sm:pr-6 lg:-mr-8 lg:pr-8">
+        <ul className="-mr-4 grid auto-cols-[40%] sm:auto-cols-[25%] lg:auto-cols-[20%] grid-flow-col gap-3 overflow-x-auto pr-4 sm:-mr-6 sm:pr-6 lg:-mr-8 lg:pr-8">
           {images.map((image, index) => (
             <SortableRecipeImageThumbnail
               key={image.id}
