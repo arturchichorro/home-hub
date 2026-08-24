@@ -163,7 +163,7 @@ export function AddShoppingItemTriggerRow({
 
   return (
     <li>
-      <div className="p-2.5">
+      <div className="py-2.5">
         <Button
           type="button"
           variant="ghost"

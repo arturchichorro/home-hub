@@ -9,7 +9,7 @@ import {
   RotateCcw,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
   AddShoppingItemTriggerRow,
@@ -27,6 +27,7 @@ type ShoppingItemStatus = "active" | "crossed" | "archived";
 type DraftShoppingItem = {
   focusRequest: number;
   id: string;
+  savedItemId?: string | undefined;
 };
 
 type SavedItemFocus = {
@@ -46,6 +47,24 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
     queries.shopping.byHousehold({ householdId }),
   );
 
+  const queryComplete = result.type === "complete";
+  const currentItems = orderCurrentShoppingItems(items);
+  const draftItemId = draft?.savedItemId ?? draft?.id;
+  const draftIsPersisted =
+    draft?.savedItemId !== undefined &&
+    currentItems.some((item) => item.id === draft.savedItemId);
+  const visibleCurrentItems = draftItemId
+    ? currentItems.filter((item) => item.id !== draftItemId)
+    : currentItems;
+  const archivedItems = items.filter((item) => item.status === "archived");
+
+  useEffect(() => {
+    if (!draftIsPersisted) return;
+    setDraft((current) =>
+      current?.savedItemId === draft?.savedItemId ? undefined : current,
+    );
+  }, [draft?.savedItemId, draftIsPersisted]);
+
   if (result.type === "error") {
     return (
       <InlineAlert role="alert" variant="danger">
@@ -53,10 +72,6 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
       </InlineAlert>
     );
   }
-
-  const queryComplete = result.type === "complete";
-  const currentItems = orderCurrentShoppingItems(items);
-  const archivedItems = items.filter((item) => item.status === "archived");
 
   function setStatus(itemId: string, status: ShoppingItemStatus) {
     zero.mutate(
@@ -90,7 +105,10 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
         />
 
         {draft ? (
-          <li className="flex min-h-14 items-center gap-2 py-2">
+          <li
+            key={draftItemId}
+            className="flex min-h-14 items-center gap-2 py-2"
+          >
             <ShoppingItemDraftNameForm
               focusRequest={draft.focusRequest}
               householdId={householdId}
@@ -107,13 +125,17 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
                   id: savedItemId,
                   request: (current?.request ?? -1) + 1,
                 }));
-                setDraft(undefined);
+                setDraft((current) =>
+                  current?.id === draft.id
+                    ? { ...current, savedItemId }
+                    : current,
+                );
               }}
             />
           </li>
         ) : null}
 
-        {currentItems.map((item) => {
+        {visibleCurrentItems.map((item) => {
           const crossed = item.status === "crossed";
           const toggleLabel = crossed ? "Reactivate" : "Cross";
 
