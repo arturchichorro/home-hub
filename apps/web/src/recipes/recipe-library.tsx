@@ -1,5 +1,12 @@
 import { queries } from "@home-hub/shared/zero/queries";
-import { BookOpen, Button, InlineAlert, Plus } from "@home-hub/ui-web";
+import {
+  BookOpen,
+  Button,
+  Calendar,
+  CookingPot,
+  InlineAlert,
+  Plus,
+} from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -46,19 +53,30 @@ function RecipeCardImage({
         width={image?.width ?? undefined}
         height={image?.height ?? undefined}
         loading="lazy"
-        className="size-24 shrink-0 rounded-lg object-cover transition-opacity group-hover:opacity-90"
+        className="aspect-[4/3] w-full object-cover"
       />
     );
   }
 
   return (
-    <div className="flex size-24 shrink-0 items-center justify-center rounded-lg bg-raised text-subtle">
+    <div className="flex aspect-[4/3] w-full items-center justify-center bg-raised text-subtle">
       <BookOpen
         aria-hidden="true"
         className={imageState.loading ? "size-8 animate-pulse" : "size-8"}
       />
     </div>
   );
+}
+
+function formatCookedDate(cookedAt: number): string {
+  const date = new Date(cookedAt);
+  const includeYear = date.getFullYear() !== new Date().getFullYear();
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    year: includeYear ? "numeric" : undefined,
+  }).format(date);
 }
 
 export function RecipeLibrary({
@@ -82,42 +100,70 @@ export function RecipeLibrary({
 
   return (
     <section
-      aria-labelledby="recipe-library-heading"
+      aria-label="Recipe library"
       aria-busy={result.type !== "complete"}
-      className="flex flex-col gap-4"
+      className="flex w-full flex-col gap-6"
     >
       <div>
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-7! px-1.5! ml-2 font-normal text-muted"
-          onClick={() => setCreating(true)}
-        >
+        <Button type="button" onClick={() => setCreating(true)}>
           <Plus aria-hidden="true" className="size-4" />
           Add recipe
         </Button>
       </div>
-      <div className="flex flex-col gap-x-4 gap-y-6">
+
+      {recipes.length === 0 && result.type === "complete" ? (
+        <div className="flex min-h-72 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-surface px-6 text-center">
+          <span className="flex size-12 items-center justify-center rounded-full bg-raised text-primary">
+            <BookOpen aria-hidden="true" className="size-6" />
+          </span>
+          <h2 className="mt-4 font-semibold">No recipes yet</h2>
+          <Button className="mt-5" onClick={() => setCreating(true)}>
+            <Plus aria-hidden="true" className="size-4" />
+            Add your first recipe
+          </Button>
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {recipes.map((recipe) => (
           <Link
             key={recipe.id}
             to="/households/$householdId/recipes/$recipeId"
             params={{ householdId, recipeId: recipe.id }}
             preload="intent"
-            className="group flex min-w-0 items-start gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+            className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface outline-none transition-colors duration-[var(--motion-duration-fast)] hover:border-subtle focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
           >
-            <RecipeCardImage
-              accessToken={accessToken}
-              householdId={householdId}
-              recipeId={recipe.id}
-              image={recipe.images[0]}
-              onSessionExpired={onSessionExpired}
-            />
-            <div className="min-w-0 py-1">
-              <h3 className="truncate font-semibold">{recipe.title}</h3>
-              <p className="mt-0.5 line-clamp-2 text-sm text-muted">
-                {recipe.description || "No description yet."}
-              </p>
+            <div className="overflow-hidden">
+              <RecipeCardImage
+                accessToken={accessToken}
+                householdId={householdId}
+                recipeId={recipe.id}
+                image={recipe.images[0]}
+                onSessionExpired={onSessionExpired}
+              />
+            </div>
+            <div className="flex min-h-32 flex-col p-4">
+              <h2 className="truncate text-lg font-semibold">{recipe.title}</h2>
+              {recipe.description ? (
+                <p className="mt-1 line-clamp-2 text-sm text-muted">
+                  {recipe.description}
+                </p>
+              ) : null}
+              <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 pt-4 text-xs text-subtle">
+                <span className="inline-flex items-center gap-1.5">
+                  <CookingPot aria-hidden="true" className="size-3.5" />
+                  {recipe.ingredients.length}{" "}
+                  {recipe.ingredients.length === 1
+                    ? "ingredient"
+                    : "ingredients"}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Calendar aria-hidden="true" className="size-3.5" />
+                  {recipe.cookLogs[0]
+                    ? `Cooked ${formatCookedDate(recipe.cookLogs[0].cookedAt)}`
+                    : "Not cooked yet"}
+                </span>
+              </div>
             </div>
           </Link>
         ))}

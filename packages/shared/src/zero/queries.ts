@@ -78,6 +78,12 @@ const recipesByHousehold = defineHomeHubQuery(
           .orderBy("id", "asc")
           .limit(1),
       )
+      .related("ingredients", (ingredient) =>
+        ingredient.orderBy("position", "asc").orderBy("id", "asc"),
+      )
+      .related("cookLogs", (cookLog) =>
+        cookLog.orderBy("cookedAt", "desc").orderBy("id", "desc").limit(1),
+      )
       .orderBy("title", "asc")
       .orderBy("id", "asc"),
 );

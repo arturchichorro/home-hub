@@ -167,6 +167,27 @@ describe("recipe queries", () => {
             ],
           },
         },
+        {
+          subquery: {
+            alias: "ingredients",
+            table: "recipeIngredients",
+            orderBy: [
+              ["position", "asc"],
+              ["id", "asc"],
+            ],
+          },
+        },
+        {
+          subquery: {
+            alias: "cookLogs",
+            table: "recipeCookLogs",
+            limit: 1,
+            orderBy: [
+              ["cookedAt", "desc"],
+              ["id", "desc"],
+            ],
+          },
+        },
       ],
     });
   });
