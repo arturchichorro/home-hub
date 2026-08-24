@@ -8,7 +8,6 @@ import {
   HousePlus,
   IconButton,
   InlineAlert,
-  PanelLeft,
   Settings,
   ShoppingBasket,
   UserPlus,
@@ -16,7 +15,7 @@ import {
 } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { AccountMenu } from "./auth/account-menu";
 import { CreateHouseholdDialog } from "./households/create-household-dialog";
 import { JoinHouseholdDialog } from "./households/join-household-dialog";
@@ -24,12 +23,17 @@ import { ZeroConnectionStatus } from "./zero/connection-status";
 
 type AppSidebarProps = {
   accessToken: string;
+  mobileOpen: boolean;
+  onMobileOpenChange: (open: boolean) => void;
   onLoggedOut: () => void;
   onSessionExpired: () => void;
   username: string;
 };
 
-type SidebarNavigationProps = AppSidebarProps & {
+type SidebarNavigationProps = Omit<
+  AppSidebarProps,
+  "mobileOpen" | "onMobileOpenChange"
+> & {
   closeControl?: ReactNode;
   mobile: boolean;
   onCreateHousehold: () => void;
@@ -249,25 +253,15 @@ function SidebarNavigation({
 
 export function AppSidebar({
   accessToken,
+  mobileOpen,
+  onMobileOpenChange,
   onLoggedOut,
   onSessionExpired,
   username,
 }: AppSidebarProps) {
   const navigate = useNavigate();
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
-
-  useEffect(() => {
-    const desktopQuery = window.matchMedia("(min-width: 64rem)");
-    const closeOnDesktop = () => {
-      if (desktopQuery.matches) setMobileOpen(false);
-    };
-
-    closeOnDesktop();
-    desktopQuery.addEventListener("change", closeOnDesktop);
-    return () => desktopQuery.removeEventListener("change", closeOnDesktop);
-  }, []);
 
   function selectHousehold(householdId: string) {
     void navigate({
@@ -292,24 +286,9 @@ export function AppSidebar({
 
       <Drawer.Root
         open={mobileOpen}
-        onOpenChange={setMobileOpen}
+        onOpenChange={onMobileOpenChange}
         swipeDirection="left"
       >
-        <Drawer.Trigger
-          render={
-            <IconButton
-              aria-label="Open navigation"
-              variant="secondary"
-              className="fixed! z-40 border border-border bg-surface shadow-raised lg:hidden"
-              style={{
-                bottom: "max(0.75rem, env(safe-area-inset-bottom))",
-                left: "max(0.75rem, env(safe-area-inset-left))",
-              }}
-            >
-              <PanelLeft aria-hidden="true" className="size-5" />
-            </IconButton>
-          }
-        />
         <Drawer.SwipeArea className="fixed inset-y-0 left-0 z-30 w-5 lg:hidden" />
         <Drawer.Portal>
           <Drawer.Backdrop className="fixed inset-0 z-50 bg-black/50 opacity-100 transition-opacity duration-[var(--motion-duration-normal)] data-ending-style:opacity-0 data-starting-style:opacity-0 lg:hidden" />
@@ -330,15 +309,15 @@ export function AppSidebar({
                   }
                   mobile
                   onCreateHousehold={() => {
-                    setMobileOpen(false);
+                    onMobileOpenChange(false);
                     setCreateDialogOpen(true);
                   }}
                   onJoinHousehold={() => {
-                    setMobileOpen(false);
+                    onMobileOpenChange(false);
                     setJoinDialogOpen(true);
                   }}
                   onLoggedOut={onLoggedOut}
-                  onNavigate={() => setMobileOpen(false)}
+                  onNavigate={() => onMobileOpenChange(false)}
                   onSessionExpired={onSessionExpired}
                   username={username}
                 />
