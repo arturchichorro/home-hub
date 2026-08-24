@@ -9,28 +9,26 @@ together before implementation begins.
 
 ## Improvements
 
+- [ ] While typing (e.g. recipe description), input keeps being trimmed (on debounce) which removes spaces the user just typed
+- [ ] Add order to recipes (to order recipe list)
+- [ ] Add image pipeline to convert images to webp for displaying in the app (maybe a proper cdn?) - I want to keep the original image too though (maybe enableable for certain users?)
 - [ ] Add user profile pictures and use base ui's Avatar
+- [ ] After having multiple lists, add the possibility to assign people to a list item (e.g. todo list, go to commune, Artur)
 - [ ] Allow to append already uploaded recipe image to a cook log
 - [ ] Add recipe ratings table, could be used to say "overall 5*", "ease to cook 3*", etc; could add to the ui
-- [ ] Add order to recipes (to order recipe list)
-- [ ] While typing (e.g. recipe description), input keeps being trimmed (on debounce) which removes spaces the user just typed
 - [ ] Open last opened household on app start (through local storage or something)
 - [ ] Add recipe ingredients to Shopping
 - [ ] Publish safe member profiles through Zero to prevent interface flashing
 - [ ] In any page of the app, we could display where we are (e.g. "Germoir 83 > Recipes > Carbonara" or "Germoir 83 > Lists > Shopping") something like that
-- [ ] Improve separation between database access, domain behavior, and transport code
-- [ ] Add image pipeline to convert images to webp for displaying in the app (maybe a proper cdn?) - I want to keep the original image too though (maybe enableable for certain users?)
 - [ ] Add user comments to cook logs (recipes)
 - [ ] Check and fix flashing of pictures (maybe increase signing duration?)
-- [ ] After having multiple lists, add the possibility to assign people to a list item (e.g. todo list, go to commune, Artur)
+- [ ] Improve separation between database access, domain behavior, and transport code
 
 ## Future modules and capabilities
 
-- [ ] French Vocabulary
-- [ ] Personal todo or wish lists
 - [ ] Multiple household lists, after reconsidering the current product non-goal - UI inspired by Gkeep
-- [ ] Goals
-- [ ] Sports logs, similar to recipe page (workouts page? idk)
+- [ ] French Vocabulary
+- [ ] Goals / sport logs / logs in general (log things by category I guess)
 - [ ] Household finance
 - [ ] Friend list with timestamped notes
 - [ ] Module de lugares onde já fui (mapa)
