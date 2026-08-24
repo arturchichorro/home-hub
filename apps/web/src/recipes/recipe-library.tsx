@@ -9,7 +9,8 @@ import {
 } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { CreateRecipeDialog } from "./create-recipe-dialog";
 import { useRecipeImageUrl } from "./use-recipe-image-url";
 
@@ -86,6 +87,21 @@ export function RecipeLibrary({
 }: RecipeLibraryProps) {
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
+  const headerRightComponent = useMemo(
+    () => (
+      <Button
+        type="button"
+        variant="ghost"
+        className="h-7! px-1.5! font-normal text-muted"
+        onClick={() => setCreating(true)}
+      >
+        <Plus aria-hidden="true" className="size-4" />
+        Add recipe
+      </Button>
+    ),
+    [],
+  );
+  useAppHeaderRightComponent(headerRightComponent);
   const [recipes, result] = useQuery(
     queries.recipes.byHousehold({ householdId }),
   );
@@ -104,13 +120,6 @@ export function RecipeLibrary({
       aria-busy={result.type !== "complete"}
       className="flex w-full flex-col gap-6"
     >
-      <div>
-        <Button type="button" onClick={() => setCreating(true)}>
-          <Plus aria-hidden="true" className="size-4" />
-          Add recipe
-        </Button>
-      </div>
-
       {recipes.length === 0 && result.type === "complete" ? (
         <div className="flex min-h-72 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-surface px-6 text-center">
           <span className="flex size-12 items-center justify-center rounded-full bg-raised text-primary">

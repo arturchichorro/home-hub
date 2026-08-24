@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 
 type AppBreadcrumbHeaderProps = {
   onOpenSidebar: () => void;
+  rightComponent?: ReactNode;
 };
 
 type BreadcrumbLocation = {
@@ -66,6 +67,7 @@ function RecipeBreadcrumb({
 
 export function AppBreadcrumbHeader({
   onOpenSidebar,
+  rightComponent,
 }: AppBreadcrumbHeaderProps) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
@@ -93,7 +95,7 @@ export function AppBreadcrumbHeader({
       >
         <PanelLeft aria-hidden="true" className="size-5" />
       </IconButton>
-      <nav aria-label="Breadcrumb" className="min-w-0 overflow-x-auto">
+      <nav aria-label="Breadcrumb" className="min-w-0 flex-1 overflow-x-auto">
         <ol className="flex min-w-max items-center gap-1.5 text-sm font-medium">
           {location.householdId ? (
             <BreadcrumbItem>
@@ -142,6 +144,9 @@ export function AppBreadcrumbHeader({
           ) : null}
         </ol>
       </nav>
+      {rightComponent ? (
+        <div className="ml-auto shrink-0">{rightComponent}</div>
+      ) : null}
     </header>
   );
 }

@@ -83,7 +83,6 @@ export function CreateRecipeDialog({
     >
       <DialogPopup
         title="New recipe"
-        description="Give the recipe a title. You can add everything else next."
         actions={
           <>
             <DialogClose disabled={submitting}>Cancel</DialogClose>
