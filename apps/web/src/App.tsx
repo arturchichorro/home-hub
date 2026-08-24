@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { AppBreadcrumbHeader } from "./app-breadcrumb-header";
+import { AppHeaderRightComponentContext } from "./app-header-right-component";
 import { AppSidebar } from "./app-sidebar";
 
 type AppProps = {
@@ -19,6 +20,8 @@ function App({
   username,
 }: AppProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [headerRightComponent, setHeaderRightComponent] =
+    useState<ReactNode>(null);
 
   useEffect(() => {
     const desktopQuery = window.matchMedia("(min-width: 64rem)");
@@ -43,10 +46,17 @@ function App({
       />
 
       <div className="min-w-0 lg:col-start-2 lg:row-start-1">
-        <AppBreadcrumbHeader onOpenSidebar={() => setMobileSidebarOpen(true)} />
-        <main className="w-full px-4 pt-6 pb-8 sm:px-6 lg:px-8">
-          {children}
-        </main>
+        <AppHeaderRightComponentContext.Provider
+          value={setHeaderRightComponent}
+        >
+          <AppBreadcrumbHeader
+            rightComponent={headerRightComponent}
+            onOpenSidebar={() => setMobileSidebarOpen(true)}
+          />
+          <main className="w-full px-4 pt-6 pb-8 sm:px-6 lg:px-8">
+            {children}
+          </main>
+        </AppHeaderRightComponentContext.Provider>
       </div>
     </div>
   );

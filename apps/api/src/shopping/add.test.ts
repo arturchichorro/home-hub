@@ -259,12 +259,14 @@ describe("add shopping item service", () => {
         name: "Whole Milk",
         normalizedName: "whole milk",
         status: "active",
+        sortKey: expect.anything(),
       },
     ]);
     expect(conflictConfigs).toEqual([
       {
         target: [shoppingItems.householdId, shoppingItems.normalizedName],
         set: {
+          sortKey: expect.anything(),
           status: "active",
           updatedAt: expect.any(Date),
         },
@@ -300,6 +302,7 @@ describe("add shopping item service", () => {
       {
         target: [shoppingItems.householdId, shoppingItems.normalizedName],
         set: {
+          sortKey: expect.anything(),
           status: "active",
           updatedAt: expect.any(Date),
         },

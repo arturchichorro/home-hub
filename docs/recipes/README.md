@@ -28,10 +28,11 @@ require both modules to be enabled.
 ### Recipe library
 
 The library lives at `/recipes`. It uses one card column by default, two from
-`sm`, and three from `lg`. Each card shows the recipe's first confirmed image,
-its title, and at most two description lines. The create action occupies the
-same grid footprint as a recipe card, opens a title-only creation dialog, and
-navigates to the new recipe detail page after creation.
+`sm`, and three from `lg`. Cards are compact, borderless image-and-text tiles:
+each shows a small fixed-size crop of the recipe's first confirmed image on the
+left, with an accent-colored title and at most two muted description lines on
+the right. A compact `+ Add recipe` row follows the grid, opens a title-only
+creation dialog, and navigates to the new recipe detail page after creation.
 
 ### Recipe detail
 

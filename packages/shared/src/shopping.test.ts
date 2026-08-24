@@ -4,9 +4,44 @@ import {
   addShoppingItemMutationSchema,
   createShoppingItemRequestSchema,
   renameShoppingItemMutationSchema,
+  reorderShoppingItemsMutationSchema,
   setShoppingItemStatusMutationSchema,
   setShoppingItemStatusRequestSchema,
 } from "./shopping";
+
+describe("reorderShoppingItemsMutationSchema", () => {
+  const input = {
+    householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
+    itemId: "8d46a4c4-4845-4a6d-a937-139633ae1bb9",
+    orderedItemIds: [
+      "9c090146-f84a-4d11-9ca3-629ac70ffc15",
+      "8d46a4c4-4845-4a6d-a937-139633ae1bb9",
+    ],
+    status: "active",
+    optimisticUpdatedAt: 1_786_000_000_000,
+  };
+
+  it("accepts a unique order containing the moved item", () => {
+    expect(reorderShoppingItemsMutationSchema.safeParse(input).success).toBe(
+      true,
+    );
+  });
+
+  it("rejects duplicate IDs and an order missing the moved item", () => {
+    expect(
+      reorderShoppingItemsMutationSchema.safeParse({
+        ...input,
+        orderedItemIds: [input.orderedItemIds[0], input.orderedItemIds[0]],
+      }).success,
+    ).toBe(false);
+    expect(
+      reorderShoppingItemsMutationSchema.safeParse({
+        ...input,
+        orderedItemIds: [input.orderedItemIds[0]],
+      }).success,
+    ).toBe(false);
+  });
+});
 
 describe("addShoppingItemMutationSchema", () => {
   const input = {

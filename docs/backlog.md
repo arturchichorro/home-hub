@@ -33,6 +33,7 @@ together before implementation begins.
 - [ ] Sports logs, similar to recipe page (workouts page? idk)
 - [ ] Household finance
 - [ ] Friend list with timestamped notes
+- [ ] Module de lugares onde já fui (mapa)
 - [ ] Turn home hub web into a PWA
 
 ## Ideia

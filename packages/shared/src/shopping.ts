@@ -22,6 +22,9 @@ export const shoppingItemStatusSchema = z.enum([
   "archived",
 ]);
 
+export const shoppingItemNameAlreadyExistsError =
+  "Shopping item name already exists";
+
 export const setShoppingItemStatusRequestSchema = z
   .object({
     status: shoppingItemStatusSchema,
@@ -56,6 +59,30 @@ export const addShoppingItemMutationSchema = z
 
 export type AddShoppingItemMutationInput = z.infer<
   typeof addShoppingItemMutationSchema
+>;
+
+export const reorderShoppingItemsMutationSchema = z
+  .object({
+    householdId: z.uuid(),
+    itemId: z.uuid(),
+    orderedItemIds: z
+      .array(z.uuid())
+      .min(1)
+      .max(500)
+      .refine((ids) => new Set(ids).size === ids.length, {
+        message: "Ordered IDs must be unique",
+      }),
+    status: shoppingItemStatusSchema,
+    optimisticUpdatedAt: z.number().int().nonnegative(),
+  })
+  .strict()
+  .refine((args) => args.orderedItemIds.includes(args.itemId), {
+    message: "Ordered IDs must contain the moved item",
+    path: ["orderedItemIds"],
+  });
+
+export type ReorderShoppingItemsMutationInput = z.infer<
+  typeof reorderShoppingItemsMutationSchema
 >;
 
 export const renameShoppingItemMutationSchema = z

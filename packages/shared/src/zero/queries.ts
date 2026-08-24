@@ -41,7 +41,8 @@ const shoppingItemsByHousehold = defineHomeHubQuery(
             setting.where("moduleKey", "shopping").where("enabled", true),
           ),
       )
-      .orderBy("createdAt", "asc"),
+      .orderBy("sortKey", "desc")
+      .orderBy("id", "asc"),
 );
 
 const moduleSettingsByHousehold = defineHomeHubQuery(
@@ -77,6 +78,12 @@ const recipesByHousehold = defineHomeHubQuery(
           .orderBy("position", "asc")
           .orderBy("id", "asc")
           .limit(1),
+      )
+      .related("ingredients", (ingredient) =>
+        ingredient.orderBy("position", "asc").orderBy("id", "asc"),
+      )
+      .related("cookLogs", (cookLog) =>
+        cookLog.orderBy("cookedAt", "desc").orderBy("id", "desc").limit(1),
       )
       .orderBy("title", "asc")
       .orderBy("id", "asc"),

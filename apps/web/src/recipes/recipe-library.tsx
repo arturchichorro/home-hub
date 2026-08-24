@@ -1,8 +1,16 @@
 import { queries } from "@home-hub/shared/zero/queries";
-import { BookOpen, Button, InlineAlert, Plus } from "@home-hub/ui-web";
+import {
+  BookOpen,
+  Button,
+  Calendar,
+  CookingPot,
+  InlineAlert,
+  Plus,
+} from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { CreateRecipeDialog } from "./create-recipe-dialog";
 import { useRecipeImageUrl } from "./use-recipe-image-url";
 
@@ -46,19 +54,30 @@ function RecipeCardImage({
         width={image?.width ?? undefined}
         height={image?.height ?? undefined}
         loading="lazy"
-        className="aspect-4/3 w-full object-cover"
+        className="h-full w-full object-cover"
       />
     );
   }
 
   return (
-    <div className="flex aspect-4/3 items-center justify-center bg-raised text-subtle">
+    <div className="flex h-full w-full items-center justify-center bg-raised text-subtle">
       <BookOpen
         aria-hidden="true"
         className={imageState.loading ? "size-8 animate-pulse" : "size-8"}
       />
     </div>
   );
+}
+
+function formatCookedDate(cookedAt: number): string {
+  const date = new Date(cookedAt);
+  const includeYear = date.getFullYear() !== new Date().getFullYear();
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    year: includeYear ? "numeric" : undefined,
+  }).format(date);
 }
 
 export function RecipeLibrary({
@@ -68,6 +87,21 @@ export function RecipeLibrary({
 }: RecipeLibraryProps) {
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
+  const headerRightComponent = useMemo(
+    () => (
+      <Button
+        type="button"
+        variant="ghost"
+        className="h-7! px-1.5! font-normal text-muted"
+        onClick={() => setCreating(true)}
+      >
+        <Plus aria-hidden="true" className="size-4" />
+        Add recipe
+      </Button>
+    ),
+    [],
+  );
+  useAppHeaderRightComponent(headerRightComponent);
   const [recipes, result] = useQuery(
     queries.recipes.byHousehold({ householdId }),
   );
@@ -82,47 +116,65 @@ export function RecipeLibrary({
 
   return (
     <section
-      aria-labelledby="recipe-library-heading"
+      aria-label="Recipe library"
       aria-busy={result.type !== "complete"}
+      className="flex w-full flex-col gap-6"
     >
-      <h2 id="recipe-library-heading" className="mb-5 text-xl font-semibold">
-        Recipes
-      </h2>
+      {recipes.length === 0 && result.type === "complete" ? (
+        <div className="flex min-h-72 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-surface px-6 text-center">
+          <span className="flex size-12 items-center justify-center rounded-full bg-raised text-primary">
+            <BookOpen aria-hidden="true" className="size-6" />
+          </span>
+          <h2 className="mt-4 font-semibold">No recipes yet</h2>
+          <Button className="mt-5" onClick={() => setCreating(true)}>
+            <Plus aria-hidden="true" className="size-4" />
+            Add your first recipe
+          </Button>
+        </div>
+      ) : null}
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 xl:grid-cols-5 lg:gap-x-5">
         {recipes.map((recipe) => (
           <Link
             key={recipe.id}
             to="/households/$householdId/recipes/$recipeId"
             params={{ householdId, recipeId: recipe.id }}
             preload="intent"
-            className="min-h-72 overflow-hidden rounded-lg border border-border bg-surface focus-visible:outline-2 focus-visible:outline-focus-ring"
+            className="block min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
           >
-            <RecipeCardImage
-              accessToken={accessToken}
-              householdId={householdId}
-              recipeId={recipe.id}
-              image={recipe.images[0]}
-              onSessionExpired={onSessionExpired}
-            />
-            <div className="space-y-1 p-4">
-              <h3 className="font-semibold">{recipe.title}</h3>
-              <p className="line-clamp-2 text-sm text-muted">
-                {recipe.description || "No description yet."}
-              </p>
+            <div className="w-full">
+              <div className="aspect-3/2 w-full overflow-hidden rounded-md">
+                <RecipeCardImage
+                  accessToken={accessToken}
+                  householdId={householdId}
+                  recipeId={recipe.id}
+                  image={recipe.images[0]}
+                  onSessionExpired={onSessionExpired}
+                />
+              </div>
+            </div>
+            <div className="min-w-0 flex flex-col gap-2 mt-2">
+              <h2 className="line-clamp-2 text-sm font-semibold sm:text-base">
+                {recipe.title}
+              </h2>
+              <div className="flex flex-wrap items-center gap-x-3 text-xs text-subtle">
+                <span className="inline-flex items-center gap-1.5">
+                  <CookingPot aria-hidden="true" className="size-3.5" />
+                  {recipe.ingredients.length}{" "}
+                  {recipe.ingredients.length === 1
+                    ? "ingredient"
+                    : "ingredients"}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Calendar aria-hidden="true" className="size-3.5" />
+                  {recipe.cookLogs[0]
+                    ? `Cooked ${formatCookedDate(recipe.cookLogs[0].cookedAt)}`
+                    : "Not cooked yet"}
+                </span>
+              </div>
             </div>
           </Link>
         ))}
-
-        <Button
-          aria-label="Create recipe"
-          title="Create recipe"
-          variant="secondary"
-          className="min-h-72 w-full border border-dashed border-border"
-          onClick={() => setCreating(true)}
-        >
-          <Plus aria-hidden="true" className="size-8" />
-        </Button>
       </div>
 
       <CreateRecipeDialog
