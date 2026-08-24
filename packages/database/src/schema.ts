@@ -141,6 +141,7 @@ export const shoppingItems = pgTable(
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
     status: shoppingItemStatusEnum().notNull().default("active"),
+    sortKey: integer("sort_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -152,6 +153,12 @@ export const shoppingItems = pgTable(
     uniqueIndex("shopping_items_household_id_normalized_name_idx").on(
       table.householdId,
       table.normalizedName,
+    ),
+    index("shopping_items_household_id_status_sort_key_id_idx").on(
+      table.householdId,
+      table.status,
+      table.sortKey,
+      table.id,
     ),
   ],
 );

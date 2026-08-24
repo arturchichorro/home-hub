@@ -41,7 +41,7 @@ const shoppingItemsByHousehold = defineHomeHubQuery(
             setting.where("moduleKey", "shopping").where("enabled", true),
           ),
       )
-      .orderBy("createdAt", "desc")
+      .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
 );
 

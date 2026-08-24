@@ -398,25 +398,26 @@ describe("shopping.add mutator", () => {
   it("optimistically inserts a normalized active item", async () => {
     const { insert, queries, transaction, update } = createFakeTransaction({
       location: "client",
-      results: [undefined],
+      results: [undefined, undefined],
     });
 
     await mutators.shopping.add.fn({ args: addArgs, ctx, tx: transaction });
 
-    expect(queries).toHaveLength(1);
+    expect(queries).toHaveLength(2);
     expect(insert).toHaveBeenCalledWith({
       id: itemId,
       householdId,
       name: "Whole Milk",
       normalizedName: "whole milk",
       status: "active",
+      sortKey: 1024,
       createdAt: optimisticUpdatedAt,
       updatedAt: optimisticUpdatedAt,
     });
     expect(update).not.toHaveBeenCalled();
   });
 
-  it("reactivates the existing canonical item instead of inserting the proposed ID", async () => {
+  it("reactivates an existing item and moves it above active items", async () => {
     const existingItemId = "9c090146-f84a-4d11-9ca3-629ac70ffc15";
     const { insert, queries, transaction, update } = createFakeTransaction({
       location: "client",
@@ -428,18 +429,44 @@ describe("shopping.add mutator", () => {
           normalizedName: "whole milk",
           status: "crossed",
         },
+        { id: "top-active", sortKey: 4096 },
       ],
     });
 
     await mutators.shopping.add.fn({ args: addArgs, ctx, tx: transaction });
 
-    expect(queries).toHaveLength(1);
+    expect(queries).toHaveLength(2);
     expect(update).toHaveBeenCalledWith({
       id: existingItemId,
       status: "active",
+      sortKey: 5120,
       updatedAt: optimisticUpdatedAt,
     });
     expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("keeps an existing top active item in place", async () => {
+    const existingItemId = "9c090146-f84a-4d11-9ca3-629ac70ffc15";
+    const { transaction, update } = createFakeTransaction({
+      location: "client",
+      results: [
+        {
+          id: existingItemId,
+          householdId,
+          name: "WHOLE MILK",
+          normalizedName: "whole milk",
+          status: "active",
+          sortKey: 4096,
+        },
+        { id: existingItemId, sortKey: 4096 },
+      ],
+    });
+
+    await mutators.shopping.add.fn({ args: addArgs, ctx, tx: transaction });
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ id: existingItemId, sortKey: 4096 }),
+    );
   });
 
   it("rejects a server mutation before looking up or writing an item when membership is missing", async () => {
@@ -481,20 +508,110 @@ describe("shopping.add mutator", () => {
         { id: "membership-id" },
         { householdId, moduleKey: "shopping", enabled: true },
         undefined,
+        undefined,
       ],
     });
 
     await mutators.shopping.add.fn({ args: addArgs, ctx, tx: transaction });
 
-    expect(queries).toHaveLength(3);
+    expect(queries).toHaveLength(4);
     expect(insert).toHaveBeenCalledWith({
       id: itemId,
       householdId,
       name: "Whole Milk",
       normalizedName: "whole milk",
       status: "active",
+      sortKey: 1024,
       createdAt: authoritativeTimestamp,
       updatedAt: authoritativeTimestamp,
+    });
+  });
+
+  it("places a new item above the current active item", async () => {
+    const { insert, transaction } = createFakeTransaction({
+      location: "client",
+      results: [undefined, { id: "existing", sortKey: 4096 }],
+    });
+
+    await mutators.shopping.add.fn({ args: addArgs, ctx, tx: transaction });
+
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({ sortKey: 5120 }),
+    );
+  });
+});
+
+describe("shopping.reorder mutator", () => {
+  const secondItemId = "9c090146-f84a-4d11-9ca3-629ac70ffc15";
+  const thirdItemId = "f9dc3f8c-7ed8-4836-a877-7881bb1d6dd6";
+  const reorderArgs = {
+    householdId,
+    itemId,
+    orderedItemIds: [secondItemId, itemId, thirdItemId],
+    status: "active" as const,
+    optimisticUpdatedAt,
+  };
+
+  it("is registered with a stable name", () => {
+    expect(mutators.shopping.reorder.mutatorName).toBe("shopping.reorder");
+  });
+
+  it("updates only the moved item when a gap is available", async () => {
+    const { transaction, update } = createFakeTransaction({
+      location: "client",
+      results: [
+        { id: itemId, householdId, status: "active", sortKey: 0 },
+        { id: secondItemId, householdId, status: "active", sortKey: 3072 },
+        { id: thirdItemId, householdId, status: "active", sortKey: 1024 },
+      ],
+    });
+
+    await mutators.shopping.reorder.fn({
+      args: reorderArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(update).toHaveBeenCalledOnce();
+    expect(update).toHaveBeenCalledWith({
+      id: itemId,
+      sortKey: 2048,
+      updatedAt: optimisticUpdatedAt,
+    });
+  });
+
+  it("rebalances the status group when adjacent keys have no gap", async () => {
+    const { transaction, update } = createFakeTransaction({
+      location: "client",
+      results: [
+        { id: itemId, householdId, status: "active", sortKey: 0 },
+        { id: secondItemId, householdId, status: "active", sortKey: 2048 },
+        { id: thirdItemId, householdId, status: "active", sortKey: 2047 },
+        { id: secondItemId, householdId, status: "active", sortKey: 2048 },
+        { id: thirdItemId, householdId, status: "active", sortKey: 2047 },
+      ],
+    });
+
+    await mutators.shopping.reorder.fn({
+      args: reorderArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(update).toHaveBeenNthCalledWith(1, {
+      id: secondItemId,
+      sortKey: 3072,
+      updatedAt: optimisticUpdatedAt,
+    });
+    expect(update).toHaveBeenNthCalledWith(2, {
+      id: itemId,
+      sortKey: 2048,
+      updatedAt: optimisticUpdatedAt,
+    });
+    expect(update).toHaveBeenNthCalledWith(3, {
+      id: thirdItemId,
+      sortKey: 1024,
+      updatedAt: optimisticUpdatedAt,
     });
   });
 });

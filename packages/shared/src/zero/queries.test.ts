@@ -294,7 +294,7 @@ describe("shopping queries", () => {
     expect(getAst(query)).toMatchObject({
       table: "shoppingItems",
       orderBy: [
-        ["createdAt", "desc"],
+        ["sortKey", "desc"],
         ["id", "asc"],
       ],
       where: {

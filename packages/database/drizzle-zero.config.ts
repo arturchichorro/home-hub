@@ -31,6 +31,7 @@ export default drizzleZeroConfig(drizzleSchema, {
       name: true,
       normalizedName: true,
       status: true,
+      sortKey: true,
       createdAt: true,
       updatedAt: true,
     },

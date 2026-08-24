@@ -5,6 +5,7 @@ import {
   cleanShoppingItemName,
   normalizeShoppingItemName,
 } from "@home-hub/shared/normalization";
+import { sql } from "drizzle-orm";
 import { findActiveUser } from "../authorization/active-user";
 import {
   findEnabledHouseholdModuleForShare,
@@ -66,6 +67,12 @@ export function createAddShoppingItemService({ db }: { db: Database }) {
       const shoppingItemId = randomUUID();
       const cleanName = cleanShoppingItemName(name);
       const normalizedName = normalizeShoppingItemName(name);
+      const nextSortKey = sql<number>`coalesce((
+        select max(${shoppingItems.sortKey}) + 1024
+        from ${shoppingItems}
+        where ${shoppingItems.householdId} = ${householdId}
+          and ${shoppingItems.status} = 'active'
+      ), 1024)`;
 
       const [item] = await tx
         .insert(shoppingItems)
@@ -75,11 +82,13 @@ export function createAddShoppingItemService({ db }: { db: Database }) {
           name: cleanName,
           normalizedName,
           status: "active",
+          sortKey: nextSortKey,
         })
         .onConflictDoUpdate({
           target: [shoppingItems.householdId, shoppingItems.normalizedName],
           set: {
             status: "active",
+            sortKey: nextSortKey,
             updatedAt: new Date(),
           },
         })
