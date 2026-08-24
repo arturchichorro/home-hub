@@ -16,6 +16,7 @@ const autosaveDelayMs = 600;
 const duplicateNameError = "Shopping item name already exists";
 
 type ShoppingItemNameInputProps = {
+  focusRequest?: number | undefined;
   householdId: string;
   itemId: string;
   currentName: string;
@@ -24,6 +25,7 @@ type ShoppingItemNameInputProps = {
 };
 
 export function ShoppingItemNameInput({
+  focusRequest,
   householdId,
   itemId,
   currentName,
@@ -47,6 +49,10 @@ export function ShoppingItemNameInput({
   const [error, setError] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
   const errorId = useId();
+
+  useEffect(() => {
+    if (focusRequest !== undefined) inputRef.current?.focus();
+  }, [focusRequest]);
 
   const clearScheduledSave = useCallback(() => {
     if (timeoutRef.current !== undefined) {
@@ -212,7 +218,7 @@ export function ShoppingItemNameInput({
     <>
       <Input
         ref={inputRef}
-        appearance="inline"
+        appearance="seamless"
         aria-label="Shopping item name"
         aria-busy={isSaving || undefined}
         aria-invalid={error ? true : undefined}

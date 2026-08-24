@@ -1,3 +1,4 @@
+import { normalizeShoppingItemName } from "@home-hub/shared/normalization";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import {
@@ -10,7 +11,10 @@ import {
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
-import { AddShoppingItemForm } from "./add-shopping-item-form";
+import {
+  AddShoppingItemTriggerRow,
+  ShoppingItemDraftNameForm,
+} from "./add-shopping-item-form";
 import { ShoppingItemNameInput } from "./shopping-item-name-input";
 import { orderCurrentShoppingItems } from "./shopping-list-order";
 
@@ -20,10 +24,23 @@ type ShoppingListProps = {
 
 type ShoppingItemStatus = "active" | "crossed" | "archived";
 
+type DraftShoppingItem = {
+  focusRequest: number;
+  id: string;
+};
+
+type SavedItemFocus = {
+  id: string;
+  request: number;
+};
+
 export function ShoppingList({ householdId }: ShoppingListProps) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
   const [showArchived, setShowArchived] = useState(false);
+  const [draft, setDraft] = useState<DraftShoppingItem>();
+  const [creationError, setCreationError] = useState<string>();
+  const [savedItemFocus, setSavedItemFocus] = useState<SavedItemFocus>();
 
   const [items, result] = useQuery(
     queries.shopping.byHousehold({ householdId }),
@@ -54,18 +71,47 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
 
   return (
     <section
-      aria-labelledby="shopping-current-heading"
+      aria-label="Shopping list"
       aria-busy={!queryComplete}
       className="grid gap-5"
     >
-      <h2 id="shopping-current-heading" className="text-xl font-semibold">
-        Shopping list
-      </h2>
+      <ul className="divide-y divide-border">
+        <AddShoppingItemTriggerRow
+          draftActive={draft !== undefined}
+          error={creationError}
+          onActivate={() => {
+            setCreationError(undefined);
+            setDraft((current) =>
+              current
+                ? { ...current, focusRequest: current.focusRequest + 1 }
+                : { focusRequest: 0, id: crypto.randomUUID() },
+            );
+          }}
+        />
 
-      <ul className="divide-y divide-border border-y border-border">
-        <li>
-          <AddShoppingItemForm householdId={householdId} />
-        </li>
+        {draft ? (
+          <li className="flex min-h-14 items-center gap-2 py-2">
+            <ShoppingItemDraftNameForm
+              focusRequest={draft.focusRequest}
+              householdId={householdId}
+              itemId={draft.id}
+              onCancel={() => setDraft(undefined)}
+              onServerError={setCreationError}
+              onSaved={(name) => {
+                const existingItem = items.find(
+                  (item) =>
+                    item.normalizedName === normalizeShoppingItemName(name),
+                );
+                const savedItemId = existingItem?.id ?? draft.id;
+                setSavedItemFocus((current) => ({
+                  id: savedItemId,
+                  request: (current?.request ?? -1) + 1,
+                }));
+                setDraft(undefined);
+              }}
+            />
+          </li>
+        ) : null}
 
         {currentItems.map((item) => {
           const crossed = item.status === "crossed";
@@ -74,6 +120,11 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
           return (
             <li key={item.id} className="flex min-h-14 items-center gap-2 py-2">
               <ShoppingItemNameInput
+                focusRequest={
+                  savedItemFocus?.id === item.id
+                    ? savedItemFocus.request
+                    : undefined
+                }
                 householdId={householdId}
                 itemId={item.id}
                 currentName={item.name}

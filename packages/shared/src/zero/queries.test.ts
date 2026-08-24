@@ -293,6 +293,10 @@ describe("shopping queries", () => {
 
     expect(getAst(query)).toMatchObject({
       table: "shoppingItems",
+      orderBy: [
+        ["createdAt", "desc"],
+        ["id", "asc"],
+      ],
       where: {
         type: "and",
         conditions: [
