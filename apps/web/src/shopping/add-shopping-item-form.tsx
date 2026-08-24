@@ -18,6 +18,8 @@ type ShoppingItemDraftNameFormProps = {
   householdId: string;
   itemId: string;
   onCancel: () => void;
+  onSaveFailed: () => void;
+  onSaveStarted: (name: string) => void;
   onSaved: (name: string) => void;
   onServerError: (message: string) => void;
 };
@@ -27,6 +29,8 @@ export function ShoppingItemDraftNameForm({
   householdId,
   itemId,
   onCancel,
+  onSaveFailed,
+  onSaveStarted,
   onSaved,
   onServerError,
 }: ShoppingItemDraftNameFormProps) {
@@ -74,6 +78,7 @@ export function ShoppingItemDraftNameForm({
     savingRef.current = true;
     setSaving(true);
     setError(undefined);
+    onSaveStarted(submittedName);
     const mutation = zero.mutate(
       mutators.shopping.add({
         itemId,
@@ -85,6 +90,7 @@ export function ShoppingItemDraftNameForm({
     const clientResult = await mutation.client;
 
     if (clientResult.type === "error") {
+      onSaveFailed();
       savingRef.current = false;
       setSaving(false);
       setError("Unable to add the shopping item.");

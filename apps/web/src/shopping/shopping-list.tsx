@@ -13,7 +13,8 @@ import {
   RotateCcw,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
   AddShoppingItemTriggerRow,
@@ -31,6 +32,7 @@ type ShoppingItemStatus = "active" | "crossed" | "archived";
 type DraftShoppingItem = {
   focusRequest: number;
   id: string;
+  pendingItemId?: string | undefined;
   savedItemId?: string | undefined;
 };
 
@@ -124,16 +126,16 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
 
   const queryComplete = result.type === "complete";
   const currentItems = orderCurrentShoppingItems(items);
-  const draftItemId = draft?.savedItemId ?? draft?.id;
+  const draftItemId = draft?.pendingItemId ?? draft?.savedItemId ?? draft?.id;
+  const savedItem = currentItems.find((item) => item.id === draft?.savedItemId);
   const draftIsPersisted =
-    draft?.savedItemId !== undefined &&
-    currentItems.some((item) => item.id === draft.savedItemId);
+    savedItem?.status === "active" && currentItems[0]?.id === savedItem.id;
   const visibleCurrentItems = draftItemId
     ? currentItems.filter((item) => item.id !== draftItemId)
     : currentItems;
   const archivedItems = items.filter((item) => item.status === "archived");
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!draftIsPersisted) return;
     setDraft((current) =>
       current?.savedItemId === draft?.savedItemId ? undefined : current,
@@ -156,6 +158,14 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
         status,
         optimisticUpdatedAt: Date.now(),
       }),
+    );
+  }
+
+  function resolveDraftItemId(name: string) {
+    return (
+      items.find(
+        (item) => item.normalizedName === normalizeShoppingItemName(name),
+      )?.id ?? draft?.id
     );
   }
 
@@ -212,7 +222,7 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
 
           {draft ? (
             <li
-              key={draftItemId}
+              key={draft.id}
               className="flex min-h-14 items-center gap-2 py-2"
             >
               <IconButton
@@ -227,20 +237,33 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
                 householdId={householdId}
                 itemId={draft.id}
                 onCancel={() => setDraft(undefined)}
+                onSaveFailed={() => {
+                  setDraft((current) =>
+                    current?.id === draft.id
+                      ? { ...current, pendingItemId: undefined }
+                      : current,
+                  );
+                }}
+                onSaveStarted={(name) => {
+                  const pendingItemId = resolveDraftItemId(name);
+                  flushSync(() => {
+                    setDraft((current) =>
+                      current?.id === draft.id
+                        ? { ...current, pendingItemId }
+                        : current,
+                    );
+                  });
+                }}
                 onServerError={setCreationError}
                 onSaved={(name) => {
-                  const existingItem = items.find(
-                    (item) =>
-                      item.normalizedName === normalizeShoppingItemName(name),
-                  );
-                  const savedItemId = existingItem?.id ?? draft.id;
+                  const savedItemId = resolveDraftItemId(name) ?? draft.id;
                   setSavedItemFocus((current) => ({
                     id: savedItemId,
                     request: (current?.request ?? -1) + 1,
                   }));
                   setDraft((current) =>
                     current?.id === draft.id
-                      ? { ...current, savedItemId }
+                      ? { ...current, pendingItemId: savedItemId, savedItemId }
                       : current,
                   );
                 }}
