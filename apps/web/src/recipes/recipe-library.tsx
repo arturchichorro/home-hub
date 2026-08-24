@@ -46,13 +46,13 @@ function RecipeCardImage({
         width={image?.width ?? undefined}
         height={image?.height ?? undefined}
         loading="lazy"
-        className="aspect-4/3 w-full object-cover"
+        className="size-24 shrink-0 rounded-lg object-cover transition-opacity group-hover:opacity-90"
       />
     );
   }
 
   return (
-    <div className="flex aspect-4/3 items-center justify-center bg-raised text-subtle">
+    <div className="flex size-24 shrink-0 items-center justify-center rounded-lg bg-raised text-subtle">
       <BookOpen
         aria-hidden="true"
         className={imageState.loading ? "size-8 animate-pulse" : "size-8"}
@@ -84,19 +84,27 @@ export function RecipeLibrary({
     <section
       aria-labelledby="recipe-library-heading"
       aria-busy={result.type !== "complete"}
+      className="flex flex-col gap-4"
     >
-      <h2 id="recipe-library-heading" className="mb-5 text-xl font-semibold">
-        Recipes
-      </h2>
-
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-7! px-1.5! ml-2 font-normal text-muted"
+          onClick={() => setCreating(true)}
+        >
+          <Plus aria-hidden="true" className="size-4" />
+          Add recipe
+        </Button>
+      </div>
+      <div className="flex flex-col gap-x-4 gap-y-6">
         {recipes.map((recipe) => (
           <Link
             key={recipe.id}
             to="/households/$householdId/recipes/$recipeId"
             params={{ householdId, recipeId: recipe.id }}
             preload="intent"
-            className="min-h-72 overflow-hidden rounded-lg border border-border bg-surface focus-visible:outline-2 focus-visible:outline-focus-ring"
+            className="group flex min-w-0 items-start gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
           >
             <RecipeCardImage
               accessToken={accessToken}
@@ -105,24 +113,14 @@ export function RecipeLibrary({
               image={recipe.images[0]}
               onSessionExpired={onSessionExpired}
             />
-            <div className="space-y-1 p-4">
-              <h3 className="font-semibold">{recipe.title}</h3>
-              <p className="line-clamp-2 text-sm text-muted">
+            <div className="min-w-0 py-1">
+              <h3 className="truncate font-semibold">{recipe.title}</h3>
+              <p className="mt-0.5 line-clamp-2 text-sm text-muted">
                 {recipe.description || "No description yet."}
               </p>
             </div>
           </Link>
         ))}
-
-        <Button
-          aria-label="Create recipe"
-          title="Create recipe"
-          variant="secondary"
-          className="min-h-72 w-full border border-dashed border-border"
-          onClick={() => setCreating(true)}
-        >
-          <Plus aria-hidden="true" className="size-8" />
-        </Button>
       </div>
 
       <CreateRecipeDialog
