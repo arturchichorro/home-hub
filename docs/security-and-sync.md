@@ -292,6 +292,7 @@ only previously synchronized Zero rows persist in the local cache.
 
 ## Module storage security
 
-The Recipes module owns the complete presigned upload, signed read, deletion,
-cache-partitioning, file-type, and size rules. See
+The Recipes module owns the complete presigned original-upload, signed
+derivative-read, deletion, cache-partitioning, file-type, variant, and size
+rules. Original objects remain private and have no user-facing read path. See
 [Recipes image storage and security](./recipes/#image-storage-and-security).

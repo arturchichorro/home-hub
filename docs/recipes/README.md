@@ -210,6 +210,18 @@ Recipe image bytes travel directly between the browser and Cloudflare R2 using
 short-lived presigned URLs. PostgreSQL stores metadata; the API never writes
 uploaded image bytes to its filesystem.
 
+Every confirmed upload remains in private R2 in its original content type and
+quality as the canonical source. The application displays optimized
+derivatives generated on demand by Cloudflare Images and cached at the edge;
+derivative generation never replaces the original. There is initially no
+user-facing read or download operation for the original bytes. A possible
+future original-access policy is independent of the retention policy.
+
+Derivative reads must use a small code-owned set of display variants and a
+short-lived server-authorized delivery capability that preserves household and
+Recipes-module access. Clients cannot supply arbitrary transformation
+parameters or obtain the private source object URL.
+
 The upload flow is:
 
 1. The authenticated browser requests permission for a specific recipe, image
@@ -225,16 +237,17 @@ The upload flow is:
 6. The browser confirms completion, and the API verifies the object's type and
    size before confirming the metadata.
 
-Only confirmed metadata may synchronize or receive a signed read URL.
+Only confirmed metadata may synchronize or receive a signed derivative read
+URL.
 Abandoned pending rows and possible objects are cleanup candidates. Support
 JPEG, PNG, and WebP initially, with a 10 MiB maximum. Treat presigned URLs as
 bearer credentials, never log them, and never expose R2 credentials through a
 `VITE_` environment variable.
 
-The web client caches signed read URLs and in-flight requests in memory. Cache
-entries are partitioned by access token, household, recipe, and image, refresh
-shortly before expiry, never persist across sessions, and are invalidated when
-an image is deleted.
+The web client caches signed derivative read URLs and in-flight requests in
+memory. Cache entries are partitioned by access token, household, recipe,
+image, and display variant, refresh shortly before expiry, never persist across
+sessions, and are invalidated when an image is deleted.
 
 Image deletion is idempotent. A short transaction authorizes and reads
 metadata, the R2 object is deleted without database locks held, and a second
@@ -243,7 +256,9 @@ If R2 deletion fails, metadata remains. If the database step fails after R2
 deletion, retrying can finish cleanup. A transactional outbox may replace this
 recovery policy if background jobs are introduced.
 
-The R2 bucket permits `GET` and `PUT` from
+The R2 bucket permits `PUT` from
 `https://home.achichorro.com` and `http://127.0.0.1:5173`, with
 `Content-Type` allowed and `ETag` exposed. This restricted CORS policy does not
-make the bucket public; each operation still requires a valid presigned URL.
+make the bucket public; each upload still requires a valid presigned URL.
+Derivative reads go through the delivery Worker and do not require browser
+CORS access to the original object.

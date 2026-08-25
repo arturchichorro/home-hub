@@ -28,7 +28,7 @@ deployment applies tested forward migrations after an off-host backup.
 
 ## Add an image delivery pipeline
 
-- [ ] Define original-image retention and access requirements, derivative formats and sizes, processing location, delivery path, authorization boundary, failure recovery, and migration behavior for existing recipe images
+- [ ] Finish defining the code-owned display variants, signed edge-delivery capability, failure recovery, deletion behavior, and migration behavior for existing recipe images; originals remain private in R2 with no initial user-facing access, while Cloudflare Images generates display derivatives on demand
 - [ ] Implement the agreed image processing and delivery pipeline while retaining original uploads
 - [ ] Verify upload, processing, authorized display, original access, deletion, cleanup, and existing-image migration behavior
 - [ ] Complete the image delivery pipeline checkpoint and commit
