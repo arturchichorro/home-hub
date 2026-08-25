@@ -119,10 +119,18 @@ original-image read or download operation to any user. Original retention
 exists for future reprocessing, recovery, and a possible later access policy.
 
 Derivative delivery must preserve the existing household authorization
-boundary through short-lived, server-authorized access. Expose only a small,
-code-owned set of display variants rather than accepting arbitrary transform
-parameters. Exact variants, delivery-token design, and failure behavior remain
-requirements to settle before implementation.
+boundary through a five-minute HMAC-signed capability issued only after the API
+reauthorizes the current user, household membership, Recipes module, and
+confirmed image. The Worker verifies the capability before consulting its
+shared cache or private R2. It exposes only three code-owned WebP variants:
+`card` at 640×427 with cover cropping, `thumbnail` at 480×480 with cover
+cropping, and `viewer` constrained to 1,920 pixels wide without enlargement.
+
+Transformation failures fail closed and never fall back to the original.
+Existing images need no migration because their derivatives are generated on
+first use. Deletion removes metadata and the original; a previously cached
+derivative is unreachable without an unexpired capability, and image UUIDs are
+never reused.
 
 **Alternatives:** pre-generating WebP objects in R2; processing images on the
 application host; converting in the browser; moving canonical storage to

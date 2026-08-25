@@ -6,3 +6,4 @@ allowBuilds:
   argon2: true
   esbuild: true
   protobufjs: false
+  workerd: true

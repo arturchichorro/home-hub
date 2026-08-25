@@ -1,3 +1,4 @@
+import { createRecipeImageReadUrlRequestSchema } from "@home-hub/shared/recipe-images";
 import type { Context } from "hono";
 import * as z from "zod";
 
@@ -20,11 +21,14 @@ export function createRecipeImageReadUrlRoute({
     const parsedHouseholdId = z.uuid().safeParse(c.req.param("householdId"));
     const parsedRecipeId = z.uuid().safeParse(c.req.param("recipeId"));
     const parsedImageId = z.uuid().safeParse(c.req.param("imageId"));
+    const body = await c.req.json().catch(() => undefined);
+    const parsedRequest = createRecipeImageReadUrlRequestSchema.safeParse(body);
 
     if (
       !parsedHouseholdId.success ||
       !parsedRecipeId.success ||
-      !parsedImageId.success
+      !parsedImageId.success ||
+      !parsedRequest.success
     ) {
       return c.json({ error: "Invalid request" }, 400);
     }
@@ -34,6 +38,7 @@ export function createRecipeImageReadUrlRoute({
       householdId: parsedHouseholdId.data,
       recipeId: parsedRecipeId.data,
       imageId: parsedImageId.data,
+      variant: parsedRequest.data.variant,
     });
 
     if (result.kind === "unauthorized") {

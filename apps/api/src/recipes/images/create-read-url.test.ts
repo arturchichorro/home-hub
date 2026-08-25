@@ -13,7 +13,13 @@ const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 const objectKey = `households/${householdId}/recipes/${recipeId}/${imageId}`;
-const input = { userId, householdId, recipeId, imageId };
+const input = {
+  userId,
+  householdId,
+  recipeId,
+  imageId,
+  variant: "card" as const,
+};
 
 function createFakeDatabase({
   user = true,
@@ -97,7 +103,12 @@ describe("create recipe image read URL service", () => {
       expiresInSeconds: recipeImageReadUrlLifetimeSeconds,
     });
     expect(transaction).toHaveBeenCalledOnce();
-    expect(signRead).toHaveBeenCalledWith({ objectKey });
+    expect(signRead).toHaveBeenCalledWith({
+      householdId,
+      imageId,
+      recipeId,
+      variant: "card",
+    });
     expect(events).toEqual(["transaction:start", "transaction:end", "sign"]);
     expect(lockStrengths).toEqual(["share", "share", "share"]);
     expect(tables).toEqual([

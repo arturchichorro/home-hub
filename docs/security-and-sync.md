@@ -171,11 +171,13 @@ For self-hosting, Rocicorp does not issue an API key. In production, configure a
 
 ## Production network and recovery boundary
 
-Caddy is the only public application service and exposes HTTPS on ports 80 and
-443. Do not publish PostgreSQL, the API container's direct port, the
-`zero-cache` direct port, or Zero's replication-manager interface to the
-internet. Caddy proxies the public API and Zero client traffic, including
-WebSocket upgrades, to the private Compose network.
+Caddy is the only public service on the VPS and exposes HTTPS on ports 80 and
+443. The separately deployed Cloudflare image-delivery Worker is public only
+at its signed derivative endpoint. Do not publish PostgreSQL, the API
+container's direct port, the `zero-cache` direct port, or Zero's
+replication-manager interface to the internet. Caddy proxies the public API and
+Zero client traffic, including WebSocket upgrades, to the private Compose
+network.
 
 PostgreSQL remains the source of truth and requires automated, encrypted,
 off-host backups plus periodic restore tests. Back up the complete database,

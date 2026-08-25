@@ -1,44 +1,37 @@
 import { describe, expect, it } from "vitest";
-
-import { createR2Client } from "./r2-client";
 import {
   recipeImageReadUrlLifetimeSeconds,
   signRecipeImageRead,
 } from "./sign-read";
 
-const accessKeyId = "test-access-key-id";
-const secretAccessKey = "test-secret-access-key";
-const bucket = "home-hub-dev";
-const objectKey =
-  "households/d92e5c4e-1c68-4942-9cc9-710207661bca/recipes/8d46a4c4-4845-4a6d-a937-139633ae1bb9/5944cb0d-931a-4723-b981-77eacb122314";
+const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+const imageId = "5944cb0d-931a-4723-b981-77eacb122314";
+const secret = "test-image-delivery-secret-at-least-32-bytes";
 
 describe("signRecipeImageRead", () => {
-  it("targets one object with a short-lived GET URL", async () => {
-    const client = createR2Client({
-      endpoint: "https://example-account.r2.cloudflarestorage.com",
-      accessKeyId,
-      secretAccessKey,
+  it("targets one fixed variant with a short-lived capability URL", async () => {
+    const now = new Date("2026-08-25T12:00:00.000Z");
+    const signedUrl = await signRecipeImageRead({
+      baseUrl: "https://images.home.example/base/",
+      householdId,
+      imageId,
+      now,
+      recipeId,
+      secret,
+      variant: "thumbnail",
     });
+    const url = new URL(signedUrl);
 
-    try {
-      const signedUrl = await signRecipeImageRead({
-        client,
-        bucket,
-        objectKey,
-      });
-      const url = new URL(signedUrl);
-
-      expect(url.searchParams.get("X-Amz-Expires")).toBe(
-        String(recipeImageReadUrlLifetimeSeconds),
-      );
-      expect(
-        url.searchParams.get("X-Amz-SignedHeaders")?.split(";"),
-      ).not.toContain("content-type");
-      expect(`${url.hostname}${url.pathname}`).toContain(bucket);
-      expect(decodeURIComponent(url.pathname)).toContain(objectKey);
-      expect(signedUrl).not.toContain(secretAccessKey);
-    } finally {
-      client.destroy();
-    }
+    expect(url.pathname).toBe(
+      `/base/recipe-images/thumbnail/${householdId}/${recipeId}/${imageId}`,
+    );
+    expect(url.searchParams.get("expires")).toBe(
+      String(
+        Math.floor(now.getTime() / 1_000) + recipeImageReadUrlLifetimeSeconds,
+      ),
+    );
+    expect(url.searchParams.get("signature")).toMatch(/^[0-9a-f]{64}$/u);
+    expect(signedUrl).not.toContain(secret);
   });
 });

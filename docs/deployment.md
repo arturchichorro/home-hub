@@ -32,7 +32,7 @@ neither replaces the off-provider PostgreSQL backups required below.
 
 ## Public routing
 
-Caddy is the only public application entry point. It:
+Caddy is the only public entry point to services running on the VPS. It:
 
 - listens on ports 80 and 443;
 - obtains and renews HTTPS certificates;
@@ -47,10 +47,53 @@ WebSocket traffic to `zero-cache`. Production configuration must keep the
 `/api/auth` refresh-cookie path, Zero callback URLs, and
 `VITE_ZERO_CACHE_URL` aligned with this routing. The browser uses the same
 origin for the SPA and API, so production does not require cross-origin API
-access. Direct recipe-image uploads and reads use the separate R2 origin; its
-module-specific CORS policy is documented in
+access. Direct recipe-image uploads use the separate R2 origin. Display reads
+use the authorization Worker at `https://images.home.achichorro.com`; the
+module-specific R2 CORS policy is documented in
 [Recipes image storage and security](./recipes/#image-storage-and-security).
 The private backup bucket does not use this browser CORS policy.
+
+## Cloudflare image delivery Worker
+
+`apps/image-delivery` owns the independently deployed Worker that reads private
+recipe originals through an R2 binding and transforms them through an Images
+binding. Its development configuration targets `home-hub-dev`; its production
+environment targets `home-hub-production` and the custom domain
+`images.home.achichorro.com`. Confirm those bucket names against the actual
+Cloudflare account before deployment.
+
+Generate one independent high-entropy signing secret of at least 32 bytes. Put
+the same value in the API's untracked `IMAGE_DELIVERY_SIGNING_SECRET` production
+environment variable and in the Worker's encrypted production secret. Do not
+reuse `API_JWT_SECRET`, an R2 credential, or a Zero password. Set
+`IMAGE_DELIVERY_BASE_URL=https://images.home.achichorro.com` for the production
+API.
+
+Initial Cloudflare setup is deliberate and manual:
+
+```bash
+pnpm --filter @home-hub/image-delivery exec wrangler login
+pnpm --filter @home-hub/image-delivery exec wrangler secret put \
+  IMAGE_DELIVERY_SIGNING_SECRET --env production
+pnpm --filter @home-hub/image-delivery deploy:production
+```
+
+The Cloudflare account must have Images transformations available, the custom
+domain must be in the account's zone, and the deploying identity must be able
+to deploy Workers and bind the production R2 bucket. `wrangler deploy --dry-run
+--env production` validates bundling without changing Cloudflare resources.
+
+For local development, put the same development-only secret in the root `.env`
+and the ignored `apps/image-delivery/.dev.vars`, start the Worker with `pnpm
+--filter @home-hub/image-delivery dev`, and keep
+`IMAGE_DELIVERY_BASE_URL=http://127.0.0.1:8787`. Remote Worker development reads
+the configured development R2 bucket, so never point it at production.
+
+Deploy a backward-compatible Worker before releasing an API version that emits
+its capability URLs. The VPS deployment script does not deploy Cloudflare
+resources. Roll back the Worker by deploying the previously verified revision;
+the five-minute capability format must remain supported across the API/Worker
+rollout window.
 
 ## Persistent state
 

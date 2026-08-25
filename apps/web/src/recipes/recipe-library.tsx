@@ -44,6 +44,7 @@ function RecipeCardImage({
     imageId: image?.id,
     onSessionExpired,
     recipeId,
+    variant: "card",
   });
 
   if (imageState.url) {

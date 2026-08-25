@@ -1,0 +1,42 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "home-hub-image-delivery",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-08-25",
+	"workers_dev": true,
+	"cache": {
+		"enabled": true
+	},
+	"r2_buckets": [
+		{
+			"binding": "RECIPE_IMAGES",
+			"bucket_name": "home-hub-production",
+			"remote": true
+		}
+	],
+	"images": {
+		"binding": "IMAGES"
+	},
+	"env": {
+		"production": {
+			"name": "home-hub-image-delivery-production",
+			"workers_dev": false,
+			"routes": [
+				{
+					"pattern": "images.home.achichorro.com",
+					"custom_domain": true
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "RECIPE_IMAGES",
+					"bucket_name": "home-hub-production",
+					"remote": true
+				}
+			],
+			"images": {
+				"binding": "IMAGES"
+			}
+		}
+	}
+}

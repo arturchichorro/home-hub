@@ -53,6 +53,8 @@ services:
       R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:?R2_ACCESS_KEY_ID is required}
       R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:?R2_SECRET_ACCESS_KEY is required}
       R2_BUCKET: ${R2_BUCKET:?R2_BUCKET is required}
+      IMAGE_DELIVERY_BASE_URL: ${IMAGE_DELIVERY_BASE_URL:?IMAGE_DELIVERY_BASE_URL is required}
+      IMAGE_DELIVERY_SIGNING_SECRET: ${IMAGE_DELIVERY_SIGNING_SECRET:?IMAGE_DELIVERY_SIGNING_SECRET is required}
     depends_on:
       postgres:
         condition: service_healthy

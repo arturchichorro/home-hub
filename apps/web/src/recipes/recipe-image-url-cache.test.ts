@@ -11,6 +11,7 @@ const identity = {
   householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
   recipeId: "671874b1-df9d-4a91-8f3c-8055473e8aa2",
   imageId: "b5b8a5ea-89cb-4c31-a93d-33049ab11c73",
+  variant: "thumbnail" as const,
 };
 
 afterEach(() => {
@@ -93,5 +94,22 @@ describe("recipe image URL cache", () => {
     invalidateRecipeImageUrl(identity);
     expect(readCachedRecipeImageUrl(identity)).toBeUndefined();
     expect(readCachedRecipeImageUrl(otherSession)).toBeUndefined();
+  });
+
+  it("keeps display variants separate", async () => {
+    const createUrl = vi.fn(async () => ({
+      kind: "success" as const,
+      url: `https://images.example/signed-${createUrl.mock.calls.length}`,
+      expiresInSeconds: 300,
+    }));
+    const viewerIdentity = { ...identity, variant: "viewer" as const };
+
+    await getOrCreateRecipeImageUrl(identity, createUrl);
+    await getOrCreateRecipeImageUrl(viewerIdentity, createUrl);
+
+    expect(createUrl).toHaveBeenCalledTimes(2);
+    expect(readCachedRecipeImageUrl(identity)?.url).not.toBe(
+      readCachedRecipeImageUrl(viewerIdentity)?.url,
+    );
   });
 });

@@ -40,6 +40,7 @@ Use current stable package versions when implementation begins and pin the `zero
 home-hub/
 ├── apps/
 │   ├── api/                 Hono application and Zero endpoints
+│   ├── image-delivery/      Cloudflare Worker for authorized image variants
 │   └── web/                 React/Vite application and feature composition
 │   # mobile/                Reserved for a future Expo/React Native application
 ├── packages/
@@ -228,6 +229,8 @@ Typical values are:
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
 - `R2_BUCKET`
+- `IMAGE_DELIVERY_BASE_URL`
+- `IMAGE_DELIVERY_SIGNING_SECRET`
 - `VITE_ZERO_CACHE_URL`
 
 The initial production target is an OVHcloud VPS-1 in Gravelines running
@@ -247,12 +250,17 @@ flowchart LR
   Zero -->|"private query and mutate calls"| API
   API -->|"private connection"| PG["PostgreSQL"]
   PG -->|"logical replication"| Zero
-  Client -->|"presigned upload or read"| R2["Cloudflare R2"]
+  Client -->|"presigned original upload"| R2["Cloudflare R2"]
+  Client -->|"signed variant read"| Edge["Cloudflare delivery Worker"]
+  Edge -->|"private original read"| R2
+  Edge -->|"WebP transform"| Images["Cloudflare Images"]
 ```
 
-Caddy is the only public application entry point. It terminates HTTPS, serves
-the compiled SPA with an `index.html` fallback, and reverse-proxies API and
-Zero traffic. PostgreSQL and the containers' direct API and Zero ports remain
+Caddy is the only public entry point to services on the VPS. It terminates
+HTTPS, serves the compiled SPA with an `index.html` fallback, and
+reverse-proxies API and Zero traffic. The independently deployed Cloudflare
+Worker is the only other public application endpoint and serves signed image
+derivatives. PostgreSQL and the containers' direct API and Zero ports remain
 private to the Compose network.
 
 The public API uses the `/api` prefix, keeping API requests distinct from SPA
@@ -261,5 +269,6 @@ preserve that boundary and the SPA's `index.html` fallback. Changes to the API
 prefix must be made together with the `/api/auth` refresh-cookie path and the
 Zero query and mutation callback URLs. The deployed browser and API share one
 origin, so the application API does not require CORS. Direct browser-to-R2
-transfers are cross-origin and require the restricted R2 bucket CORS policy
-described above.
+uploads are cross-origin and require the restricted R2 bucket CORS policy
+described above. Derivative reads use the Worker and never expose an R2 read
+URL.

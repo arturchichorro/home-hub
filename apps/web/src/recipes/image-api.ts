@@ -1,3 +1,4 @@
+import type { RecipeImageVariant } from "@home-hub/shared/recipe-image-delivery";
 import {
   type CreateRecipeImageUploadRequest,
   type CreateRecipeImageUploadResponse,
@@ -131,12 +132,19 @@ export async function createRecipeImageReadUrl({
   householdId,
   recipeId,
   imageId,
-}: RecipeImageCommandInput): Promise<CreateRecipeImageReadUrlResult> {
+  variant,
+}: RecipeImageCommandInput & {
+  variant: RecipeImageVariant;
+}): Promise<CreateRecipeImageReadUrlResult> {
   const response = await fetch(
     `${imageUrl({ householdId, recipeId, imageId })}/read-url`,
     {
       method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ variant }),
     },
   );
 

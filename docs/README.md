@@ -50,6 +50,7 @@ pnpm db:migrate
 ```sh
 pnpm --filter @home-hub/api dev
 pnpm --filter @home-hub/web dev
+pnpm --filter @home-hub/image-delivery dev
 ```
 
 ### Verification
@@ -57,8 +58,7 @@ pnpm --filter @home-hub/web dev
 ```sh
 pnpm test
 pnpm check
-pnpm --filter @home-hub/api typecheck
-pnpm --filter @home-hub/web typecheck
+pnpm typecheck
 pnpm --filter @home-hub/web build
 ```
 

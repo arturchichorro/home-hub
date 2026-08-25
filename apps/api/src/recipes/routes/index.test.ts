@@ -181,7 +181,11 @@ describe("recipe routes", () => {
       `/${householdId}/recipes/${recipeId}/images/${imageId}/read-url`,
       {
         method: "POST",
-        headers: { Authorization: `Bearer ${createAccessToken()}` },
+        headers: {
+          Authorization: `Bearer ${createAccessToken()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ variant: "thumbnail" }),
       },
     );
 
@@ -191,6 +195,7 @@ describe("recipe routes", () => {
       householdId,
       recipeId,
       imageId,
+      variant: "thumbnail",
     });
   });
 

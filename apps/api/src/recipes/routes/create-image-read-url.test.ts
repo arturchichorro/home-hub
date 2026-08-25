@@ -40,7 +40,11 @@ function postReadUrl(
 ) {
   return app.request(
     `/${params.householdId ?? householdId}/recipes/${params.recipeId ?? recipeId}/images/${params.imageId ?? imageId}/read-url`,
-    { method: "POST" },
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ variant: "card" }),
+    },
   );
 }
 
@@ -84,7 +88,27 @@ describe("create recipe image read URL route", () => {
       householdId,
       recipeId,
       imageId,
+      variant: "card",
     });
+  });
+
+  it("rejects a missing or unknown display variant", async () => {
+    const createRecipeImageReadUrl = vi.fn<CreateReadUrl>(async () => ({
+      kind: "forbidden",
+    }));
+    const app = createTestApp(createRecipeImageReadUrl);
+
+    const response = await app.request(
+      `/${householdId}/recipes/${recipeId}/images/${imageId}/read-url`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variant: "original" }),
+      },
+    );
+
+    expect(response.status).toBe(400);
+    expect(createRecipeImageReadUrl).not.toHaveBeenCalled();
   });
 
   it.each([
