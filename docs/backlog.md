@@ -12,7 +12,6 @@ together before implementation begins.
 - [ ] While typing (e.g. recipe description), input keeps being trimmed (on debounce) which removes spaces the user just typed
 - [ ] Add ordering to recipes (to order recipe list)
 - [ ] Add ordering to households in the sidebar
-- [ ] Add image pipeline to convert images to webp for displaying in the app (maybe a proper cdn?) - I want to keep the original image too though (maybe enableable for certain users?)
 - [ ] Add user profile pictures and use base ui's Avatar
 - [ ] After having multiple lists, add the possibility to assign people to a list item (e.g. todo list, go to commune, Artur)
 - [ ] Allow to append already uploaded recipe image to a cook log

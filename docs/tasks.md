@@ -26,6 +26,13 @@ commit changes unless explicitly asked for that specific action. CI rehearses
 the committed migration history on a disposable database, and the production
 deployment applies tested forward migrations after an off-host backup.
 
+## Add an image delivery pipeline
+
+- [ ] Define original-image retention and access requirements, derivative formats and sizes, processing location, delivery path, authorization boundary, failure recovery, and migration behavior for existing recipe images
+- [ ] Implement the agreed image processing and delivery pipeline while retaining original uploads
+- [ ] Verify upload, processing, authorized display, original access, deletion, cleanup, and existing-image migration behavior
+- [ ] Complete the image delivery pipeline checkpoint and commit
+
 ## Deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack
