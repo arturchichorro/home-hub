@@ -171,11 +171,13 @@ For self-hosting, Rocicorp does not issue an API key. In production, configure a
 
 ## Production network and recovery boundary
 
-Caddy is the only public application service and exposes HTTPS on ports 80 and
-443. Do not publish PostgreSQL, the API container's direct port, the
-`zero-cache` direct port, or Zero's replication-manager interface to the
-internet. Caddy proxies the public API and Zero client traffic, including
-WebSocket upgrades, to the private Compose network.
+Caddy is the only public service on the VPS and exposes HTTPS on ports 80 and
+443. The separately deployed Cloudflare image-delivery Worker is public only
+at its signed derivative endpoint. Do not publish PostgreSQL, the API
+container's direct port, the `zero-cache` direct port, or Zero's
+replication-manager interface to the internet. Caddy proxies the public API and
+Zero client traffic, including WebSocket upgrades, to the private Compose
+network.
 
 PostgreSQL remains the source of truth and requires automated, encrypted,
 off-host backups plus periodic restore tests. Back up the complete database,
@@ -292,6 +294,7 @@ only previously synchronized Zero rows persist in the local cache.
 
 ## Module storage security
 
-The Recipes module owns the complete presigned upload, signed read, deletion,
-cache-partitioning, file-type, and size rules. See
+The Recipes module owns the complete presigned original-upload, signed
+derivative-read, deletion, cache-partitioning, file-type, variant, and size
+rules. Original objects remain private and have no user-facing read path. See
 [Recipes image storage and security](./recipes/#image-storage-and-security).

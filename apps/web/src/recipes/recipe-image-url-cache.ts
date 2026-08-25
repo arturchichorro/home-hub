@@ -1,3 +1,4 @@
+import type { RecipeImageVariant } from "@home-hub/shared/recipe-image-delivery";
 import type { CreateRecipeImageReadUrlResult } from "./image-api";
 
 type RecipeImageUrlIdentity = {
@@ -5,6 +6,7 @@ type RecipeImageUrlIdentity = {
   householdId: string;
   imageId: string;
   recipeId: string;
+  variant: RecipeImageVariant;
 };
 
 type CachedRecipeImageUrl = {
@@ -26,7 +28,7 @@ function resourceKey({
   householdId,
   imageId,
   recipeId,
-}: Omit<RecipeImageUrlIdentity, "accessToken">) {
+}: Omit<RecipeImageUrlIdentity, "accessToken" | "variant">) {
   return JSON.stringify([householdId, recipeId, imageId]);
 }
 
@@ -36,6 +38,7 @@ export function recipeImageUrlCacheKey(identity: RecipeImageUrlIdentity) {
     identity.householdId,
     identity.recipeId,
     identity.imageId,
+    identity.variant,
   ]);
 }
 
@@ -102,7 +105,7 @@ export function getOrCreateRecipeImageUrl(
 }
 
 export function invalidateRecipeImageUrl(
-  identity: Omit<RecipeImageUrlIdentity, "accessToken">,
+  identity: Omit<RecipeImageUrlIdentity, "accessToken" | "variant">,
 ) {
   const imageResourceKey = resourceKey(identity);
   for (const [key, cached] of cachedUrls) {

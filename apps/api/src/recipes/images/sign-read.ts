@@ -1,27 +1,51 @@
-import { GetObjectCommand, type S3Client } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import {
+  type RecipeImageVariant,
+  recipeImageDeliveryCapabilityLifetimeSeconds,
+  signRecipeImageDeliveryCapability,
+} from "@home-hub/shared/recipe-image-delivery";
 
-export const recipeImageReadUrlLifetimeSeconds = 300;
+export const recipeImageReadUrlLifetimeSeconds =
+  recipeImageDeliveryCapabilityLifetimeSeconds;
 
 type SignRecipeImageReadInput = {
-  client: S3Client;
-  bucket: string;
-  objectKey: string;
+  baseUrl: string;
+  householdId: string;
+  imageId: string;
+  now?: Date;
+  recipeId: string;
+  secret: string;
+  variant: RecipeImageVariant;
 };
 
-export function signRecipeImageRead({
-  client,
-  bucket,
-  objectKey,
+export async function signRecipeImageRead({
+  baseUrl,
+  householdId,
+  imageId,
+  now = new Date(),
+  recipeId,
+  secret,
+  variant,
 }: SignRecipeImageReadInput): Promise<string> {
-  return getSignedUrl(
-    client,
-    new GetObjectCommand({
-      Bucket: bucket,
-      Key: objectKey,
-    }),
-    {
-      expiresIn: recipeImageReadUrlLifetimeSeconds,
-    },
+  const expiresAt =
+    Math.floor(now.getTime() / 1_000) + recipeImageReadUrlLifetimeSeconds;
+  const capability = {
+    expiresAt,
+    householdId,
+    imageId,
+    recipeId,
+    variant,
+  };
+  const signature = await signRecipeImageDeliveryCapability({
+    capability,
+    secret,
+  });
+  const url = new URL(
+    ["recipe-images", variant, householdId, recipeId, imageId]
+      .map(encodeURIComponent)
+      .join("/"),
+    baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`,
   );
+  url.searchParams.set("expires", String(expiresAt));
+  url.searchParams.set("signature", signature);
+  return url.toString();
 }

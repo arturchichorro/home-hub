@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   confirmRecipeImageUploadResponseSchema,
+  createRecipeImageReadUrlRequestSchema,
   createRecipeImageReadUrlResponseSchema,
   createRecipeImageUploadRequestSchema,
   createRecipeImageUploadResponseSchema,
@@ -107,5 +108,28 @@ describe("recipe image HTTP response schemas", () => {
     expect(createRecipeImageReadUrlResponseSchema.parse(response)).toEqual(
       response,
     );
+  });
+});
+
+describe("createRecipeImageReadUrlRequestSchema", () => {
+  it.each(["card", "thumbnail", "viewer"] as const)(
+    "accepts the fixed %s variant",
+    (variant) => {
+      expect(createRecipeImageReadUrlRequestSchema.parse({ variant })).toEqual({
+        variant,
+      });
+    },
+  );
+
+  it("rejects original and arbitrary variants", () => {
+    expect(
+      createRecipeImageReadUrlRequestSchema.safeParse({ variant: "original" })
+        .success,
+    ).toBe(false);
+    expect(
+      createRecipeImageReadUrlRequestSchema.safeParse({
+        variant: "width-1234",
+      }).success,
+    ).toBe(false);
   });
 });

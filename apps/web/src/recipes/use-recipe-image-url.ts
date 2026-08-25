@@ -1,3 +1,4 @@
+import type { RecipeImageVariant } from "@home-hub/shared/recipe-image-delivery";
 import { useEffect, useState } from "react";
 import { createRecipeImageReadUrl } from "./image-api";
 import {
@@ -12,6 +13,7 @@ type UseRecipeImageUrlOptions = {
   imageId: string | undefined;
   onSessionExpired: () => void;
   recipeId: string;
+  variant: RecipeImageVariant;
 };
 
 type RecipeImageUrlState = {
@@ -32,9 +34,10 @@ export function useRecipeImageUrl({
   imageId,
   onSessionExpired,
   recipeId,
+  variant,
 }: UseRecipeImageUrlOptions): RecipeImageUrlState {
   const identity = imageId
-    ? { accessToken, householdId, imageId, recipeId }
+    ? { accessToken, householdId, imageId, recipeId, variant }
     : undefined;
   const key = identity ? recipeImageUrlCacheKey(identity) : undefined;
   const cached = identity ? readCachedRecipeImageUrl(identity) : undefined;
@@ -56,7 +59,13 @@ export function useRecipeImageUrl({
       return () => undefined;
     }
 
-    const currentIdentity = { accessToken, householdId, imageId, recipeId };
+    const currentIdentity = {
+      accessToken,
+      householdId,
+      imageId,
+      recipeId,
+      variant,
+    };
     const currentKey = recipeImageUrlCacheKey(currentIdentity);
 
     function scheduleRefresh(refreshAt: number) {
@@ -102,7 +111,7 @@ export function useRecipeImageUrl({
       active = false;
       if (refreshTimeout !== undefined) clearTimeout(refreshTimeout);
     };
-  }, [accessToken, householdId, imageId, onSessionExpired, recipeId]);
+  }, [accessToken, householdId, imageId, onSessionExpired, recipeId, variant]);
 
   return {
     error,

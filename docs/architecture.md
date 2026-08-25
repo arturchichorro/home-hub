@@ -24,6 +24,7 @@ the reasoning behind the major choices.
 | Database access and migrations | Drizzle ORM with committed SQL migrations         |
 | Password hashing               | Argon2id                                          |
 | Image storage                  | Cloudflare R2 through its S3-compatible API       |
+| Image transformation/delivery  | Cloudflare Images through an authorization Worker |
 | TLS and reverse proxy          | Caddy                                             |
 | Initial production host        | OVHcloud VPS-1 in Gravelines, Ubuntu 26.04 AMD64  |
 | Production process topology    | Docker Compose on one Linux host                  |
@@ -39,6 +40,7 @@ Use current stable package versions when implementation begins and pin the `zero
 home-hub/
 ├── apps/
 │   ├── api/                 Hono application and Zero endpoints
+│   ├── image-delivery/      Cloudflare Worker for authorized image variants
 │   └── web/                 React/Vite application and feature composition
 │   # mobile/                Reserved for a future Expo/React Native application
 ├── packages/
@@ -68,6 +70,10 @@ flowchart LR
   PG -->|"logical replication"| Cache
   UI -->|"request upload authorization"| API
   UI -->|"presigned PUT"| R2["Cloudflare R2"]
+  UI -->|"request derivative authorization"| API
+  UI -->|"signed variant read"| Edge["Cloudflare delivery Worker"]
+  Edge -->|"read private original"| R2
+  Edge -->|"transform and cache"| Images["Cloudflare Images"]
 ```
 
 
@@ -168,7 +174,7 @@ The API owns:
 - verification of Zero authentication tokens;
 - transformation of named Zero queries using trusted user context;
 - transactional execution and authorization of Zero mutations;
-- R2 presigned upload and read URLs;
+- R2 presigned original-upload URLs and signed derivative-delivery capabilities;
 - the health endpoint.
 
 The API remains stateless apart from PostgreSQL and R2. Feature dependencies
@@ -192,9 +198,18 @@ starting the new application version. It never automatically reverses a
 migration or restores a backup. Destructive or backward-incompatible changes
 require an explicit staged migration and rollback plan.
 
-### Cloudflare R2
+### Cloudflare R2 and Images
 
-Image bytes travel directly between the browser and R2 through short-lived presigned URLs. The API stores only metadata and never writes uploaded files to its filesystem.
+Original image bytes travel directly from the browser to private R2 through
+short-lived presigned upload URLs. Confirmed originals remain the canonical
+source and are not directly readable by users. The API stores only metadata
+and never writes uploaded files to its filesystem.
+
+For display, a Cloudflare Worker validates a short-lived capability authorized
+by the API, selects one of the code-owned variants, reads the private R2
+original, and uses Cloudflare Images to generate and cache the optimized
+derivative. Arbitrary client-controlled transformations and original-image
+downloads are not exposed.
 
 Recipes-specific URL caching, upload, deletion, and bucket CORS rules are
 documented in
@@ -214,6 +229,8 @@ Typical values are:
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
 - `R2_BUCKET`
+- `IMAGE_DELIVERY_BASE_URL`
+- `IMAGE_DELIVERY_SIGNING_SECRET`
 - `VITE_ZERO_CACHE_URL`
 
 The initial production target is an OVHcloud VPS-1 in Gravelines running
@@ -233,12 +250,17 @@ flowchart LR
   Zero -->|"private query and mutate calls"| API
   API -->|"private connection"| PG["PostgreSQL"]
   PG -->|"logical replication"| Zero
-  Client -->|"presigned upload or read"| R2["Cloudflare R2"]
+  Client -->|"presigned original upload"| R2["Cloudflare R2"]
+  Client -->|"signed variant read"| Edge["Cloudflare delivery Worker"]
+  Edge -->|"private original read"| R2
+  Edge -->|"WebP transform"| Images["Cloudflare Images"]
 ```
 
-Caddy is the only public application entry point. It terminates HTTPS, serves
-the compiled SPA with an `index.html` fallback, and reverse-proxies API and
-Zero traffic. PostgreSQL and the containers' direct API and Zero ports remain
+Caddy is the only public entry point to services on the VPS. It terminates
+HTTPS, serves the compiled SPA with an `index.html` fallback, and
+reverse-proxies API and Zero traffic. The independently deployed Cloudflare
+Worker is the only other public application endpoint and serves signed image
+derivatives. PostgreSQL and the containers' direct API and Zero ports remain
 private to the Compose network.
 
 The public API uses the `/api` prefix, keeping API requests distinct from SPA
@@ -247,5 +269,6 @@ preserve that boundary and the SPA's `index.html` fallback. Changes to the API
 prefix must be made together with the `/api/auth` refresh-cookie path and the
 Zero query and mutation callback URLs. The deployed browser and API share one
 origin, so the application API does not require CORS. Direct browser-to-R2
-transfers are cross-origin and require the restricted R2 bucket CORS policy
-described above.
+uploads are cross-origin and require the restricted R2 bucket CORS policy
+described above. Derivative reads use the Worker and never expose an R2 read
+URL.

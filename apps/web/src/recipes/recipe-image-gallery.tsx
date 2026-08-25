@@ -78,6 +78,7 @@ export function RecipeImageThumbnail({
     recipeId,
     imageId: image.id,
     onSessionExpired,
+    variant: "thumbnail",
   });
   const classes = [
     "aspect-square overflow-hidden rounded-lg bg-raised",
@@ -221,6 +222,7 @@ export function RecipeImageViewer({
     recipeId,
     imageId: image?.id,
     onSessionExpired,
+    variant: "viewer",
   });
   const canNavigate = images.length > 1;
 

@@ -96,15 +96,45 @@ token sessions; invitations as account-creation credentials.
 
 ## R2 direct image transfer
 
-**Status:** accepted
+**Status:** accepted for original uploads; display reads superseded by edge-generated derivatives
 
-The API authorizes recipe images and issues short-lived presigned URLs. Image
-bytes move directly between clients and R2; PostgreSQL stores metadata and
-server-controlled object keys. See
+The API authorizes original recipe-image uploads and issues short-lived
+presigned `PUT` URLs. Original bytes move directly from clients to R2;
+PostgreSQL stores metadata and server-controlled object keys. Display reads use
+the separately accepted edge-generated derivative path below. See
 [Recipes image storage and security](./recipes/#image-storage-and-security).
 
 **Alternatives:** proxying image bytes through the API; storing uploads on the
 application host; persisting public or signed URLs.
+
+## R2 originals with edge-generated display derivatives
+
+**Status:** accepted
+
+Retain every confirmed original recipe-image upload in private Cloudflare R2
+as the canonical source. Display optimized derivatives generated on demand by
+Cloudflare Images and cached at the edge; do not replace or discard the
+original after transformation. The application does not initially expose an
+original-image read or download operation to any user. Original retention
+exists for future reprocessing, recovery, and a possible later access policy.
+
+Derivative delivery must preserve the existing household authorization
+boundary through a five-minute HMAC-signed capability issued only after the API
+reauthorizes the current user, household membership, Recipes module, and
+confirmed image. The Worker verifies the capability before consulting its
+shared cache or private R2. It exposes only three code-owned WebP variants:
+`card` at 640×427 with cover cropping, `thumbnail` at 480×480 with cover
+cropping, and `viewer` constrained to 1,920 pixels wide without enlargement.
+
+Transformation failures fail closed and never fall back to the original.
+Existing images need no migration because their derivatives are generated on
+first use. Deletion removes metadata and the original; a previously cached
+derivative is unreachable without an unexpired capability, and image UUIDs are
+never reused.
+
+**Alternatives:** pre-generating WebP objects in R2; processing images on the
+application host; converting in the browser; moving canonical storage to
+Cloudflare Images; exposing original downloads to household members or owners.
 
 ## Platform-specific internal UI libraries
 

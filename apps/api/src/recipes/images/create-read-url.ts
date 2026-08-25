@@ -1,4 +1,5 @@
 import type { Database } from "@home-hub/database";
+import type { RecipeImageVariant } from "@home-hub/shared/recipe-image-delivery";
 import { findActiveUser } from "../../authorization/active-user";
 import {
   findEnabledHouseholdModuleForShare,
@@ -7,13 +8,19 @@ import {
 import { findConfirmedRecipeImageForShare } from "./scoped-entities";
 import { recipeImageReadUrlLifetimeSeconds } from "./sign-read";
 
-type SignRead = (input: { objectKey: string }) => Promise<string>;
+type SignRead = (input: {
+  householdId: string;
+  imageId: string;
+  recipeId: string;
+  variant: RecipeImageVariant;
+}) => Promise<string>;
 
 export type CreateRecipeImageReadUrlInput = {
   userId: string;
   householdId: string;
   recipeId: string;
   imageId: string;
+  variant: RecipeImageVariant;
 };
 
 export type CreateRecipeImageReadUrlResult =
@@ -38,6 +45,7 @@ export function createRecipeImageReadUrlService({
     householdId,
     recipeId,
     imageId,
+    variant,
   }: CreateRecipeImageReadUrlInput): Promise<CreateRecipeImageReadUrlResult> {
     const authorizedImage = await db.transaction(async (tx) => {
       const user = await findActiveUser(tx, userId);
@@ -62,14 +70,14 @@ export function createRecipeImageReadUrlService({
       });
       if (!image) return { kind: "not_found" as const };
 
-      return { kind: "image" as const, objectKey: image.objectKey };
+      return { kind: "image" as const };
     });
 
     if (authorizedImage.kind !== "image") return authorizedImage;
 
     return {
       kind: "success",
-      url: await signRead({ objectKey: authorizedImage.objectKey }),
+      url: await signRead({ householdId, imageId, recipeId, variant }),
       expiresInSeconds: recipeImageReadUrlLifetimeSeconds,
     };
   };

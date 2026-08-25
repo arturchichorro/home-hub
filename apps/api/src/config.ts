@@ -43,6 +43,10 @@ const configSchema = z.object({
   R2_ACCESS_KEY_ID: z.string().min(1, "R2_ACCESS_KEY_ID is required"),
   R2_SECRET_ACCESS_KEY: z.string().min(1, "R2_SECRET_ACCESS_KEY is required"),
   R2_BUCKET: z.string().trim().min(1, "R2_BUCKET is required"),
+  IMAGE_DELIVERY_BASE_URL: z.url(),
+  IMAGE_DELIVERY_SIGNING_SECRET: z
+    .string()
+    .min(32, "IMAGE_DELIVERY_SIGNING_SECRET must be at least 32 characters"),
 });
 
 export const config = configSchema.parse(process.env);

@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { recipeImageVariants } from "./recipe-image-delivery";
 
 export const recipeImageContentTypes = [
   "image/jpeg",
@@ -64,6 +65,16 @@ export const confirmRecipeImageUploadResponseSchema = z
 
 export type ConfirmRecipeImageUploadResponse = z.infer<
   typeof confirmRecipeImageUploadResponseSchema
+>;
+
+export const recipeImageVariantSchema = z.enum(recipeImageVariants);
+
+export const createRecipeImageReadUrlRequestSchema = z
+  .object({ variant: recipeImageVariantSchema })
+  .strict();
+
+export type CreateRecipeImageReadUrlRequest = z.infer<
+  typeof createRecipeImageReadUrlRequestSchema
 >;
 
 export const createRecipeImageReadUrlResponseSchema = z

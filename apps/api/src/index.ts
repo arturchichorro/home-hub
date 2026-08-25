@@ -125,11 +125,14 @@ const recipeImages = {
   }),
   createRecipeImageReadUrl: createRecipeImageReadUrlService({
     db: infrastructure.db,
-    signRead: ({ objectKey }) =>
+    signRead: ({ householdId, imageId, recipeId, variant }) =>
       signRecipeImageRead({
-        client: infrastructure.r2Client,
-        bucket: infrastructure.config.R2_BUCKET,
-        objectKey,
+        baseUrl: infrastructure.config.IMAGE_DELIVERY_BASE_URL,
+        householdId,
+        imageId,
+        recipeId,
+        secret: infrastructure.config.IMAGE_DELIVERY_SIGNING_SECRET,
+        variant,
       }),
   }),
   deleteRecipeImage: createDeleteRecipeImageService({
