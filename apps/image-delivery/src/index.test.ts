@@ -40,7 +40,7 @@ function createHarness({ cached }: { cached?: Response } = {}) {
   const transform = vi.fn(() => ({ output, transform }));
   const input = vi.fn(() => ({ output, transform }));
   const get = vi.fn(async () => ({ body: new Blob(["original"]).stream() }));
-  const match = vi.fn(async () => cached);
+  const match = vi.fn(async (_request: Request) => cached);
   const put = vi.fn(async () => undefined);
   const waitUntil = vi.fn();
   const env: ImageDeliveryEnv = {
@@ -81,7 +81,13 @@ describe("recipe image delivery Worker", () => {
       height: 480,
       fit: "cover",
     });
-    expect(harness.output).toHaveBeenCalledWith({ format: "image/webp" });
+    expect(harness.output).toHaveBeenCalledWith({
+      format: "image/webp",
+      quality: 82,
+    });
+    expect((harness.match.mock.calls[0]?.[0] as Request | undefined)?.url).toBe(
+      `https://images.example/recipe-images/thumbnail/${householdId}/${recipeId}/${imageId}?transform=webp-q82-v1`,
+    );
     expect(harness.waitUntil).toHaveBeenCalledOnce();
   });
 

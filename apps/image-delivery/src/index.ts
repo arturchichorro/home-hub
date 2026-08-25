@@ -20,7 +20,10 @@ type ImagesOutput = {
 };
 
 type ImagesTransformer = {
-  output(options: { format: "image/webp" }): Promise<ImagesOutput>;
+  output(options: {
+    format: "image/webp";
+    quality: number;
+  }): Promise<ImagesOutput>;
   transform(options: {
     fit: "cover" | "scale-down";
     height?: number;
@@ -46,6 +49,8 @@ type CacheLike = Pick<Cache, "match" | "put">;
 
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const webpQuality = 82;
+const transformVersion = "webp-q82-v1";
 
 function isRecipeImageVariant(value: string): value is RecipeImageVariant {
   return (recipeImageVariants as readonly string[]).includes(value);
@@ -138,7 +143,9 @@ export async function handleRecipeImageDeliveryRequest({
   });
   if (!authorized) return errorResponse(403);
 
-  const cacheKey = new Request(`${url.origin}${url.pathname}`, {
+  const cacheKeyUrl = new URL(`${url.origin}${url.pathname}`);
+  cacheKeyUrl.searchParams.set("transform", transformVersion);
+  const cacheKey = new Request(cacheKeyUrl, {
     method: "GET",
   });
   const cached = await cache.match(cacheKey);
@@ -152,7 +159,7 @@ export async function handleRecipeImageDeliveryRequest({
     const transformed = (
       await env.IMAGES.input(original.body)
         .transform(recipeImageVariantTransforms[capability.variant])
-        .output({ format: "image/webp" })
+        .output({ format: "image/webp", quality: webpQuality })
     ).response();
     if (!transformed.ok) return errorResponse(500);
 
