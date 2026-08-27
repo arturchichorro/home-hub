@@ -8,7 +8,7 @@ import {
 import { findConfirmedRecipeImageForShare } from "./scoped-entities";
 import { recipeImageReadUrlLifetimeSeconds } from "./sign-read";
 
-type SignRead = (input: {
+export type SignRead = (input: {
   householdId: string;
   imageId: string;
   recipeId: string;

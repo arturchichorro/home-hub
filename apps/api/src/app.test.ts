@@ -37,6 +37,7 @@ const defaultInput: CreateAppInput = {
   recipeImages: {
     confirmRecipeImageUpload: async () => ({ kind: "forbidden" }),
     createRecipeImageReadUrl: async () => ({ kind: "forbidden" }),
+    createRecipeImageReadUrls: async () => ({ kind: "forbidden" }),
     createRecipeImageUpload: async () => ({ kind: "forbidden" }),
     deleteRecipeImage: async () => ({ kind: "forbidden" }),
   },

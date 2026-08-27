@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   recipeImageDeliveryCapabilityLifetimeSeconds,
+  recipeImageDerivativeObjectKey,
+  recipeImageOriginalObjectKey,
+  recipeImageProcessingCapabilityLifetimeSeconds,
   signRecipeImageDeliveryCapability,
+  signRecipeImageProcessingCapability,
   verifyRecipeImageDeliveryCapability,
+  verifyRecipeImageProcessingCapability,
 } from "./recipe-image-delivery";
 
 const secret = "test-image-delivery-secret-at-least-32-bytes";
@@ -68,5 +73,51 @@ describe("recipe image delivery capabilities", () => {
     await expect(
       signRecipeImageDeliveryCapability({ capability, secret: "too-short" }),
     ).rejects.toThrow("at least 32 bytes");
+  });
+});
+
+describe("recipe image storage", () => {
+  const identity = {
+    householdId: capability.householdId,
+    imageId: capability.imageId,
+    recipeId: capability.recipeId,
+  };
+
+  it("uses deterministic original and derivative keys", () => {
+    const original = recipeImageOriginalObjectKey(identity);
+    expect(original).toBe(
+      `households/${identity.householdId}/recipes/${identity.recipeId}/${identity.imageId}`,
+    );
+    expect(
+      recipeImageDerivativeObjectKey({ ...identity, variant: "viewer" }),
+    ).toBe(`${original}/derivatives/viewer.webp`);
+  });
+
+  it("signs short-lived processing capabilities independently from reads", async () => {
+    const processingCapability = {
+      ...identity,
+      expiresAt: nowSeconds + recipeImageProcessingCapabilityLifetimeSeconds,
+    };
+    const signature = await signRecipeImageProcessingCapability({
+      capability: processingCapability,
+      secret,
+    });
+
+    await expect(
+      verifyRecipeImageProcessingCapability({
+        capability: processingCapability,
+        nowSeconds,
+        secret,
+        signature,
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      verifyRecipeImageProcessingCapability({
+        capability: { ...processingCapability, imageId: capability.recipeId },
+        nowSeconds,
+        secret,
+        signature,
+      }),
+    ).resolves.toBe(false);
   });
 });

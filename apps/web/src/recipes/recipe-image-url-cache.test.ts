@@ -8,11 +8,30 @@ import {
 
 const identity = {
   accessToken: "access-token",
+  userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
   householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
   recipeId: "671874b1-df9d-4a91-8f3c-8055473e8aa2",
   imageId: "b5b8a5ea-89cb-4c31-a93d-33049ab11c73",
   variant: "thumbnail" as const,
 };
+
+function createMemoryStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => Array.from(values.keys())[index] ?? null,
+    removeItem: (key) => {
+      values.delete(key);
+    },
+    setItem: (key, value) => {
+      values.set(key, value);
+    },
+  };
+}
 
 afterEach(() => {
   clearRecipeImageUrlCache();
@@ -79,21 +98,28 @@ describe("recipe image URL cache", () => {
     expect(createUrl).toHaveBeenCalledTimes(2);
   });
 
-  it("isolates access tokens and invalidates every token for a deleted image", async () => {
+  it("reuses URLs across token refreshes and isolates users", async () => {
     const createUrl = vi.fn(async () => ({
       kind: "success" as const,
       url: "https://images.example/signed",
       expiresInSeconds: 300,
     }));
     const otherSession = { ...identity, accessToken: "other-token" };
+    const otherUser = {
+      ...identity,
+      accessToken: "other-token",
+      userId: "b6dd68d1-1455-443d-b871-49b7c71d6646",
+    };
 
     await getOrCreateRecipeImageUrl(identity, createUrl);
     await getOrCreateRecipeImageUrl(otherSession, createUrl);
+    await getOrCreateRecipeImageUrl(otherUser, createUrl);
     expect(createUrl).toHaveBeenCalledTimes(2);
 
     invalidateRecipeImageUrl(identity);
     expect(readCachedRecipeImageUrl(identity)).toBeUndefined();
     expect(readCachedRecipeImageUrl(otherSession)).toBeUndefined();
+    expect(readCachedRecipeImageUrl(otherUser)).toBeDefined();
   });
 
   it("keeps display variants separate", async () => {
@@ -111,5 +137,35 @@ describe("recipe image URL cache", () => {
     expect(readCachedRecipeImageUrl(identity)?.url).not.toBe(
       readCachedRecipeImageUrl(viewerIdentity)?.url,
     );
+  });
+
+  it("restores an unexpired signed URL after a module reload", async () => {
+    vi.stubGlobal("localStorage", createMemoryStorage());
+    vi.resetModules();
+    const initialCache = await import("./recipe-image-url-cache");
+    const createUrl = vi.fn(async () => ({
+      kind: "success" as const,
+      url: "https://images.example/persisted",
+      expiresInSeconds: 3_600,
+    }));
+    await initialCache.getOrCreateRecipeImageUrl(identity, createUrl);
+    expect(localStorage.length).toBe(1);
+
+    vi.resetModules();
+    expect(localStorage.length).toBe(1);
+    const reloadedCache = await import("./recipe-image-url-cache");
+    expect(reloadedCache.readCachedRecipeImageUrl(identity)).toBeDefined();
+    const createAfterReload = vi.fn(async () => ({
+      kind: "success" as const,
+      url: "https://images.example/new",
+      expiresInSeconds: 3_600,
+    }));
+    await reloadedCache.getOrCreateRecipeImageUrl(identity, createAfterReload);
+
+    expect(createAfterReload).not.toHaveBeenCalled();
+    expect(reloadedCache.readCachedRecipeImageUrl(identity)?.url).toBe(
+      "https://images.example/persisted",
+    );
+    reloadedCache.clearRecipeImageUrlCache();
   });
 });

@@ -5,7 +5,22 @@ import {
   recipeImages,
 } from "@home-hub/database/schema";
 import { describe, expect, it, vi } from "vitest";
-import { createConfirmRecipeImageUploadService } from "./confirm-upload";
+import { createConfirmRecipeImageUploadService as createConfirmRecipeImageUploadServiceBase } from "./confirm-upload";
+
+type ConfirmServiceInput = Parameters<
+  typeof createConfirmRecipeImageUploadServiceBase
+>[0];
+
+function createConfirmRecipeImageUploadService({
+  processDerivatives = async () => undefined,
+  ...input
+}: Omit<ConfirmServiceInput, "processDerivatives"> &
+  Partial<Pick<ConfirmServiceInput, "processDerivatives">>) {
+  return createConfirmRecipeImageUploadServiceBase({
+    ...input,
+    processDerivatives,
+  });
+}
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
@@ -117,9 +132,11 @@ describe("confirm recipe image upload service", () => {
       contentType: "image/webp",
       byteSize: 2_048,
     }));
+    const processDerivatives = vi.fn(async () => undefined);
     const confirmUpload = createConfirmRecipeImageUploadService({
       db,
       inspectObject,
+      processDerivatives,
     });
 
     const result = await confirmUpload(input);
@@ -129,6 +146,11 @@ describe("confirm recipe image upload service", () => {
     expect(result.image.confirmedAt).toBeInstanceOf(Date);
     expect(transaction).toHaveBeenCalledTimes(2);
     expect(inspectObject).toHaveBeenCalledWith({ objectKey });
+    expect(processDerivatives).toHaveBeenCalledWith({
+      householdId,
+      imageId,
+      recipeId,
+    });
     expect(lockStrengths).toEqual([
       "share",
       "share",
@@ -179,6 +201,27 @@ describe("confirm recipe image upload service", () => {
     await expect(
       createConfirmRecipeImageUploadService({ db, inspectObject })(input),
     ).resolves.toEqual({ kind: "upload_not_found" });
+    expect(transaction).toHaveBeenCalledOnce();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("keeps metadata pending when derivative processing fails", async () => {
+    const { db, transaction, update } = createFakeDatabase();
+    const inspectObject = vi.fn(async () => ({
+      contentType: "image/webp",
+      byteSize: 2_048,
+    }));
+    const error = new Error("processing unavailable");
+
+    await expect(
+      createConfirmRecipeImageUploadService({
+        db,
+        inspectObject,
+        processDerivatives: async () => {
+          throw error;
+        },
+      })(input),
+    ).rejects.toBe(error);
     expect(transaction).toHaveBeenCalledOnce();
     expect(update).not.toHaveBeenCalled();
   });

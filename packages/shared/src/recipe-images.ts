@@ -91,3 +91,44 @@ export const createRecipeImageReadUrlResponseSchema = z
 export type CreateRecipeImageReadUrlResponse = z.infer<
   typeof createRecipeImageReadUrlResponseSchema
 >;
+
+export const createRecipeImageReadUrlsRequestSchema = z
+  .object({
+    requests: z
+      .array(
+        z
+          .object({
+            imageId: z.uuid(),
+            recipeId: z.uuid(),
+            variant: recipeImageVariantSchema,
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(100),
+  })
+  .strict();
+
+export type CreateRecipeImageReadUrlsRequest = z.infer<
+  typeof createRecipeImageReadUrlsRequestSchema
+>;
+
+export const createRecipeImageReadUrlsResponseSchema = z
+  .object({
+    reads: z.array(
+      z
+        .object({
+          imageId: z.uuid(),
+          recipeId: z.uuid(),
+          variant: recipeImageVariantSchema,
+          url: z.url(),
+          expiresInSeconds: z.number().int().positive(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+
+export type CreateRecipeImageReadUrlsResponse = z.infer<
+  typeof createRecipeImageReadUrlsResponseSchema
+>;

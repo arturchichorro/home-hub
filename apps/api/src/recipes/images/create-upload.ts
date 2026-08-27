@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Database } from "@home-hub/database";
 import { recipeImages } from "@home-hub/database/schema";
+import { recipeImageOriginalObjectKey } from "@home-hub/shared/recipe-image-delivery";
 import type {
   CreateRecipeImageUploadRequest,
   RecipeImageContentType,
@@ -38,17 +39,7 @@ export type CreateRecipeImageUploadResult =
       uploadUrlExpiresInSeconds: number;
     };
 
-export function createRecipeImageObjectKey({
-  householdId,
-  recipeId,
-  imageId,
-}: {
-  householdId: string;
-  recipeId: string;
-  imageId: string;
-}): string {
-  return `households/${householdId}/recipes/${recipeId}/${imageId}`;
-}
+export const createRecipeImageObjectKey = recipeImageOriginalObjectKey;
 
 export function createRecipeImageUploadService({
   db,

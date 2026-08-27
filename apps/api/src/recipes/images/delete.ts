@@ -1,5 +1,9 @@
 import type { Database } from "@home-hub/database";
 import { recipeImages } from "@home-hub/database/schema";
+import {
+  recipeImageDerivativeObjectKey,
+  recipeImageStoredVariants,
+} from "@home-hub/shared/recipe-image-delivery";
 import { and, eq } from "drizzle-orm";
 import { findActiveUser } from "../../authorization/active-user";
 import {
@@ -11,7 +15,7 @@ import {
   findRecipeImageObjectForUpdate,
 } from "./scoped-entities";
 
-type DeleteObject = (input: { objectKey: string }) => Promise<void>;
+type DeleteObjects = (input: { objectKeys: string[] }) => Promise<void>;
 
 export type DeleteRecipeImageInput = {
   userId: string;
@@ -27,10 +31,10 @@ export type DeleteRecipeImageResult =
 
 export function createDeleteRecipeImageService({
   db,
-  deleteObject,
+  deleteObjects,
 }: {
   db: Database;
-  deleteObject: DeleteObject;
+  deleteObjects: DeleteObjects;
 }) {
   return async function deleteRecipeImage({
     userId,
@@ -67,7 +71,19 @@ export function createDeleteRecipeImageService({
 
     if (initial.kind !== "image") return initial;
 
-    await deleteObject({ objectKey: initial.objectKey });
+    await deleteObjects({
+      objectKeys: [
+        initial.objectKey,
+        ...recipeImageStoredVariants.map((variant) =>
+          recipeImageDerivativeObjectKey({
+            householdId,
+            imageId,
+            recipeId,
+            variant,
+          }),
+        ),
+      ],
+    });
 
     return db.transaction(async (tx) => {
       const user = await findActiveUser(tx, userId);

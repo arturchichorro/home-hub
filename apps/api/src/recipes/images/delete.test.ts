@@ -5,7 +5,24 @@ import {
   recipeImages,
 } from "@home-hub/database/schema";
 import { describe, expect, it, vi } from "vitest";
-import { createDeleteRecipeImageService } from "./delete";
+import { createDeleteRecipeImageService as createDeleteRecipeImageServiceBase } from "./delete";
+
+type DeleteServiceInput = Parameters<
+  typeof createDeleteRecipeImageServiceBase
+>[0];
+
+function createDeleteRecipeImageService({
+  db,
+  deleteObject,
+}: {
+  db: DeleteServiceInput["db"];
+  deleteObject: DeleteServiceInput["deleteObjects"];
+}) {
+  return createDeleteRecipeImageServiceBase({
+    db,
+    deleteObjects: deleteObject,
+  });
+}
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
@@ -116,7 +133,13 @@ describe("delete recipe image service", () => {
       "transaction:end",
     ]);
     expect(transaction).toHaveBeenCalledTimes(2);
-    expect(deleteObject).toHaveBeenCalledWith({ objectKey });
+    expect(deleteObject).toHaveBeenCalledWith({
+      objectKeys: [
+        objectKey,
+        `${objectKey}/derivatives/thumbnail.webp`,
+        `${objectKey}/derivatives/viewer.webp`,
+      ],
+    });
     expect(deleteRow).toHaveBeenCalledOnce();
     expect(lockStrengths).toEqual([
       "share",

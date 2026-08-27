@@ -4,7 +4,7 @@ import {
   recipeImages,
   recipes,
 } from "@home-hub/database/schema";
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull } from "drizzle-orm";
 
 type RecipeEntityInput = { householdId: string; recipeId: string };
 type RecipeImageInput = RecipeEntityInput & { imageId: string };
@@ -66,6 +66,23 @@ export async function findConfirmedRecipeImageForShare(
     .for("share");
 
   return image;
+}
+
+export async function findConfirmedHouseholdRecipeImagesForShare(
+  tx: DatabaseTransaction,
+  { householdId, imageIds }: { householdId: string; imageIds: string[] },
+) {
+  return tx
+    .select({ id: recipeImages.id, recipeId: recipeImages.recipeId })
+    .from(recipeImages)
+    .where(
+      and(
+        inArray(recipeImages.id, imageIds),
+        eq(recipeImages.householdId, householdId),
+        isNotNull(recipeImages.confirmedAt),
+      ),
+    )
+    .for("share");
 }
 
 const recipeImageDetails = {

@@ -4,6 +4,7 @@ import {
   confirmRecipeImageUploadResponseSchema,
   createRecipeImageReadUrlRequestSchema,
   createRecipeImageReadUrlResponseSchema,
+  createRecipeImageReadUrlsRequestSchema,
   createRecipeImageUploadRequestSchema,
   createRecipeImageUploadResponseSchema,
   maxRecipeImageByteSize,
@@ -129,6 +130,38 @@ describe("createRecipeImageReadUrlRequestSchema", () => {
     expect(
       createRecipeImageReadUrlRequestSchema.safeParse({
         variant: "width-1234",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("createRecipeImageReadUrlsRequestSchema", () => {
+  const request = {
+    imageId: "671874b1-df9d-4a91-8f3c-8055473e8aa2",
+    recipeId: "8d46a4c4-4845-4a6d-a937-139633ae1bb9",
+    variant: "thumbnail" as const,
+  };
+
+  it("accepts up to 100 fixed-variant requests", () => {
+    const requests = Array.from({ length: 100 }, () => request);
+    expect(createRecipeImageReadUrlsRequestSchema.parse({ requests })).toEqual({
+      requests,
+    });
+  });
+
+  it("rejects empty, oversized, and arbitrary-variant batches", () => {
+    expect(
+      createRecipeImageReadUrlsRequestSchema.safeParse({ requests: [] })
+        .success,
+    ).toBe(false);
+    expect(
+      createRecipeImageReadUrlsRequestSchema.safeParse({
+        requests: Array.from({ length: 101 }, () => request),
+      }).success,
+    ).toBe(false);
+    expect(
+      createRecipeImageReadUrlsRequestSchema.safeParse({
+        requests: [{ ...request, variant: "original" }],
       }).success,
     ).toBe(false);
   });

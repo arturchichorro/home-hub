@@ -18,6 +18,7 @@ type RecipeLibraryProps = {
   accessToken: string;
   householdId: string;
   onSessionExpired: () => void;
+  userId: string;
 };
 
 type RecipeCardImageProps = RecipeLibraryProps & {
@@ -37,6 +38,7 @@ function RecipeCardImage({
   image,
   onSessionExpired,
   recipeId,
+  userId,
 }: RecipeCardImageProps) {
   const imageState = useRecipeImageUrl({
     accessToken,
@@ -44,7 +46,8 @@ function RecipeCardImage({
     imageId: image?.id,
     onSessionExpired,
     recipeId,
-    variant: "card",
+    userId,
+    variant: "thumbnail",
   });
 
   if (imageState.url) {
@@ -85,6 +88,7 @@ export function RecipeLibrary({
   accessToken,
   householdId,
   onSessionExpired,
+  userId,
 }: RecipeLibraryProps) {
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
@@ -151,6 +155,7 @@ export function RecipeLibrary({
                   recipeId={recipe.id}
                   image={recipe.images[0]}
                   onSessionExpired={onSessionExpired}
+                  userId={userId}
                 />
               </div>
             </div>

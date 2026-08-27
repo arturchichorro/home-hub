@@ -1,10 +1,14 @@
 import {
   recipeImageDeliveryCapabilityLifetimeSeconds,
+  recipeImageDerivativeObjectKey,
+  recipeImageProcessingCapabilityLifetimeSeconds,
   signRecipeImageDeliveryCapability,
+  signRecipeImageProcessingCapability,
 } from "@home-hub/shared/recipe-image-delivery";
 import { describe, expect, it, vi } from "vitest";
 import {
   handleRecipeImageDeliveryRequest,
+  handleRecipeImageProcessingRequest,
   type ImageDeliveryEnv,
 } from "./index";
 
@@ -32,21 +36,40 @@ async function signedRequest(variant: "card" | "thumbnail" | "viewer") {
   );
 }
 
-function createHarness({ cached }: { cached?: Response } = {}) {
-  const outputResponse = new Response("transformed-webp", {
-    headers: { "Content-Type": "image/webp" },
-  });
-  const output = vi.fn(async () => ({ response: () => outputResponse }));
+function createHarness({
+  cached,
+  storedDerivative = true,
+}: {
+  cached?: Response;
+  storedDerivative?: boolean;
+} = {}) {
+  const output = vi.fn(async () => ({
+    response: () =>
+      new Response("transformed-webp", {
+        headers: { "Content-Type": "image/webp" },
+      }),
+  }));
   const transform = vi.fn(() => ({ output, transform }));
   const input = vi.fn(() => ({ output, transform }));
-  const get = vi.fn(async () => ({ body: new Blob(["original"]).stream() }));
+  const get = vi.fn(async (key: string) =>
+    key.includes("/derivatives/") && !storedDerivative
+      ? null
+      : { body: new Blob(["object-bytes"]).stream() },
+  );
+  const store = vi.fn(
+    async (
+      _key: string,
+      _value: ArrayBuffer | ReadableStream,
+      _options?: unknown,
+    ) => undefined,
+  );
   const match = vi.fn(async (_request: Request) => cached);
   const put = vi.fn(async () => undefined);
   const waitUntil = vi.fn();
   const env: ImageDeliveryEnv = {
     IMAGE_DELIVERY_SIGNING_SECRET: secret,
     IMAGES: { input },
-    RECIPE_IMAGES: { get },
+    RECIPE_IMAGES: { get, put: store },
   };
 
   return {
@@ -58,6 +81,7 @@ function createHarness({ cached }: { cached?: Response } = {}) {
     match,
     output,
     put,
+    store,
     transform,
     waitUntil,
   };
@@ -65,7 +89,7 @@ function createHarness({ cached }: { cached?: Response } = {}) {
 
 describe("recipe image delivery Worker", () => {
   it("authorizes, reads the private original, transforms a fixed variant, and caches it", async () => {
-    const harness = createHarness();
+    const harness = createHarness({ storedDerivative: false });
     const response = await handleRecipeImageDeliveryRequest({
       ...harness,
       nowSeconds,
@@ -74,21 +98,81 @@ describe("recipe image delivery Worker", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("image/webp");
-    expect(response.headers.get("Cache-Control")).toBe("private, max-age=300");
-    expect(harness.get).toHaveBeenCalledWith(objectKey);
+    expect(response.headers.get("Cache-Control")).toBe("private, max-age=3600");
+    expect(harness.get).toHaveBeenNthCalledWith(
+      1,
+      recipeImageDerivativeObjectKey({
+        householdId,
+        imageId,
+        recipeId,
+        variant: "thumbnail",
+      }),
+    );
+    expect(harness.get).toHaveBeenNthCalledWith(2, objectKey);
     expect(harness.transform).toHaveBeenCalledWith({
-      width: 480,
-      height: 480,
-      fit: "cover",
+      width: 768,
+      fit: "scale-down",
     });
     expect(harness.output).toHaveBeenCalledWith({
       format: "image/webp",
       quality: 82,
     });
     expect((harness.match.mock.calls[0]?.[0] as Request | undefined)?.url).toBe(
-      `https://images.example/recipe-images/thumbnail/${householdId}/${recipeId}/${imageId}?transform=webp-q82-v1`,
+      `https://images.example/recipe-images/thumbnail/${householdId}/${recipeId}/${imageId}?transform=webp-q82-v3`,
     );
-    expect(harness.waitUntil).toHaveBeenCalledOnce();
+    expect(harness.store).toHaveBeenCalledOnce();
+    expect(harness.waitUntil).toHaveBeenCalledTimes(2);
+  });
+
+  it("serves a pre-generated derivative without transforming the original", async () => {
+    const harness = createHarness();
+    const response = await handleRecipeImageDeliveryRequest({
+      ...harness,
+      nowSeconds,
+      request: await signedRequest("viewer"),
+    });
+
+    expect(response.status).toBe(200);
+    expect(harness.get).toHaveBeenCalledOnce();
+    expect(harness.input).not.toHaveBeenCalled();
+    expect(harness.store).not.toHaveBeenCalled();
+  });
+
+  it("authenticates processing and stores both derivatives before succeeding", async () => {
+    const harness = createHarness();
+    const capability = {
+      expiresAt: nowSeconds + recipeImageProcessingCapabilityLifetimeSeconds,
+      householdId,
+      imageId,
+      recipeId,
+    };
+    const signature = await signRecipeImageProcessingCapability({
+      capability,
+      secret,
+    });
+    const response = await handleRecipeImageProcessingRequest({
+      env: harness.env,
+      nowSeconds,
+      request: new Request(
+        "https://images.example/internal/recipe-images/process",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...capability, signature }),
+        },
+      ),
+    });
+
+    expect(response.status).toBe(204);
+    expect(harness.input).toHaveBeenCalledTimes(2);
+    expect(harness.store).toHaveBeenCalledTimes(2);
+    expect(harness.store.mock.calls.map(([key]) => key)).toEqual([
+      recipeImageDerivativeObjectKey({
+        ...capability,
+        variant: "thumbnail",
+      }),
+      recipeImageDerivativeObjectKey({ ...capability, variant: "viewer" }),
+    ]);
   });
 
   it("validates authorization before returning an edge-cached derivative", async () => {

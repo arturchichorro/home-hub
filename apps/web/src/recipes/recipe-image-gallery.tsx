@@ -18,7 +18,8 @@ import {
   Trash2,
   X,
 } from "@home-hub/ui-web";
-import type { KeyboardEvent, Ref } from "react";
+import { type KeyboardEvent, type Ref, useEffect, useState } from "react";
+import { prefetchRecipeImage } from "./prefetch-recipe-image";
 import { getAdjacentRecipeImage } from "./recipe-image-navigation";
 import { useRecipeImageUrl } from "./use-recipe-image-url";
 
@@ -51,6 +52,7 @@ type RecipeImageContext = {
   householdId: string;
   recipeId: string;
   onSessionExpired: () => void;
+  userId: string;
 };
 
 type RecipeImageThumbnailProps = RecipeImageContext & {
@@ -71,6 +73,7 @@ export function RecipeImageThumbnail({
   containerRef,
   onSessionExpired,
   onOpen,
+  userId,
 }: RecipeImageThumbnailProps) {
   const { url, error } = useRecipeImageUrl({
     accessToken,
@@ -78,6 +81,7 @@ export function RecipeImageThumbnail({
     recipeId,
     imageId: image.id,
     onSessionExpired,
+    userId,
     variant: "thumbnail",
   });
   const classes = [
@@ -160,6 +164,7 @@ export function RecipeImageGallery({
   onSessionExpired,
   onOpen,
   onReorder,
+  userId,
 }: RecipeImageGalleryProps) {
   return (
     <div className="min-w-0">
@@ -189,6 +194,7 @@ export function RecipeImageGallery({
               disabled={false}
               onSessionExpired={onSessionExpired}
               onOpen={onOpen}
+              userId={userId}
             />
           ))}
         </ul>
@@ -215,16 +221,59 @@ export function RecipeImageViewer({
   onSessionExpired,
   onOpenChange,
   onSelect,
+  userId,
 }: RecipeImageViewerProps) {
-  const { url, error } = useRecipeImageUrl({
+  const { url: smallUrl } = useRecipeImageUrl({
     accessToken,
     householdId,
     recipeId,
     imageId: image?.id,
     onSessionExpired,
+    userId,
+    variant: "thumbnail",
+  });
+  const { url: viewerUrl, error } = useRecipeImageUrl({
+    accessToken,
+    householdId,
+    recipeId,
+    imageId: image?.id,
+    onSessionExpired,
+    userId,
     variant: "viewer",
   });
+  const [loadedViewerUrl, setLoadedViewerUrl] = useState<string>();
+  const viewerLoaded = viewerUrl !== undefined && loadedViewerUrl === viewerUrl;
   const canNavigate = images.length > 1;
+
+  useEffect(() => {
+    if (!image || !viewerLoaded) return;
+    const adjacentImages = [
+      getAdjacentRecipeImage(images, image.id, -1),
+      getAdjacentRecipeImage(images, image.id, 1),
+    ];
+    for (const adjacentImage of adjacentImages) {
+      if (!adjacentImage) continue;
+      void prefetchRecipeImage({
+        accessToken,
+        userId,
+        householdId,
+        imageId: adjacentImage.id,
+        recipeId,
+        variant: "viewer",
+      }).then((prefetch) => {
+        if (prefetch.kind === "unauthorized") onSessionExpired();
+      });
+    }
+  }, [
+    accessToken,
+    householdId,
+    image,
+    images,
+    onSessionExpired,
+    recipeId,
+    userId,
+    viewerLoaded,
+  ]);
 
   function navigate(direction: -1 | 1) {
     if (!image) return;
@@ -273,14 +322,28 @@ export function RecipeImageViewer({
             onConfirm={() => onDelete(image)}
           />
         ) : null}
-        {url ? (
-          <img
-            src={url}
-            alt="Recipe"
-            width={image?.width ?? undefined}
-            height={image?.height ?? undefined}
-            className="max-h-[90vh] w-full object-contain"
-          />
+        {viewerUrl || smallUrl ? (
+          <div className="relative">
+            {viewerUrl ? (
+              <img
+                src={viewerUrl}
+                alt="Recipe"
+                width={image?.width ?? undefined}
+                height={image?.height ?? undefined}
+                className={`max-h-[90vh] w-full object-contain transition-opacity duration-200 ${viewerLoaded ? "opacity-100" : "opacity-0"}`}
+                onLoad={() => setLoadedViewerUrl(viewerUrl)}
+              />
+            ) : null}
+            {smallUrl ? (
+              <img
+                src={smallUrl}
+                alt={viewerUrl ? "" : "Recipe"}
+                width={image?.width ?? undefined}
+                height={image?.height ?? undefined}
+                className={`${viewerUrl ? "absolute inset-0" : ""} max-h-[90vh] w-full object-contain transition-opacity duration-200 ${viewerLoaded ? "opacity-0" : "opacity-100"}`}
+              />
+            ) : null}
+          </div>
         ) : error ? (
           <InlineAlert role="alert" variant="danger">
             This image is not currently available.

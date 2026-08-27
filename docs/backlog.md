@@ -23,6 +23,8 @@ together before implementation begins.
 - [ ] Add user comments to cook logs (recipes)
 - [ ] Check and fix flashing of pictures (maybe increase signing duration?)
 - [ ] Improve separation between database access, domain behavior, and transport code
+= [ ] Make upload be faster by displaying user uploaded picture optimistically, until we get confirmation
+- [ ] Include image wrangler deployment in the deploy script as well
 
 ## Future modules and capabilities
 
