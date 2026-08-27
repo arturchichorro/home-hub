@@ -55,7 +55,8 @@ image settle back inside the normal page inset at the end of the strip. The row
 reveals part of the next image when additional pictures are available. An Add
 picture row follows the gallery. Drag handles reorder confirmed images with
 pointer, touch, or keyboard input; the first image is the recipe-card cover.
-Images crop only in cards and thumbnails.
+Recipe cards and thumbnails reuse one aspect-preserving derivative and apply
+their different crops in CSS.
 
 Every thumbnail opens the same bare modal viewer. The viewer preserves the
 stored aspect ratio and shows only close, previous, and next controls. Previous
@@ -211,18 +212,20 @@ short-lived presigned URLs. PostgreSQL stores metadata; the API never writes
 uploaded image bytes to its filesystem.
 
 Every confirmed upload remains in private R2 in its original content type and
-quality as the canonical source. The application displays optimized
-derivatives generated on demand by Cloudflare Images and cached at the edge;
-derivative generation never replaces the original. There is initially no
-user-facing read or download operation for the original bytes. A possible
-future original-access policy is independent of the retention policy.
+quality as the canonical source. Cloudflare Images generates two optimized
+WebP derivatives during upload confirmation, and the Worker stores them in R2
+for immediate display. Derivative generation never replaces the original.
+There is initially no user-facing read or download operation for the original
+bytes. A possible future original-access policy is independent of the
+retention policy.
 
-Derivative reads use three code-owned WebP variants: a 640×427 cover-cropped
-`card`, a 480×480 cover-cropped `thumbnail`, and a `viewer` constrained to
-1,920 pixels wide without enlargement. A five-minute server-authorized
-delivery capability preserves household and Recipes-module access. Clients
-cannot supply arbitrary transformation parameters or obtain the private source
-object URL.
+Current derivative reads use an aspect-preserving `thumbnail` constrained to
+768 pixels wide for recipe cards and detail thumbnails, and a `viewer`
+constrained to 1,920 pixels wide without enlargement. The legacy 640×427
+`card` variant remains valid only for rollout compatibility. Derivatives use
+WebP quality 82. A one-hour server-authorized delivery capability preserves
+household and Recipes-module access. Clients cannot supply arbitrary
+transformation parameters or obtain the private source object URL.
 
 The upload flow is:
 
@@ -237,7 +240,11 @@ The upload flow is:
    type.
 5. The browser uploads directly to R2.
 6. The browser confirms completion, and the API verifies the object's type and
-   size before confirming the metadata.
+   size.
+7. The API sends the Worker a five-minute HMAC-authenticated processing request.
+   The Worker generates and stores `thumbnail.webp` and `viewer.webp` at
+   deterministic keys. Retrying safely overwrites those same keys.
+8. The API confirms the metadata only after both derivative writes succeed.
 
 Only confirmed metadata may synchronize or receive a signed derivative read
 URL.
@@ -246,32 +253,39 @@ JPEG, PNG, and WebP initially, with a 10 MiB maximum. Treat presigned URLs as
 bearer credentials, never log them, and never expose R2 credentials through a
 `VITE_` environment variable.
 
-The web client caches signed derivative read URLs and in-flight requests in
-memory. Cache entries are partitioned by access token, household, recipe,
-image, and display variant, refresh shortly before expiry, never persist across
-sessions, and are invalidated when an image is deleted.
+The web client caches signed derivative read URLs and in-flight requests by
+user, household, recipe, image, and display variant. Unexpired URL metadata is
+persisted in browser storage so reloads reuse the exact URL and browser HTTP
+cache; entries refresh shortly before expiry, are cleared on logout, and are
+invalidated when an image is deleted. Simultaneous misses are authorized in
+household-wide batches of at most 100 requests.
 
 The derivative read flow is:
 
-1. The authenticated browser requests one fixed display variant from the API.
+1. The authenticated browser requests one or more fixed display variants from
+   the API, omitting URLs that remain valid in its persistent cache.
 2. The API verifies the active user, household membership, enabled Recipes
    setting, and confirmed recipe-scoped image under shared locks.
-3. Outside the transaction, the API returns a five-minute HMAC-signed Worker
-   URL containing only the variant and route-scoped IDs.
+3. Outside the transaction, the API returns one-hour HMAC-signed Worker URLs
+   containing only the variant and route-scoped IDs.
 4. The Worker validates the method, fixed variant, IDs, expiry, and signature
    before consulting the edge cache.
-5. On a cache miss, the Worker reads the deterministic private R2 object key,
-   asks Cloudflare Images for the fixed WebP transformation, and stores that
-   derivative in edge cache without storing another R2 object.
-6. The browser receives the derivative with a private five-minute cache policy.
+5. On an edge-cache miss, the Worker reads the pre-generated derivative from
+   its deterministic private R2 key and puts the response in edge cache. If an
+   older image lacks that derivative, the Worker generates and stores it once
+   as a lazy repair.
+6. The browser receives the derivative with a private cache policy capped by
+   the capability's remaining lifetime. The thumbnail appears immediately in
+   the viewer and crossfades to the full viewer derivative when ready.
 
 Invalid, expired, or changed capabilities fail closed. A missing original
-returns `404`; a transformation failure returns a generic `500` and never
-falls back to exposing the original. Existing confirmed images require no data
-migration because the same deterministic object keys are transformed lazily.
+returns `404`; a transformation or storage failure returns a generic `500` and
+never falls back to exposing the original. Existing confirmed images require
+no eager data migration because missing derivatives are repaired lazily.
 
 Image deletion is idempotent. A short transaction authorizes and reads
-metadata, the R2 object is deleted without database locks held, and a second
+metadata, the original and both derivatives are deleted from R2 without
+database locks held, and a second
 transaction reauthorizes and locks the row before hard-deleting its metadata.
 If R2 deletion fails, metadata remains. If the database step fails after R2
 deletion, retrying can finish cleanup. A transactional outbox may replace this
@@ -279,7 +293,7 @@ recovery policy if background jobs are introduced.
 
 Deleting an image does not synchronously purge its content-addressed edge-cache
 entry. The API stops issuing capabilities as soon as metadata is deleted, an
-already-issued URL stops working after at most five minutes because the Worker
+already-issued URL stops working after at most one hour because the Worker
 authorizes before reading cache, and image UUIDs are never reused. The orphaned
 cache entry then expires or is evicted without making the deleted image
 reachable.

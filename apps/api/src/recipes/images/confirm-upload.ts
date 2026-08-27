@@ -16,6 +16,12 @@ type InspectObject = (input: {
   objectKey: string;
 }) => Promise<InspectR2ObjectResult | null>;
 
+type ProcessDerivatives = (input: {
+  householdId: string;
+  imageId: string;
+  recipeId: string;
+}) => Promise<void>;
+
 export type ConfirmRecipeImageUploadInput = {
   userId: string;
   householdId: string;
@@ -34,9 +40,11 @@ export type ConfirmRecipeImageUploadResult =
 export function createConfirmRecipeImageUploadService({
   db,
   inspectObject,
+  processDerivatives,
 }: {
   db: Database;
   inspectObject: InspectObject;
+  processDerivatives: ProcessDerivatives;
 }) {
   return async function confirmRecipeImageUpload({
     userId,
@@ -89,6 +97,8 @@ export function createConfirmRecipeImageUploadService({
     ) {
       return { kind: "invalid_upload" };
     }
+
+    await processDerivatives({ householdId, imageId, recipeId });
 
     return db.transaction(async (tx) => {
       const user = await findActiveUser(tx, userId);

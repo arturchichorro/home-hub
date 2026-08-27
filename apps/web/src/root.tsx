@@ -2,6 +2,7 @@ import type { Zero } from "@rocicorp/zero";
 import { RouterProvider } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { refreshSession, type Session } from "./auth/api";
+import { clearRecipeImageUrlCache } from "./recipes/recipe-image-url-cache";
 import { createAppRouter } from "./router";
 
 type RootProps = {
@@ -25,6 +26,7 @@ export function Root({ initialSession }: RootProps) {
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const onLoggedOut = useCallback(() => {
+    clearRecipeImageUrlCache();
     setZero(undefined);
     setSession(null);
   }, []);
@@ -35,7 +37,10 @@ export function Root({ initialSession }: RootProps) {
     void refreshSession(expiredSession)
       .then((refreshedSession) => {
         if (sessionRef.current !== expiredSession) return;
-        if (!refreshedSession) setZero(undefined);
+        if (!refreshedSession) {
+          clearRecipeImageUrlCache(expiredSession.user.id);
+          setZero(undefined);
+        }
         setSession(refreshedSession);
       })
       .catch(() => {

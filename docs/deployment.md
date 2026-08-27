@@ -55,9 +55,10 @@ The private backup bucket does not use this browser CORS policy.
 
 ## Cloudflare image delivery Worker
 
-`apps/image-delivery` owns the independently deployed Worker that reads private
-recipe originals through an R2 binding and transforms them through an Images
-binding. Its development configuration targets `home-hub-dev`; its production
+`apps/image-delivery` owns the independently deployed Worker that generates
+fixed derivatives through an Images binding and reads and writes private image
+objects through an R2 binding. Its development configuration targets
+`home-hub-dev`; its production
 environment targets `home-hub-production` and the custom domain
 `images.home.achichorro.com`. Confirm those bucket names against the actual
 Cloudflare account before deployment.
@@ -89,11 +90,12 @@ and the ignored `apps/image-delivery/.dev.vars`, start the Worker with `pnpm
 `IMAGE_DELIVERY_BASE_URL=http://127.0.0.1:8787`. Remote Worker development reads
 the configured development R2 bucket, so never point it at production.
 
-Deploy a backward-compatible Worker before releasing an API version that emits
-its capability URLs. The VPS deployment script does not deploy Cloudflare
-resources. Roll back the Worker by deploying the previously verified revision;
-the five-minute capability format must remain supported across the API/Worker
-rollout window.
+Deploy the backward-compatible Worker before releasing the API version that
+calls its internal processing route; otherwise new upload confirmations will
+fail safely and remain pending. The VPS deployment script does not deploy
+Cloudflare resources. Roll back the Worker by deploying the previously verified
+revision; both the one-hour read capability and five-minute processing
+capability must remain supported across the API/Worker rollout window.
 
 ## Persistent state
 

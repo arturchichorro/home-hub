@@ -22,6 +22,7 @@ type RecipeCookingHistoryListProps = {
   recipeId: string;
   onOpenImage: (image: RecipeImage, cookLogIds: readonly string[]) => void;
   onSessionExpired: () => void;
+  userId: string;
 };
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
@@ -37,6 +38,7 @@ export function RecipeCookingHistoryList({
   recipeId,
   onOpenImage,
   onSessionExpired,
+  userId,
 }: RecipeCookingHistoryListProps) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
@@ -145,6 +147,7 @@ export function RecipeCookingHistoryList({
                     className="size-12 shrink-0"
                     onSessionExpired={onSessionExpired}
                     onOpen={(image) => onOpenImage(image, [cookLog.id])}
+                    userId={userId}
                   />
                 ))}
               </ul>

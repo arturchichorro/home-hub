@@ -25,10 +25,12 @@ import { consoleStructuredLogger } from "./observability";
 import { createDatabaseReadinessCheck } from "./readiness";
 import { createConfirmRecipeImageUploadService } from "./recipes/images/confirm-upload";
 import { createRecipeImageReadUrlService } from "./recipes/images/create-read-url";
+import { createRecipeImageReadUrlsService } from "./recipes/images/create-read-urls";
 import { createRecipeImageUploadService } from "./recipes/images/create-upload";
 import { createDeleteRecipeImageService } from "./recipes/images/delete";
-import { deleteR2Object } from "./recipes/images/delete-object";
+import { deleteR2Objects } from "./recipes/images/delete-object";
 import { inspectR2Object } from "./recipes/images/inspect-object";
+import { processRecipeImageDerivatives } from "./recipes/images/process-derivatives";
 import { createR2Client } from "./recipes/images/r2-client";
 import { signRecipeImageRead } from "./recipes/images/sign-read";
 import { signRecipeImageUpload } from "./recipes/images/sign-upload";
@@ -122,6 +124,14 @@ const recipeImages = {
         bucket: infrastructure.config.R2_BUCKET,
         objectKey,
       }),
+    processDerivatives: ({ householdId, imageId, recipeId }) =>
+      processRecipeImageDerivatives({
+        baseUrl: infrastructure.config.IMAGE_DELIVERY_BASE_URL,
+        householdId,
+        imageId,
+        recipeId,
+        secret: infrastructure.config.IMAGE_DELIVERY_SIGNING_SECRET,
+      }),
   }),
   createRecipeImageReadUrl: createRecipeImageReadUrlService({
     db: infrastructure.db,
@@ -135,13 +145,25 @@ const recipeImages = {
         variant,
       }),
   }),
+  createRecipeImageReadUrls: createRecipeImageReadUrlsService({
+    db: infrastructure.db,
+    signRead: ({ householdId, imageId, recipeId, variant }) =>
+      signRecipeImageRead({
+        baseUrl: infrastructure.config.IMAGE_DELIVERY_BASE_URL,
+        householdId,
+        imageId,
+        recipeId,
+        secret: infrastructure.config.IMAGE_DELIVERY_SIGNING_SECRET,
+        variant,
+      }),
+  }),
   deleteRecipeImage: createDeleteRecipeImageService({
     db: infrastructure.db,
-    deleteObject: ({ objectKey }) =>
-      deleteR2Object({
+    deleteObjects: ({ objectKeys }) =>
+      deleteR2Objects({
         client: infrastructure.r2Client,
         bucket: infrastructure.config.R2_BUCKET,
-        objectKey,
+        objectKeys,
       }),
   }),
 };

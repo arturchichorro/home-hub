@@ -11,6 +11,10 @@ import type {
   CreateRecipeImageReadUrlResult,
 } from "../images/create-read-url";
 import type {
+  CreateRecipeImageReadUrlsInput,
+  CreateRecipeImageReadUrlsResult,
+} from "../images/create-read-urls";
+import type {
   CreateRecipeImageUploadInput,
   CreateRecipeImageUploadResult,
 } from "../images/create-upload";
@@ -52,6 +56,11 @@ function createTestApp(
   ) => Promise<DeleteRecipeImageResult> = async () => ({
     kind: "forbidden",
   }),
+  createRecipeImageReadUrls: (
+    input: CreateRecipeImageReadUrlsInput,
+  ) => Promise<CreateRecipeImageReadUrlsResult> = async () => ({
+    kind: "forbidden",
+  }),
 ) {
   const app = new Hono();
   app.route(
@@ -59,6 +68,7 @@ function createTestApp(
     createRecipeRoutes({
       confirmRecipeImageUpload,
       createRecipeImageReadUrl,
+      createRecipeImageReadUrls,
       createRecipeImageUpload,
       deleteRecipeImage,
       jwtSecret,
@@ -196,6 +206,52 @@ describe("recipe routes", () => {
       recipeId,
       imageId,
       variant: "thumbnail",
+    });
+  });
+
+  it("mounts authenticated batched read URLs under the recipe", async () => {
+    const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+    const createRecipeImageReadUrls = vi.fn(
+      async (): Promise<CreateRecipeImageReadUrlsResult> => ({
+        kind: "success",
+        reads: [
+          {
+            imageId,
+            recipeId,
+            variant: "thumbnail",
+            url: "https://signed-read.example",
+            expiresInSeconds: 3_600,
+          },
+        ],
+      }),
+    );
+    const app = createTestApp(
+      async () => ({ kind: "forbidden" }),
+      async () => ({ kind: "forbidden" }),
+      async () => ({ kind: "forbidden" }),
+      async () => ({ kind: "forbidden" }),
+      createRecipeImageReadUrls,
+    );
+
+    const response = await app.request(
+      `/${householdId}/recipes/images/read-urls`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${createAccessToken()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requests: [{ imageId, recipeId, variant: "thumbnail" }],
+        }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(createRecipeImageReadUrls).toHaveBeenCalledWith({
+      userId,
+      householdId,
+      requests: [{ imageId, recipeId, variant: "thumbnail" }],
     });
   });
 

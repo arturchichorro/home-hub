@@ -1,9 +1,11 @@
 import type { RecipeImageVariant } from "@home-hub/shared/recipe-image-delivery";
 import {
+  type CreateRecipeImageReadUrlsRequest,
   type CreateRecipeImageUploadRequest,
   type CreateRecipeImageUploadResponse,
   confirmRecipeImageUploadResponseSchema,
   createRecipeImageReadUrlResponseSchema,
+  createRecipeImageReadUrlsResponseSchema,
   createRecipeImageUploadRequestSchema,
   createRecipeImageUploadResponseSchema,
 } from "@home-hub/shared/recipe-images";
@@ -40,6 +42,20 @@ export type CreateRecipeImageReadUrlResult =
   | { kind: "forbidden" }
   | { kind: "not_found" }
   | { kind: "success"; url: string; expiresInSeconds: number };
+
+export type CreateRecipeImageReadUrlsResult =
+  | { kind: "unauthorized" }
+  | { kind: "forbidden" }
+  | {
+      kind: "success";
+      reads: Array<{
+        imageId: string;
+        recipeId: string;
+        variant: RecipeImageVariant;
+        url: string;
+        expiresInSeconds: number;
+      }>;
+    };
 
 export type DeleteRecipeImageResult =
   | { kind: "unauthorized" }
@@ -157,6 +173,34 @@ export async function createRecipeImageReadUrl({
     await response.json(),
   );
   return { kind: "success", ...read };
+}
+
+export async function createRecipeImageReadUrls({
+  accessToken,
+  householdId,
+  requests,
+}: Pick<RecipeImageCommandInput, "accessToken" | "householdId"> &
+  CreateRecipeImageReadUrlsRequest): Promise<CreateRecipeImageReadUrlsResult> {
+  const response = await fetch(
+    `/api/households/${encodeURIComponent(householdId)}/recipes/images/read-urls`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ requests }),
+    },
+  );
+
+  if (response.status === 401) return { kind: "unauthorized" };
+  if (response.status === 403) return { kind: "forbidden" };
+  if (!response.ok) throw new Error("Failed to create recipe image read URLs");
+
+  const result = createRecipeImageReadUrlsResponseSchema.parse(
+    await response.json(),
+  );
+  return { kind: "success", reads: result.reads };
 }
 
 export async function deleteRecipeImage({

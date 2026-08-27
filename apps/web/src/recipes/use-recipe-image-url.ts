@@ -1,6 +1,6 @@
 import type { RecipeImageVariant } from "@home-hub/shared/recipe-image-delivery";
 import { useEffect, useState } from "react";
-import { createRecipeImageReadUrl } from "./image-api";
+import { createBatchedRecipeImageReadUrl } from "./recipe-image-read-url-batcher";
 import {
   getOrCreateRecipeImageUrl,
   readCachedRecipeImageUrl,
@@ -9,6 +9,7 @@ import {
 
 type UseRecipeImageUrlOptions = {
   accessToken: string;
+  userId: string;
   householdId: string;
   imageId: string | undefined;
   onSessionExpired: () => void;
@@ -30,6 +31,7 @@ type InternalRecipeImageUrlState = {
 
 export function useRecipeImageUrl({
   accessToken,
+  userId,
   householdId,
   imageId,
   onSessionExpired,
@@ -37,7 +39,7 @@ export function useRecipeImageUrl({
   variant,
 }: UseRecipeImageUrlOptions): RecipeImageUrlState {
   const identity = imageId
-    ? { accessToken, householdId, imageId, recipeId, variant }
+    ? { accessToken, userId, householdId, imageId, recipeId, variant }
     : undefined;
   const key = identity ? recipeImageUrlCacheKey(identity) : undefined;
   const cached = identity ? readCachedRecipeImageUrl(identity) : undefined;
@@ -61,6 +63,7 @@ export function useRecipeImageUrl({
 
     const currentIdentity = {
       accessToken,
+      userId,
       householdId,
       imageId,
       recipeId,
@@ -88,7 +91,7 @@ export function useRecipeImageUrl({
       if (active) setState({ error: false, key: currentKey, url: undefined });
 
       const result = await getOrCreateRecipeImageUrl(currentIdentity, () =>
-        createRecipeImageReadUrl(currentIdentity),
+        createBatchedRecipeImageReadUrl(currentIdentity),
       );
       if (!active) return;
 
@@ -111,7 +114,15 @@ export function useRecipeImageUrl({
       active = false;
       if (refreshTimeout !== undefined) clearTimeout(refreshTimeout);
     };
-  }, [accessToken, householdId, imageId, onSessionExpired, recipeId, variant]);
+  }, [
+    accessToken,
+    householdId,
+    imageId,
+    onSessionExpired,
+    recipeId,
+    userId,
+    variant,
+  ]);
 
   return {
     error,

@@ -28,7 +28,7 @@ deployment applies tested forward migrations after an off-host backup.
 
 ## Add an image delivery pipeline
 
-- [x] Define fixed card, thumbnail, and viewer WebP variants; five-minute signed edge capabilities; fail-closed transformation behavior; cache-safe deletion behavior; and lazy processing for existing images, while retaining inaccessible originals in private R2
+- [x] Define pre-generated thumbnail and viewer WebP variants; one-hour signed edge capabilities; fail-closed processing; deletion of all stored objects; and lazy repair for existing images, while retaining inaccessible originals in private R2
 - [x] Implement the agreed image processing and delivery pipeline while retaining original uploads
 - [ ] Verify upload, processing, authorized display, original access, deletion, cleanup, and existing-image migration behavior
 - [ ] Complete the image delivery pipeline checkpoint and commit

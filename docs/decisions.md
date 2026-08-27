@@ -96,45 +96,59 @@ token sessions; invitations as account-creation credentials.
 
 ## R2 direct image transfer
 
-**Status:** accepted for original uploads; display reads superseded by edge-generated derivatives
+**Status:** accepted for original uploads; display reads use stored derivatives
 
 The API authorizes original recipe-image uploads and issues short-lived
 presigned `PUT` URLs. Original bytes move directly from clients to R2;
 PostgreSQL stores metadata and server-controlled object keys. Display reads use
-the separately accepted edge-generated derivative path below. See
+the separately accepted pre-generated derivative path below. See
 [Recipes image storage and security](./recipes/#image-storage-and-security).
 
 **Alternatives:** proxying image bytes through the API; storing uploads on the
 application host; persisting public or signed URLs.
 
-## R2 originals with edge-generated display derivatives
+## R2 originals with pre-generated display derivatives
 
 **Status:** accepted
 
 Retain every confirmed original recipe-image upload in private Cloudflare R2
-as the canonical source. Display optimized derivatives generated on demand by
-Cloudflare Images and cached at the edge; do not replace or discard the
-original after transformation. The application does not initially expose an
-original-image read or download operation to any user. Original retention
-exists for future reprocessing, recovery, and a possible later access policy.
+as the canonical source. Before confirming metadata, use Cloudflare Images to
+generate and store `thumbnail.webp` and `viewer.webp` beside the original. Do
+not replace or discard the original after transformation. The application does
+not initially expose an original-image read or download operation to any user.
+Original retention exists for future reprocessing, recovery, and a possible
+later access policy.
 
 Derivative delivery must preserve the existing household authorization
-boundary through a five-minute HMAC-signed capability issued only after the API
+boundary through a one-hour HMAC-signed capability issued only after the API
 reauthorizes the current user, household membership, Recipes module, and
 confirmed image. The Worker verifies the capability before consulting its
-shared cache or private R2. It exposes only three code-owned WebP variants:
-`card` at 640×427 with cover cropping, `thumbnail` at 480×480 with cover
-cropping, and `viewer` constrained to 1,920 pixels wide without enlargement.
+shared cache or private R2. The active client uses an aspect-preserving
+`thumbnail` constrained to 768 pixels wide for both recipe cards and detail
+thumbnails, with each surface applying its own CSS crop, plus a `viewer`
+constrained to 1,920 pixels wide without enlargement. The previous 640×427
+`card` capability remains accepted for rollout compatibility but is not
+requested by the current client. WebP derivatives use explicit quality 82.
 
+The browser persists unexpired derivative URLs per user, batches simultaneous
+URL misses across a household, shows the cached thumbnail immediately while a
+viewer derivative loads, and conservatively prefetches the first and adjacent
+viewer images only when network information is available and indicates neither
+data-saving mode nor a slow connection.
+
+Upload confirmation uses a separate five-minute HMAC capability to request the
+two fixed transformations from the Worker. Deterministic keys make retries
+idempotent, and metadata remains pending unless both derivatives are stored.
 Transformation failures fail closed and never fall back to the original.
-Existing images need no migration because their derivatives are generated on
-first use. Deletion removes metadata and the original; a previously cached
-derivative is unreachable without an unexpired capability, and image UUIDs are
-never reused.
+Existing images need no eager migration because the Worker repairs a missing
+stored derivative on first use. Deletion removes metadata, the original, and
+both stored derivatives; a previously edge-cached derivative is unreachable
+without an unexpired capability, and image UUIDs are never reused.
 
-**Alternatives:** pre-generating WebP objects in R2; processing images on the
-application host; converting in the browser; moving canonical storage to
-Cloudflare Images; exposing original downloads to household members or owners.
+**Alternatives:** generating derivatives only on first display; processing
+images on the application host; converting in the browser; moving canonical
+storage to Cloudflare Images; exposing original downloads to household members
+or owners.
 
 ## Platform-specific internal UI libraries
 

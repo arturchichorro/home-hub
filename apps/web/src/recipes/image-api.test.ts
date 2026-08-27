@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   confirmRecipeImageUpload,
   createRecipeImageReadUrl,
+  createRecipeImageReadUrls,
   deleteRecipeImage,
   requestRecipeImageUpload,
   uploadRecipeImageObject,
@@ -163,6 +164,54 @@ describe("recipe image API", () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ variant: "viewer" }),
+      },
+    );
+  });
+
+  it("returns validated signed read URLs in one batch", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        reads: [
+          {
+            imageId,
+            recipeId,
+            variant: "thumbnail",
+            url: "https://read.example/image",
+            expiresInSeconds: 3_600,
+          },
+        ],
+      }),
+    );
+
+    await expect(
+      createRecipeImageReadUrls({
+        accessToken,
+        householdId,
+        requests: [{ imageId, recipeId, variant: "thumbnail" }],
+      }),
+    ).resolves.toEqual({
+      kind: "success",
+      reads: [
+        {
+          imageId,
+          recipeId,
+          variant: "thumbnail",
+          url: "https://read.example/image",
+          expiresInSeconds: 3_600,
+        },
+      ],
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/households/${householdId}/recipes/images/read-urls`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requests: [{ imageId, recipeId, variant: "thumbnail" }],
+        }),
       },
     );
   });

@@ -11,10 +11,14 @@ import {
   Textarea,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { AddRecipeCookLogForm } from "./add-recipe-cook-log-form";
 import { deleteRecipeImage } from "./image-api";
+import {
+  prefetchRecipeImage,
+  scheduleIdleRecipeImagePrefetch,
+} from "./prefetch-recipe-image";
 import { RecipeCookingHistoryList } from "./recipe-cooking-history-list";
 import { RecipeImageGallery, RecipeImageViewer } from "./recipe-image-gallery";
 import { RecipeImageUploadForm } from "./recipe-image-upload-form";
@@ -27,6 +31,7 @@ type RecipeDetailProps = {
   householdId: string;
   recipeId: string;
   onSessionExpired: () => void;
+  userId: string;
 };
 
 export function RecipeDetail({
@@ -34,6 +39,7 @@ export function RecipeDetail({
   householdId,
   recipeId,
   onSessionExpired,
+  userId,
 }: RecipeDetailProps) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
@@ -53,6 +59,32 @@ export function RecipeDetail({
     currentTitle: recipe?.title ?? "",
     currentDescription: recipe?.description ?? null,
   });
+  const firstVisibleImageId = recipe?.images.find(
+    (image) => !hiddenImageIds.has(image.id),
+  )?.id;
+
+  useEffect(() => {
+    if (!firstVisibleImageId) return;
+    return scheduleIdleRecipeImagePrefetch(() => {
+      void prefetchRecipeImage({
+        accessToken,
+        userId,
+        householdId,
+        imageId: firstVisibleImageId,
+        recipeId,
+        variant: "viewer",
+      }).then((prefetch) => {
+        if (prefetch.kind === "unauthorized") onSessionExpired();
+      });
+    });
+  }, [
+    accessToken,
+    firstVisibleImageId,
+    householdId,
+    onSessionExpired,
+    recipeId,
+    userId,
+  ]);
 
   if (result.type === "error") {
     return (
@@ -125,7 +157,12 @@ export function RecipeDetail({
       });
       if (deletion.kind === "unauthorized") onSessionExpired();
       if (deletion.kind === "success") {
-        invalidateRecipeImageUrl({ householdId, recipeId, imageId: image.id });
+        invalidateRecipeImageUrl({
+          householdId,
+          recipeId,
+          imageId: image.id,
+          userId,
+        });
       } else {
         restoreImage();
       }
@@ -166,6 +203,7 @@ export function RecipeDetail({
               onSessionExpired={onSessionExpired}
               onOpen={openGalleryImage}
               onReorder={reorderImages}
+              userId={userId}
             />
           </div>
         ) : null}
@@ -214,6 +252,7 @@ export function RecipeDetail({
                 setSelectedImage(image);
               }}
               onSessionExpired={onSessionExpired}
+              userId={userId}
             />
           )}
         </div>
@@ -231,6 +270,7 @@ export function RecipeDetail({
         onOpenChange={(open) => {
           if (!open) setSelectedImage(undefined);
         }}
+        userId={userId}
       />
     </article>
   );

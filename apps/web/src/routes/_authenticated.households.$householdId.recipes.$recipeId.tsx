@@ -26,6 +26,7 @@ function RecipeDetailRoute() {
       householdId={householdId}
       recipeId={recipeId}
       onSessionExpired={onSessionExpired}
+      userId={session.user.id}
     />
   );
 }

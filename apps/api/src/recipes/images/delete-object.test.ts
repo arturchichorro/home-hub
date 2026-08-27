@@ -1,6 +1,10 @@
-import { DeleteObjectCommand, type S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  type S3Client,
+} from "@aws-sdk/client-s3";
 import { describe, expect, it, vi } from "vitest";
-import { deleteR2Object } from "./delete-object";
+import { deleteR2Object, deleteR2Objects } from "./delete-object";
 
 const bucket = "home-hub-dev";
 const objectKey =
@@ -24,6 +28,30 @@ describe("deleteR2Object", () => {
     expect((command as DeleteObjectCommand).input).toEqual({
       Bucket: bucket,
       Key: objectKey,
+    });
+  });
+});
+
+describe("deleteR2Objects", () => {
+  it("deletes the original and derivatives in one request", async () => {
+    let command: unknown;
+    const client = {
+      send: vi.fn(async (input: unknown) => {
+        command = input;
+        return {};
+      }),
+    } as unknown as S3Client;
+    const objectKeys = [objectKey, `${objectKey}/derivatives/thumbnail.webp`];
+
+    await deleteR2Objects({ client, bucket, objectKeys });
+
+    expect(command).toBeInstanceOf(DeleteObjectsCommand);
+    expect((command as DeleteObjectsCommand).input).toEqual({
+      Bucket: bucket,
+      Delete: {
+        Objects: objectKeys.map((Key) => ({ Key })),
+        Quiet: true,
+      },
     });
   });
 });
