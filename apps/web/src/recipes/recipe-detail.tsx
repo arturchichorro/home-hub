@@ -2,15 +2,19 @@ import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import type { RecipeImage } from "@home-hub/shared/zero/schema";
 import {
+  ConfirmationPopover,
   CookingPot,
   ErrorPopover,
   History,
+  IconButton,
   Images,
   InlineAlert,
   Input,
   Textarea,
+  Trash2,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { AddRecipeCookLogForm } from "./add-recipe-cook-log-form";
@@ -42,7 +46,10 @@ export function RecipeDetail({
   userId,
 }: RecipeDetailProps) {
   const zero = useZero();
+  const navigate = useNavigate();
   const mutationEnabled = useZeroMutationEnabled();
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string>();
   const [selectedImage, setSelectedImage] = useState<RecipeImage>();
   const [hiddenImageIds, setHiddenImageIds] = useState<Set<string>>(
     () => new Set(),
@@ -94,7 +101,7 @@ export function RecipeDetail({
     );
   }
 
-  if (!recipe && result.type === "complete") {
+  if (!recipe && result.type === "complete" && !deleting) {
     return (
       <InlineAlert role="alert" variant="danger">
         Recipe not found.
@@ -102,7 +109,9 @@ export function RecipeDetail({
     );
   }
 
-  if (!recipe) return null;
+  if (!recipe) {
+    return deleting ? <p className="text-muted">Deleting recipe…</p> : null;
+  }
 
   const nextImagePosition =
     recipe.images.reduce(
@@ -135,6 +144,36 @@ export function RecipeDetail({
         optimisticUpdatedAt: Date.now(),
       }),
     );
+  }
+
+  async function deleteRecipe() {
+    if (deleting || !mutationEnabled) return;
+    setDeleting(true);
+    setDeleteError(undefined);
+    try {
+      const mutation = zero.mutate(
+        mutators.recipes.delete({
+          householdId,
+          recipeId,
+          optimisticDeletedAt: Date.now(),
+        }),
+      );
+      const client = await mutation.client;
+      const outcome = client.type === "error" ? client : await mutation.server;
+      if (outcome.type === "error") {
+        setDeleteError("The recipe could not be deleted.");
+        return;
+      }
+      await navigate({
+        to: "/households/$householdId/recipes",
+        params: { householdId },
+        replace: true,
+      });
+    } catch {
+      setDeleteError("The recipe could not be deleted.");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   async function deleteImage(image: RecipeImage) {
@@ -172,14 +211,38 @@ export function RecipeDetail({
   }
 
   return (
-    <article className="grid gap-2" aria-busy={result.type !== "complete"}>
-      <Input
-        {...editor.titleProps}
-        appearance="seamless"
-        aria-label="Recipe title"
-        className="text-2xl font-semibold text-primary"
-        maxLength={150}
-      />
+    <article
+      className="grid gap-2"
+      aria-busy={result.type !== "complete" || deleting}
+    >
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <Input
+          {...editor.titleProps}
+          appearance="seamless"
+          aria-label="Recipe title"
+          className="min-w-0 flex-1 text-2xl font-semibold text-primary"
+          maxLength={150}
+        />
+        <ConfirmationPopover
+          message="Are you sure you want to delete this recipe?"
+          trigger={
+            <IconButton
+              aria-label="Delete recipe"
+              title="Delete recipe"
+              className="size-7! shrink-0"
+              disabled={!mutationEnabled || deleting}
+            >
+              <Trash2 aria-hidden="true" className="size-4" />
+            </IconButton>
+          }
+          onConfirm={() => void deleteRecipe()}
+        />
+      </div>
+      {deleteError ? (
+        <InlineAlert role="alert" variant="danger">
+          {deleteError}
+        </InlineAlert>
+      ) : null}
       <Textarea
         {...editor.descriptionProps}
         appearance="seamless"

@@ -30,6 +30,12 @@ const updateRecipeArgs = {
   optimisticUpdatedAt,
 };
 
+const deleteRecipeArgs = {
+  householdId,
+  recipeId,
+  optimisticDeletedAt: optimisticUpdatedAt,
+};
+
 const addRecipeIngredientArgs = {
   ingredientId,
   householdId,
@@ -256,6 +262,7 @@ describe("recipes.create mutator", () => {
       householdId,
       title: "Tomato Soup",
       description: "A simple soup.",
+      deletedAt: null,
       createdAt: optimisticUpdatedAt,
       updatedAt: optimisticUpdatedAt,
     });
@@ -320,9 +327,81 @@ describe("recipes.create mutator", () => {
       householdId,
       title: "Tomato Soup",
       description: "A simple soup.",
+      deletedAt: null,
       createdAt: authoritativeTimestamp,
       updatedAt: authoritativeTimestamp,
     });
+  });
+});
+
+describe("recipes.delete mutator", () => {
+  it("is registered with a stable name", () => {
+    expect(mutators.recipes.delete.mutatorName).toBe("recipes.delete");
+  });
+
+  it("optimistically soft-deletes a cached recipe", async () => {
+    const { ingredientDelete, cookLogDelete, recipeUpdate, transaction } =
+      createFakeTransaction({
+        location: "client",
+        results: [{ id: recipeId, householdId }],
+      });
+
+    await mutators.recipes.delete.fn({
+      args: deleteRecipeArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(recipeUpdate).toHaveBeenCalledWith({
+      id: recipeId,
+      deletedAt: optimisticUpdatedAt,
+    });
+    expect(ingredientDelete).not.toHaveBeenCalled();
+    expect(cookLogDelete).not.toHaveBeenCalled();
+  });
+
+  it("uses the authoritative server timestamp", async () => {
+    const authoritativeTimestamp = 1_786_000_001_000;
+    vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
+    const { recipeUpdate, transaction } = createFakeTransaction({
+      location: "server",
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+        { id: recipeId, householdId },
+      ],
+    });
+
+    await mutators.recipes.delete.fn({
+      args: deleteRecipeArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(recipeUpdate).toHaveBeenCalledWith({
+      id: recipeId,
+      deletedAt: authoritativeTimestamp,
+    });
+  });
+
+  it("rejects an unavailable recipe", async () => {
+    const { recipeUpdate, transaction } = createFakeTransaction({
+      location: "server",
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+        undefined,
+      ],
+    });
+
+    await expect(
+      mutators.recipes.delete.fn({
+        args: deleteRecipeArgs,
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Recipe deletion not allowed");
+    expect(recipeUpdate).not.toHaveBeenCalled();
   });
 });
 

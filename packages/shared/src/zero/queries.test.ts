@@ -248,6 +248,12 @@ describe("recipe queries", () => {
         type: "and",
         conditions: [
           equalsCondition("householdId", householdId),
+          {
+            type: "simple",
+            left: { type: "column", name: "deletedAt" },
+            op: "IS",
+            right: { type: "literal", value: null },
+          },
           moduleAccessCondition("recipes"),
         ],
       },
@@ -311,8 +317,14 @@ describe("recipe queries", () => {
         type: "and",
         conditions: [
           equalsCondition("householdId", householdId),
-          equalsCondition("id", recipeId),
+          {
+            type: "simple",
+            left: { type: "column", name: "deletedAt" },
+            op: "IS",
+            right: { type: "literal", value: null },
+          },
           moduleAccessCondition("recipes"),
+          equalsCondition("id", recipeId),
         ],
       },
       related: [

@@ -78,20 +78,22 @@ const listDetail = defineHomeHubQuery(listDetailArgsSchema, ({ args, ctx }) =>
     .one(),
 );
 
+const authorizedRecipes = (householdId: string, userId: string) =>
+  zql.recipes
+    .where("householdId", householdId)
+    .where("deletedAt", "IS", null)
+    .whereExists("household", (household) =>
+      household
+        .whereExists("members", (member) => member.where("userId", userId))
+        .whereExists("moduleSettings", (setting) =>
+          setting.where("moduleKey", "recipes").where("enabled", true),
+        ),
+    );
+
 const recipesByHousehold = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
-    zql.recipes
-      .where("householdId", args.householdId)
-      .whereExists("household", (household) =>
-        household
-          .whereExists("members", (member) =>
-            member.where("userId", ctx.userId),
-          )
-          .whereExists("moduleSettings", (setting) =>
-            setting.where("moduleKey", "recipes").where("enabled", true),
-          ),
-      )
+    authorizedRecipes(args.householdId, ctx.userId)
       .related("images", (image) =>
         image
           .where("confirmedAt", "IS NOT", null)
@@ -112,18 +114,8 @@ const recipesByHousehold = defineHomeHubQuery(
 const recipeDetail = defineHomeHubQuery(
   recipeDetailArgsSchema,
   ({ args, ctx }) =>
-    zql.recipes
-      .where("householdId", args.householdId)
+    authorizedRecipes(args.householdId, ctx.userId)
       .where("id", args.recipeId)
-      .whereExists("household", (household) =>
-        household
-          .whereExists("members", (member) =>
-            member.where("userId", ctx.userId),
-          )
-          .whereExists("moduleSettings", (setting) =>
-            setting.where("moduleKey", "recipes").where("enabled", true),
-          ),
-      )
       .related("ingredients", (ingredient) =>
         ingredient.orderBy("position", "asc").orderBy("id", "asc"),
       )

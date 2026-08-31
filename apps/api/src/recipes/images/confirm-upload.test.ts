@@ -3,6 +3,7 @@ import {
   householdMembers,
   householdModuleSettings,
   recipeImages,
+  recipes,
 } from "@home-hub/database/schema";
 import { describe, expect, it, vi } from "vitest";
 import { createConfirmRecipeImageUploadService as createConfirmRecipeImageUploadServiceBase } from "./confirm-upload";
@@ -75,7 +76,6 @@ function createFakeDatabase({
   );
 
   const select = vi.fn((_selection: unknown) => {
-    const result = selectResults.shift();
     const builder = {
       from: (table: unknown) => {
         tables.push(table);
@@ -85,6 +85,7 @@ function createFakeDatabase({
       limit: (_limit: unknown) => builder,
       for: async (strength: unknown) => {
         lockStrengths.push(strength);
+        const result = selectResults.shift();
         return result ? [result] : [];
       },
     };
@@ -163,9 +164,11 @@ describe("confirm recipe image upload service", () => {
       householdMembers,
       householdModuleSettings,
       recipeImages,
+      recipes,
       householdMembers,
       householdModuleSettings,
       recipeImages,
+      recipes,
       recipeImages,
     ]);
     expect(updatedValues).toEqual([

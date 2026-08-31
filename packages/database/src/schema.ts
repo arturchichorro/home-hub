@@ -247,6 +247,7 @@ export const recipes = pgTable(
       .references(() => households.id),
     title: text("title").notNull(),
     description: text("description"),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

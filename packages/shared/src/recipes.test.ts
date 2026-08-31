@@ -4,6 +4,7 @@ import {
   createRecipeCookLogMutationSchema,
   createRecipeIngredientMutationSchema,
   createRecipeMutationSchema,
+  deleteRecipeMutationSchema,
   renameRecipeIngredientMutationSchema,
   reorderRecipeImagesMutationSchema,
   reorderRecipeIngredientsMutationSchema,
@@ -131,6 +132,32 @@ describe("updateRecipeMutationSchema", () => {
       updateRecipeMutationSchema.safeParse({
         ...updateInput,
         userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("deleteRecipeMutationSchema", () => {
+  it("accepts a scoped recipe and optimistic deletion timestamp", () => {
+    expect(
+      deleteRecipeMutationSchema.parse({
+        householdId: input.householdId,
+        recipeId: input.recipeId,
+        optimisticDeletedAt: input.optimisticTimestamp,
+      }),
+    ).toEqual({
+      householdId: input.householdId,
+      recipeId: input.recipeId,
+      optimisticDeletedAt: input.optimisticTimestamp,
+    });
+  });
+
+  it("rejects an invalid deletion timestamp", () => {
+    expect(
+      deleteRecipeMutationSchema.safeParse({
+        householdId: input.householdId,
+        recipeId: input.recipeId,
+        optimisticDeletedAt: -1,
       }).success,
     ).toBe(false);
   });

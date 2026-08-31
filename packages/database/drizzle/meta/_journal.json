@@ -134,6 +134,13 @@
       "when": 1788213861945,
       "tag": "0018_soft-delete-lists",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788214770458,
+      "tag": "0019_soft-delete-recipes",
+      "breakpoints": true
     }
   ]
 }

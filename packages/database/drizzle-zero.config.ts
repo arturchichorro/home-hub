@@ -51,6 +51,7 @@ export default drizzleZeroConfig(drizzleSchema, {
       householdId: true,
       title: true,
       description: true,
+      deletedAt: true,
       createdAt: true,
       updatedAt: true,
     },

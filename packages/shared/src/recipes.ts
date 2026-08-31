@@ -46,6 +46,14 @@ export type UpdateRecipeMutationInput = z.infer<
   typeof updateRecipeMutationSchema
 >;
 
+export const deleteRecipeMutationSchema = z
+  .object({
+    householdId: z.uuid(),
+    recipeId: z.uuid(),
+    optimisticDeletedAt: z.number().int().nonnegative(),
+  })
+  .strict();
+
 const recipeIngredientNameSchema = z
   .string()
   .transform(cleanRecipeIngredientName)

@@ -3,6 +3,7 @@ import {
   householdMembers,
   householdModuleSettings,
   recipeImages,
+  recipes,
 } from "@home-hub/database/schema";
 import { describe, expect, it, vi } from "vitest";
 import { createRecipeImageReadUrlService } from "./create-read-url";
@@ -43,7 +44,6 @@ function createFakeDatabase({
   const lockStrengths: unknown[] = [];
 
   const select = vi.fn((_selection: unknown) => {
-    const result = results.shift();
     const builder = {
       from: (table: unknown) => {
         tables.push(table);
@@ -53,6 +53,7 @@ function createFakeDatabase({
       limit: (_limit: unknown) => builder,
       for: async (strength: unknown) => {
         lockStrengths.push(strength);
+        const result = results.shift();
         return result ? [result] : [];
       },
     };
@@ -115,6 +116,7 @@ describe("create recipe image read URL service", () => {
       householdMembers,
       householdModuleSettings,
       recipeImages,
+      recipes,
     ]);
   });
 
