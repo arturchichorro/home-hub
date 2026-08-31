@@ -15,17 +15,16 @@ import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 type Props = {
   householdId: string;
-  list?: { id: string; name: string };
   onClose: () => void;
   onSaved: (listId: string) => void;
 };
 
 // Mounted only while open, so each new dialog starts with fresh input/error state.
-export function ListNameDialog({ householdId, list, onClose, onSaved }: Props) {
+export function ListNameDialog({ householdId, onClose, onSaved }: Props) {
   const zero = useZero();
   const enabled = useZeroMutationEnabled();
   const formId = useId();
-  const [name, setName] = useState(list?.name ?? "");
+  const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -34,22 +33,15 @@ export function ListNameDialog({ householdId, list, onClose, onSaved }: Props) {
     if (saving || !enabled) return;
     setSaving(true);
     setError(undefined);
-    const listId = list?.id ?? crypto.randomUUID();
+    const listId = crypto.randomUUID();
     try {
       const mutation = zero.mutate(
-        list
-          ? mutators.lists.rename({
-              householdId,
-              listId,
-              name,
-              optimisticUpdatedAt: Date.now(),
-            })
-          : mutators.lists.create({
-              householdId,
-              listId,
-              name,
-              optimisticTimestamp: Date.now(),
-            }),
+        mutators.lists.create({
+          householdId,
+          listId,
+          name,
+          optimisticTimestamp: Date.now(),
+        }),
       );
       const client = await mutation.client;
       const result = client.type === "error" ? client : await mutation.server;
@@ -79,7 +71,7 @@ export function ListNameDialog({ householdId, list, onClose, onSaved }: Props) {
       disablePointerDismissal={saving}
     >
       <DialogPopup
-        title={list ? "Rename list" : "New list"}
+        title="New list"
         actions={
           <>
             <DialogClose disabled={saving}>Cancel</DialogClose>
@@ -89,7 +81,7 @@ export function ListNameDialog({ householdId, list, onClose, onSaved }: Props) {
               busy={saving}
               disabled={!enabled}
             >
-              {list ? "Save name" : "Create list"}
+              Create list
             </Button>
           </>
         }

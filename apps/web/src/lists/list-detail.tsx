@@ -12,7 +12,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { ListItems } from "./list-items";
-import { ListNameDialog } from "./list-name-dialog";
+import { ListNameInput } from "./list-name-input";
 
 export function ListDetail({
   householdId,
@@ -27,7 +27,6 @@ export function ListDetail({
   const [list, result] = useQuery(
     queries.lists.detail({ householdId, listId }),
   );
-  const [renaming, setRenaming] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string>();
@@ -97,18 +96,12 @@ export function ListDetail({
   return (
     <div className="grid gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="min-w-0 break-words text-xl font-semibold">
-          {list.name}
-        </h1>
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="compact"
-            disabled={!enabled || deleting}
-            onClick={() => setRenaming(true)}
-          >
-            Rename
-          </Button>
+        <ListNameInput
+          currentName={list.name}
+          householdId={householdId}
+          listId={listId}
+        />
+        <div className="flex shrink-0 gap-2">
           <Button
             variant="ghost"
             size="compact"
@@ -125,14 +118,6 @@ export function ListDetail({
         </InlineAlert>
       ) : null}
       <ListItems householdId={householdId} listId={listId} items={list.items} />
-      {renaming ? (
-        <ListNameDialog
-          householdId={householdId}
-          list={list}
-          onClose={() => setRenaming(false)}
-          onSaved={() => {}}
-        />
-      ) : null}
       <DialogRoot
         open={confirmDelete}
         onOpenChange={(open) => {

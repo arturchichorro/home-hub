@@ -21,8 +21,10 @@ Clicking anywhere on a card opens the list; dragging the card reorders it, with
 no separate handles or arrow buttons. Touch uses a short hold to begin dragging,
 allowing normal vertical scrolling before activation. Keyboard drag controls
 remain available on the focused card. New lists appear at the top. Each card opens
-`/households/:householdId/lists/:listId`, with a named breadcrumb, rename control,
-and confirmed deletion of the list and all its items.
+`/households/:householdId/lists/:listId`, with a named breadcrumb, a seamless
+inline name editor, and confirmed deletion of the list and all its items. Name
+edits debounce, save on blur or Enter, revert with Escape, and roll back with an
+anchored error when validation or persistence fails.
 
 The actual item-list interactions are preserved: add-item drafts, debounced
 inline editing, active items followed by crossed items, drag ordering within
