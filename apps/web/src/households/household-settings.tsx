@@ -3,10 +3,10 @@ import { InlineAlert } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { useEffect, useState } from "react";
 import { HouseholdMemberList } from "./household-member-list";
+import { HouseholdNameInput } from "./household-name-input";
 import { LeaveHouseholdControl } from "./leave-household-control";
 import { ModuleSettings } from "./module-settings";
 import { PendingInviteList } from "./pending-invite-list";
-import { RenameHouseholdForm } from "./rename-household-form";
 
 type HouseholdSettingsProps = {
   accessToken: string;
@@ -53,18 +53,20 @@ export function HouseholdSettings({
 
   return (
     <div className="grid gap-8" aria-busy={result.type !== "complete"}>
-      {isOwner ? (
-        <section className="grid gap-4">
-          <h3 className="text-lg font-semibold">Name</h3>
-          <RenameHouseholdForm
-            key={household.id}
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        {isOwner ? (
+          <HouseholdNameInput
             accessToken={accessToken}
-            householdId={household.id}
             currentName={household.name}
+            householdId={household.id}
             onSessionExpired={onSessionExpired}
           />
-        </section>
-      ) : null}
+        ) : (
+          <h2 className="flex h-10 min-w-0 flex-1 items-center truncate px-1 text-2xl font-semibold text-primary">
+            {household.name}
+          </h2>
+        )}
+      </div>
 
       <section className="grid gap-4 border-t border-border pt-6">
         <h3 className="text-lg font-semibold">Members</h3>

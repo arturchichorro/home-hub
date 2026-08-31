@@ -20,13 +20,7 @@ function HouseholdSettingsRoute() {
   const { session, onSessionExpired } = Route.useRouteContext();
 
   return (
-    <section
-      aria-labelledby="household-management-heading"
-      className="grid gap-6"
-    >
-      <h2 id="household-management-heading" className="text-xl font-semibold">
-        Household management
-      </h2>
+    <section aria-label="Household management" className="grid gap-6">
       <HouseholdSettings
         accessToken={session.accessToken}
         householdId={householdId}
