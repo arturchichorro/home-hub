@@ -1,6 +1,6 @@
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
-import { Button, InlineAlert, Plus, StickyNote } from "@home-hub/ui-web";
+import { Button, InlineAlert, ListTodo, Plus } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
@@ -76,7 +76,7 @@ export function ListsLibrary({ householdId }: { householdId: string }) {
       ) : null}
       {!lists.length && result.type === "complete" ? (
         <div className="flex min-h-72 flex-col items-center justify-center rounded-lg border border-dashed border-border px-6 text-center">
-          <StickyNote aria-hidden="true" className="size-8 text-primary" />
+          <ListTodo aria-hidden="true" className="size-8 text-primary" />
           <h2 className="mt-4 font-semibold">No lists yet</h2>
           <p className="mt-2 text-sm text-muted">
             Shopping, travel, things to do—make a list for anything.

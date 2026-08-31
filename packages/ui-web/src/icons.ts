@@ -16,6 +16,7 @@ export {
   ImagePlus,
   Images,
   LayoutGrid,
+  ListTodo,
   MessageSquare,
   PanelLeft,
   Plus,

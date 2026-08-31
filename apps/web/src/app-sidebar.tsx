@@ -8,8 +8,8 @@ import {
   HousePlus,
   IconButton,
   InlineAlert,
+  ListTodo,
   Settings,
-  StickyNote,
   UserPlus,
   X,
 } from "@home-hub/ui-web";
@@ -61,7 +61,7 @@ const moduleDefinitions: readonly ModuleDefinition[] = [
   {
     key: "lists",
     label: "Lists",
-    Icon: StickyNote,
+    Icon: ListTodo,
     to: "/households/$householdId/lists",
   },
   {
