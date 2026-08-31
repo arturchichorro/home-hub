@@ -88,6 +88,20 @@ jobs:
               OR to_regclass('public.list_items') IS NULL THEN
               RAISE EXCEPTION 'Application tables must be created in public';
             END IF;
+            IF to_regclass('public.shopping_items') IS NOT NULL
+              OR to_regclass('public.shopping_list_migration_links') IS NOT NULL
+              OR to_regtype('public.shopping_item_status') IS NOT NULL
+              OR to_regprocedure('public.mirror_shopping_item_to_lists()') IS NOT NULL
+              OR to_regprocedure('public.mirror_shopping_module_to_lists()') IS NOT NULL
+              OR EXISTS (
+                SELECT FROM public.household_module_settings WHERE module_key = 'shopping'
+              )
+              OR EXISTS (
+                SELECT FROM pg_publication_tables
+                WHERE pubname = 'home_hub_zero' AND tablename = 'shopping_items'
+              ) THEN
+              RAISE EXCEPTION 'Retired Shopping database objects must be removed';
+            END IF;
           END $$;
           SQL
 

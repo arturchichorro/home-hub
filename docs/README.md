@@ -3,7 +3,7 @@
 Home Hub is a private application for people who share a household. Each
 household enables the built-in modules it wants to use. Initial modules include:
 
-- a shared shopping list;
+- named, orderable shared lists;
 - recipes and ordered recipe ingredients;
 - recipe images stored outside the application server.
 

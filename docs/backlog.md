@@ -17,7 +17,7 @@ together before implementation begins.
 - [ ] Allow to append already uploaded recipe image to a cook log
 - [ ] Add recipe ratings table, could be used to say "overall 5*", "ease to cook 3*", etc; could add to the ui
 - [ ] Open last opened household on app start (through local storage or something)
-- [ ] Add recipe ingredients to Shopping
+- [ ] Add recipe ingredients to a chosen list
 - [ ] Publish safe member profiles through Zero to prevent interface flashing
 - [ ] In any page of the app, we could display where we are (e.g. "Germoir 83 > Recipes > Carbonara" or "Germoir 83 > Lists > Shopping") something like that
 - [ ] Add user comments to cook logs (recipes)

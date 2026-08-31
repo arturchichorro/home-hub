@@ -125,44 +125,6 @@ export const householdInvites = pgTable(
   ],
 );
 
-export const shoppingItemStatusEnum = pgEnum("shopping_item_status", [
-  "active",
-  "crossed",
-  "archived",
-]);
-
-export const shoppingItems = pgTable(
-  "shopping_items",
-  {
-    id: uuid("id").primaryKey(),
-    householdId: uuid("household_id")
-      .notNull()
-      .references(() => households.id),
-    name: text("name").notNull(),
-    normalizedName: text("normalized_name").notNull(),
-    status: shoppingItemStatusEnum().notNull().default("active"),
-    sortKey: integer("sort_key").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("shopping_items_household_id_normalized_name_idx").on(
-      table.householdId,
-      table.normalizedName,
-    ),
-    index("shopping_items_household_id_status_sort_key_id_idx").on(
-      table.householdId,
-      table.status,
-      table.sortKey,
-      table.id,
-    ),
-  ],
-);
-
 export const householdsRelations = relations(households, ({ many }) => ({
   images: many(recipeImages),
   listItems: many(listItems),
@@ -170,7 +132,6 @@ export const householdsRelations = relations(households, ({ many }) => ({
   members: many(householdMembers),
   moduleSettings: many(householdModuleSettings),
   recipes: many(recipes),
-  shoppingItems: many(shoppingItems),
 }));
 
 export const householdMembersRelations = relations(
@@ -182,13 +143,6 @@ export const householdMembersRelations = relations(
     }),
   }),
 );
-
-export const shoppingItemsRelations = relations(shoppingItems, ({ one }) => ({
-  household: one(households, {
-    fields: [shoppingItems.householdId],
-    references: [households.id],
-  }),
-}));
 
 export const listItemStatusEnum = pgEnum("list_item_status", [
   "active",

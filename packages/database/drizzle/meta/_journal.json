@@ -120,6 +120,13 @@
       "when": 1788186247665,
       "tag": "0016_backfill-shopping-lists",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1788191540765,
+      "tag": "0017_retire-shopping",
+      "breakpoints": true
     }
   ]
 }

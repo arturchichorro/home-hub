@@ -214,7 +214,7 @@ describe("Zero routes", () => {
 
     const response = await postQuery({
       app,
-      body: createQueryRequest({ name: "shopping.unknown" }),
+      body: createQueryRequest({ name: "lists.unknown" }),
       accessToken: createAccessToken(),
     });
 
@@ -226,8 +226,8 @@ describe("Zero routes", () => {
         {
           error: "app",
           id: "query-1",
-          message: "Query not found: shopping.unknown",
-          name: "shopping.unknown",
+          message: "Query not found: lists.unknown",
+          name: "lists.unknown",
         },
       ],
     });

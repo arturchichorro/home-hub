@@ -20,7 +20,7 @@ function equalsCondition(column: string, value: string | boolean) {
   };
 }
 
-function moduleAccessCondition(moduleKey: "shopping" | "recipes" | "lists") {
+function moduleAccessCondition(moduleKey: "recipes" | "lists") {
   return {
     type: "correlatedSubquery",
     op: "EXISTS",

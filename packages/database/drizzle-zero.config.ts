@@ -45,16 +45,6 @@ export default drizzleZeroConfig(drizzleSchema, {
       createdAt: true,
       updatedAt: true,
     },
-    shoppingItems: {
-      id: true,
-      householdId: true,
-      name: true,
-      normalizedName: true,
-      status: true,
-      sortKey: true,
-      createdAt: true,
-      updatedAt: true,
-    },
     recipes: {
       id: true,
       householdId: true,

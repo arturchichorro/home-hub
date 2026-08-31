@@ -63,7 +63,7 @@ The current rules and lock requirements are maintained in
 [Security and synchronization](./security-and-sync.md#household-management-and-module-configuration).
 
 **Alternatives:** per-member module permissions; dynamically installed
-plugins; a generic user-defined schema; a shared catalog for shopping items and
+plugins; a generic user-defined schema; a shared catalog for list items and
 recipe ingredients.
 
 ## Hono on Node.js with Zod at trust boundaries
