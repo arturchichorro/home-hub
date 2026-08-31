@@ -9,6 +9,7 @@ import {
   renameRecipeIngredientMutationSchema,
   reorderRecipeImagesMutationSchema,
   reorderRecipeIngredientsMutationSchema,
+  reorderRecipesMutationSchema,
   updateRecipeCookLogMutationSchema,
   updateRecipeIngredientMutationSchema,
   updateRecipeMutationSchema,
@@ -16,15 +17,15 @@ import {
 import type { ZeroAuthContext } from "./context";
 import { listMutatorDefinitions } from "./list-mutators";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
+import { nextSortKey, planReorder } from "./ordering";
 import { type Schema, zql } from "./schema.gen";
 
 const defineHomeHubMutator = defineMutatorWithType<Schema, ZeroAuthContext>();
 const defineHomeHubMutators = defineMutatorsWithType<Schema>();
+const activeRecipes = (householdId: string) =>
+  zql.recipes.where("householdId", householdId).where("deletedAt", "IS", null);
 const activeRecipe = (householdId: string, recipeId: string) =>
-  zql.recipes
-    .where("id", recipeId)
-    .where("householdId", householdId)
-    .where("deletedAt", "IS", null);
+  activeRecipes(householdId).where("id", recipeId);
 const createRecipe = defineHomeHubMutator(
   createRecipeMutationSchema,
   async ({ args, ctx, tx }) => {
@@ -35,6 +36,13 @@ const createRecipe = defineHomeHubMutator(
       moduleKey: "recipes",
     });
 
+    const top = await tx.run(
+      activeRecipes(args.householdId)
+        .orderBy("sortKey", "desc")
+        .orderBy("id", "asc")
+        .one(),
+    );
+
     const timestamp =
       tx.location === "server" ? Date.now() : args.optimisticTimestamp;
 
@@ -43,10 +51,30 @@ const createRecipe = defineHomeHubMutator(
       householdId: args.householdId,
       title: args.title,
       description: args.description,
+      sortKey: nextSortKey(top?.sortKey),
       deletedAt: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
+  },
+);
+
+const reorderRecipes = defineHomeHubMutator(
+  reorderRecipesMutationSchema,
+  async ({ args, ctx, tx }) => {
+    await requireServerHouseholdModuleAccess({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+      moduleKey: "recipes",
+    });
+
+    const rows = await tx.run(activeRecipes(args.householdId));
+    const updates = planReorder(rows, args.orderedRecipeIds, args.recipeId);
+    const updatedAt =
+      tx.location === "server" ? Date.now() : args.optimisticUpdatedAt;
+    for (const update of updates)
+      await tx.mutate.recipes.update({ ...update, updatedAt });
   },
 );
 
@@ -410,6 +438,7 @@ export const mutators = defineHomeHubMutators({
     create: createRecipe,
     update: updateRecipe,
     delete: deleteRecipe,
+    reorder: reorderRecipes,
     addIngredient: addRecipeIngredient,
     updateIngredient: updateRecipeIngredient,
     renameIngredient: renameRecipeIngredient,

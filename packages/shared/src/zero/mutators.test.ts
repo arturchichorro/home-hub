@@ -247,7 +247,7 @@ describe("recipes.create mutator", () => {
   it("optimistically inserts a recipe using the client timestamp", async () => {
     const { queries, recipeInsert, transaction } = createFakeTransaction({
       location: "client",
-      results: [],
+      results: [undefined],
     });
 
     await mutators.recipes.create.fn({
@@ -256,12 +256,13 @@ describe("recipes.create mutator", () => {
       tx: transaction,
     });
 
-    expect(queries).toHaveLength(0);
+    expect(queries).toHaveLength(1);
     expect(recipeInsert).toHaveBeenCalledWith({
       id: recipeId,
       householdId,
       title: "Tomato Soup",
       description: "A simple soup.",
+      sortKey: 1024,
       deletedAt: null,
       createdAt: optimisticUpdatedAt,
       updatedAt: optimisticUpdatedAt,
@@ -312,6 +313,7 @@ describe("recipes.create mutator", () => {
       results: [
         { id: "membership-id" },
         { householdId, moduleKey: "recipes", enabled: true },
+        undefined,
       ],
     });
 
@@ -321,16 +323,74 @@ describe("recipes.create mutator", () => {
       tx: transaction,
     });
 
-    expect(queries).toHaveLength(2);
+    expect(queries).toHaveLength(3);
     expect(recipeInsert).toHaveBeenCalledWith({
       id: recipeId,
       householdId,
       title: "Tomato Soup",
       description: "A simple soup.",
+      sortKey: 1024,
       deletedAt: null,
       createdAt: authoritativeTimestamp,
       updatedAt: authoritativeTimestamp,
     });
+  });
+});
+
+describe("recipes.reorder mutator", () => {
+  it("is registered with a stable name", () => {
+    expect(mutators.recipes.reorder.mutatorName).toBe("recipes.reorder");
+  });
+
+  it("optimistically moves a recipe without rewriting every row", async () => {
+    const { recipeUpdate, transaction } = createFakeTransaction({
+      location: "client",
+      results: [
+        [
+          { id: recipeId, sortKey: 2048 },
+          { id: imageId, sortKey: 1024 },
+        ],
+      ],
+    });
+
+    await mutators.recipes.reorder.fn({
+      args: {
+        householdId,
+        recipeId,
+        orderedRecipeIds: [imageId, recipeId],
+        optimisticUpdatedAt,
+      },
+      ctx,
+      tx: transaction,
+    });
+
+    expect(recipeUpdate).toHaveBeenCalledOnce();
+    expect(recipeUpdate).toHaveBeenCalledWith({
+      id: recipeId,
+      sortKey: 0,
+      updatedAt: optimisticUpdatedAt,
+    });
+  });
+
+  it("rejects an out-of-household recipe ID", async () => {
+    const { recipeUpdate, transaction } = createFakeTransaction({
+      location: "client",
+      results: [[{ id: recipeId, sortKey: 1024 }]],
+    });
+
+    await expect(
+      mutators.recipes.reorder.fn({
+        args: {
+          householdId,
+          recipeId,
+          orderedRecipeIds: [recipeId, imageId],
+          optimisticUpdatedAt,
+        },
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Reorder not allowed");
+    expect(recipeUpdate).not.toHaveBeenCalled();
   });
 });
 

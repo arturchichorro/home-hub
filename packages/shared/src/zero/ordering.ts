@@ -4,20 +4,20 @@ const minSortKey = -2_147_483_648;
 
 type OrderedRow = { id: string; sortKey: number };
 
-export function nextListSortKey(topSortKey = 0): number {
+export function nextSortKey(topSortKey = 0): number {
   const next = topSortKey + gap;
-  if (next > maxSortKey) throw new Error("List ordering requires rebalancing");
+  if (next > maxSortKey) throw new Error("Ordering requires rebalancing");
   return next;
 }
 
-export function planListReorder(
+export function planReorder(
   rows: readonly OrderedRow[],
   orderedIds: readonly string[],
   movedId: string,
 ): OrderedRow[] {
   const byId = new Map(rows.map((row) => [row.id, row]));
   if (!orderedIds.includes(movedId) || orderedIds.some((id) => !byId.has(id))) {
-    throw new Error("List reorder not allowed");
+    throw new Error("Reorder not allowed");
   }
   const index = orderedIds.indexOf(movedId);
   const previousId = orderedIds[index - 1];
@@ -51,7 +51,7 @@ export function planListReorder(
       ? remaining.findIndex((row) => row.id === previous.id) + 1
       : 0;
   const moved = byId.get(movedId);
-  if (!moved) throw new Error("List reorder not allowed");
+  if (!moved) throw new Error("Reorder not allowed");
   remaining.splice(position, 0, moved);
   if (remaining.length * gap > maxSortKey)
     throw new Error("Too many rows to reorder");

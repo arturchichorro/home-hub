@@ -13,8 +13,8 @@ import {
 } from "../lists";
 import { normalizeListItemName, normalizeListName } from "../normalization";
 import type { ZeroAuthContext } from "./context";
-import { nextListSortKey, planListReorder } from "./list-ordering";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
+import { nextSortKey, planReorder } from "./ordering";
 import { type Schema, zql } from "./schema.gen";
 
 const defineMutator = defineMutatorWithType<Schema, ZeroAuthContext>();
@@ -84,7 +84,7 @@ export const listMutatorDefinitions = {
       householdId: args.householdId,
       name: args.name,
       normalizedName,
-      sortKey: nextListSortKey(top?.sortKey),
+      sortKey: nextSortKey(top?.sortKey),
       deletedAt: null,
       createdAt: now,
       updatedAt: now,
@@ -119,7 +119,7 @@ export const listMutatorDefinitions = {
     async ({ tx, ctx, args }) => {
       await requireAccess(tx, ctx, args.householdId);
       const rows = await tx.run(scopedLists(args.householdId));
-      const updates = planListReorder(rows, args.orderedListIds, args.listId);
+      const updates = planReorder(rows, args.orderedListIds, args.listId);
       const updatedAt = timestamp(tx, args.optimisticUpdatedAt);
       for (const update of updates)
         await tx.mutate.lists.update({ ...update, updatedAt });
@@ -143,7 +143,7 @@ export const listMutatorDefinitions = {
       const sortKey =
         top && existing?.id === top.id
           ? top.sortKey
-          : nextListSortKey(top?.sortKey);
+          : nextSortKey(top?.sortKey);
       const now = timestamp(tx, args.optimisticTimestamp);
       if (existing) {
         await tx.mutate.listItems.update({
@@ -201,7 +201,7 @@ export const listMutatorDefinitions = {
     async ({ tx, ctx, args }) => {
       await requireList(tx, ctx, args);
       const rows = await tx.run(scopedItems(args).where("status", args.status));
-      const updates = planListReorder(rows, args.orderedItemIds, args.itemId);
+      const updates = planReorder(rows, args.orderedItemIds, args.itemId);
       const updatedAt = timestamp(tx, args.optimisticUpdatedAt);
       for (const update of updates)
         await tx.mutate.listItems.update({ ...update, updatedAt });

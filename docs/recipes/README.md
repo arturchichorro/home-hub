@@ -33,6 +33,10 @@ each shows a small fixed-size crop of the recipe's first confirmed image on the
 left, with an accent-colored title and at most two muted description lines on
 the right. A compact `+ Add recipe` row follows the grid, opens a title-only
 creation dialog, and navigates to the new recipe detail page after creation.
+Cards have no visible ordering controls: clicking opens a recipe, while dragging
+reorders it. Touch uses a short hold before dragging so normal page scrolling
+remains available. Existing recipes begin in their previous alphabetical order,
+and newly created recipes appear at the top.
 
 ### Recipe detail
 
@@ -124,6 +128,7 @@ constrained so they cannot cross household or recipe boundaries.
 - `household_id`
 - `title`
 - `description`
+- `sort_key`
 - `deleted_at`
 - `created_at`, `updated_at`
 

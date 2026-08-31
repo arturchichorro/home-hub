@@ -162,6 +162,15 @@ const orderedIdsSchema = z
     message: "Ordered IDs must be unique",
   });
 
+export const reorderRecipesMutationSchema = z
+  .object({
+    householdId: z.uuid(),
+    recipeId: z.uuid(),
+    orderedRecipeIds: orderedIdsSchema,
+    optimisticUpdatedAt: z.number().int().nonnegative(),
+  })
+  .strict();
+
 export const deleteRecipeIngredientMutationSchema = z
   .object({
     ingredientId: z.uuid(),

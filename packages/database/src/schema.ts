@@ -247,6 +247,7 @@ export const recipes = pgTable(
       .references(() => households.id),
     title: text("title").notNull(),
     description: text("description"),
+    sortKey: integer("sort_key").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -257,6 +258,9 @@ export const recipes = pgTable(
   },
   (table) => [
     unique("recipes_household_id_id_idx").on(table.householdId, table.id),
+    index("recipes_household_id_sort_key_id_idx")
+      .on(table.householdId, table.sortKey, table.id)
+      .where(sql`${table.deletedAt} is null`),
   ],
 );
 

@@ -241,7 +241,7 @@ describe("recipe queries", () => {
     expect(getAst(query)).toMatchObject({
       table: "recipes",
       orderBy: [
-        ["title", "asc"],
+        ["sortKey", "desc"],
         ["id", "asc"],
       ],
       where: {
