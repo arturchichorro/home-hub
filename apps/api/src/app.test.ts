@@ -41,10 +41,6 @@ const defaultInput: CreateAppInput = {
     createRecipeImageUpload: async () => ({ kind: "forbidden" }),
     deleteRecipeImage: async () => ({ kind: "forbidden" }),
   },
-  shopping: {
-    addShoppingItem: async () => ({ kind: "forbidden" }),
-    setShoppingItemStatus: async () => ({ kind: "forbidden" }),
-  },
   infrastructure: {
     zeroDbProvider: dbProvider,
     jwtSecret,
@@ -63,7 +59,6 @@ function createTestApp(overrides: CreateTestAppOverrides = {}) {
     auth: { ...defaultInput.auth, ...overrides.auth },
     households: { ...defaultInput.households, ...overrides.households },
     recipeImages: { ...defaultInput.recipeImages, ...overrides.recipeImages },
-    shopping: { ...defaultInput.shopping, ...overrides.shopping },
     infrastructure: {
       ...defaultInput.infrastructure,
       ...overrides.infrastructure,
@@ -245,21 +240,9 @@ describe("app", () => {
     expect(createHousehold).toHaveBeenCalledOnce();
   });
 
-  it("mounts shopping item addition under its household", async () => {
+  it("does not mount retired Shopping endpoints", async () => {
     const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
-    const item = {
-      id: "8d46a4c4-4845-4a6d-a937-139633ae1bb9",
-      householdId,
-      name: "Milk",
-      status: "active" as const,
-    };
-    const addShoppingItem = vi.fn(async () => ({
-      kind: "success" as const,
-      item,
-    }));
-    const app = createTestApp({
-      shopping: { addShoppingItem },
-    });
+    const app = createTestApp();
     const accessToken = signAccessToken({
       userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
       jwtId: "49ef297e-ed36-44b0-913f-0ef66e81887d",
@@ -278,12 +261,6 @@ describe("app", () => {
       },
     );
 
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ item });
-    expect(addShoppingItem).toHaveBeenCalledWith({
-      userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
-      householdId,
-      name: "Milk",
-    });
+    expect(response.status).toBe(404);
   });
 });

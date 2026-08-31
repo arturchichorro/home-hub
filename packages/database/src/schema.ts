@@ -165,6 +165,8 @@ export const shoppingItems = pgTable(
 
 export const householdsRelations = relations(households, ({ many }) => ({
   images: many(recipeImages),
+  listItems: many(listItems),
+  lists: many(lists),
   members: many(householdMembers),
   moduleSettings: many(householdModuleSettings),
   recipes: many(recipes),
@@ -185,6 +187,102 @@ export const shoppingItemsRelations = relations(shoppingItems, ({ one }) => ({
   household: one(households, {
     fields: [shoppingItems.householdId],
     references: [households.id],
+  }),
+}));
+
+export const listItemStatusEnum = pgEnum("list_item_status", [
+  "active",
+  "crossed",
+  "archived",
+]);
+
+export const lists = pgTable(
+  "lists",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    sortKey: integer("sort_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("lists_household_id_id_unique").on(table.householdId, table.id),
+    uniqueIndex("lists_household_id_normalized_name_idx").on(
+      table.householdId,
+      table.normalizedName,
+    ),
+    index("lists_household_id_sort_key_id_idx").on(
+      table.householdId,
+      table.sortKey,
+      table.id,
+    ),
+  ],
+);
+
+export const listItems = pgTable(
+  "list_items",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    listId: uuid("list_id").notNull(),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    status: listItemStatusEnum().notNull().default("active"),
+    sortKey: integer("sort_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.householdId, table.listId],
+      foreignColumns: [lists.householdId, lists.id],
+      name: "list_items_household_list_fk",
+    }).onDelete("cascade"),
+    uniqueIndex("list_items_household_id_list_id_normalized_name_idx").on(
+      table.householdId,
+      table.listId,
+      table.normalizedName,
+    ),
+    index("list_items_household_id_list_id_status_sort_key_id_idx").on(
+      table.householdId,
+      table.listId,
+      table.status,
+      table.sortKey,
+      table.id,
+    ),
+  ],
+);
+
+export const listsRelations = relations(lists, ({ many, one }) => ({
+  household: one(households, {
+    fields: [lists.householdId],
+    references: [households.id],
+  }),
+  items: many(listItems),
+}));
+
+export const listItemsRelations = relations(listItems, ({ one }) => ({
+  household: one(households, {
+    fields: [listItems.householdId],
+    references: [households.id],
+  }),
+  list: one(lists, {
+    fields: [listItems.householdId, listItems.listId],
+    references: [lists.householdId, lists.id],
   }),
 }));
 

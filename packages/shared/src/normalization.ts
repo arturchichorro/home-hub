@@ -20,6 +20,22 @@ export function cleanShoppingItemName(value: string): string {
   return cleanSingleLineText(value);
 }
 
+export function cleanListName(value: string): string {
+  return cleanSingleLineText(value);
+}
+
+export function normalizeListName(value: string): string {
+  return cleanListName(value).toLowerCase();
+}
+
+export function cleanListItemName(value: string): string {
+  return cleanSingleLineText(value);
+}
+
+export function normalizeListItemName(value: string): string {
+  return cleanListItemName(value).toLowerCase();
+}
+
 export function normalizeShoppingItemName(value: string): string {
   return cleanShoppingItemName(value).toLowerCase();
 }

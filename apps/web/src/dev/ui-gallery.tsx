@@ -50,7 +50,7 @@ export function UiGallery() {
   const [connected, setConnected] = useState(true);
   const [household, setHousehold] = useState("Rue des Mimosas");
   const [imageTarget, setImageTarget] = useState("recipe");
-  const [shoppingEnabled, setShoppingEnabled] = useState(true);
+  const [listsEnabled, setListsEnabled] = useState(true);
   const [showFieldError, setShowFieldError] = useState(true);
   const errorAnchorRef = useRef<HTMLInputElement>(null);
 
@@ -122,10 +122,10 @@ export function UiGallery() {
         >
           <div className="grid max-w-md gap-4">
             <Switch
-              label="Shopping"
-              description="Show shopping in this household."
-              checked={shoppingEnabled}
-              onCheckedChange={setShoppingEnabled}
+              label="Lists"
+              description="Show lists in this household."
+              checked={listsEnabled}
+              onCheckedChange={setListsEnabled}
             />
             <Switch
               label="Unavailable module"
@@ -238,7 +238,7 @@ export function UiGallery() {
             <Input
               ref={errorAnchorRef}
               appearance="inline"
-              aria-label="Example shopping item name"
+              aria-label="Example lists item name"
               aria-invalid={showFieldError || undefined}
               defaultValue="Oat milk"
               onValueChange={() => setShowFieldError(false)}

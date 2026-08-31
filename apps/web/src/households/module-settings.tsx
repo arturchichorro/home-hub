@@ -29,7 +29,7 @@ export function ModuleSettings({
       </InlineAlert>
     );
 
-  async function toggle(moduleKey: "shopping" | "recipes", enabled: boolean) {
+  async function toggle(moduleKey: "lists" | "recipes", enabled: boolean) {
     setPendingKey(moduleKey);
     setError(undefined);
     try {

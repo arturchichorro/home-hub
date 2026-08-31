@@ -112,7 +112,7 @@ The household is the tenancy, collaboration, and authorization boundary. A
 user may belong to multiple households, and every household-owned row is
 authorized through current membership in PostgreSQL.
 
-Shopping and Recipes are the initial built-in feature modules. French
+Lists and Recipes are the built-in feature modules. French
 Vocabulary and possible future features such as household finance use the same
 module boundary when implemented. Modules are not dynamically installed
 plugins: application code owns a small catalogue of stable module keys.
@@ -130,9 +130,9 @@ server-side access path. A missing setting fails closed. The canonical
 enforcement rules are in [Security and synchronization](./security-and-sync.md).
 
 Cross-module behavior is implemented as an explicit application operation. For
-example, adding recipe ingredients to the shopping list connects Recipes and
-Shopping by copying ingredient names and inserting or reactivating normalized
-shopping rows. Both modules must be enabled for that operation. There is no
+example, a future operation to add recipe ingredients to a selected list connects
+Recipes and Lists by copying names and inserting or reactivating normalized
+list items. Both modules must be enabled for that operation. There is no
 shared item catalog: each module owns its records, and the explicit operation
 is the integration boundary.
 

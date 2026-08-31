@@ -20,7 +20,7 @@ function equalsCondition(column: string, value: string | boolean) {
   };
 }
 
-function moduleAccessCondition(moduleKey: "shopping" | "recipes") {
+function moduleAccessCondition(moduleKey: "shopping" | "recipes" | "lists") {
   return {
     type: "correlatedSubquery",
     op: "EXISTS",
@@ -88,6 +88,71 @@ function directMembershipCondition() {
     },
   };
 }
+
+describe("Lists queries", () => {
+  it("scopes the ordered library to household membership and enabled Lists", () => {
+    expect(queries.lists.byHousehold.queryName).toBe("lists.byHousehold");
+    expect(
+      getAst(
+        queries.lists.byHousehold.fn({
+          args: { householdId },
+          ctx: { userId },
+        }),
+      ),
+    ).toMatchObject({
+      table: "lists",
+      orderBy: [
+        ["sortKey", "desc"],
+        ["id", "asc"],
+      ],
+      where: {
+        type: "and",
+        conditions: [
+          equalsCondition("householdId", householdId),
+          moduleAccessCondition("lists"),
+        ],
+      },
+    });
+  });
+  it("returns one authorized list with items joined by household AND list ID", () => {
+    expect(queries.lists.detail.queryName).toBe("lists.detail");
+    expect(
+      getAst(
+        queries.lists.detail.fn({
+          args: { householdId, listId: recipeId },
+          ctx: { userId },
+        }),
+      ),
+    ).toMatchObject({
+      table: "lists",
+      limit: 1,
+      where: {
+        type: "and",
+        conditions: [
+          equalsCondition("householdId", householdId),
+          moduleAccessCondition("lists"),
+          equalsCondition("id", recipeId),
+        ],
+      },
+      related: [
+        {
+          correlation: {
+            parentField: ["householdId", "id"],
+            childField: ["householdId", "listId"],
+          },
+          subquery: {
+            table: "listItems",
+            alias: "items",
+            orderBy: [
+              ["sortKey", "desc"],
+              ["id", "asc"],
+            ],
+          },
+        },
+      ],
+    });
+  });
+});
 
 describe("household queries", () => {
   it("registers a stable name", () => {
@@ -284,26 +349,6 @@ describe("module settings queries", () => {
   });
 });
 
-describe("shopping queries", () => {
-  it("requires membership and an enabled Shopping setting", () => {
-    const query = queries.shopping.byHousehold.fn({
-      args: { householdId },
-      ctx: { userId },
-    });
-
-    expect(getAst(query)).toMatchObject({
-      table: "shoppingItems",
-      orderBy: [
-        ["sortKey", "desc"],
-        ["id", "asc"],
-      ],
-      where: {
-        type: "and",
-        conditions: [
-          equalsCondition("householdId", householdId),
-          moduleAccessCondition("shopping"),
-        ],
-      },
-    });
-  });
+it("does not register legacy Shopping queries", () => {
+  expect(queries).not.toHaveProperty("shopping");
 });

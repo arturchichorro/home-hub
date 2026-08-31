@@ -98,7 +98,7 @@ describe("create household service", () => {
       values: [
         {
           householdId: result.household.id,
-          moduleKey: "shopping",
+          moduleKey: "lists",
           enabled: true,
         },
         {

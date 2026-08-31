@@ -4,6 +4,26 @@ import * as drizzleSchema from "./src/schema";
 
 export default drizzleZeroConfig(drizzleSchema, {
   tables: {
+    lists: {
+      id: true,
+      householdId: true,
+      name: true,
+      normalizedName: true,
+      sortKey: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    listItems: {
+      id: true,
+      householdId: true,
+      listId: true,
+      name: true,
+      normalizedName: true,
+      status: true,
+      sortKey: true,
+      createdAt: true,
+      updatedAt: true,
+    },
     households: {
       id: true,
       name: true,

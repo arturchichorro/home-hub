@@ -1,14 +1,14 @@
-type CurrentShoppingItem = {
+type CurrentListItem = {
   id: string;
   sortKey: number;
   status: "active" | "crossed" | "archived" | null;
 };
 
-function bySortKey<T extends CurrentShoppingItem>(left: T, right: T): number {
+function bySortKey<T extends CurrentListItem>(left: T, right: T): number {
   return right.sortKey - left.sortKey || left.id.localeCompare(right.id);
 }
 
-export function orderCurrentShoppingItems<T extends CurrentShoppingItem>(
+export function orderCurrentListItems<T extends CurrentListItem>(
   items: readonly T[],
 ): T[] {
   return [

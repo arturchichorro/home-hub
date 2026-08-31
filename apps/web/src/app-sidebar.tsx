@@ -9,7 +9,7 @@ import {
   IconButton,
   InlineAlert,
   Settings,
-  ShoppingBasket,
+  StickyNote,
   UserPlus,
   X,
 } from "@home-hub/ui-web";
@@ -48,21 +48,21 @@ type HouseholdNavigationGroupProps = {
 };
 
 type ModuleDefinition = {
-  key: "recipes" | "settings" | "shopping";
+  key: "recipes" | "settings" | "lists";
   label: string;
   Icon: typeof BookOpen;
   to:
     | "/households/$householdId/recipes"
     | "/households/$householdId/settings"
-    | "/households/$householdId/shopping";
+    | "/households/$householdId/lists";
 };
 
 const moduleDefinitions: readonly ModuleDefinition[] = [
   {
-    key: "shopping",
-    label: "Shopping",
-    Icon: ShoppingBasket,
-    to: "/households/$householdId/shopping",
+    key: "lists",
+    label: "Lists",
+    Icon: StickyNote,
+    to: "/households/$householdId/lists",
   },
   {
     key: "recipes",
@@ -78,15 +78,18 @@ const moduleDefinitions: readonly ModuleDefinition[] = [
   },
 ];
 
-function moduleIsActive(
+export function moduleIsActive(
   pathname: string,
   householdId: string,
   key: ModuleDefinition["key"],
 ): boolean {
   const householdPath = `/households/${householdId}`;
 
-  if (key === "recipes") return pathname.startsWith(`${householdPath}/recipes`);
-  return pathname === `${householdPath}/${key}`;
+  const modulePath = `${householdPath}/${key}`;
+  return (
+    pathname === modulePath ||
+    (key !== "settings" && pathname.startsWith(`${modulePath}/`))
+  );
 }
 
 function HouseholdNavigationGroup({

@@ -36,10 +36,10 @@ describe("set household module enabled route", () => {
   it("validates, authenticates, and forwards the command", async () => {
     const service = vi.fn(async () => ({
       kind: "success" as const,
-      setting: { moduleKey: "shopping" as const, enabled: false },
+      setting: { moduleKey: "lists" as const, enabled: false },
     }));
     const response = await app(service).request(
-      `/${householdId}/modules/shopping`,
+      `/${householdId}/modules/lists`,
       {
         method: "PATCH",
         headers: {
@@ -53,15 +53,15 @@ describe("set household module enabled route", () => {
     expect(service).toHaveBeenCalledWith({
       userId,
       householdId,
-      moduleKey: "shopping",
+      moduleKey: "lists",
       enabled: false,
     });
   });
 
   it.each([
-    ["bad-id", "shopping", { enabled: true }],
+    ["bad-id", "lists", { enabled: true }],
     [householdId, "unknown", { enabled: true }],
-    [householdId, "shopping", { enabled: "true" }],
+    [householdId, "lists", { enabled: "true" }],
   ])("rejects an invalid request", async (id, key, body) => {
     const service = vi.fn(async () => ({ kind: "forbidden" as const }));
     const response = await app(service).request(`/${id}/modules/${key}`, {

@@ -132,7 +132,7 @@ export async function findEnabledHouseholdModuleForShare(
   {
     householdId,
     moduleKey,
-  }: { householdId: string; moduleKey: HouseholdModuleKey },
+  }: { householdId: string; moduleKey: HouseholdModuleKey | "shopping" },
 ) {
   const [setting] = await tx
     .select({ householdId: householdModuleSettings.householdId })

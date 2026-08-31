@@ -1,9 +1,8 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
-import { normalizeShoppingItemName } from "@home-hub/shared/normalization";
+import { normalizeListItemName } from "@home-hub/shared/normalization";
 import { mutators } from "@home-hub/shared/zero/mutators";
-import { queries } from "@home-hub/shared/zero/queries";
-import type { ShoppingItem } from "@home-hub/shared/zero/schema";
+import type { ListItem } from "@home-hub/shared/zero/schema";
 import {
   Archive,
   Check,
@@ -12,24 +11,26 @@ import {
   InlineAlert,
   RotateCcw,
 } from "@home-hub/ui-web";
-import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useZero } from "@rocicorp/zero/react";
 import { useLayoutEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
-  AddShoppingItemTriggerRow,
-  ShoppingItemDraftNameForm,
-} from "./add-shopping-item-form";
-import { ShoppingItemNameInput } from "./shopping-item-name-input";
-import { orderCurrentShoppingItems } from "./shopping-list-order";
+  AddListItemTriggerRow,
+  ListItemDraftNameForm,
+} from "./add-list-item-form";
+import { ListItemNameInput } from "./list-item-name-input";
+import { orderCurrentListItems } from "./list-item-order";
 
-type ShoppingListProps = {
+type ListItemsProps = {
   householdId: string;
+  listId: string;
+  items: readonly ListItem[];
 };
 
-type ShoppingItemStatus = "active" | "crossed" | "archived";
+type ListItemStatus = "active" | "crossed" | "archived";
 
-type DraftShoppingItem = {
+type DraftListItem = {
   focusRequest: number;
   id: string;
   pendingItemId?: string | undefined;
@@ -41,30 +42,32 @@ type SavedItemFocus = {
   request: number;
 };
 
-type ShoppingItemRowProps = {
+type ListItemRowProps = {
   disabled: boolean;
   focusRequest?: number | undefined;
   householdId: string;
+  listId: string;
   index: number;
-  item: ShoppingItem;
-  onSetStatus: (itemId: string, status: ShoppingItemStatus) => void;
+  item: ListItem;
+  onSetStatus: (itemId: string, status: ListItemStatus) => void;
 };
 
-function ShoppingItemRow({
+function ListItemRow({
   disabled,
   focusRequest,
   householdId,
+  listId,
   index,
   item,
   onSetStatus,
-}: ShoppingItemRowProps) {
+}: ListItemRowProps) {
   const crossed = item.status === "crossed";
   const toggleLabel = crossed ? "Reactivate" : "Cross";
   const sortable = useSortable({
     id: item.id,
     index,
-    type: `shopping-item-${item.status}`,
-    accept: `shopping-item-${item.status}`,
+    type: `list-item-${item.status}`,
+    accept: `list-item-${item.status}`,
     disabled,
   });
 
@@ -81,9 +84,10 @@ function ShoppingItemRow({
       >
         <GripVertical aria-hidden="true" className="size-4" />
       </IconButton>
-      <ShoppingItemNameInput
+      <ListItemNameInput
         focusRequest={focusRequest}
         householdId={householdId}
+        listId={listId}
         itemId={item.id}
         currentName={item.name}
         crossed={crossed}
@@ -112,20 +116,16 @@ function ShoppingItemRow({
   );
 }
 
-export function ShoppingList({ householdId }: ShoppingListProps) {
+export function ListItems({ householdId, listId, items }: ListItemsProps) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
   const [showArchived, setShowArchived] = useState(false);
-  const [draft, setDraft] = useState<DraftShoppingItem>();
+  const [draft, setDraft] = useState<DraftListItem>();
   const [creationError, setCreationError] = useState<string>();
+  const [actionError, setActionError] = useState<string>();
   const [savedItemFocus, setSavedItemFocus] = useState<SavedItemFocus>();
 
-  const [items, result] = useQuery(
-    queries.shopping.byHousehold({ householdId }),
-  );
-
-  const queryComplete = result.type === "complete";
-  const currentItems = orderCurrentShoppingItems(items);
+  const currentItems = orderCurrentListItems(items);
   const draftItemId = draft?.pendingItemId ?? draft?.savedItemId ?? draft?.id;
   const savedItem = currentItems.find((item) => item.id === draft?.savedItemId);
   const draftIsPersisted =
@@ -142,39 +142,47 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
     );
   }, [draft?.savedItemId, draftIsPersisted]);
 
-  if (result.type === "error") {
-    return (
-      <InlineAlert role="alert" variant="danger">
-        Unable to load the shopping list.
-      </InlineAlert>
+  function setStatus(itemId: string, status: ListItemStatus) {
+    observeMutation(
+      zero.mutate(
+        mutators.lists.setItemStatus({
+          householdId,
+          listId,
+          itemId,
+          status,
+          optimisticUpdatedAt: Date.now(),
+        }),
+      ),
     );
   }
 
-  function setStatus(itemId: string, status: ShoppingItemStatus) {
-    zero.mutate(
-      mutators.shopping.setStatus({
-        householdId,
-        itemId,
-        status,
-        optimisticUpdatedAt: Date.now(),
-      }),
-    );
+  function observeMutation(mutation: {
+    client: PromiseLike<{ type: string }>;
+    server: PromiseLike<{ type: string }>;
+  }) {
+    setActionError(undefined);
+    void Promise.all([mutation.client, mutation.server])
+      .then((results) => {
+        if (results.some((result) => result.type === "error"))
+          setActionError("The change could not be saved.");
+      })
+      .catch(() => setActionError("The change could not be saved."));
   }
 
   function resolveDraftItemId(name: string) {
     return (
-      items.find(
-        (item) => item.normalizedName === normalizeShoppingItemName(name),
-      )?.id ?? draft?.id
+      items.find((item) => item.normalizedName === normalizeListItemName(name))
+        ?.id ?? draft?.id
     );
   }
 
   return (
-    <section
-      aria-label="Shopping list"
-      aria-busy={!queryComplete}
-      className="grid gap-5"
-    >
+    <section aria-label="List" className="grid gap-5">
+      {actionError ? (
+        <InlineAlert role="alert" variant="danger">
+          {actionError}
+        </InlineAlert>
+      ) : null}
       <DragDropProvider
         onDragEnd={(event) => {
           if (event.canceled || !mutationEnabled) return;
@@ -195,19 +203,22 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
           const orderedItemIds = reordered
             .filter((item) => item.status === moved.status)
             .map((item) => item.id);
-          zero.mutate(
-            mutators.shopping.reorder({
-              householdId,
-              itemId: moved.id,
-              orderedItemIds,
-              status: moved.status,
-              optimisticUpdatedAt: Date.now(),
-            }),
+          observeMutation(
+            zero.mutate(
+              mutators.lists.reorderItems({
+                householdId,
+                listId,
+                itemId: moved.id,
+                orderedItemIds,
+                status: moved.status,
+                optimisticUpdatedAt: Date.now(),
+              }),
+            ),
           );
         }}
       >
         <ul className="divide-y divide-border">
-          <AddShoppingItemTriggerRow
+          <AddListItemTriggerRow
             draftActive={draft !== undefined}
             error={creationError}
             onActivate={() => {
@@ -232,9 +243,10 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
               >
                 <GripVertical aria-hidden="true" className="size-4" />
               </IconButton>
-              <ShoppingItemDraftNameForm
+              <ListItemDraftNameForm
                 focusRequest={draft.focusRequest}
                 householdId={householdId}
+                listId={listId}
                 itemId={draft.id}
                 onCancel={() => setDraft(undefined)}
                 onSaveFailed={() => {
@@ -272,7 +284,7 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
           ) : null}
 
           {visibleCurrentItems.map((item, index) => (
-            <ShoppingItemRow
+            <ListItemRow
               key={item.id}
               disabled={!mutationEnabled}
               focusRequest={
@@ -281,6 +293,7 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
                   : undefined
               }
               householdId={householdId}
+              listId={listId}
               index={index}
               item={item}
               onSetStatus={setStatus}
@@ -316,8 +329,9 @@ export function ShoppingList({ householdId }: ShoppingListProps) {
                   >
                     <GripVertical aria-hidden="true" className="size-4" />
                   </IconButton>
-                  <ShoppingItemNameInput
+                  <ListItemNameInput
                     householdId={householdId}
+                    listId={listId}
                     itemId={item.id}
                     currentName={item.name}
                     muted

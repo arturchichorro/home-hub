@@ -9,9 +9,9 @@ import {
 
 describe("household module catalogue", () => {
   it("defines the stable initial module keys", () => {
-    expect(householdModuleKeys).toEqual(["shopping", "recipes"]);
+    expect(householdModuleKeys).toEqual(["lists", "recipes"]);
     expect(householdModuleCatalog.map(({ key }) => key)).toEqual([
-      "shopping",
+      "lists",
       "recipes",
     ]);
   });
@@ -22,9 +22,9 @@ describe("household module catalogue", () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  it("enables Shopping and Recipes by default", () => {
+  it("enables Lists and Recipes by default", () => {
     expect(householdModuleCatalog).toEqual([
-      { key: "shopping", label: "Shopping", defaultEnabled: true },
+      { key: "lists", label: "Lists", defaultEnabled: true },
       { key: "recipes", label: "Recipes", defaultEnabled: true },
     ]);
   });
@@ -33,7 +33,7 @@ describe("household module catalogue", () => {
     expect(householdModuleKeySchema.parse(key)).toBe(key);
   });
 
-  it.each(["", "recipe", "vocabulary", "SHOPPING"])(
+  it.each(["", "recipe", "vocabulary", "SHOPPING", "shopping"])(
     "rejects the unsupported key %s",
     (key) => {
       expect(householdModuleKeySchema.safeParse(key).success).toBe(false);

@@ -10,7 +10,7 @@
   "r2_buckets": [
     {
       "binding": "RECIPE_IMAGES",
-      "bucket_name": "home-hub-production",
+      "bucket_name": "home-hub",
       "remote": true
     }
   ],

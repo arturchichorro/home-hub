@@ -1,5 +1,6 @@
 import { defineQueriesWithType, defineQueryWithType } from "@rocicorp/zero";
 import * as z from "zod";
+import { listDetailArgsSchema } from "../lists";
 import type { ZeroAuthContext } from "./context";
 import { type Schema, zql } from "./schema.gen";
 
@@ -27,24 +28,6 @@ const myHouseholds = defineHomeHubQuery(z.object({}).strict(), ({ ctx }) =>
     .orderBy("id", "asc"),
 );
 
-const shoppingItemsByHousehold = defineHomeHubQuery(
-  householdIdArgsSchema,
-  ({ args, ctx }) =>
-    zql.shoppingItems
-      .where("householdId", args.householdId)
-      .whereExists("household", (household) =>
-        household
-          .whereExists("members", (member) =>
-            member.where("userId", ctx.userId),
-          )
-          .whereExists("moduleSettings", (setting) =>
-            setting.where("moduleKey", "shopping").where("enabled", true),
-          ),
-      )
-      .orderBy("sortKey", "desc")
-      .orderBy("id", "asc"),
-);
-
 const moduleSettingsByHousehold = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
@@ -56,6 +39,34 @@ const moduleSettingsByHousehold = defineHomeHubQuery(
         ),
       )
       .orderBy("moduleKey", "asc"),
+);
+
+const authorizedLists = (householdId: string, userId: string) =>
+  zql.lists
+    .where("householdId", householdId)
+    .whereExists("household", (household) =>
+      household
+        .whereExists("members", (member) => member.where("userId", userId))
+        .whereExists("moduleSettings", (setting) =>
+          setting.where("moduleKey", "lists").where("enabled", true),
+        ),
+    );
+
+const listsByHousehold = defineHomeHubQuery(
+  householdIdArgsSchema,
+  ({ args, ctx }) =>
+    authorizedLists(args.householdId, ctx.userId)
+      .orderBy("sortKey", "desc")
+      .orderBy("id", "asc"),
+);
+
+const listDetail = defineHomeHubQuery(listDetailArgsSchema, ({ args, ctx }) =>
+  authorizedLists(args.householdId, ctx.userId)
+    .where("id", args.listId)
+    .related("items", (item) =>
+      item.orderBy("sortKey", "desc").orderBy("id", "asc"),
+    )
+    .one(),
 );
 
 const recipesByHousehold = defineHomeHubQuery(
@@ -120,14 +131,15 @@ const recipeDetail = defineHomeHubQuery(
 );
 
 export const queries = defineHomeHubQueries({
+  lists: {
+    byHousehold: listsByHousehold,
+    detail: listDetail,
+  },
   households: {
     mine: myHouseholds,
   },
   modules: {
     byHousehold: moduleSettingsByHousehold,
-  },
-  shopping: {
-    byHousehold: shoppingItemsByHousehold,
   },
   recipes: {
     byHousehold: recipesByHousehold,

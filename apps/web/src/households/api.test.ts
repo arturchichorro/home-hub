@@ -25,18 +25,18 @@ beforeEach(() => {
 describe("setHouseholdModuleEnabled", () => {
   it("sends the authenticated toggle command", async () => {
     fetchMock.mockResolvedValueOnce(
-      Response.json({ setting: { moduleKey: "shopping", enabled: false } }),
+      Response.json({ setting: { moduleKey: "lists", enabled: false } }),
     );
     await expect(
       setHouseholdModuleEnabled({
         accessToken: "access-token",
         householdId,
-        moduleKey: "shopping",
+        moduleKey: "lists",
         enabled: false,
       }),
     ).resolves.toEqual({ kind: "success" });
     expect(fetchMock).toHaveBeenCalledWith(
-      `/api/households/${householdId}/modules/shopping`,
+      `/api/households/${householdId}/modules/lists`,
       {
         method: "PATCH",
         headers: {

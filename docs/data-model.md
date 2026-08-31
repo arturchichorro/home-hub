@@ -119,16 +119,17 @@ each module addition includes an explicit migration. Household creation inserts
 a setting for every implemented module. A new module migration backfills every
 existing household with its chosen default; missing settings fail closed.
 
-Shopping and Recipes are initially enabled. Deferred modules such as French
+Lists and Recipes are initially enabled. Deferred modules such as French
 Vocabulary default to disabled. Disabling a module retains all of its rows.
 Core household and membership behavior has no module setting and cannot be
 disabled.
 
-### Shopping module tables
+### Lists module tables
 
-Shopping owns `shopping_items`. Its columns, normalization, uniqueness, and
-status-transition rules are documented in the
-[Shopping module data model](./shopping/#data-model).
+Lists owns `lists` and `list_items`. Their columns, normalization, uniqueness,
+ordering, and status-transition rules are documented in the
+[Lists module data model](./lists/#data-model). The retired `shopping_items`
+table remains temporarily for the staged migration.
 
 ### Recipes module tables
 
@@ -142,8 +143,8 @@ metadata lifecycle are documented in the
 - A household has at most one owner row; application transactions ensure it
   always has exactly one owner.
 - A user has at most one membership in a household.
-- Shopping names are unique by normalized name within a household; see the
-  [Shopping module data model](./shopping/#data-model).
+- List names are unique within a household; item names are unique within a list.
+  Item references cannot cross households; see the [Lists data model](./lists/#data-model).
 - Recipes references cannot cross household or recipe boundaries; see the
   [Recipes module data model](./recipes/#data-model).
 - Module settings are unique by household and stable module key.

@@ -228,13 +228,14 @@ authorized.
 
 Zero uses a custom PostgreSQL publication named `home_hub_zero` as a coarse
 replication allowlist. It publishes the columns required from `households`,
-`household_members`, `household_module_settings`, `shopping_items`, `recipes`,
+`household_members`, `household_module_settings`, `lists`, `list_items`, `recipes`,
 `recipe_ingredients`, `recipe_cook_logs`, and `recipe_images`. It excludes
 `users`, `refresh_tokens`, and `household_invites`, so password hashes, email
 addresses, refresh-token hashes, and invite-token hashes do not enter the Zero
 replica. The recipe-image publication also omits object keys. Publishing a
 table does not authorize client access; named queries must still apply
-authenticated, household-scoped row authorization.
+authenticated, household-scoped row authorization. The retired `shopping_items`
+table remains in the publication until cleanup, but has no live named query.
 
 ## Mutation authorization
 
@@ -247,14 +248,14 @@ Shared mutators provide the optimistic client behavior. Server execution adds au
 3. Validate mutation arguments at runtime.
 4. Check membership and the relevant enabled module setting for the supplied
    household inside the mutation transaction.
-5. Verify targeted shopping rows and referenced recipe, ingredient, cooking-log,
-   and image rows belong to the same household and recipe.
+5. Verify lists and list items belong to the requested household and list, and
+   recipe, ingredient, cooking-log, and image rows to the requested household and recipe.
 6. Execute the operation idempotently.
 7. Return errors that do not reveal whether a foreign row exists.
 
-Shopping-specific creation, rename, transition, normalization, and conflict
+Lists-specific creation, rename, transition, normalization, and conflict
 rules are documented in
-[Shopping synchronization and authorization](./shopping/#synchronization-and-authorization).
+[Lists synchronization and authorization](./lists/#synchronization-and-authorization).
 
 Synced mutators must never change authentication records, household ownership,
 membership, roles, invites, or module settings. Those remain online-only API
