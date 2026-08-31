@@ -3,7 +3,7 @@
 Lists provides named, manually ordered lists per household. Its stable module
 key is `lists`. Lists and Recipes are enabled by default; new households start
 with no lists. Previously migrated households retain their lists, items, and
-module settings; see [migration notes](../lists-migration.md).
+module settings.
 
 ## Interface
 

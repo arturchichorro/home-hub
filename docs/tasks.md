@@ -26,28 +26,6 @@ commit changes unless explicitly asked for that specific action. CI rehearses
 the committed migration history on a disposable database, and the production
 deployment applies tested forward migrations after an off-host backup.
 
-## Add an image delivery pipeline
-
-- [x] Define pre-generated thumbnail and viewer WebP variants; one-hour signed edge capabilities; fail-closed processing; deletion of all stored objects; and lazy repair for existing images, while retaining inaccessible originals in private R2
-- [x] Implement the agreed image processing and delivery pipeline while retaining original uploads
-- [ ] Verify upload, processing, authorized display, original access, deletion, cleanup, and existing-image migration behavior
-- [ ] Complete the image delivery pipeline checkpoint and commit
-
-## Replace Shopping with named Lists
-
-Checkpoint details and rollout constraints: [Lists migration](./lists-migration.md).
-
-- [x] Define orderable household Lists and per-list items, retaining the Shopping schema during transition
-- [x] Write the initial backfill and temporary transactional Shopping-to-Lists bridge
-- [x] Apply migrations locally
-- [x] Add authorized Zero queries and mutations for Lists and list items
-- [x] Replace Shopping navigation with the Lists library and list detail routes, preserving item UX and adding list ordering
-- [x] Check the signed-in Lists flow in the app (confirmed in production)
-- [x] Verify production cutover and retire old writers
-- [x] Remove legacy application code and prepare the compatibility cleanup migration
-- [ ] Apply cleanup migration `0017` locally and deploy it to production
-- [ ] Complete the Lists concept checkpoint and commit
-
 ## Deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack
