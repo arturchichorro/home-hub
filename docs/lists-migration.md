@@ -2,7 +2,21 @@
 
 The learner has applied migrations `0015` and `0016` locally. The Lists UI and
 API cutover are implemented; no further migration is needed for this UI batch.
-The applied migration files are unchanged.
+Migration `0015` was subsequently corrected to explicitly create and reference
+its tables, enum, and index targets in `public`. Production's default search
+path selected Zero's `home_hub` schema because it matches the database role,
+causing the original foreign key to fail. This corrects the failing migration
+itself so deployment can retry it; a later migration cannot repair a failure
+that prevents reaching it. Databases that already applied it successfully in
+`public` need no rerun or migration-history reset.
+
+Application and migration connections now explicitly set `search_path=public`
+through a shared connection-URL helper. This also protects unqualified runtime
+queries and future generated migrations from the same schema collision. Zero's
+internal schema and upstream connection settings are unchanged. The existing CI
+migration-history check creates an empty `home_hub` schema first to reproduce
+production's default-path behavior. No production environment change is required;
+deploy the updated API and migration images together through the normal workflow.
 
 ## Temporary compatibility
 

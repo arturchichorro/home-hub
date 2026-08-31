@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
 
 import { defineConfig } from "drizzle-kit";
+import { withPublicSearchPath } from "./src/connection-url";
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
 
@@ -19,6 +20,6 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: databaseUrl,
+    url: withPublicSearchPath(databaseUrl),
   },
 });

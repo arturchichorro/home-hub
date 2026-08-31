@@ -70,10 +70,26 @@ jobs:
             exit 1
           fi
 
-      - name: Apply complete migration history
+      - name: Apply complete migration history with Zero schema collision
         env:
           DATABASE_URL: postgres://home_hub:home_hub@127.0.0.1:5432/home_hub
-        run: pnpm db:migrate
+        run: |
+          # Zero creates a schema matching POSTGRES_USER in production.
+          docker exec "${{ job.services.postgres.id }}" \
+            psql -U home_hub -d home_hub -v ON_ERROR_STOP=1 \
+            -c 'CREATE SCHEMA home_hub;'
+          pnpm db:migrate
+          docker exec -i "${{ job.services.postgres.id }}" \
+            psql -U home_hub -d home_hub -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'home_hub')
+              OR to_regclass('public.lists') IS NULL
+              OR to_regclass('public.list_items') IS NULL THEN
+              RAISE EXCEPTION 'Application tables must be created in public';
+            END IF;
+          END $$;
+          SQL
 
       - name: Build production web application
         env:

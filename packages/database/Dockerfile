@@ -14,6 +14,7 @@ COPY packages/ui-web/package.json packages/ui-web/package.json
 RUN pnpm install --frozen-lockfile --filter @home-hub/database
 
 COPY packages/database/drizzle.config.ts packages/database/drizzle.config.ts
+COPY packages/database/src/connection-url.ts packages/database/src/connection-url.ts
 COPY packages/database/drizzle packages/database/drizzle
 
 USER node
