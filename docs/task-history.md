@@ -350,3 +350,9 @@ the backlog.
 - [x] Reuse expiring signed image URLs across route and component remounts without crossing sessions
 - [x] Verify optimistic, authorization, failure, drag, keyboard, touch, cover-image, and storage-cleanup behavior
 - [x] Update the system documentation and complete the recipe-operations checkpoint
+
+## Misc
+
+- [x] Add ordering to recipes (to order recipe list)
+- [x] Add ordering to households in the sidebar
+- [x] In any page of the app, we could display where we are (e.g. "Germoir 83 > Recipes > Carbonara" or "Germoir 83 > Lists > Shopping") something like that
