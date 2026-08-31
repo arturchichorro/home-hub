@@ -7,6 +7,7 @@ export const Route = createFileRoute("/_authenticated/households/$householdId")(
   {
     loader: ({ context, params }) => {
       void context.zero?.run(queries.households.mine({}));
+      void context.zero?.run(queries.householdMemberships.mine({}));
       void context.zero?.run(
         queries.modules.byHousehold({ householdId: params.householdId }),
       );

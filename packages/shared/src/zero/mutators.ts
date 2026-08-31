@@ -1,4 +1,5 @@
 import { defineMutatorsWithType, defineMutatorWithType } from "@rocicorp/zero";
+import { reorderHouseholdsMutationSchema } from "../households";
 import {
   createRecipeCookLogMutationSchema,
   createRecipeIngredientMutationSchema,
@@ -26,6 +27,31 @@ const activeRecipes = (householdId: string) =>
   zql.recipes.where("householdId", householdId).where("deletedAt", "IS", null);
 const activeRecipe = (householdId: string, recipeId: string) =>
   activeRecipes(householdId).where("id", recipeId);
+const reorderHouseholds = defineHomeHubMutator(
+  reorderHouseholdsMutationSchema,
+  async ({ args, ctx, tx }) => {
+    const rows = await tx.run(zql.householdMembers.where("userId", ctx.userId));
+    const updates = planReorder(
+      rows.map(({ householdId, sortKey }) => ({ id: householdId, sortKey })),
+      args.orderedHouseholdIds,
+      args.householdId,
+    );
+    const membershipsByHouseholdId = new Map(
+      rows.map((row) => [row.householdId, row]),
+    );
+    const updatedAt =
+      tx.location === "server" ? Date.now() : args.optimisticUpdatedAt;
+    for (const update of updates) {
+      const membership = membershipsByHouseholdId.get(update.id);
+      if (!membership) throw new Error("Household reorder not allowed");
+      await tx.mutate.householdMembers.update({
+        id: membership.id,
+        sortKey: update.sortKey,
+        updatedAt,
+      });
+    }
+  },
+);
 const createRecipe = defineHomeHubMutator(
   createRecipeMutationSchema,
   async ({ args, ctx, tx }) => {
@@ -433,6 +459,9 @@ const reorderRecipeImages = defineHomeHubMutator(
 );
 
 export const mutators = defineHomeHubMutators({
+  householdMemberships: {
+    reorder: reorderHouseholds,
+  },
   lists: listMutatorDefinitions,
   recipes: {
     create: createRecipe,

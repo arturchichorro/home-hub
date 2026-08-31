@@ -137,8 +137,8 @@ describe("list households service", () => {
     ]);
     expect(whereClauses).toEqual([eq(householdMembers.userId, userId)]);
     expect(orderClauses).toEqual([
-      desc(households.createdAt),
-      asc(households.id),
+      desc(householdMembers.sortKey),
+      asc(householdMembers.id),
     ]);
   });
 });

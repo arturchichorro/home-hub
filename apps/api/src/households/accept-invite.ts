@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { findActiveUser } from "../authorization/active-user";
 import { findHouseholdMembershipWithoutLock } from "../authorization/household-access";
 import { hashInviteToken } from "./invite-token";
+import { nextHouseholdMembershipSortKey } from "./membership-order";
 import { findHouseholdInviteByTokenHashForUpdate } from "./scoped-entities";
 
 export type AcceptHouseholdInviteInput = {
@@ -65,12 +66,14 @@ export function createAcceptHouseholdInviteService({ db }: { db: Database }) {
       }
 
       const householdMemberId = randomUUID();
+      const sortKey = await nextHouseholdMembershipSortKey(tx, user.id);
 
       await tx.insert(householdMembers).values({
         id: householdMemberId,
         householdId: invite.householdId,
         userId: user.id,
         role: "member",
+        sortKey,
       });
 
       await tx

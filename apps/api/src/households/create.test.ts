@@ -14,10 +14,12 @@ function createFakeDatabase({
   userExists = true,
   failMembershipInsert = false,
   failModuleSettingsInsert = false,
+  topSortKey,
 }: {
   userExists?: boolean;
   failMembershipInsert?: boolean;
   failModuleSettingsInsert?: boolean;
+  topSortKey?: number;
 } = {}) {
   const inserted: Array<{ table: unknown; values: unknown }> = [];
   const findUser = vi.fn(async () => (userExists ? { id: userId } : undefined));
@@ -27,6 +29,17 @@ function createFakeDatabase({
       users: {
         findFirst: findUser,
       },
+    },
+    select: (_selection: unknown) => {
+      const rows = topSortKey === undefined ? [] : [{ sortKey: topSortKey }];
+      const builder = {
+        from: (_table: unknown) => builder,
+        where: (_condition: unknown) => builder,
+        orderBy: (..._order: unknown[]) => builder,
+        limit: (_limit: number) => builder,
+        execute: async () => rows,
+      };
+      return builder;
     },
     insert: (table: unknown) => ({
       values: async (values: unknown) => {
@@ -91,6 +104,7 @@ describe("create household service", () => {
         householdId: result.household.id,
         userId,
         role: "owner",
+        sortKey: 1024,
       },
     });
     expect(inserted[2]).toEqual({

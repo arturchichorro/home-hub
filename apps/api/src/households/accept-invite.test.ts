@@ -33,11 +33,13 @@ function createFakeDatabase({
   invite = activeInvite,
   existingMembership,
   failInviteUpdate = false,
+  topSortKey,
 }: {
   userExists?: boolean;
   invite?: StoredInvite | null;
   existingMembership?: { id: string };
   failInviteUpdate?: boolean;
+  topSortKey?: number;
 } = {}) {
   const findUser = vi.fn(async () => (userExists ? { id: userId } : undefined));
   const selections: unknown[] = [];
@@ -64,6 +66,7 @@ function createFakeDatabase({
         limits.push(limit);
         return builder;
       },
+      orderBy: (..._order: unknown[]) => builder,
       for: async (strength: unknown) => {
         lockStrengths.push(strength);
         return rows;
@@ -82,14 +85,19 @@ function createFakeDatabase({
     },
     select: (selection: unknown) => {
       selections.push(selection);
+      const index = selectIndex++;
       const rows =
-        selectIndex++ === 0
+        index === 0
           ? invite
             ? [invite]
             : []
-          : existingMembership
-            ? [existingMembership]
-            : [];
+          : index === 1
+            ? existingMembership
+              ? [existingMembership]
+              : []
+            : topSortKey === undefined
+              ? []
+              : [{ sortKey: topSortKey }];
       return createSelectBuilder(rows);
     },
     insert: (table: unknown) => ({
@@ -219,6 +227,7 @@ describe("accept household invite service", () => {
           householdId,
           userId,
           role: "member",
+          sortKey: 1024,
         },
       },
     ]);

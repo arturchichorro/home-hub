@@ -27,6 +27,20 @@ export type CreateHouseholdResponse = z.infer<
   typeof createHouseholdResponseSchema
 >;
 
+export const reorderHouseholdsMutationSchema = z
+  .object({
+    householdId: z.uuid(),
+    orderedHouseholdIds: z
+      .array(z.uuid())
+      .min(1)
+      .max(500)
+      .refine((ids) => new Set(ids).size === ids.length, {
+        message: "Ordered household IDs must be unique",
+      }),
+    optimisticUpdatedAt: z.number().int().nonnegative(),
+  })
+  .strict();
+
 export const acceptHouseholdInviteRequestSchema = z
   .object({
     token: z

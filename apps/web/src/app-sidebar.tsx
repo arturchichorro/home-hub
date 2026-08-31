@@ -1,3 +1,12 @@
+import {
+  KeyboardSensor,
+  PointerActivationConstraints,
+  PointerSensor,
+  type Sensors,
+} from "@dnd-kit/dom";
+import { DragDropProvider } from "@dnd-kit/react";
+import { isSortable, useSortable } from "@dnd-kit/react/sortable";
+import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import {
   BookOpen,
@@ -13,13 +22,14 @@ import {
   UserPlus,
   X,
 } from "@home-hub/ui-web";
-import { useQuery } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import { AccountMenu } from "./auth/account-menu";
 import { CreateHouseholdDialog } from "./households/create-household-dialog";
 import { JoinHouseholdDialog } from "./households/join-household-dialog";
 import { ZeroConnectionStatus } from "./zero/connection-status";
+import { useZeroMutationEnabled } from "./zero/use-zero-mutation-enabled";
 
 type AppSidebarProps = {
   accessToken: string;
@@ -42,8 +52,10 @@ type SidebarNavigationProps = Omit<
 };
 
 type HouseholdNavigationGroupProps = {
+  disabled: boolean;
   householdId: string;
   householdName: string;
+  index: number;
   onNavigate?: (() => void) | undefined;
 };
 
@@ -78,6 +90,45 @@ const moduleDefinitions: readonly ModuleDefinition[] = [
   },
 ];
 
+const householdPointerSensor = PointerSensor.configure({
+  activationConstraints(event) {
+    if (event.pointerType === "mouse") {
+      return [new PointerActivationConstraints.Distance({ value: 5 })];
+    }
+    if (event.pointerType === "touch") {
+      return [
+        new PointerActivationConstraints.Delay({ value: 250, tolerance: 5 }),
+      ];
+    }
+    return [
+      new PointerActivationConstraints.Delay({ value: 200, tolerance: 10 }),
+      new PointerActivationConstraints.Distance({ value: 5 }),
+    ];
+  },
+});
+
+const householdKeyboardSensor = KeyboardSensor.configure({
+  keyboardCodes: {
+    start: ["Space"],
+    cancel: ["Escape"],
+    end: ["Space", "Enter", "Tab"],
+    up: ["ArrowUp"],
+    down: ["ArrowDown"],
+    left: ["ArrowLeft"],
+    right: ["ArrowRight"],
+  },
+});
+
+function householdSensors(defaults: Sensors): Sensors {
+  return [
+    ...defaults.filter(
+      (sensor) => sensor !== PointerSensor && sensor !== KeyboardSensor,
+    ),
+    householdPointerSensor,
+    householdKeyboardSensor,
+  ];
+}
+
 export function moduleIsActive(
   pathname: string,
   householdId: string,
@@ -93,8 +144,10 @@ export function moduleIsActive(
 }
 
 function HouseholdNavigationGroup({
+  disabled,
   householdId,
   householdName,
+  index,
   onNavigate,
 }: HouseholdNavigationGroupProps) {
   const navigate = useNavigate();
@@ -105,6 +158,13 @@ function HouseholdNavigationGroup({
   const [settings, result] = useQuery(
     queries.modules.byHousehold({ householdId }),
   );
+  const sortable = useSortable({
+    id: householdId,
+    index,
+    type: "user-household",
+    accept: "user-household",
+    disabled,
+  });
   const enabledModuleKeys = new Set(
     settings
       .filter((setting) => setting.enabled)
@@ -122,11 +182,14 @@ function HouseholdNavigationGroup({
 
   return (
     <details
+      ref={sortable.ref}
       open={open}
       className="group/household"
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary
+        ref={sortable.handleRef}
+        draggable={false}
         className={`flex min-h-9 cursor-pointer list-none items-center gap-2 rounded-md px-2 text-sm font-medium outline-none hover:bg-raised focus-visible:ring-2 focus-visible:ring-focus-ring [&::-webkit-details-marker]:hidden ${householdSelected ? "text-foreground" : "text-muted"}`}
       >
         <House aria-hidden="true" className="size-4 shrink-0" />
@@ -173,8 +236,28 @@ function SidebarNavigation({
   onNavigate,
   username,
 }: SidebarNavigationProps) {
+  const zero = useZero();
   const navigate = useNavigate();
-  const [households, result] = useQuery(queries.households.mine({}));
+  const mutationEnabled = useZeroMutationEnabled();
+  const [memberships, result] = useQuery(queries.householdMemberships.mine({}));
+
+  function moveHousehold(from: number, to: number) {
+    if (!mutationEnabled || from === to || to < 0 || to >= memberships.length)
+      return;
+    const reordered = [...memberships];
+    const [moved] = reordered.splice(from, 1);
+    if (!moved) return;
+    reordered.splice(to, 0, moved);
+    zero.mutate(
+      mutators.householdMemberships.reorder({
+        householdId: moved.householdId,
+        orderedHouseholdIds: reordered.map(
+          (membership) => membership.householdId,
+        ),
+        optimisticUpdatedAt: Date.now(),
+      }),
+    );
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-surface p-3 text-foreground">
@@ -209,19 +292,37 @@ function SidebarNavigation({
             Unable to load households.
           </InlineAlert>
         ) : null}
-        {households.length === 0 && result.type === "complete" ? (
+        {memberships.length === 0 && result.type === "complete" ? (
           <p className="px-2 py-3 text-sm text-muted">No households yet</p>
         ) : null}
-        <div className="grid gap-1">
-          {households.map((household) => (
-            <HouseholdNavigationGroup
-              key={household.id}
-              householdId={household.id}
-              householdName={household.name}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </div>
+        <DragDropProvider
+          sensors={householdSensors}
+          onDragEnd={(event) => {
+            const source = event.operation.source;
+            if (
+              !event.canceled &&
+              isSortable(source) &&
+              source.initialIndex !== source.index
+            ) {
+              moveHousehold(source.initialIndex, source.index);
+            }
+          }}
+        >
+          <div className="grid gap-1">
+            {memberships.map((membership, index) =>
+              membership.household ? (
+                <HouseholdNavigationGroup
+                  key={membership.id}
+                  disabled={!mutationEnabled}
+                  householdId={membership.household.id}
+                  householdName={membership.household.name}
+                  index={index}
+                  onNavigate={onNavigate}
+                />
+              ) : null,
+            )}
+          </div>
+        </DragDropProvider>
       </nav>
 
       <div className="grid gap-1 border-t border-border py-2">

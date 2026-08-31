@@ -145,6 +145,21 @@ jobs:
             ) THEN
               RAISE EXCEPTION 'Recipe ordering column must exist and be published';
             END IF;
+            IF NOT EXISTS (
+              SELECT FROM information_schema.columns
+              WHERE table_schema = 'public'
+                AND table_name = 'household_members'
+                AND column_name = 'sort_key'
+                AND is_nullable = 'NO'
+            ) OR NOT EXISTS (
+              SELECT FROM pg_publication_tables
+              WHERE pubname = 'home_hub_zero'
+                AND schemaname = 'public'
+                AND tablename = 'household_members'
+                AND 'sort_key' = ANY(attnames)
+            ) THEN
+              RAISE EXCEPTION 'Per-user household ordering must exist and be published';
+            END IF;
           END $$;
           SQL
 

@@ -107,11 +107,13 @@ function createFakeTransaction({
   const cookLogUpdate = vi.fn(async () => undefined);
   const cookLogDelete = vi.fn(async () => undefined);
   const imageUpdate = vi.fn(async () => undefined);
+  const householdMemberUpdate = vi.fn(async () => undefined);
 
   const transaction = {
     clientID: "client-id",
     location,
     mutate: {
+      householdMembers: { update: householdMemberUpdate },
       recipeCookLogs: {
         delete: cookLogDelete,
         insert: cookLogInsert,
@@ -135,6 +137,7 @@ function createFakeTransaction({
     cookLogUpdate,
     cookLogDelete,
     imageUpdate,
+    householdMemberUpdate,
     ingredientDelete,
     ingredientInsert,
     ingredientUpdate,
@@ -144,6 +147,67 @@ function createFakeTransaction({
     transaction,
   };
 }
+
+describe("householdMemberships.reorder mutator", () => {
+  it("updates only the current user's moved membership", async () => {
+    const { householdMemberUpdate, transaction } = createFakeTransaction({
+      location: "client",
+      results: [
+        [
+          {
+            id: ingredientId,
+            householdId,
+            userId,
+            sortKey: 2048,
+          },
+          {
+            id: cookLogId,
+            householdId: recipeId,
+            userId,
+            sortKey: 1024,
+          },
+        ],
+      ],
+    });
+
+    await mutators.householdMemberships.reorder.fn({
+      args: {
+        householdId,
+        orderedHouseholdIds: [recipeId, householdId],
+        optimisticUpdatedAt,
+      },
+      ctx,
+      tx: transaction,
+    });
+
+    expect(householdMemberUpdate).toHaveBeenCalledOnce();
+    expect(householdMemberUpdate).toHaveBeenCalledWith({
+      id: ingredientId,
+      sortKey: 0,
+      updatedAt: optimisticUpdatedAt,
+    });
+  });
+
+  it("rejects a household outside the current user's memberships", async () => {
+    const { householdMemberUpdate, transaction } = createFakeTransaction({
+      location: "client",
+      results: [[{ id: ingredientId, householdId, userId, sortKey: 1024 }]],
+    });
+
+    await expect(
+      mutators.householdMemberships.reorder.fn({
+        args: {
+          householdId,
+          orderedHouseholdIds: [householdId, recipeId],
+          optimisticUpdatedAt,
+        },
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Reorder not allowed");
+    expect(householdMemberUpdate).not.toHaveBeenCalled();
+  });
+});
 
 describe("recipes.update mutator", () => {
   it("is registered with a stable name", () => {

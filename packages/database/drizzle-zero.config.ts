@@ -36,6 +36,7 @@ export default drizzleZeroConfig(drizzleSchema, {
       householdId: true,
       userId: true,
       role: true,
+      sortKey: true,
       createdAt: true,
       updatedAt: true,
     },
