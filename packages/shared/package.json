@@ -6,6 +6,7 @@
     "./auth": "./src/auth.ts",
     "./households": "./src/households.ts",
     "./modules": "./src/modules.ts",
+    "./lists": "./src/lists.ts",
     "./normalization": "./src/normalization.ts",
     "./recipe-image-delivery": "./src/recipe-image-delivery.ts",
     "./recipe-images": "./src/recipe-images.ts",

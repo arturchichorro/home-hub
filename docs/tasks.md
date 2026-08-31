@@ -33,6 +33,18 @@ deployment applies tested forward migrations after an off-host backup.
 - [ ] Verify upload, processing, authorized display, original access, deletion, cleanup, and existing-image migration behavior
 - [ ] Complete the image delivery pipeline checkpoint and commit
 
+## Replace Shopping with named Lists
+
+Checkpoint details and rollout constraints: [Lists migration](./lists-migration.md).
+
+- [x] Define orderable household Lists and per-list items, retaining the Shopping schema during transition
+- [x] Write the initial backfill and temporary transactional Shopping-to-Lists bridge
+- [ ] Apply migrations locally and check the Lists flow in the app
+- [x] Add authorized Zero queries and mutation definitions for Lists and list items (activate mutations at UI/API cutover)
+- [ ] Replace Shopping navigation with the Lists library and list detail routes, preserving item UX and adding list ordering
+- [ ] Verify cutover, retire old writers, and remove temporary compatibility in a subsequent migration
+- [ ] Complete the Lists concept checkpoint and commit
+
 ## Deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack
