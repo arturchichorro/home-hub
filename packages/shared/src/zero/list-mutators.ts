@@ -62,8 +62,7 @@ async function requireItem(
   return item;
 }
 
-// Prepared for the UI cutover. Do not register alongside live Shopping writers:
-// the migration bridge is one-way, and Shopping is still authoritative for now.
+// Lists is the sole live writer after the Shopping UI/API cutover.
 export const listMutatorDefinitions = {
   create: defineMutator(createListMutationSchema, async ({ tx, ctx, args }) => {
     await requireAccess(tx, ctx, args.householdId);

@@ -4,10 +4,10 @@ import { useQuery } from "@rocicorp/zero/react";
 import { Navigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
-type HouseholdModuleKey = "shopping" | "recipes";
+type HouseholdModuleKey = "lists" | "recipes";
 
 type HouseholdModuleRoute =
-  | "/households/$householdId/shopping"
+  | "/households/$householdId/lists"
   | "/households/$householdId/recipes"
   | "/households/$householdId/settings";
 
@@ -26,11 +26,9 @@ export function getDefaultHouseholdModuleRoute(
   settings: readonly ModuleSetting[],
 ): HouseholdModuleRoute {
   if (
-    settings.some(
-      (setting) => setting.moduleKey === "shopping" && setting.enabled,
-    )
+    settings.some((setting) => setting.moduleKey === "lists" && setting.enabled)
   ) {
-    return "/households/$householdId/shopping";
+    return "/households/$householdId/lists";
   }
 
   if (

@@ -39,9 +39,10 @@ Checkpoint details and rollout constraints: [Lists migration](./lists-migration.
 
 - [x] Define orderable household Lists and per-list items, retaining the Shopping schema during transition
 - [x] Write the initial backfill and temporary transactional Shopping-to-Lists bridge
-- [ ] Apply migrations locally and check the Lists flow in the app
-- [x] Add authorized Zero queries and mutation definitions for Lists and list items (activate mutations at UI/API cutover)
-- [ ] Replace Shopping navigation with the Lists library and list detail routes, preserving item UX and adding list ordering
+- [x] Apply migrations locally
+- [x] Add authorized Zero queries and mutations for Lists and list items
+- [x] Replace Shopping navigation with the Lists library and list detail routes, preserving item UX and adding list ordering
+- [ ] Check the signed-in Lists flow in the app
 - [ ] Verify cutover, retire old writers, and remove temporary compatibility in a subsequent migration
 - [ ] Complete the Lists concept checkpoint and commit
 

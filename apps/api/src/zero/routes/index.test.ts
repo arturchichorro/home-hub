@@ -9,6 +9,7 @@ const jwtSecret = "test-jwt-secret";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const itemId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+const listId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 const dbProvider = {} as ZeroDbProvider;
 
 afterEach(() => {
@@ -27,7 +28,8 @@ function createMutationTestProvider({
     : moduleEnabled
       ? [
           { id: "membership-id" },
-          { householdId, moduleKey: "shopping", enabled: true },
+          { householdId, moduleKey: "lists", enabled: true },
+          { id: listId, householdId },
           { id: itemId, householdId },
         ]
       : [{ id: "membership-id" }, undefined];
@@ -37,7 +39,7 @@ function createMutationTestProvider({
     clientID: "test-client",
     location: "server",
     mutate: {
-      shoppingItems: { update },
+      listItems: { update },
     },
     mutationID: 1,
     reason: "authoritative",
@@ -82,7 +84,7 @@ function createQueryRequest(input?: { name?: string; householdId?: string }) {
     [
       {
         id: "query-1",
-        name: input?.name ?? "shopping.byHousehold",
+        name: input?.name ?? "lists.byHousehold",
         args: [{ householdId: input?.householdId ?? householdId }],
       },
     ],
@@ -100,11 +102,12 @@ function createMutationRequest(input?: {
         type: "custom",
         id: 1,
         clientID: "test-client",
-        name: "shopping.setStatus",
+        name: "lists.setItemStatus",
         args: [
           {
             householdId: input?.householdId ?? householdId,
             itemId: input?.itemId ?? itemId,
+            listId,
             status: "crossed",
             optimisticUpdatedAt: 1_786_000_000_000,
           },
@@ -166,7 +169,7 @@ describe("Zero routes", () => {
       queries: [
         {
           id: "query-1",
-          name: "shopping.byHousehold",
+          name: "lists.byHousehold",
         },
       ],
     });
@@ -200,7 +203,7 @@ describe("Zero routes", () => {
           error: "app",
           id: "query-1",
           message: expect.stringContaining("Invalid UUID"),
-          name: "shopping.byHousehold",
+          name: "lists.byHousehold",
         },
       ],
     });
@@ -313,7 +316,7 @@ describe("Zero routes", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
-  it("rejects a mutation when the shopping module is disabled", async () => {
+  it("rejects a mutation when the Lists module is disabled", async () => {
     const { dbProvider, update } = createMutationTestProvider({
       moduleEnabled: false,
     });

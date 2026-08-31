@@ -15,22 +15,16 @@ import {
   type CreateRecipeRoutesInput,
   createRecipeRoutes,
 } from "./recipes/routes";
-import {
-  type CreateShoppingRoutesInput,
-  createShoppingRoutes,
-} from "./shopping/routes";
 import { type CreateZeroRoutesInput, createZeroRoutes } from "./zero/routes";
 
 type AuthServices = Omit<CreateAuthRoutesInput, "isProduction" | "jwtSecret">;
 type HouseholdServices = Omit<CreateHouseholdRoutesInput, "jwtSecret">;
 type RecipeImageServices = Omit<CreateRecipeRoutesInput, "jwtSecret">;
-type ShoppingServices = Omit<CreateShoppingRoutesInput, "jwtSecret">;
 
 export type CreateAppInput = {
   auth: AuthServices;
   households: HouseholdServices;
   recipeImages: RecipeImageServices;
-  shopping: ShoppingServices;
   infrastructure: {
     isProduction: boolean;
     jwtSecret: string;
@@ -67,10 +61,6 @@ export function createApp(input: CreateAppInput) {
   app.route(
     "/api/households/:householdId/recipes",
     createRecipeRoutes({ ...input.recipeImages, jwtSecret }),
-  );
-  app.route(
-    "/api/households/:householdId/shopping",
-    createShoppingRoutes({ ...input.shopping, jwtSecret }),
   );
   app.route(
     "/api/zero",

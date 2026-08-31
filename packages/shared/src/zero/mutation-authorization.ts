@@ -36,7 +36,7 @@ export async function requireServerHouseholdModuleAccess({
   tx: Transaction<Schema>;
   householdId: string;
   userId: string;
-  moduleKey: HouseholdModuleKey | "lists";
+  moduleKey: HouseholdModuleKey | "shopping";
 }): Promise<void> {
   if (tx.location !== "server") {
     return;

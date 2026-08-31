@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { orderCurrentShoppingItems } from "./shopping-list-order";
+import { orderCurrentListItems } from "./list-item-order";
 
-describe("orderCurrentShoppingItems", () => {
+describe("orderCurrentListItems", () => {
   it("orders active and crossed groups by descending sort key", () => {
     const items = [
       { id: "crossed-high", sortKey: 20, status: "crossed" as const },
@@ -12,7 +12,7 @@ describe("orderCurrentShoppingItems", () => {
       { id: "invalid-null", sortKey: 40, status: null },
     ];
 
-    expect(orderCurrentShoppingItems(items).map((item) => item.id)).toEqual([
+    expect(orderCurrentListItems(items).map((item) => item.id)).toEqual([
       "active-high",
       "active-low",
       "crossed-high",

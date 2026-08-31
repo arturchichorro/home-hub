@@ -1,4 +1,4 @@
-import { cleanShoppingItemName } from "@home-hub/shared/normalization";
+import { cleanListItemName } from "@home-hub/shared/normalization";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import {
   Button,
@@ -13,9 +13,10 @@ import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 const autosaveDelayMs = 600;
 
-type ShoppingItemDraftNameFormProps = {
+type ListItemDraftNameFormProps = {
   focusRequest: number;
   householdId: string;
+  listId: string;
   itemId: string;
   onCancel: () => void;
   onSaveFailed: () => void;
@@ -24,16 +25,17 @@ type ShoppingItemDraftNameFormProps = {
   onServerError: (message: string) => void;
 };
 
-export function ShoppingItemDraftNameForm({
+export function ListItemDraftNameForm({
   focusRequest,
   householdId,
+  listId,
   itemId,
   onCancel,
   onSaveFailed,
   onSaveStarted,
   onSaved,
   onServerError,
-}: ShoppingItemDraftNameFormProps) {
+}: ListItemDraftNameFormProps) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -65,13 +67,13 @@ export function ShoppingItemDraftNameForm({
     clearScheduledSave();
     if (savingRef.current) return;
 
-    const submittedName = cleanShoppingItemName(rawName);
+    const submittedName = cleanListItemName(rawName);
     if (submittedName.length === 0) {
       if (dismissEmpty) onCancel();
       return;
     }
     if (!mutationEnabled) {
-      setError("Unable to add the shopping item.");
+      setError("Unable to add the list item.");
       return;
     }
 
@@ -80,9 +82,10 @@ export function ShoppingItemDraftNameForm({
     setError(undefined);
     onSaveStarted(submittedName);
     const mutation = zero.mutate(
-      mutators.shopping.add({
+      mutators.lists.addItem({
         itemId,
         householdId,
+        listId,
         name: submittedName,
         optimisticTimestamp: Date.now(),
       }),
@@ -93,14 +96,14 @@ export function ShoppingItemDraftNameForm({
       onSaveFailed();
       savingRef.current = false;
       setSaving(false);
-      setError("Unable to add the shopping item.");
+      setError("Unable to add the list item.");
       return;
     }
 
     onSaved(submittedName);
     const serverResult = await mutation.server;
     if (serverResult.type === "error") {
-      onServerError("The shopping item could not be saved.");
+      onServerError("The list item could not be saved.");
     }
   }
 
@@ -108,7 +111,7 @@ export function ShoppingItemDraftNameForm({
     setName(value);
     setError(undefined);
     clearScheduledSave();
-    if (cleanShoppingItemName(value).length === 0) return;
+    if (cleanListItemName(value).length === 0) return;
     timeoutRef.current = setTimeout(() => {
       void saveDraft(value, false);
     }, autosaveDelayMs);
@@ -124,7 +127,7 @@ export function ShoppingItemDraftNameForm({
       <Input
         ref={inputRef}
         appearance="seamless"
-        aria-label="Shopping item name"
+        aria-label="List item name"
         aria-busy={saving || undefined}
         aria-invalid={error ? true : undefined}
         aria-errormessage={error ? errorId : undefined}
@@ -154,17 +157,17 @@ export function ShoppingItemDraftNameForm({
   );
 }
 
-type AddShoppingItemTriggerRowProps = {
+type AddListItemTriggerRowProps = {
   draftActive: boolean;
   error?: string | undefined;
   onActivate: () => void;
 };
 
-export function AddShoppingItemTriggerRow({
+export function AddListItemTriggerRow({
   draftActive,
   error,
   onActivate,
-}: AddShoppingItemTriggerRowProps) {
+}: AddListItemTriggerRowProps) {
   const mutationEnabled = useZeroMutationEnabled();
 
   return (

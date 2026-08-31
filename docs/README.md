@@ -20,7 +20,7 @@ Connected changes should appear immediately and converge across clients. Previou
 
 - [Recipes](./recipes/) owns Recipes behavior, interface composition, data,
   synchronization, and image security.
-- [Shopping](./shopping/) owns Shopping behavior, interface composition, data,
+- [Lists](./lists/) owns list behavior, interface composition, data,
   and synchronization.
 
 ## Useful commands

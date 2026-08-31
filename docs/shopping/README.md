@@ -1,5 +1,10 @@
 # Shopping module
 
+Historical reference: Shopping has been replaced by [Lists](../lists/).
+The old routes and mutation names are retired; legacy data and bridge code
+remain temporarily for the staged migration. The description below documents
+the pre-cutover module, not the current application.
+
 This document is the canonical reference for Shopping product behavior,
 interface composition, persisted data, synchronization, and module-specific
 security. Cross-cutting runtime boundaries remain in

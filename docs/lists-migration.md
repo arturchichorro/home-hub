@@ -1,8 +1,8 @@
 # Shopping to Lists migration checkpoint
 
-The new domain tables and backfill are written, but the Lists application is
-not implemented yet. Migrations `0015` and `0016` have not been applied locally
-by the guiding agent.
+The learner has applied migrations `0015` and `0016` locally. The Lists UI and
+API cutover are implemented; no further migration is needed for this UI batch.
+The applied migration files are unchanged.
 
 ## Temporary compatibility
 
@@ -29,7 +29,7 @@ wait. A failed migration rolls back its data changes and trigger installation.
   not silently recreated by an item edit. Item IDs/households cannot be changed.
 
 This is a one-way deployment bridge, not a permanent dual-write architecture.
-Shopping remains authoritative until cutover. Do not expose concurrent Shopping
+Shopping remains authoritative only until cutover. Do not expose concurrent Shopping
 and Lists writers, manually edit mirrored rows, or use `TRUNCATE` on source
 tables: row triggers cover the application's INSERT/UPDATE/DELETE operations,
 not administrative truncation. No authorization bypass or public access is added.
@@ -52,10 +52,12 @@ Deletion explicitly removes children for optimistic client updates as well as
 the database cascade. Ordering normally changes one row; exhausted gaps trigger
 rebalancing, preserving rows a stale client may not yet have seen.
 
-The new mutation definitions are intentionally not registered in the live API
-yet. Register them when replacing Shopping writers in the UI/API cutover; do not
-run both write paths against the same migrated data. The public module catalogue
-and current Shopping UI are unchanged at this stage.
+The Lists mutation definitions are now registered in the live API. Shopping
+queries, mutation names, and REST endpoints are no longer exposed. The module
+catalogue, sidebar, default navigation, and settings use `lists`. Existing old
+browser tabs must reload; their pending Shopping mutations are not accepted.
+Legacy services and mutators remain unmounted for their existing test coverage
+until cleanup. No new application path writes to Shopping tables/settings.
 
 Once old writers are retired, a later reviewed cleanup migration must drop both
 mirror triggers, their functions, and `shopping_list_migration_links`, followed

@@ -32,7 +32,7 @@ function fakeDb({ user = true, owner = true, setting = true } = {}) {
           ? [{ id: "owner" }]
           : []
         : setting
-          ? [{ moduleKey: "shopping" }]
+          ? [{ moduleKey: "lists" }]
           : [];
     },
   };
@@ -45,7 +45,7 @@ function fakeDb({ user = true, owner = true, setting = true } = {}) {
       return updateBuilder;
     },
     async returning() {
-      return [{ moduleKey: "shopping", enabled: false }];
+      return [{ moduleKey: "lists", enabled: false }];
     },
   };
   const tx = {
@@ -66,7 +66,7 @@ function fakeDb({ user = true, owner = true, setting = true } = {}) {
 const input = {
   userId,
   householdId,
-  moduleKey: "shopping" as const,
+  moduleKey: "lists" as const,
   enabled: false,
 };
 
@@ -104,7 +104,7 @@ describe("set household module enabled service", () => {
       createSetHouseholdModuleEnabledService({ db })(input),
     ).resolves.toEqual({
       kind: "success",
-      setting: { moduleKey: "shopping", enabled: false },
+      setting: { moduleKey: "lists", enabled: false },
     });
     expect(locks).toEqual(["share", "update"]);
     expect(updates[0]).toMatchObject({ enabled: false });

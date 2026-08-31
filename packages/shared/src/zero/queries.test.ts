@@ -349,26 +349,6 @@ describe("module settings queries", () => {
   });
 });
 
-describe("shopping queries", () => {
-  it("requires membership and an enabled Shopping setting", () => {
-    const query = queries.shopping.byHousehold.fn({
-      args: { householdId },
-      ctx: { userId },
-    });
-
-    expect(getAst(query)).toMatchObject({
-      table: "shoppingItems",
-      orderBy: [
-        ["sortKey", "desc"],
-        ["id", "asc"],
-      ],
-      where: {
-        type: "and",
-        conditions: [
-          equalsCondition("householdId", householdId),
-          moduleAccessCondition("shopping"),
-        ],
-      },
-    });
-  });
+it("does not register legacy Shopping queries", () => {
+  expect(queries).not.toHaveProperty("shopping");
 });

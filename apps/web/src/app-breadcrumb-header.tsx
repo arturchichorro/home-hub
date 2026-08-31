@@ -11,8 +11,9 @@ type AppBreadcrumbHeaderProps = {
 
 type BreadcrumbLocation = {
   householdId?: string;
-  module?: "recipes" | "settings" | "shopping";
+  module?: "recipes" | "settings" | "lists";
   recipeId?: string;
+  listId?: string;
 };
 
 export function getBreadcrumbLocation(pathname: string): BreadcrumbLocation {
@@ -22,13 +23,14 @@ export function getBreadcrumbLocation(pathname: string): BreadcrumbLocation {
   const module =
     segments[2] === "recipes" ||
     segments[2] === "settings" ||
-    segments[2] === "shopping"
+    segments[2] === "lists"
       ? segments[2]
       : undefined;
 
   const location: BreadcrumbLocation = { householdId: segments[1] };
   if (module) location.module = module;
   if (module === "recipes" && segments[3]) location.recipeId = segments[3];
+  if (module === "lists" && segments[3]) location.listId = segments[3];
   return location;
 }
 
@@ -65,6 +67,26 @@ function RecipeBreadcrumb({
   );
 }
 
+function ListBreadcrumb({
+  householdId,
+  listId,
+}: {
+  householdId: string;
+  listId: string;
+}) {
+  const [list] = useQuery(queries.lists.detail({ householdId, listId }));
+  return (
+    <>
+      <BreadcrumbSeparator />
+      <BreadcrumbItem>
+        <span aria-current="page" className="block max-w-64 truncate">
+          {list?.name ?? "List"}
+        </span>
+      </BreadcrumbItem>
+    </>
+  );
+}
+
 export function AppBreadcrumbHeader({
   onOpenSidebar,
   rightComponent,
@@ -80,8 +102,8 @@ export function AppBreadcrumbHeader({
   const moduleLabel =
     location.module === "recipes"
       ? "Recipes"
-      : location.module === "shopping"
-        ? "Shopping"
+      : location.module === "lists"
+        ? "Lists"
         : location.module === "settings"
           ? "Settings"
           : undefined;
@@ -130,6 +152,16 @@ export function AppBreadcrumbHeader({
                   >
                     {moduleLabel}
                   </Link>
+                ) : location.module === "lists" &&
+                  location.listId &&
+                  location.householdId ? (
+                  <Link
+                    to="/households/$householdId/lists"
+                    params={{ householdId: location.householdId }}
+                    className="rounded-sm text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus-ring"
+                  >
+                    Lists
+                  </Link>
                 ) : (
                   <span aria-current="page">{moduleLabel}</span>
                 )}
@@ -140,6 +172,12 @@ export function AppBreadcrumbHeader({
             <RecipeBreadcrumb
               householdId={location.householdId}
               recipeId={location.recipeId}
+            />
+          ) : null}
+          {location.householdId && location.listId ? (
+            <ListBreadcrumb
+              householdId={location.householdId}
+              listId={location.listId}
             />
           ) : null}
         </ol>

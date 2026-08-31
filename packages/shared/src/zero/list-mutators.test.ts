@@ -125,9 +125,10 @@ const item = (overrides: Row = {}): Row => ({
 afterEach(() => vi.restoreAllMocks());
 
 describe("Lists mutators", () => {
-  it("prepares the new registry without enabling simultaneous Shopping and Lists writes", () => {
+  it("activates Lists and removes legacy Shopping writes", () => {
     expect(mutators.create.mutatorName).toBe("lists.create");
-    expect(liveMutators).not.toHaveProperty("lists");
+    expect(liveMutators.lists.create.mutatorName).toBe("lists.create");
+    expect(liveMutators).not.toHaveProperty("shopping");
   });
   it.each(["client", "server"] as const)(
     "creates at the top with %s timestamps",

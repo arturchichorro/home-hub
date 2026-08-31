@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-export const householdModuleKeys = ["shopping", "recipes"] as const;
+export const householdModuleKeys = ["lists", "recipes"] as const;
 
 export type HouseholdModuleKey = (typeof householdModuleKeys)[number];
 
@@ -13,7 +13,7 @@ export type HouseholdModuleDefinition = {
 };
 
 export const householdModuleCatalog = [
-  { key: "shopping", label: "Shopping", defaultEnabled: true },
+  { key: "lists", label: "Lists", defaultEnabled: true },
   { key: "recipes", label: "Recipes", defaultEnabled: true },
 ] as const satisfies readonly HouseholdModuleDefinition[];
 

@@ -28,24 +28,6 @@ const myHouseholds = defineHomeHubQuery(z.object({}).strict(), ({ ctx }) =>
     .orderBy("id", "asc"),
 );
 
-const shoppingItemsByHousehold = defineHomeHubQuery(
-  householdIdArgsSchema,
-  ({ args, ctx }) =>
-    zql.shoppingItems
-      .where("householdId", args.householdId)
-      .whereExists("household", (household) =>
-        household
-          .whereExists("members", (member) =>
-            member.where("userId", ctx.userId),
-          )
-          .whereExists("moduleSettings", (setting) =>
-            setting.where("moduleKey", "shopping").where("enabled", true),
-          ),
-      )
-      .orderBy("sortKey", "desc")
-      .orderBy("id", "asc"),
-);
-
 const moduleSettingsByHousehold = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
@@ -158,9 +140,6 @@ export const queries = defineHomeHubQueries({
   },
   modules: {
     byHousehold: moduleSettingsByHousehold,
-  },
-  shopping: {
-    byHousehold: shoppingItemsByHousehold,
   },
   recipes: {
     byHousehold: recipesByHousehold,

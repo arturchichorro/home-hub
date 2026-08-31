@@ -2,7 +2,11 @@ import type { Transaction } from "@rocicorp/zero";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ZeroAuthContext } from "./context";
-import { mutators } from "./mutators";
+import { legacyShoppingMutators } from "./legacy-shopping-mutators";
+import { mutators as activeMutators } from "./mutators";
+
+const mutators = { ...activeMutators, ...legacyShoppingMutators };
+
 import type { Schema } from "./schema.gen";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";

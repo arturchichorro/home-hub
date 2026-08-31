@@ -35,8 +35,6 @@ import { createR2Client } from "./recipes/images/r2-client";
 import { signRecipeImageRead } from "./recipes/images/sign-read";
 import { signRecipeImageUpload } from "./recipes/images/sign-upload";
 import { closeHttpServer, createGracefulShutdown } from "./server-lifecycle";
-import { createAddShoppingItemService } from "./shopping/add";
-import { createSetShoppingItemStatusService } from "./shopping/set-status";
 import { createZeroDbProvider } from "./zero/db-provider";
 
 const { db, close: closeDatabase } = createDbClient(config.DATABASE_URL);
@@ -94,13 +92,6 @@ const households = {
     db: infrastructure.db,
   }),
   setHouseholdModuleEnabled: createSetHouseholdModuleEnabledService({
-    db: infrastructure.db,
-  }),
-};
-
-const shopping = {
-  addShoppingItem: createAddShoppingItemService({ db: infrastructure.db }),
-  setShoppingItemStatus: createSetShoppingItemStatusService({
     db: infrastructure.db,
   }),
 };
@@ -172,7 +163,6 @@ const app = createApp({
   auth,
   households,
   recipeImages,
-  shopping,
   infrastructure: {
     zeroDbProvider: infrastructure.dbProvider,
     jwtSecret: infrastructure.config.API_JWT_SECRET,

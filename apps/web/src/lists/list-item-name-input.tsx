@@ -1,4 +1,4 @@
-import { cleanShoppingItemName } from "@home-hub/shared/normalization";
+import { cleanListItemName } from "@home-hub/shared/normalization";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { ErrorPopover, Input } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
@@ -13,25 +13,27 @@ import {
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 const autosaveDelayMs = 600;
-const duplicateNameError = "Shopping item name already exists";
+const duplicateNameError = "List item name already exists";
 
-type ShoppingItemNameInputProps = {
+type ListItemNameInputProps = {
   focusRequest?: number | undefined;
   householdId: string;
+  listId: string;
   itemId: string;
   currentName: string;
   crossed?: boolean;
   muted?: boolean;
 };
 
-export function ShoppingItemNameInput({
+export function ListItemNameInput({
   focusRequest,
   householdId,
+  listId,
   itemId,
   currentName,
   crossed = false,
   muted = false,
-}: ShoppingItemNameInputProps) {
+}: ListItemNameInputProps) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -86,7 +88,7 @@ export function ShoppingItemNameInput({
         return;
       }
 
-      const submittedName = cleanShoppingItemName(draftNameRef.current);
+      const submittedName = cleanListItemName(draftNameRef.current);
 
       if (submittedName.length === 0) {
         if (showEmptyNameError) {
@@ -106,8 +108,9 @@ export function ShoppingItemNameInput({
       setError(undefined);
 
       const mutation = zero.mutate(
-        mutators.shopping.rename({
+        mutators.lists.renameItem({
           householdId,
+          listId,
           itemId,
           name: submittedName,
           optimisticUpdatedAt: Date.now(),
@@ -121,12 +124,10 @@ export function ShoppingItemNameInput({
       if (result.type === "success") {
         confirmedNameRef.current = submittedName;
 
-        if (cleanShoppingItemName(draftNameRef.current) === submittedName) {
+        if (cleanListItemName(draftNameRef.current) === submittedName) {
           replaceDraft(submittedName);
         }
-      } else if (
-        cleanShoppingItemName(draftNameRef.current) === submittedName
-      ) {
+      } else if (cleanListItemName(draftNameRef.current) === submittedName) {
         revertDraft();
         if (mountedRef.current) {
           setError(
@@ -152,6 +153,7 @@ export function ShoppingItemNameInput({
     [
       clearScheduledSave,
       householdId,
+      listId,
       itemId,
       mutationEnabled,
       replaceDraft,
@@ -219,7 +221,7 @@ export function ShoppingItemNameInput({
       <Input
         ref={inputRef}
         appearance="seamless"
-        aria-label="Shopping item name"
+        aria-label="List item name"
         aria-busy={isSaving || undefined}
         aria-invalid={error ? true : undefined}
         aria-errormessage={error ? errorId : undefined}

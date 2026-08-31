@@ -19,7 +19,7 @@ another household.
 
 Home Hub is organized into small built-in modules:
 
-- [Shopping](./shopping/) provides one shared shopping list.
+- [Lists](./lists/) provides multiple named, manually ordered shared lists.
 - [Recipes](./recipes/) provides shared recipes, their ingredients, cooking
   history, and images.
 - French Vocabulary is a deferred module for learning words and expressions.
@@ -45,7 +45,7 @@ are always available and are not configurable modules.
 
 Disabling a module hides its navigation and blocks its server-side queries,
 mutations, uploads, and integrations. It does not delete the module's data.
-Re-enabling it restores access. Shopping and Recipes are enabled by default to
+Re-enabling it restores access. Lists and Recipes are enabled by default to
 preserve the initial product, while later modules default to disabled unless a
 specific product decision says otherwise.
 
@@ -53,11 +53,11 @@ specific product decision says otherwise.
 
 Modules remain mostly independent and interact through explicit operations
 when the product requires it. For example, adding a recipe's ingredients to the
-shopping list is a deliberate operation that copies the ingredient names into
-Shopping and inserts or reactivates the corresponding shopping rows.
+selected list would be a deliberate operation that copies ingredient names into
+Lists and inserts or reactivates the corresponding items. This is not implemented yet.
 
 Do not add a general event system or allow modules to reach arbitrarily into
-one another's internals. Shopping items and recipe ingredients are separate
+one another's internals. List items and recipe ingredients are separate
 domain records. Introduce a shared entity only when concrete behavior requires
 shared identity or metadata rather than merely copying values.
 
@@ -84,6 +84,5 @@ these operations are defined in
 - dynamically installed or third-party modules;
 - per-member module permissions;
 - a generic schema for arbitrary household data;
-- multiple shopping lists;
 - artificial limits on the number of household members;
 - long-term offline writes.
