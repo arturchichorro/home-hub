@@ -22,7 +22,6 @@ export {
   RotateCcw,
   Scale,
   Settings,
-  ShoppingBasket,
   StickyNote,
   Trash2,
   UserPlus,

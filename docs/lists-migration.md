@@ -1,81 +1,63 @@
-# Shopping to Lists migration checkpoint
+# Lists migration and cleanup
 
-The learner has applied migrations `0015` and `0016` locally. The Lists UI and
-API cutover are implemented; no further migration is needed for this UI batch.
-Migration `0015` was subsequently corrected to explicitly create and reference
-its tables, enum, and index targets in `public`. Production's default search
-path selected Zero's `home_hub` schema because it matches the database role,
-causing the original foreign key to fail. This corrects the failing migration
-itself so deployment can retry it; a later migration cannot repair a failure
-that prevents reaching it. Databases that already applied it successfully in
-`public` need no rerun or migration-history reset.
+Migrations `0015` and `0016` have been applied locally and in production. The
+user confirmed that the deployed Lists module works. The previous module's
+writers are retired, so cleanup migration `0017_retire-shopping.sql` is ready
+for the next deployment. It has not been applied as part of preparing this change.
 
-Application and migration connections now explicitly set `search_path=public`
-through a shared connection-URL helper. This also protects unqualified runtime
-queries and future generated migrations from the same schema collision. Zero's
-internal schema and upstream connection settings are unchanged. The existing CI
-migration-history check creates an empty `home_hub` schema first to reproduce
-production's default-path behavior. No production environment change is required;
-deploy the updated API and migration images together through the normal workflow.
+## Schema selection
 
-## Temporary compatibility
+Migration `0015` explicitly creates and references its objects in `public`.
+Production's default search path previously selected Zero's `home_hub` schema
+because it matches the database role, causing the original foreign key to fail.
+Databases that already applied it successfully in `public` need no rerun or
+migration-history reset.
 
-Production applies migrations before replacing the old API. Migration `0016`
-therefore locks writes to the source tables while it copies existing data and
-installs forward-mirroring triggers. Drizzle's migration transaction holds those
-locks until commit, so a successful old write cannot fall between the snapshot
-and trigger installation. Ordinary reads remain available; concurrent writes may
-wait. A failed migration rolls back its data changes and trigger installation.
+Application and migration connections explicitly set `search_path=public`
+through a shared connection-URL helper. This protects unqualified runtime
+queries and future generated migrations. Zero's internal schema and upstream
+connection settings are unchanged. The existing CI migration-history check
+creates an empty `home_hub` schema first to reproduce the production collision.
 
-- Every existing household gets one Shopping list, including empty households.
-- Item IDs, names, statuses, ordering, and timestamps are preserved.
-- Shopping's enabled/disabled setting is copied to Lists without removing the
-  original setting. Missing settings remain missing, preserving denied access.
-- Subsequent Shopping inserts, updates, and deletes mirror into the new tables
-  in the same transaction. Errors are not swallowed: both sides roll back.
-- The old household-creation path inserts a Shopping module setting; its trigger
-  creates the new list and mapping. A future household created with only a Lists
-  setting starts with no lists, as agreed.
-- A migration-owned `shopping_list_migration_links` table holds stable IDs so
-  renaming or reordering a list cannot redirect subsequent Shopping writes.
-  It is intentionally absent from the application schema and Zero publication.
-- A missing mapping or missing update target fails explicitly. A deleted list is
-  not silently recreated by an item edit. Item IDs/households cannot be changed.
+## Cleanup migration
 
-This is a one-way deployment bridge, not a permanent dual-write architecture.
-Shopping remains authoritative only until cutover. Do not expose concurrent Shopping
-and Lists writers, manually edit mirrored rows, or use `TRUNCATE` on source
-tables: row triggers cover the application's INSERT/UPDATE/DELETE operations,
-not administrative truncation. No authorization bypass or public access is added.
+Migration `0016` copied existing items into one named Shopping list per household,
+preserving IDs, statuses, order, timestamps, and module enablement. Its temporary
+forward-mirroring triggers bridged the original deployment, which migrates before
+replacing the API. Lists is now the only writer; those source records are stale.
 
-## Implementation and checks
+Migration `0017` removes, in order:
 
-Use the normal test suite, type checks, and existing CI migration-history check.
-There is no separate rehearsal script or manual concurrency-check requirement.
-The learner still applies local migrations and creates commits manually.
+1. Both mirroring triggers and their functions. This must happen first: deleting
+   a legacy module setting while its trigger exists would delete the Lists setting.
+2. Only module settings with `module_key = 'shopping'`.
+3. `shopping_items` from the Zero publication.
+4. `shopping_list_migration_links`, `shopping_items`, and `shopping_item_status`.
 
-The Zero schema and publication include Lists and list items. Queries check
-household membership and enabled Lists access; detail items follow the composite
-household/list relationship. The library orders lists by descending sort key.
+The migration never writes to `lists` or `list_items`. Names, current items,
+ordering, and Lists enablement remain unchanged, including any list named
+Shopping. It does not use `CASCADE`; unexpected dependencies fail visibly.
+Drizzle applies the migration transactionally.
 
-List mutation definitions support create, rename, delete, reorder, and the
-existing item add/reactivate, rename, status, and reorder behavior. They check
-household/module access on the server and scope each child lookup to its list.
-Normalized names are unique per household for lists and per list for items.
-Deletion explicitly removes children for optimistic client updates as well as
-the database cascade. Ordering normally changes one row; exhausted gaps trigger
-rebalancing, preserving rows a stale client may not yet have seen.
+The application no longer exports legacy services, validators, mutators, table
+definitions, or module-key exceptions. The generated Zero schema excludes the
+retired table. Historical migrations and migration snapshots remain intact for
+existing database history and fresh installations. Tests may still mention
+Shopping to verify that the retired interfaces are rejected, or as a list name.
 
-The Lists mutation definitions are now registered in the live API. Shopping
-queries, mutation names, and REST endpoints are no longer exposed. The module
-catalogue, sidebar, default navigation, and settings use `lists`. Existing old
-browser tabs must reload; their pending Shopping mutations are not accepted.
-Legacy services and mutators remain unmounted for their existing test coverage
-until cleanup. No new application path writes to Shopping tables/settings.
+## Applying the change
 
-Once old writers are retired, a later reviewed cleanup migration must drop both
-mirror triggers, their functions, and `shopping_list_migration_links`, followed
-by the retired Shopping tables/settings/type and synchronization configuration.
-Do not remove the bridge in a pre-deployment migration while old writers are
-still running. After Lists accepts writes, the old Shopping tables are no longer
-an up-to-date rollback source; application rollback needs a separate plan.
+Apply the generated migration locally with `pnpm db:migrate`, then commit and
+merge the change to `main`. The normal deployment takes an off-host backup,
+applies migration `0017`, and replaces the API/web images. No manual table drops,
+environment changes, or Zero data-volume deletion are needed. Reload existing
+browser tabs after deployment to use the updated client schema.
+
+Do not deploy this cleanup directly over the pre-Lists application. This
+production instance has already completed that prerequisite. Once applied,
+recovering the retired source tables requires a backup; do not roll back to the
+pre-Lists application. Current Lists data is not removed by cleanup.
+
+Use the normal test suite, type checks, and existing CI migration-history check,
+which also asserts that retired database objects are absent. There is no
+separate rehearsal script. The learner applies local migrations and commits.

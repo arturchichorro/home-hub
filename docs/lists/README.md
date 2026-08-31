@@ -1,10 +1,9 @@
 # Lists module
 
-Lists replaces the single Shopping module with named, manually ordered lists
-per household. Its stable module key is `lists`. Lists and Recipes are enabled
-by default; new households start with no lists. Migrated households retain a
-Shopping list with their existing items, even if it is empty. Existing disabled
-Shopping settings become disabled Lists settings.
+Lists provides named, manually ordered lists per household. Its stable module
+key is `lists`. Lists and Recipes are enabled by default; new households start
+with no lists. Previously migrated households retain their lists, items, and
+module settings; see [migration notes](../lists-migration.md).
 
 ## Interface
 
@@ -12,8 +11,7 @@ The sidebar opens `/households/:householdId/lists`, a responsive card library
 similar to Recipes. Members can create lists and change their order using drag
 handles or earlier/later buttons. New lists appear at the top. Each card opens
 `/households/:householdId/lists/:listId`, with a named breadcrumb, rename control,
-and confirmed deletion of the list and all its items. There is no `/shopping`
-route or redirect.
+and confirmed deletion of the list and all its items.
 
 The actual item-list interactions are preserved: add-item drafts, debounced
 inline editing, active items followed by crossed items, drag ordering within
@@ -48,10 +46,9 @@ and foreign keys remain the final constraints. Client changes are optimistic;
 the server supplies authoritative timestamps. List deletion explicitly deletes
 cached children as well as relying on the database cascade.
 
-Old Shopping query/mutation names and REST routes are no longer exposed. The
-legacy tables and migration bridge remain until a later cleanup migration;
-see [migration notes](../lists-migration.md). Do not run an old Shopping API
-against data that is already being edited through Lists.
+The application schema and Zero publication contain only the current domain
+tables. Migration `0017` removes the retired module's source tables, settings,
+and temporary mirroring bridge without changing live Lists data.
 
 Recipe ingredients and list items remain separate records. Any future operation
 to copy ingredients must choose a target list and authorize both modules.

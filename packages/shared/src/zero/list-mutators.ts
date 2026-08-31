@@ -62,7 +62,6 @@ async function requireItem(
   return item;
 }
 
-// Lists is the sole live writer after the Shopping UI/API cutover.
 export const listMutatorDefinitions = {
   create: defineMutator(createListMutationSchema, async ({ tx, ctx, args }) => {
     await requireAccess(tx, ctx, args.householdId);

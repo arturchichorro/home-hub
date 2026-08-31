@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  cleanListItemName,
   cleanRecipeCookLogComment,
   cleanRecipeDescription,
   cleanRecipeIngredientAmount,
   cleanRecipeIngredientName,
   cleanRecipeIngredientNote,
   cleanRecipeTitle,
-  cleanShoppingItemName,
-  normalizeShoppingItemName,
+  normalizeListItemName,
   normalizeUsername,
 } from "./normalization";
 
@@ -69,39 +69,39 @@ describe("normalizeUsername", () => {
   });
 });
 
-describe("cleanShoppingItemName", () => {
+describe("cleanListItemName", () => {
   it("trims leading and trailing whitespace", () => {
-    expect(cleanShoppingItemName("  milk  ")).toBe("milk");
+    expect(cleanListItemName("  milk  ")).toBe("milk");
   });
 
   it("preserves letter case", () => {
-    expect(cleanShoppingItemName("Whole Milk")).toBe("Whole Milk");
+    expect(cleanListItemName("Whole Milk")).toBe("Whole Milk");
   });
 
   it("collapses repeated internal whitespace", () => {
-    expect(cleanShoppingItemName("whole   milk")).toBe("whole milk");
+    expect(cleanListItemName("whole   milk")).toBe("whole milk");
   });
 
   it("applies Unicode NFKC normalization", () => {
-    expect(cleanShoppingItemName("ﬁ")).toBe("fi");
-    expect(cleanShoppingItemName("ｍｉｌｋ")).toBe("milk");
+    expect(cleanListItemName("ﬁ")).toBe("fi");
+    expect(cleanListItemName("ｍｉｌｋ")).toBe("milk");
   });
 });
 
-describe("normalizeShoppingItemName", () => {
+describe("normalizeListItemName", () => {
   it("trims leading and trailing whitespace", () => {
-    expect(normalizeShoppingItemName("  milk  ")).toBe("milk");
+    expect(normalizeListItemName("  milk  ")).toBe("milk");
   });
 
   it("lowercases uppercase letters", () => {
-    expect(normalizeShoppingItemName("Whole Milk")).toBe("whole milk");
+    expect(normalizeListItemName("Whole Milk")).toBe("whole milk");
   });
 
   it("collapses repeated internal whitespace", () => {
-    expect(normalizeShoppingItemName("whole   milk")).toBe("whole milk");
+    expect(normalizeListItemName("whole   milk")).toBe("whole milk");
   });
 
   it("applies Unicode NFKC normalization before lowercasing", () => {
-    expect(normalizeShoppingItemName("Ｆｕｌｌ")).toBe("full");
+    expect(normalizeListItemName("Ｆｕｌｌ")).toBe("full");
   });
 });

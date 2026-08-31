@@ -18,10 +18,10 @@ Disabling Recipes hides its navigation and blocks its queries, mutations,
 uploads, and signed image reads. It does not delete recipe data; re-enabling the
 module restores access for every current household member.
 
-Recipe ingredients and Shopping items are separate domain records. A future
-operation may copy ingredient names into Shopping and insert or reactivate its
-normalized rows, but that cross-module operation is not implemented and must
-require both modules to be enabled.
+Recipe ingredients and list items are separate domain records. A future
+operation may copy ingredient names into a chosen list and insert or reactivate
+its normalized rows, but that cross-module operation is not implemented and
+must require both modules to be enabled and authorize access to the target list.
 
 ## Interface
 

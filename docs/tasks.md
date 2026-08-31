@@ -42,8 +42,10 @@ Checkpoint details and rollout constraints: [Lists migration](./lists-migration.
 - [x] Apply migrations locally
 - [x] Add authorized Zero queries and mutations for Lists and list items
 - [x] Replace Shopping navigation with the Lists library and list detail routes, preserving item UX and adding list ordering
-- [ ] Check the signed-in Lists flow in the app
-- [ ] Verify cutover, retire old writers, and remove temporary compatibility in a subsequent migration
+- [x] Check the signed-in Lists flow in the app (confirmed in production)
+- [x] Verify production cutover and retire old writers
+- [x] Remove legacy application code and prepare the compatibility cleanup migration
+- [ ] Apply cleanup migration `0017` locally and deploy it to production
 - [ ] Complete the Lists concept checkpoint and commit
 
 ## Deploy to and migrate onto the Raspberry Pi

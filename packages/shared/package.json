@@ -10,7 +10,6 @@
     "./normalization": "./src/normalization.ts",
     "./recipe-image-delivery": "./src/recipe-image-delivery.ts",
     "./recipe-images": "./src/recipe-images.ts",
-    "./shopping": "./src/shopping.ts",
     "./recipes": "./src/recipes.ts",
     "./zero/context": "./src/zero/context.ts",
     "./zero/mutators": "./src/zero/mutators.ts",

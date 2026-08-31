@@ -16,10 +16,6 @@ function cleanNullableMultilineText(value: string): string | null {
   return cleaned.length === 0 ? null : cleaned;
 }
 
-export function cleanShoppingItemName(value: string): string {
-  return cleanSingleLineText(value);
-}
-
 export function cleanListName(value: string): string {
   return cleanSingleLineText(value);
 }
@@ -34,10 +30,6 @@ export function cleanListItemName(value: string): string {
 
 export function normalizeListItemName(value: string): string {
   return cleanListItemName(value).toLowerCase();
-}
-
-export function normalizeShoppingItemName(value: string): string {
-  return cleanShoppingItemName(value).toLowerCase();
 }
 
 export function cleanRecipeTitle(value: string): string {
