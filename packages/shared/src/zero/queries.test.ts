@@ -90,6 +90,35 @@ function directMembershipCondition() {
 }
 
 describe("Lists queries", () => {
+  it("previews only the first four current items in detail-list order", () => {
+    const ast = getAst(
+      queries.lists.byHousehold.fn({ args: { householdId }, ctx: { userId } }),
+    );
+    expect(ast.related).toMatchObject([
+      {
+        correlation: {
+          parentField: ["householdId", "id"],
+          childField: ["householdId", "listId"],
+        },
+        subquery: {
+          table: "listItems",
+          alias: "items",
+          where: {
+            type: "simple",
+            left: { type: "column", name: "status" },
+            op: "IN",
+            right: { type: "literal", value: ["active", "crossed"] },
+          },
+          orderBy: [
+            ["status", "asc"],
+            ["sortKey", "desc"],
+            ["id", "asc"],
+          ],
+          limit: 4,
+        },
+      },
+    ]);
+  });
   it("scopes the ordered library to household membership and enabled Lists", () => {
     expect(queries.lists.byHousehold.queryName).toBe("lists.byHousehold");
     expect(

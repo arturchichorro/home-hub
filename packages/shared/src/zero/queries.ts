@@ -56,6 +56,14 @@ const listsByHousehold = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
     authorizedLists(args.householdId, ctx.userId)
+      .related("items", (item) =>
+        item
+          .where("status", "IN", ["active", "crossed"])
+          .orderBy("status", "asc")
+          .orderBy("sortKey", "desc")
+          .orderBy("id", "asc")
+          .limit(4),
+      )
       .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
 );
