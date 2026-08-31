@@ -4,9 +4,11 @@ import {
   createRecipeCookLogMutationSchema,
   createRecipeIngredientMutationSchema,
   createRecipeMutationSchema,
+  deleteRecipeMutationSchema,
   renameRecipeIngredientMutationSchema,
   reorderRecipeImagesMutationSchema,
   reorderRecipeIngredientsMutationSchema,
+  reorderRecipesMutationSchema,
   updateRecipeCookLogMutationSchema,
   updateRecipeIngredientMutationSchema,
   updateRecipeMutationSchema,
@@ -131,6 +133,59 @@ describe("updateRecipeMutationSchema", () => {
       updateRecipeMutationSchema.safeParse({
         ...updateInput,
         userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("deleteRecipeMutationSchema", () => {
+  it("accepts a scoped recipe and optimistic deletion timestamp", () => {
+    expect(
+      deleteRecipeMutationSchema.parse({
+        householdId: input.householdId,
+        recipeId: input.recipeId,
+        optimisticDeletedAt: input.optimisticTimestamp,
+      }),
+    ).toEqual({
+      householdId: input.householdId,
+      recipeId: input.recipeId,
+      optimisticDeletedAt: input.optimisticTimestamp,
+    });
+  });
+
+  it("rejects an invalid deletion timestamp", () => {
+    expect(
+      deleteRecipeMutationSchema.safeParse({
+        householdId: input.householdId,
+        recipeId: input.recipeId,
+        optimisticDeletedAt: -1,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("reorderRecipesMutationSchema", () => {
+  it("accepts a complete household recipe order", () => {
+    expect(
+      reorderRecipesMutationSchema.parse({
+        householdId: input.householdId,
+        recipeId: input.recipeId,
+        orderedRecipeIds: [
+          input.recipeId,
+          "671874b1-df9d-4a91-8f3c-8055473e8aa2",
+        ],
+        optimisticUpdatedAt: input.optimisticTimestamp,
+      }).orderedRecipeIds,
+    ).toHaveLength(2);
+  });
+
+  it("rejects duplicate recipe IDs", () => {
+    expect(
+      reorderRecipesMutationSchema.safeParse({
+        householdId: input.householdId,
+        recipeId: input.recipeId,
+        orderedRecipeIds: [input.recipeId, input.recipeId],
+        optimisticUpdatedAt: input.optimisticTimestamp,
       }).success,
     ).toBe(false);
   });

@@ -5,6 +5,7 @@ import App from "../App";
 export const Route = createFileRoute("/_authenticated/")({
   loader: ({ context }) => {
     void context.zero?.run(queries.households.mine({}));
+    void context.zero?.run(queries.householdMemberships.mine({}));
   },
   component: HomeRoute,
 });

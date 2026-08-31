@@ -1,13 +1,16 @@
 import { defineMutatorsWithType, defineMutatorWithType } from "@rocicorp/zero";
+import { reorderHouseholdsMutationSchema } from "../households";
 import {
   createRecipeCookLogMutationSchema,
   createRecipeIngredientMutationSchema,
   createRecipeMutationSchema,
   deleteRecipeCookLogMutationSchema,
   deleteRecipeIngredientMutationSchema,
+  deleteRecipeMutationSchema,
   renameRecipeIngredientMutationSchema,
   reorderRecipeImagesMutationSchema,
   reorderRecipeIngredientsMutationSchema,
+  reorderRecipesMutationSchema,
   updateRecipeCookLogMutationSchema,
   updateRecipeIngredientMutationSchema,
   updateRecipeMutationSchema,
@@ -15,10 +18,40 @@ import {
 import type { ZeroAuthContext } from "./context";
 import { listMutatorDefinitions } from "./list-mutators";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
+import { nextSortKey, planReorder } from "./ordering";
 import { type Schema, zql } from "./schema.gen";
 
 const defineHomeHubMutator = defineMutatorWithType<Schema, ZeroAuthContext>();
 const defineHomeHubMutators = defineMutatorsWithType<Schema>();
+const activeRecipes = (householdId: string) =>
+  zql.recipes.where("householdId", householdId).where("deletedAt", "IS", null);
+const activeRecipe = (householdId: string, recipeId: string) =>
+  activeRecipes(householdId).where("id", recipeId);
+const reorderHouseholds = defineHomeHubMutator(
+  reorderHouseholdsMutationSchema,
+  async ({ args, ctx, tx }) => {
+    const rows = await tx.run(zql.householdMembers.where("userId", ctx.userId));
+    const updates = planReorder(
+      rows.map(({ householdId, sortKey }) => ({ id: householdId, sortKey })),
+      args.orderedHouseholdIds,
+      args.householdId,
+    );
+    const membershipsByHouseholdId = new Map(
+      rows.map((row) => [row.householdId, row]),
+    );
+    const updatedAt =
+      tx.location === "server" ? Date.now() : args.optimisticUpdatedAt;
+    for (const update of updates) {
+      const membership = membershipsByHouseholdId.get(update.id);
+      if (!membership) throw new Error("Household reorder not allowed");
+      await tx.mutate.householdMembers.update({
+        id: membership.id,
+        sortKey: update.sortKey,
+        updatedAt,
+      });
+    }
+  },
+);
 const createRecipe = defineHomeHubMutator(
   createRecipeMutationSchema,
   async ({ args, ctx, tx }) => {
@@ -29,6 +62,13 @@ const createRecipe = defineHomeHubMutator(
       moduleKey: "recipes",
     });
 
+    const top = await tx.run(
+      activeRecipes(args.householdId)
+        .orderBy("sortKey", "desc")
+        .orderBy("id", "asc")
+        .one(),
+    );
+
     const timestamp =
       tx.location === "server" ? Date.now() : args.optimisticTimestamp;
 
@@ -37,9 +77,30 @@ const createRecipe = defineHomeHubMutator(
       householdId: args.householdId,
       title: args.title,
       description: args.description,
+      sortKey: nextSortKey(top?.sortKey),
+      deletedAt: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
+  },
+);
+
+const reorderRecipes = defineHomeHubMutator(
+  reorderRecipesMutationSchema,
+  async ({ args, ctx, tx }) => {
+    await requireServerHouseholdModuleAccess({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+      moduleKey: "recipes",
+    });
+
+    const rows = await tx.run(activeRecipes(args.householdId));
+    const updates = planReorder(rows, args.orderedRecipeIds, args.recipeId);
+    const updatedAt =
+      tx.location === "server" ? Date.now() : args.optimisticUpdatedAt;
+    for (const update of updates)
+      await tx.mutate.recipes.update({ ...update, updatedAt });
   },
 );
 
@@ -54,10 +115,7 @@ const updateRecipe = defineHomeHubMutator(
     });
 
     const recipe = await tx.run(
-      zql.recipes
-        .where("id", args.recipeId)
-        .where("householdId", args.householdId)
-        .one(),
+      activeRecipe(args.householdId, args.recipeId).one(),
     );
 
     if (!recipe) {
@@ -74,6 +132,29 @@ const updateRecipe = defineHomeHubMutator(
   },
 );
 
+const deleteRecipe = defineHomeHubMutator(
+  deleteRecipeMutationSchema,
+  async ({ args, ctx, tx }) => {
+    await requireServerHouseholdModuleAccess({
+      tx,
+      householdId: args.householdId,
+      userId: ctx.userId,
+      moduleKey: "recipes",
+    });
+
+    const recipe = await tx.run(
+      activeRecipe(args.householdId, args.recipeId).one(),
+    );
+    if (!recipe) throw new Error("Recipe deletion not allowed");
+
+    await tx.mutate.recipes.update({
+      id: args.recipeId,
+      deletedAt:
+        tx.location === "server" ? Date.now() : args.optimisticDeletedAt,
+    });
+  },
+);
+
 const addRecipeIngredient = defineHomeHubMutator(
   createRecipeIngredientMutationSchema,
   async ({ args, ctx, tx }) => {
@@ -85,10 +166,7 @@ const addRecipeIngredient = defineHomeHubMutator(
     });
 
     const recipe = await tx.run(
-      zql.recipes
-        .where("id", args.recipeId)
-        .where("householdId", args.householdId)
-        .one(),
+      activeRecipe(args.householdId, args.recipeId).one(),
     );
 
     if (!recipe) {
@@ -127,6 +205,9 @@ const updateRecipeIngredient = defineHomeHubMutator(
         .where("id", args.ingredientId)
         .where("householdId", args.householdId)
         .where("recipeId", args.recipeId)
+        .whereExists("recipe", (recipe) =>
+          recipe.where("deletedAt", "IS", null),
+        )
         .one(),
     );
     if (!ingredient) throw new Error("Recipe ingredient update not allowed");
@@ -163,6 +244,9 @@ const renameRecipeIngredient = defineHomeHubMutator(
         .where("id", args.ingredientId)
         .where("householdId", args.householdId)
         .where("recipeId", args.recipeId)
+        .whereExists("recipe", (recipe) =>
+          recipe.where("deletedAt", "IS", null),
+        )
         .one(),
     );
     if (!ingredient) throw new Error("Recipe ingredient rename not allowed");
@@ -191,10 +275,7 @@ const addRecipeCookLog = defineHomeHubMutator(
     }
 
     const recipe = await tx.run(
-      zql.recipes
-        .where("id", args.recipeId)
-        .where("householdId", args.householdId)
-        .one(),
+      activeRecipe(args.householdId, args.recipeId).one(),
     );
 
     if (!recipe) {
@@ -231,6 +312,9 @@ const updateRecipeCookLog = defineHomeHubMutator(
         .where("id", args.cookLogId)
         .where("householdId", args.householdId)
         .where("recipeId", args.recipeId)
+        .whereExists("recipe", (recipe) =>
+          recipe.where("deletedAt", "IS", null),
+        )
         .one(),
     );
     if (!cookLog) throw new Error("Recipe cooking log update not allowed");
@@ -259,6 +343,9 @@ const deleteRecipeIngredient = defineHomeHubMutator(
         .where("id", args.ingredientId)
         .where("householdId", args.householdId)
         .where("recipeId", args.recipeId)
+        .whereExists("recipe", (recipe) =>
+          recipe.where("deletedAt", "IS", null),
+        )
         .one(),
     );
     if (!ingredient) throw new Error("Recipe ingredient deletion not allowed");
@@ -288,6 +375,9 @@ const reorderRecipeIngredients = defineHomeHubMutator(
           .where("id", ingredientId)
           .where("householdId", args.householdId)
           .where("recipeId", args.recipeId)
+          .whereExists("recipe", (recipe) =>
+            recipe.where("deletedAt", "IS", null),
+          )
           .one(),
       );
       if (!ingredient) throw new Error("Recipe ingredient reorder not allowed");
@@ -315,6 +405,9 @@ const deleteRecipeCookLog = defineHomeHubMutator(
         .where("id", args.cookLogId)
         .where("householdId", args.householdId)
         .where("recipeId", args.recipeId)
+        .whereExists("recipe", (recipe) =>
+          recipe.where("deletedAt", "IS", null),
+        )
         .one(),
     );
     if (!cookLog) throw new Error("Recipe cooking log deletion not allowed");
@@ -350,6 +443,9 @@ const reorderRecipeImages = defineHomeHubMutator(
           .where("id", imageId)
           .where("householdId", args.householdId)
           .where("recipeId", args.recipeId)
+          .whereExists("recipe", (recipe) =>
+            recipe.where("deletedAt", "IS", null),
+          )
           .one(),
       );
       if (!image) throw new Error("Recipe image reorder not allowed");
@@ -363,10 +459,15 @@ const reorderRecipeImages = defineHomeHubMutator(
 );
 
 export const mutators = defineHomeHubMutators({
+  householdMemberships: {
+    reorder: reorderHouseholds,
+  },
   lists: listMutatorDefinitions,
   recipes: {
     create: createRecipe,
     update: updateRecipe,
+    delete: deleteRecipe,
+    reorder: reorderRecipes,
     addIngredient: addRecipeIngredient,
     updateIngredient: updateRecipeIngredient,
     renameIngredient: renameRecipeIngredient,

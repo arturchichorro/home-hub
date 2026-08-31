@@ -4,10 +4,27 @@ import {
   recipeImages,
   recipes,
 } from "@home-hub/database/schema";
-import { and, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, eq, exists, inArray, isNotNull, isNull } from "drizzle-orm";
 
 type RecipeEntityInput = { householdId: string; recipeId: string };
 type RecipeImageInput = RecipeEntityInput & { imageId: string };
+
+const activeRecipeExists = (
+  tx: DatabaseTransaction,
+  { householdId, recipeId }: RecipeEntityInput,
+) =>
+  exists(
+    tx
+      .select({ id: recipes.id })
+      .from(recipes)
+      .where(
+        and(
+          eq(recipes.householdId, householdId),
+          eq(recipes.id, recipeId),
+          isNull(recipes.deletedAt),
+        ),
+      ),
+  );
 
 export async function findRecipeForShare(
   tx: DatabaseTransaction,
@@ -16,7 +33,13 @@ export async function findRecipeForShare(
   const [recipe] = await tx
     .select({ id: recipes.id })
     .from(recipes)
-    .where(and(eq(recipes.householdId, householdId), eq(recipes.id, recipeId)))
+    .where(
+      and(
+        eq(recipes.householdId, householdId),
+        eq(recipes.id, recipeId),
+        isNull(recipes.deletedAt),
+      ),
+    )
     .limit(1)
     .for("share");
 
@@ -60,6 +83,7 @@ export async function findConfirmedRecipeImageForShare(
         eq(recipeImages.householdId, householdId),
         eq(recipeImages.recipeId, recipeId),
         isNotNull(recipeImages.confirmedAt),
+        activeRecipeExists(tx, { householdId, recipeId }),
       ),
     )
     .limit(1)
@@ -80,6 +104,18 @@ export async function findConfirmedHouseholdRecipeImagesForShare(
         inArray(recipeImages.id, imageIds),
         eq(recipeImages.householdId, householdId),
         isNotNull(recipeImages.confirmedAt),
+        exists(
+          tx
+            .select({ id: recipes.id })
+            .from(recipes)
+            .where(
+              and(
+                eq(recipes.householdId, householdId),
+                eq(recipes.id, recipeImages.recipeId),
+                isNull(recipes.deletedAt),
+              ),
+            ),
+        ),
       ),
     )
     .for("share");
@@ -105,6 +141,7 @@ export async function findRecipeImageForShare(
         eq(recipeImages.id, imageId),
         eq(recipeImages.householdId, householdId),
         eq(recipeImages.recipeId, recipeId),
+        activeRecipeExists(tx, { householdId, recipeId }),
       ),
     )
     .limit(1)
@@ -125,6 +162,7 @@ export async function findRecipeImageForUpdate(
         eq(recipeImages.id, imageId),
         eq(recipeImages.householdId, householdId),
         eq(recipeImages.recipeId, recipeId),
+        activeRecipeExists(tx, { householdId, recipeId }),
       ),
     )
     .limit(1)
@@ -145,6 +183,7 @@ export async function findRecipeImageObjectForShare(
         eq(recipeImages.id, imageId),
         eq(recipeImages.householdId, householdId),
         eq(recipeImages.recipeId, recipeId),
+        activeRecipeExists(tx, { householdId, recipeId }),
       ),
     )
     .limit(1)
@@ -165,6 +204,7 @@ export async function findRecipeImageObjectForUpdate(
         eq(recipeImages.id, imageId),
         eq(recipeImages.householdId, householdId),
         eq(recipeImages.recipeId, recipeId),
+        activeRecipeExists(tx, { householdId, recipeId }),
       ),
     )
     .limit(1)

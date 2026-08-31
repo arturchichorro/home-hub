@@ -9,6 +9,7 @@ import {
   listHouseholdInvitesResponseSchema,
   listHouseholdMembersResponseSchema,
   renameHouseholdRequestSchema,
+  reorderHouseholdsMutationSchema,
   transferHouseholdOwnershipRequestSchema,
 } from "./households";
 
@@ -27,6 +28,31 @@ describe.each([
     { name: "Home", unexpected: true },
   ])("rejects an invalid request: %o", (request) => {
     expect(schema.safeParse(request).success).toBe(false);
+  });
+});
+
+describe("reorder households mutation", () => {
+  const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+  const otherHouseholdId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+
+  it("accepts a unique household order", () => {
+    expect(
+      reorderHouseholdsMutationSchema.parse({
+        householdId,
+        orderedHouseholdIds: [otherHouseholdId, householdId],
+        optimisticUpdatedAt: 1000,
+      }).orderedHouseholdIds,
+    ).toEqual([otherHouseholdId, householdId]);
+  });
+
+  it("rejects duplicate household IDs", () => {
+    expect(
+      reorderHouseholdsMutationSchema.safeParse({
+        householdId,
+        orderedHouseholdIds: [householdId, householdId],
+        optimisticUpdatedAt: 1000,
+      }).success,
+    ).toBe(false);
   });
 });
 

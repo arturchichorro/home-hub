@@ -11,7 +11,7 @@ function getAst(query: unknown): AST {
   return (query as { ast: AST }).ast;
 }
 
-function equalsCondition(column: string, value: string | boolean) {
+function equalsCondition(column: string, value: string | boolean | null) {
   return {
     type: "simple",
     left: { type: "column", name: column },
@@ -90,6 +90,35 @@ function directMembershipCondition() {
 }
 
 describe("Lists queries", () => {
+  it("previews only the first four current items in detail-list order", () => {
+    const ast = getAst(
+      queries.lists.byHousehold.fn({ args: { householdId }, ctx: { userId } }),
+    );
+    expect(ast.related).toMatchObject([
+      {
+        correlation: {
+          parentField: ["householdId", "id"],
+          childField: ["householdId", "listId"],
+        },
+        subquery: {
+          table: "listItems",
+          alias: "items",
+          where: {
+            type: "simple",
+            left: { type: "column", name: "status" },
+            op: "IN",
+            right: { type: "literal", value: ["active", "crossed"] },
+          },
+          orderBy: [
+            ["status", "asc"],
+            ["sortKey", "desc"],
+            ["id", "asc"],
+          ],
+          limit: 4,
+        },
+      },
+    ]);
+  });
   it("scopes the ordered library to household membership and enabled Lists", () => {
     expect(queries.lists.byHousehold.queryName).toBe("lists.byHousehold");
     expect(
@@ -109,6 +138,12 @@ describe("Lists queries", () => {
         type: "and",
         conditions: [
           equalsCondition("householdId", householdId),
+          {
+            type: "simple",
+            left: { type: "column", name: "deletedAt" },
+            op: "IS",
+            right: { type: "literal", value: null },
+          },
           moduleAccessCondition("lists"),
         ],
       },
@@ -130,6 +165,12 @@ describe("Lists queries", () => {
         type: "and",
         conditions: [
           equalsCondition("householdId", householdId),
+          {
+            type: "simple",
+            left: { type: "column", name: "deletedAt" },
+            op: "IS",
+            right: { type: "literal", value: null },
+          },
           moduleAccessCondition("lists"),
           equalsCondition("id", recipeId),
         ],
@@ -157,6 +198,32 @@ describe("Lists queries", () => {
 describe("household queries", () => {
   it("registers a stable name", () => {
     expect(queries.households.mine.queryName).toBe("households.mine");
+    expect(queries.householdMemberships.mine.queryName).toBe(
+      "householdMemberships.mine",
+    );
+  });
+
+  it("orders the current user's sidebar memberships", () => {
+    expect(
+      getAst(
+        queries.householdMemberships.mine.fn({ args: {}, ctx: { userId } }),
+      ),
+    ).toMatchObject({
+      table: "householdMembers",
+      where: equalsCondition("userId", userId),
+      orderBy: [
+        ["sortKey", "desc"],
+        ["id", "asc"],
+      ],
+      related: [
+        {
+          subquery: {
+            table: "households",
+            alias: "household",
+          },
+        },
+      ],
+    });
   });
 
   it("returns authorized households and only the current user's membership", () => {
@@ -200,13 +267,19 @@ describe("recipe queries", () => {
     expect(getAst(query)).toMatchObject({
       table: "recipes",
       orderBy: [
-        ["title", "asc"],
+        ["sortKey", "desc"],
         ["id", "asc"],
       ],
       where: {
         type: "and",
         conditions: [
           equalsCondition("householdId", householdId),
+          {
+            type: "simple",
+            left: { type: "column", name: "deletedAt" },
+            op: "IS",
+            right: { type: "literal", value: null },
+          },
           moduleAccessCondition("recipes"),
         ],
       },
@@ -270,8 +343,14 @@ describe("recipe queries", () => {
         type: "and",
         conditions: [
           equalsCondition("householdId", householdId),
-          equalsCondition("id", recipeId),
+          {
+            type: "simple",
+            left: { type: "column", name: "deletedAt" },
+            op: "IS",
+            right: { type: "literal", value: null },
+          },
           moduleAccessCondition("recipes"),
+          equalsCondition("id", recipeId),
         ],
       },
       related: [

@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { nextListSortKey, planListReorder } from "./list-ordering";
+import { nextSortKey, planReorder } from "./ordering";
 
-describe("Lists ordering", () => {
+describe("Sort-key ordering", () => {
   const rows = [
     { id: "a", sortKey: 3072 },
     { id: "b", sortKey: 2048 },
     { id: "c", sortKey: 1024 },
   ];
   it("puts new entries at the top", () => {
-    expect(nextListSortKey()).toBe(1024);
-    expect(nextListSortKey(3072)).toBe(4096);
-    expect(() => nextListSortKey(2147483647)).toThrow("rebalancing");
+    expect(nextSortKey()).toBe(1024);
+    expect(nextSortKey(3072)).toBe(4096);
+    expect(() => nextSortKey(2147483647)).toThrow("rebalancing");
   });
   it.each([
     { order: ["c", "a", "b"], moved: "c", key: 4096 },
@@ -19,20 +19,20 @@ describe("Lists ordering", () => {
   ])(
     "only updates the moved row when a gap exists: $order",
     ({ order, moved, key }) => {
-      expect(planListReorder(rows, order, moved)).toEqual([
+      expect(planReorder(rows, order, moved)).toEqual([
         { id: moved, sortKey: key },
       ]);
     },
   );
   it("handles a single row", () => {
-    expect(planListReorder([{ id: "a", sortKey: 3072 }], ["a"], "a")).toEqual([
+    expect(planReorder([{ id: "a", sortKey: 3072 }], ["a"], "a")).toEqual([
       { id: "a", sortKey: 0 },
     ]);
   });
   it("rejects any out-of-scope ID, even one that is not a neighbor", () => {
-    expect(() =>
-      planListReorder(rows, ["c", "a", "b", "foreign"], "c"),
-    ).toThrow("not allowed");
+    expect(() => planReorder(rows, ["c", "a", "b", "foreign"], "c")).toThrow(
+      "not allowed",
+    );
   });
   it("rebalances exhausted gaps while retaining omitted concurrent rows", () => {
     const current = [
@@ -41,7 +41,7 @@ describe("Lists ordering", () => {
       { id: "b", sortKey: 10 },
       { id: "c", sortKey: 1 },
     ];
-    expect(planListReorder(current, ["a", "c", "b"], "c")).toEqual([
+    expect(planReorder(current, ["a", "c", "b"], "c")).toEqual([
       { id: "new", sortKey: 4096 },
       { id: "a", sortKey: 3072 },
       { id: "c", sortKey: 2048 },
@@ -56,9 +56,9 @@ describe("Lists ordering", () => {
         { id: "b", sortKey: 0 },
       ];
       const ordered = boundary > 0 ? ["b", "a"] : ["a", "b"];
-      expect(
-        planListReorder(current, ordered, "b").map((row) => row.id),
-      ).toEqual(ordered);
+      expect(planReorder(current, ordered, "b").map((row) => row.id)).toEqual(
+        ordered,
+      );
     },
   );
 });

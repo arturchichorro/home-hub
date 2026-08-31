@@ -8,10 +8,28 @@ module settings; see [migration notes](../lists-migration.md).
 ## Interface
 
 The sidebar opens `/households/:householdId/lists`, a responsive card library
-similar to Recipes. Members can create lists and change their order using drag
-handles or earlier/later buttons. New lists appear at the top. Each card opens
-`/households/:householdId/lists/:listId`, with a named breadcrumb, rename control,
-and confirmed deletion of the list and all its items.
+similar to Recipes. Each card shows only its title and the first four current
+items, with active items first and checked, struck-through completed items after
+them. Archived items are excluded; item order matches the detail screen. Status
+indicators are read-only previews, not toggle controls. The library query fetches
+at most four items per list.
+
+Cards use one compact fixed height rather than scaling to square tiles, so they
+stay aligned without adding large empty areas on wide screens.
+
+Clicking anywhere on a card opens the list; dragging the card reorders it, with
+no separate handles or arrow buttons. Touch uses a short hold to begin dragging,
+allowing normal vertical scrolling before activation. Keyboard drag controls
+remain available on the focused card. New lists appear at the top. Each card opens
+`/households/:householdId/lists/:listId`, with a named breadcrumb, a seamless
+inline name editor, and confirmed deletion from a trash-icon action. Name
+edits debounce, save on blur or Enter, revert with Escape, and roll back with an
+anchored error when validation or persistence fails.
+
+Deleting sets the list's nullable `deleted_at` timestamp. Library and detail
+queries exclude deleted lists, while their items remain stored. All list and
+item mutations scope their parent lookup to non-deleted lists. Active list names
+remain unique per household; names belonging only to deleted lists may be reused.
 
 The actual item-list interactions are preserved: add-item drafts, debounced
 inline editing, active items followed by crossed items, drag ordering within

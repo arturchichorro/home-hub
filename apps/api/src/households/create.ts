@@ -7,6 +7,7 @@ import {
 } from "@home-hub/database/schema";
 import { householdModuleCatalog } from "@home-hub/shared/modules";
 import { findActiveUser } from "../authorization/active-user";
+import { nextHouseholdMembershipSortKey } from "./membership-order";
 
 export type CreateHouseholdInput = {
   userId: string;
@@ -31,6 +32,7 @@ export function createHouseholdService({ db }: { db: Database }) {
 
       const householdId = randomUUID();
       const householdMemberId = randomUUID();
+      const sortKey = await nextHouseholdMembershipSortKey(tx, userId);
 
       await tx.insert(households).values({
         id: householdId,
@@ -42,6 +44,7 @@ export function createHouseholdService({ db }: { db: Database }) {
         householdId,
         userId,
         role: "owner",
+        sortKey,
       });
 
       await tx.insert(householdModuleSettings).values(

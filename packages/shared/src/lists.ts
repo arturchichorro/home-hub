@@ -39,7 +39,9 @@ export const renameListMutationSchema = z
     optimisticUpdatedAt: timestamp,
   })
   .strict();
-export const deleteListMutationSchema = z.object(scope).strict();
+export const deleteListMutationSchema = z
+  .object({ ...scope, optimisticDeletedAt: timestamp })
+  .strict();
 export const reorderListsMutationSchema = z
   .object({
     ...scope,

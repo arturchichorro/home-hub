@@ -127,6 +127,34 @@
       "when": 1788191540765,
       "tag": "0017_retire-shopping",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788213861945,
+      "tag": "0018_soft-delete-lists",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788214770458,
+      "tag": "0019_soft-delete-recipes",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1788215658793,
+      "tag": "0020_order-recipes",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1788216306788,
+      "tag": "0021_order-households-per-user",
+      "breakpoints": true
     }
   ]
 }

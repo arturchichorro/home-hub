@@ -63,6 +63,7 @@ export {
   ImagePlus,
   Images,
   LayoutGrid,
+  ListTodo,
   type LucideIcon,
   type LucideProps,
   MessageSquare,

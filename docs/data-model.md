@@ -72,9 +72,13 @@ to be unique.
 - `household_id`
 - `user_id`
 - `role`: `owner | member`
+- `sort_key`
 - `created_at`, `updated_at`
 
 Use `id` as the primary key and enforce a unique household/user pair.
+`sort_key` stores that user's private sidebar order; changing it never changes
+the order seen by another member. New and newly joined households are placed at
+the top.
 
 Each household has exactly one owner. Enforce at most one owner with a partial
 unique index on `household_id` for rows whose role is `owner`; household

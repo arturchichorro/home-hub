@@ -32,7 +32,7 @@ export function createListHouseholdsService({ db }: { db: Database }) {
       .from(householdMembers)
       .innerJoin(households, eq(householdMembers.householdId, households.id))
       .where(eq(householdMembers.userId, userId))
-      .orderBy(desc(households.createdAt), asc(households.id));
+      .orderBy(desc(householdMembers.sortKey), asc(householdMembers.id));
 
     return {
       kind: "success",

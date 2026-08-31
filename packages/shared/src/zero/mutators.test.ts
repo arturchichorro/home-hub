@@ -30,6 +30,12 @@ const updateRecipeArgs = {
   optimisticUpdatedAt,
 };
 
+const deleteRecipeArgs = {
+  householdId,
+  recipeId,
+  optimisticDeletedAt: optimisticUpdatedAt,
+};
+
 const addRecipeIngredientArgs = {
   ingredientId,
   householdId,
@@ -101,11 +107,13 @@ function createFakeTransaction({
   const cookLogUpdate = vi.fn(async () => undefined);
   const cookLogDelete = vi.fn(async () => undefined);
   const imageUpdate = vi.fn(async () => undefined);
+  const householdMemberUpdate = vi.fn(async () => undefined);
 
   const transaction = {
     clientID: "client-id",
     location,
     mutate: {
+      householdMembers: { update: householdMemberUpdate },
       recipeCookLogs: {
         delete: cookLogDelete,
         insert: cookLogInsert,
@@ -129,6 +137,7 @@ function createFakeTransaction({
     cookLogUpdate,
     cookLogDelete,
     imageUpdate,
+    householdMemberUpdate,
     ingredientDelete,
     ingredientInsert,
     ingredientUpdate,
@@ -138,6 +147,67 @@ function createFakeTransaction({
     transaction,
   };
 }
+
+describe("householdMemberships.reorder mutator", () => {
+  it("updates only the current user's moved membership", async () => {
+    const { householdMemberUpdate, transaction } = createFakeTransaction({
+      location: "client",
+      results: [
+        [
+          {
+            id: ingredientId,
+            householdId,
+            userId,
+            sortKey: 2048,
+          },
+          {
+            id: cookLogId,
+            householdId: recipeId,
+            userId,
+            sortKey: 1024,
+          },
+        ],
+      ],
+    });
+
+    await mutators.householdMemberships.reorder.fn({
+      args: {
+        householdId,
+        orderedHouseholdIds: [recipeId, householdId],
+        optimisticUpdatedAt,
+      },
+      ctx,
+      tx: transaction,
+    });
+
+    expect(householdMemberUpdate).toHaveBeenCalledOnce();
+    expect(householdMemberUpdate).toHaveBeenCalledWith({
+      id: ingredientId,
+      sortKey: 0,
+      updatedAt: optimisticUpdatedAt,
+    });
+  });
+
+  it("rejects a household outside the current user's memberships", async () => {
+    const { householdMemberUpdate, transaction } = createFakeTransaction({
+      location: "client",
+      results: [[{ id: ingredientId, householdId, userId, sortKey: 1024 }]],
+    });
+
+    await expect(
+      mutators.householdMemberships.reorder.fn({
+        args: {
+          householdId,
+          orderedHouseholdIds: [householdId, recipeId],
+          optimisticUpdatedAt,
+        },
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Reorder not allowed");
+    expect(householdMemberUpdate).not.toHaveBeenCalled();
+  });
+});
 
 describe("recipes.update mutator", () => {
   it("is registered with a stable name", () => {
@@ -241,7 +311,7 @@ describe("recipes.create mutator", () => {
   it("optimistically inserts a recipe using the client timestamp", async () => {
     const { queries, recipeInsert, transaction } = createFakeTransaction({
       location: "client",
-      results: [],
+      results: [undefined],
     });
 
     await mutators.recipes.create.fn({
@@ -250,12 +320,14 @@ describe("recipes.create mutator", () => {
       tx: transaction,
     });
 
-    expect(queries).toHaveLength(0);
+    expect(queries).toHaveLength(1);
     expect(recipeInsert).toHaveBeenCalledWith({
       id: recipeId,
       householdId,
       title: "Tomato Soup",
       description: "A simple soup.",
+      sortKey: 1024,
+      deletedAt: null,
       createdAt: optimisticUpdatedAt,
       updatedAt: optimisticUpdatedAt,
     });
@@ -305,6 +377,7 @@ describe("recipes.create mutator", () => {
       results: [
         { id: "membership-id" },
         { householdId, moduleKey: "recipes", enabled: true },
+        undefined,
       ],
     });
 
@@ -314,15 +387,145 @@ describe("recipes.create mutator", () => {
       tx: transaction,
     });
 
-    expect(queries).toHaveLength(2);
+    expect(queries).toHaveLength(3);
     expect(recipeInsert).toHaveBeenCalledWith({
       id: recipeId,
       householdId,
       title: "Tomato Soup",
       description: "A simple soup.",
+      sortKey: 1024,
+      deletedAt: null,
       createdAt: authoritativeTimestamp,
       updatedAt: authoritativeTimestamp,
     });
+  });
+});
+
+describe("recipes.reorder mutator", () => {
+  it("is registered with a stable name", () => {
+    expect(mutators.recipes.reorder.mutatorName).toBe("recipes.reorder");
+  });
+
+  it("optimistically moves a recipe without rewriting every row", async () => {
+    const { recipeUpdate, transaction } = createFakeTransaction({
+      location: "client",
+      results: [
+        [
+          { id: recipeId, sortKey: 2048 },
+          { id: imageId, sortKey: 1024 },
+        ],
+      ],
+    });
+
+    await mutators.recipes.reorder.fn({
+      args: {
+        householdId,
+        recipeId,
+        orderedRecipeIds: [imageId, recipeId],
+        optimisticUpdatedAt,
+      },
+      ctx,
+      tx: transaction,
+    });
+
+    expect(recipeUpdate).toHaveBeenCalledOnce();
+    expect(recipeUpdate).toHaveBeenCalledWith({
+      id: recipeId,
+      sortKey: 0,
+      updatedAt: optimisticUpdatedAt,
+    });
+  });
+
+  it("rejects an out-of-household recipe ID", async () => {
+    const { recipeUpdate, transaction } = createFakeTransaction({
+      location: "client",
+      results: [[{ id: recipeId, sortKey: 1024 }]],
+    });
+
+    await expect(
+      mutators.recipes.reorder.fn({
+        args: {
+          householdId,
+          recipeId,
+          orderedRecipeIds: [recipeId, imageId],
+          optimisticUpdatedAt,
+        },
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Reorder not allowed");
+    expect(recipeUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe("recipes.delete mutator", () => {
+  it("is registered with a stable name", () => {
+    expect(mutators.recipes.delete.mutatorName).toBe("recipes.delete");
+  });
+
+  it("optimistically soft-deletes a cached recipe", async () => {
+    const { ingredientDelete, cookLogDelete, recipeUpdate, transaction } =
+      createFakeTransaction({
+        location: "client",
+        results: [{ id: recipeId, householdId }],
+      });
+
+    await mutators.recipes.delete.fn({
+      args: deleteRecipeArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(recipeUpdate).toHaveBeenCalledWith({
+      id: recipeId,
+      deletedAt: optimisticUpdatedAt,
+    });
+    expect(ingredientDelete).not.toHaveBeenCalled();
+    expect(cookLogDelete).not.toHaveBeenCalled();
+  });
+
+  it("uses the authoritative server timestamp", async () => {
+    const authoritativeTimestamp = 1_786_000_001_000;
+    vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
+    const { recipeUpdate, transaction } = createFakeTransaction({
+      location: "server",
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+        { id: recipeId, householdId },
+      ],
+    });
+
+    await mutators.recipes.delete.fn({
+      args: deleteRecipeArgs,
+      ctx,
+      tx: transaction,
+    });
+
+    expect(recipeUpdate).toHaveBeenCalledWith({
+      id: recipeId,
+      deletedAt: authoritativeTimestamp,
+    });
+  });
+
+  it("rejects an unavailable recipe", async () => {
+    const { recipeUpdate, transaction } = createFakeTransaction({
+      location: "server",
+      results: [
+        { id: "membership-id" },
+        { householdId, moduleKey: "recipes", enabled: true },
+        undefined,
+      ],
+    });
+
+    await expect(
+      mutators.recipes.delete.fn({
+        args: deleteRecipeArgs,
+        ctx,
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Recipe deletion not allowed");
+    expect(recipeUpdate).not.toHaveBeenCalled();
   });
 });
 

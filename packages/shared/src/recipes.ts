@@ -46,6 +46,14 @@ export type UpdateRecipeMutationInput = z.infer<
   typeof updateRecipeMutationSchema
 >;
 
+export const deleteRecipeMutationSchema = z
+  .object({
+    householdId: z.uuid(),
+    recipeId: z.uuid(),
+    optimisticDeletedAt: z.number().int().nonnegative(),
+  })
+  .strict();
+
 const recipeIngredientNameSchema = z
   .string()
   .transform(cleanRecipeIngredientName)
@@ -153,6 +161,15 @@ const orderedIdsSchema = z
   .refine((ids) => new Set(ids).size === ids.length, {
     message: "Ordered IDs must be unique",
   });
+
+export const reorderRecipesMutationSchema = z
+  .object({
+    householdId: z.uuid(),
+    recipeId: z.uuid(),
+    orderedRecipeIds: orderedIdsSchema,
+    optimisticUpdatedAt: z.number().int().nonnegative(),
+  })
+  .strict();
 
 export const deleteRecipeIngredientMutationSchema = z
   .object({

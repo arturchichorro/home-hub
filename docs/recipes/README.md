@@ -33,6 +33,10 @@ each shows a small fixed-size crop of the recipe's first confirmed image on the
 left, with an accent-colored title and at most two muted description lines on
 the right. A compact `+ Add recipe` row follows the grid, opens a title-only
 creation dialog, and navigates to the new recipe detail page after creation.
+Cards have no visible ordering controls: clicking opens a recipe, while dragging
+reorders it. Touch uses a short hold before dragging so normal page scrolling
+remains available. Existing recipes begin in their previous alphabetical order,
+and newly created recipes appear at the top.
 
 ### Recipe detail
 
@@ -40,6 +44,11 @@ Addressable detail pages live at `/recipes/$recipeId` and remain one column at
 every width. The directly editable accent-colored title and description appear
 first, followed by the confirmed-image gallery and independently closable
 Ingredients and Cooking history sections.
+
+The title row includes a neutral trash action with a compact confirmation
+popover. Deleting a recipe sets its `deleted_at` timestamp and returns to the
+recipe library; the recipe and all ingredients, cooking logs, images, and image
+objects remain stored.
 
 Title, description, ingredient names, ingredient amounts and notes, and
 cooking-log comments use seamless debounced inline editing. Valid changes also
@@ -119,6 +128,8 @@ constrained so they cannot cross household or recipe boundaries.
 - `household_id`
 - `title`
 - `description`
+- `sort_key`
+- `deleted_at`
 - `created_at`, `updated_at`
 
 Recipe titles do not need to be unique within a household. Normalize titles
@@ -187,8 +198,8 @@ nonnegative. Width and height are untrusted layout metadata constrained to
 
 ## Synchronization and authorization
 
-Named Recipes queries constrain results through current household membership
-and an enabled Recipes module setting. The Zero publication is only a coarse
+Named Recipes queries constrain results through current household membership,
+an enabled Recipes module setting, and `deleted_at IS NULL`. The Zero publication is only a coarse
 allowlist: it omits recipe-image object keys, and query authorization still
 determines which rows a client may synchronize.
 
@@ -196,7 +207,8 @@ Recipe, ingredient, cooking-log, and confirmed-image metadata changes use
 validated custom Zero mutators where implemented. Their optimistic client run
 provides immediate feedback; their authoritative server run verifies the
 authenticated user, current household membership, the enabled Recipes setting,
-and every referenced recipe-scoped row inside the transaction. Foreign IDs are
+and every referenced active recipe-scoped row inside the transaction. Deleted
+recipes cannot receive metadata or image mutations. Foreign IDs are
 indistinguishable from missing IDs. Scalar conflicts use the last write
 accepted by PostgreSQL, while independently created rows survive through their
 stable IDs.
