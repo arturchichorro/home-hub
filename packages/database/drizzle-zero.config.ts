@@ -10,6 +10,7 @@ export default drizzleZeroConfig(drizzleSchema, {
       name: true,
       normalizedName: true,
       sortKey: true,
+      deletedAt: true,
       createdAt: true,
       updatedAt: true,
     },

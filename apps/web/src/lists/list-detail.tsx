@@ -1,11 +1,10 @@
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import {
-  Button,
-  DialogClose,
-  DialogPopup,
-  DialogRoot,
+  ConfirmationPopover,
+  IconButton,
   InlineAlert,
+  Trash2,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -27,7 +26,6 @@ export function ListDetail({
   const [list, result] = useQuery(
     queries.lists.detail({ householdId, listId }),
   );
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -37,7 +35,11 @@ export function ListDetail({
     setError(undefined);
     try {
       const mutation = zero.mutate(
-        mutators.lists.delete({ householdId, listId }),
+        mutators.lists.delete({
+          householdId,
+          listId,
+          optimisticDeletedAt: Date.now(),
+        }),
       );
       const client = await mutation.client;
       const outcome = client.type === "error" ? client : await mutation.server;
@@ -102,56 +104,28 @@ export function ListDetail({
           listId={listId}
         />
         <div className="flex shrink-0 gap-2">
-          <Button
-            variant="ghost"
-            size="compact"
-            disabled={!enabled || deleting}
-            onClick={() => setConfirmDelete(true)}
-          >
-            Delete list
-          </Button>
+          <ConfirmationPopover
+            message="Are you sure you want to delete this list?"
+            trigger={
+              <IconButton
+                aria-label="Delete list"
+                title="Delete list"
+                className="size-7!"
+                disabled={!enabled || deleting}
+              >
+                <Trash2 aria-hidden="true" className="size-4" />
+              </IconButton>
+            }
+            onConfirm={() => void remove()}
+          />
         </div>
       </div>
-      {error && !confirmDelete ? (
+      {error ? (
         <InlineAlert role="alert" variant="danger">
           {error}
         </InlineAlert>
       ) : null}
       <ListItems householdId={householdId} listId={listId} items={list.items} />
-      <DialogRoot
-        open={confirmDelete}
-        onOpenChange={(open) => {
-          if (!deleting) {
-            setConfirmDelete(open);
-            setError(undefined);
-          }
-        }}
-        disablePointerDismissal={deleting}
-      >
-        <DialogPopup
-          title="Delete list?"
-          actions={
-            <>
-              <DialogClose disabled={deleting}>Cancel</DialogClose>
-              <Button
-                variant="danger"
-                busy={deleting}
-                disabled={!enabled}
-                onClick={() => void remove()}
-              >
-                Delete list
-              </Button>
-            </>
-          }
-        >
-          <p>Delete “{list.name}” and all its items? This cannot be undone.</p>
-          {error ? (
-            <InlineAlert className="mt-4" role="alert" variant="danger">
-              {error}
-            </InlineAlert>
-          ) : null}
-        </DialogPopup>
-      </DialogRoot>
     </div>
   );
 }

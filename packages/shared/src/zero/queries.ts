@@ -44,6 +44,7 @@ const moduleSettingsByHousehold = defineHomeHubQuery(
 const authorizedLists = (householdId: string, userId: string) =>
   zql.lists
     .where("householdId", householdId)
+    .where("deletedAt", "IS", null)
     .whereExists("household", (household) =>
       household
         .whereExists("members", (member) => member.where("userId", userId))

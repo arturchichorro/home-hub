@@ -23,7 +23,7 @@ type Scope = { householdId: string; listId: string };
 const timestamp = (tx: Tx, optimistic: number) =>
   tx.location === "server" ? Date.now() : optimistic;
 const scopedLists = (householdId: string) =>
-  zql.lists.where("householdId", householdId);
+  zql.lists.where("householdId", householdId).where("deletedAt", "IS", null);
 const scopedItems = (scope: Scope) =>
   zql.listItems
     .where("householdId", scope.householdId)
@@ -85,6 +85,7 @@ export const listMutatorDefinitions = {
       name: args.name,
       normalizedName,
       sortKey: nextListSortKey(top?.sortKey),
+      deletedAt: null,
       createdAt: now,
       updatedAt: now,
     });
@@ -108,11 +109,10 @@ export const listMutatorDefinitions = {
   }),
   delete: defineMutator(deleteListMutationSchema, async ({ tx, ctx, args }) => {
     await requireList(tx, ctx, args);
-    // Explicit child deletes also update the optimistic cache; PostgreSQL's FK
-    // cascade alone would only remove children on the server.
-    const items = await tx.run(scopedItems(args));
-    for (const item of items) await tx.mutate.listItems.delete({ id: item.id });
-    await tx.mutate.lists.delete({ id: args.listId });
+    await tx.mutate.lists.update({
+      id: args.listId,
+      deletedAt: timestamp(tx, args.optimisticDeletedAt),
+    });
   }),
   reorder: defineMutator(
     reorderListsMutationSchema,

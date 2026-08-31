@@ -39,9 +39,11 @@ function matches(row: Row, condition?: Condition): boolean {
   if (!condition) return true;
   if (condition.type === "and")
     return condition.conditions.every((entry) => matches(row, entry));
-  if (condition.op !== "=")
-    throw new Error(`Unsupported test operator ${condition.op}`);
-  return row[condition.left.name] === condition.right.value;
+  if (condition.op === "IS" && condition.right.value === null)
+    return row[condition.left.name] == null;
+  if (condition.op === "=")
+    return row[condition.left.name] === condition.right.value;
+  throw new Error(`Unsupported test operator ${condition.op}`);
 }
 
 // Evaluate the actual scoped queries, rather than returning queued rows that
@@ -151,6 +153,7 @@ describe("Lists mutators", () => {
         name: "To Do",
         normalizedName: "to do",
         sortKey: 2048,
+        deletedAt: null,
         createdAt: location === "server" ? 9000 : 1000,
         updatedAt: location === "server" ? 9000 : 1000,
       });
@@ -171,6 +174,26 @@ describe("Lists mutators", () => {
       }),
     ).rejects.toThrow("List name already exists");
     expect(writes).not.toHaveBeenCalled();
+  });
+  it("allows reusing the name of a deleted list", async () => {
+    const { tx, data } = setup();
+    required(data.lists[0]).deletedAt = 500;
+    await mutators.create.fn({
+      tx,
+      ctx,
+      args: {
+        householdId,
+        listId: otherListId,
+        name: "Shopping",
+        optimisticTimestamp: 1000,
+      },
+    });
+    expect(data.lists).toHaveLength(2);
+    expect(data.lists[1]).toMatchObject({
+      id: otherListId,
+      normalizedName: "shopping",
+      deletedAt: null,
+    });
   });
   it("allows the same list name in a different household", async () => {
     const { tx, data } = setup();
@@ -224,16 +247,28 @@ describe("Lists mutators", () => {
     ).rejects.toThrow("List name already exists");
     expect(writes).not.toHaveBeenCalled();
   });
-  it("deletes only the selected list and its children, including on the client", async () => {
-    const { tx, data } = setup("client");
-    data.lists.push({ id: otherListId, householdId });
-    data.listItems = [item(), item({ id: otherItemId, listId: otherListId })];
-    await mutators.delete.fn({ tx, ctx, args: scope });
-    expect(data.lists).toEqual([{ id: otherListId, householdId }]);
-    expect(data.listItems).toEqual([
-      expect.objectContaining({ id: otherItemId }),
-    ]);
-  });
+  it.each(["client", "server"] as const)(
+    "soft-deletes only the selected list using the %s timestamp",
+    async (location) => {
+      vi.spyOn(Date, "now").mockReturnValue(9000);
+      const { tx, data } = setup(location);
+      data.lists.push({ id: otherListId, householdId });
+      data.listItems = [item(), item({ id: otherItemId, listId: otherListId })];
+      await mutators.delete.fn({
+        tx,
+        ctx,
+        args: { ...scope, optimisticDeletedAt: 1000 },
+      });
+      expect(data.lists).toHaveLength(2);
+      expect(data.lists[0]).toMatchObject({
+        id: listId,
+        deletedAt: location === "server" ? 9000 : 1000,
+      });
+      expect(data.lists[1]).toMatchObject({ id: otherListId });
+      expect(data.lists[1]?.deletedAt).toBeUndefined();
+      expect(data.listItems).toHaveLength(2);
+    },
+  );
   it("reorders lists within a household", async () => {
     const { tx, data } = setup("client");
     data.lists.push({ id: otherListId, householdId, sortKey: 0 });
@@ -272,7 +307,11 @@ describe("Lists mutators", () => {
     {
       name: "delete",
       run: (tx: Transaction<Schema>) =>
-        mutators.delete.fn({ tx, ctx, args: scope }),
+        mutators.delete.fn({
+          tx,
+          ctx,
+          args: { ...scope, optimisticDeletedAt: 1000 },
+        }),
     },
     {
       name: "reorder",
@@ -348,13 +387,20 @@ describe("Lists mutators", () => {
         expect(writes).not.toHaveBeenCalled();
       },
     );
-    if (name !== "create")
+    if (name !== "create") {
       it("rejects a parent list from another household", async () => {
         const { tx, data, writes } = setup();
         required(data.lists[0]).householdId = foreignHouseholdId;
         await expect(run(tx)).rejects.toThrow("not allowed");
         expect(writes).not.toHaveBeenCalled();
       });
+      it("rejects a deleted parent list", async () => {
+        const { tx, data, writes } = setup();
+        required(data.lists[0]).deletedAt = 9000;
+        await expect(run(tx)).rejects.toThrow("not allowed");
+        expect(writes).not.toHaveBeenCalled();
+      });
+    }
   });
   it("creates an item without reactivating its namesake in another list", async () => {
     const { tx, data } = setup("client");

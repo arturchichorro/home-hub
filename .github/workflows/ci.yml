@@ -102,6 +102,20 @@ jobs:
               ) THEN
               RAISE EXCEPTION 'Retired Shopping database objects must be removed';
             END IF;
+            IF NOT EXISTS (
+              SELECT FROM information_schema.columns
+              WHERE table_schema = 'public'
+                AND table_name = 'lists'
+                AND column_name = 'deleted_at'
+            ) OR NOT EXISTS (
+              SELECT FROM pg_publication_tables
+              WHERE pubname = 'home_hub_zero'
+                AND schemaname = 'public'
+                AND tablename = 'lists'
+                AND 'deleted_at' = ANY(attnames)
+            ) THEN
+              RAISE EXCEPTION 'Lists soft-delete column must exist and be published';
+            END IF;
           END $$;
           SQL
 

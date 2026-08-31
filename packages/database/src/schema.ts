@@ -160,6 +160,7 @@ export const lists = pgTable(
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
     sortKey: integer("sort_key").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -169,15 +170,12 @@ export const lists = pgTable(
   },
   (table) => [
     unique("lists_household_id_id_unique").on(table.householdId, table.id),
-    uniqueIndex("lists_household_id_normalized_name_idx").on(
-      table.householdId,
-      table.normalizedName,
-    ),
-    index("lists_household_id_sort_key_id_idx").on(
-      table.householdId,
-      table.sortKey,
-      table.id,
-    ),
+    uniqueIndex("lists_household_id_normalized_name_idx")
+      .on(table.householdId, table.normalizedName)
+      .where(sql`${table.deletedAt} is null`),
+    index("lists_household_id_sort_key_id_idx")
+      .on(table.householdId, table.sortKey, table.id)
+      .where(sql`${table.deletedAt} is null`),
   ],
 );
 

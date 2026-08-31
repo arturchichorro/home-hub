@@ -11,7 +11,7 @@ function getAst(query: unknown): AST {
   return (query as { ast: AST }).ast;
 }
 
-function equalsCondition(column: string, value: string | boolean) {
+function equalsCondition(column: string, value: string | boolean | null) {
   return {
     type: "simple",
     left: { type: "column", name: column },
@@ -138,6 +138,12 @@ describe("Lists queries", () => {
         type: "and",
         conditions: [
           equalsCondition("householdId", householdId),
+          {
+            type: "simple",
+            left: { type: "column", name: "deletedAt" },
+            op: "IS",
+            right: { type: "literal", value: null },
+          },
           moduleAccessCondition("lists"),
         ],
       },
@@ -159,6 +165,12 @@ describe("Lists queries", () => {
         type: "and",
         conditions: [
           equalsCondition("householdId", householdId),
+          {
+            type: "simple",
+            left: { type: "column", name: "deletedAt" },
+            op: "IS",
+            right: { type: "literal", value: null },
+          },
           moduleAccessCondition("lists"),
           equalsCondition("id", recipeId),
         ],

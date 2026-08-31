@@ -22,9 +22,14 @@ no separate handles or arrow buttons. Touch uses a short hold to begin dragging,
 allowing normal vertical scrolling before activation. Keyboard drag controls
 remain available on the focused card. New lists appear at the top. Each card opens
 `/households/:householdId/lists/:listId`, with a named breadcrumb, a seamless
-inline name editor, and confirmed deletion of the list and all its items. Name
+inline name editor, and confirmed deletion from a trash-icon action. Name
 edits debounce, save on blur or Enter, revert with Escape, and roll back with an
 anchored error when validation or persistence fails.
+
+Deleting sets the list's nullable `deleted_at` timestamp. Library and detail
+queries exclude deleted lists, while their items remain stored. All list and
+item mutations scope their parent lookup to non-deleted lists. Active list names
+remain unique per household; names belonging only to deleted lists may be reused.
 
 The actual item-list interactions are preserved: add-item drafts, debounced
 inline editing, active items followed by crossed items, drag ordering within

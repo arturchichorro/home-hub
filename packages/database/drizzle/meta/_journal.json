@@ -127,6 +127,13 @@
       "when": 1788191540765,
       "tag": "0017_retire-shopping",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788213861945,
+      "tag": "0018_soft-delete-lists",
+      "breakpoints": true
     }
   ]
 }
