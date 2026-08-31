@@ -102,63 +102,26 @@ jobs:
               ) THEN
               RAISE EXCEPTION 'Retired Shopping database objects must be removed';
             END IF;
-            IF NOT EXISTS (
-              SELECT FROM information_schema.columns
-              WHERE table_schema = 'public'
-                AND table_name = 'lists'
-                AND column_name = 'deleted_at'
-            ) OR NOT EXISTS (
-              SELECT FROM pg_publication_tables
-              WHERE pubname = 'home_hub_zero'
-                AND schemaname = 'public'
-                AND tablename = 'lists'
-                AND 'deleted_at' = ANY(attnames)
+            IF EXISTS (
+              SELECT 1
+              FROM (
+                VALUES
+                  ('lists', 'deleted_at'),
+                  ('recipes', 'deleted_at'),
+                  ('recipes', 'sort_key'),
+                  ('household_members', 'sort_key')
+              ) AS expected(table_name, column_name)
+              LEFT JOIN pg_publication_tables AS published
+                ON published.pubname = 'home_hub_zero'
+                AND published.schemaname = 'public'
+                AND published.tablename = expected.table_name
+              WHERE published.tablename IS NULL
+                OR NOT COALESCE(
+                  expected.column_name = ANY(published.attnames),
+                  false
+                )
             ) THEN
-              RAISE EXCEPTION 'Lists soft-delete column must exist and be published';
-            END IF;
-            IF NOT EXISTS (
-              SELECT FROM information_schema.columns
-              WHERE table_schema = 'public'
-                AND table_name = 'recipes'
-                AND column_name = 'deleted_at'
-            ) OR NOT EXISTS (
-              SELECT FROM pg_publication_tables
-              WHERE pubname = 'home_hub_zero'
-                AND schemaname = 'public'
-                AND tablename = 'recipes'
-                AND 'deleted_at' = ANY(attnames)
-            ) THEN
-              RAISE EXCEPTION 'Recipes soft-delete column must exist and be published';
-            END IF;
-            IF NOT EXISTS (
-              SELECT FROM information_schema.columns
-              WHERE table_schema = 'public'
-                AND table_name = 'recipes'
-                AND column_name = 'sort_key'
-                AND is_nullable = 'NO'
-            ) OR NOT EXISTS (
-              SELECT FROM pg_publication_tables
-              WHERE pubname = 'home_hub_zero'
-                AND schemaname = 'public'
-                AND tablename = 'recipes'
-                AND 'sort_key' = ANY(attnames)
-            ) THEN
-              RAISE EXCEPTION 'Recipe ordering column must exist and be published';
-            END IF;
-            IF NOT EXISTS (
-              SELECT FROM information_schema.columns
-              WHERE table_schema = 'public'
-                AND table_name = 'household_members'
-                AND column_name = 'sort_key'
-                AND is_nullable = 'NO'
-            ) OR NOT EXISTS (
-              SELECT FROM pg_publication_tables
-              WHERE pubname = 'home_hub_zero'
-                AND schemaname = 'public'
-                AND tablename = 'household_members'
-                AND 'sort_key' = ANY(attnames)
-            ) THEN
-              RAISE EXCEPTION 'Per-user household ordering must exist and be published';
+              RAISE EXCEPTION 'Required Zero publication columns are missing';
             END IF;
           END $$;
           SQL
