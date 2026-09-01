@@ -6,6 +6,7 @@ import {
   Tooltip,
 } from "@home-hub/ui-web";
 import { useId, useRef, useState } from "react";
+import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { leaveHousehold } from "./api";
 
 type LeaveHouseholdControlProps = {
@@ -27,8 +28,10 @@ export function LeaveHouseholdControl({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const errorId = useId();
+  const mutationEnabled = useZeroMutationEnabled();
 
   async function handleLeave() {
+    if (!mutationEnabled) return;
     setSubmitting(true);
     setError(null);
 
@@ -76,7 +79,7 @@ export function LeaveHouseholdControl({
                   aria-invalid={error ? true : undefined}
                   busy={submitting}
                   className="size-7!"
-                  disabled={isOwner}
+                  disabled={isOwner || !mutationEnabled}
                 >
                   <LogOut aria-hidden="true" className="size-4" />
                 </IconButton>

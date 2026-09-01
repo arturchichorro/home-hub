@@ -3,6 +3,7 @@ import { queries } from "@home-hub/shared/zero/queries";
 import { InlineAlert, Switch } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { useState } from "react";
+import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { setHouseholdModuleEnabled } from "./api";
 
 type ModuleSettingsProps = {
@@ -21,6 +22,7 @@ export function ModuleSettings({
   );
   const [pendingKey, setPendingKey] = useState<string>();
   const [error, setError] = useState<string>();
+  const mutationEnabled = useZeroMutationEnabled();
 
   if (result.type === "error")
     return (
@@ -30,6 +32,7 @@ export function ModuleSettings({
     );
 
   async function toggle(moduleKey: "lists" | "recipes", enabled: boolean) {
+    if (!mutationEnabled) return;
     setPendingKey(moduleKey);
     setError(undefined);
     try {
@@ -68,7 +71,9 @@ export function ModuleSettings({
               <Switch
                 label={module.label}
                 checked={setting?.enabled ?? false}
-                disabled={!setting || pendingKey !== undefined}
+                disabled={
+                  !mutationEnabled || !setting || pendingKey !== undefined
+                }
                 onCheckedChange={(enabled) => void toggle(module.key, enabled)}
               />
             </li>

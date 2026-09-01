@@ -177,6 +177,7 @@ export function RecipeDetail({
   }
 
   async function deleteImage(image: RecipeImage) {
+    if (!mutationEnabled) return;
     setHiddenImageIds((current) => new Set(current).add(image.id));
     setSelectedImage(undefined);
 

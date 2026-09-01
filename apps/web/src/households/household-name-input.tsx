@@ -1,6 +1,7 @@
 import { ErrorPopover, Input } from "@home-hub/ui-web";
 import { useRef } from "react";
 import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
+import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { renameHousehold } from "./api";
 
 type HouseholdNameInputProps = {
@@ -17,11 +18,12 @@ export function HouseholdNameInput({
   onSessionExpired,
 }: HouseholdNameInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const mutationEnabled = useZeroMutationEnabled();
   const editor = useDebouncedTextEditor({
     currentValue: currentName,
     emptyError: "The household name cannot be empty.",
     failureError: "The household name could not be saved.",
-    mutationEnabled: true,
+    mutationEnabled,
     normalize: (value) => value.trim(),
     required: true,
     save: async (name) => {

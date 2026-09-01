@@ -8,6 +8,7 @@ import {
   InlineAlert,
 } from "@home-hub/ui-web";
 import { type SubmitEvent, useState } from "react";
+import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { createHousehold } from "./api";
 
 type CreateHouseholdDialogProps = {
@@ -28,6 +29,7 @@ export function CreateHouseholdDialog({
   const [name, setName] = useState("");
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const mutationEnabled = useZeroMutationEnabled();
 
   function changeOpen(nextOpen: boolean) {
     if (isSubmitting) return;
@@ -41,6 +43,7 @@ export function CreateHouseholdDialog({
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!mutationEnabled) return;
     setError(undefined);
     setIsSubmitting(true);
 
@@ -79,6 +82,7 @@ export function CreateHouseholdDialog({
               type="submit"
               form="create-household-form"
               busy={isSubmitting}
+              disabled={!mutationEnabled}
             >
               Create household
             </Button>
@@ -94,6 +98,7 @@ export function CreateHouseholdDialog({
             <FieldControl
               name="name"
               autoComplete="off"
+              disabled={!mutationEnabled}
               maxLength={100}
               required
               value={name}

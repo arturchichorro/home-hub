@@ -157,6 +157,28 @@ is disabled. The shell does not perform global fallback redirects.
 
 There will be no PowerSync, TanStack DB, Redux persistence layer, or custom offline mutation queue.
 
+### Progressive web application
+
+The web client is installable as a progressive web application. Its service
+worker precaches only the compiled application shell, icons, and other static
+build assets. API requests, Zero synchronization traffic, signed recipe-image
+URLs, and direct uploads are never runtime-cached by the service worker. Zero
+continues to own synchronized application data and its persistent browser
+cache.
+
+Zero's connection state is the authority for editing availability. The client
+is read-write while Zero reports `connected` or `connecting`; `disconnected`,
+authentication, error, and closed states are read-only. This also applies to
+direct API commands such as household administration and image uploads.
+
+After a successful online session, the client stores only the validated user
+identity required to select that user's Zero browser cache. It does not persist
+the access token. If online session restoration fails because the network is
+unavailable, the last known identity may open previously synchronized data in
+read-only mode. A server `401` is authoritative, clears that bootstrap, and
+does not fall back to offline access. Normal refresh-token authentication
+resumes when connectivity returns.
+
 ### `zero-cache`
 
 `zero-cache` is self-hosted. It maintains a local replica of PostgreSQL, materializes requested queries, and sends incremental changes to clients. It calls the API’s query and mutate endpoints so that the API can apply authenticated authorization rules.

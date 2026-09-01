@@ -2,6 +2,10 @@ import type { Zero } from "@rocicorp/zero";
 import { RouterProvider } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { refreshSession, type Session } from "./auth/api";
+import {
+  clearSessionBootstrap,
+  saveSessionBootstrap,
+} from "./auth/session-bootstrap";
 import { clearRecipeImageUrlCache } from "./recipes/recipe-image-url-cache";
 import { createAppRouter } from "./router";
 
@@ -13,6 +17,7 @@ export function Root({ initialSession }: RootProps) {
   const [session, setSession] = useState(initialSession);
   const [zero, setZero] = useState<Zero>();
   const onAuthenticated = useCallback((nextSession: Session) => {
+    saveSessionBootstrap(nextSession.user);
     setZero(undefined);
     setSession(nextSession);
   }, []);
@@ -26,6 +31,7 @@ export function Root({ initialSession }: RootProps) {
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const onLoggedOut = useCallback(() => {
+    clearSessionBootstrap();
     clearRecipeImageUrlCache();
     setZero(undefined);
     setSession(null);
@@ -38,6 +44,7 @@ export function Root({ initialSession }: RootProps) {
       .then((refreshedSession) => {
         if (sessionRef.current !== expiredSession) return;
         if (!refreshedSession) {
+          clearSessionBootstrap();
           clearRecipeImageUrlCache(expiredSession.user.id);
           setZero(undefined);
         }
