@@ -29,10 +29,17 @@ export type RefreshAccessTokenResult =
 
 let activeRefreshRequest: Promise<RefreshAccessTokenResult> | undefined;
 
-async function requestAccessTokenRefresh(): Promise<RefreshAccessTokenResult> {
+type SessionRequestOptions = {
+  signal?: AbortSignal;
+};
+
+async function requestAccessTokenRefresh({
+  signal,
+}: SessionRequestOptions = {}): Promise<RefreshAccessTokenResult> {
   const refreshResponse = await fetch("/api/auth/refresh", {
     method: "POST",
     credentials: "include",
+    ...(signal ? { signal } : {}),
   });
 
   if (refreshResponse.status === 401) return { kind: "unauthorized" };
@@ -48,9 +55,11 @@ async function requestAccessTokenRefresh(): Promise<RefreshAccessTokenResult> {
   return { kind: "success", accessToken };
 }
 
-export function refreshAccessToken(): Promise<RefreshAccessTokenResult> {
+export function refreshAccessToken(
+  options?: SessionRequestOptions,
+): Promise<RefreshAccessTokenResult> {
   if (!activeRefreshRequest) {
-    activeRefreshRequest = requestAccessTokenRefresh().finally(() => {
+    activeRefreshRequest = requestAccessTokenRefresh(options).finally(() => {
       activeRefreshRequest = undefined;
     });
   }
@@ -68,8 +77,10 @@ export async function refreshSession(
     : { ...session, accessToken: result.accessToken };
 }
 
-export async function restoreSession(): Promise<Session | null> {
-  const refreshResult = await refreshAccessToken();
+export async function restoreSession({
+  signal,
+}: SessionRequestOptions = {}): Promise<Session | null> {
+  const refreshResult = await refreshAccessToken(signal ? { signal } : {});
 
   if (refreshResult.kind === "unauthorized") return null;
 
@@ -79,6 +90,7 @@ export async function restoreSession(): Promise<Session | null> {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
+    ...(signal ? { signal } : {}),
   });
 
   if (meResponse.status === 401) return null;
