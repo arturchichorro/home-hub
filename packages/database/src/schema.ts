@@ -60,6 +60,7 @@ export const householdMemberRoleEnum = pgEnum("household_member_role", [
 export const households = pgTable("households", {
   id: uuid("id").primaryKey(),
   name: text("name").notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -146,8 +147,16 @@ export const householdMembersRelations = relations(
       fields: [householdMembers.householdId],
       references: [households.id],
     }),
+    user: one(users, {
+      fields: [householdMembers.userId],
+      references: [users.id],
+    }),
   }),
 );
+
+export const usersRelations = relations(users, ({ many }) => ({
+  householdMemberships: many(householdMembers),
+}));
 
 export const listItemStatusEnum = pgEnum("list_item_status", [
   "active",

@@ -56,6 +56,7 @@ export {
   ChevronLeft,
   ChevronRight,
   CookingPot,
+  Crown,
   GripVertical,
   History,
   House,
@@ -64,6 +65,7 @@ export {
   Images,
   LayoutGrid,
   ListTodo,
+  LogOut,
   type LucideIcon,
   type LucideProps,
   MessageSquare,
@@ -127,3 +129,4 @@ export {
   type TextareaAppearance,
   type TextareaProps,
 } from "./textarea";
+export { Tooltip, type TooltipProps } from "./tooltip";

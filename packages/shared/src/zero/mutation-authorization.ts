@@ -19,6 +19,9 @@ export async function requireServerHouseholdMembership({
     zql.householdMembers
       .where("householdId", householdId)
       .where("userId", userId)
+      .whereExists("household", (household) =>
+        household.where("deletedAt", "IS", null),
+      )
       .one(),
   );
 
@@ -46,6 +49,9 @@ export async function requireServerHouseholdModuleAccess({
     zql.householdMembers
       .where("householdId", householdId)
       .where("userId", userId)
+      .whereExists("household", (household) =>
+        household.where("deletedAt", "IS", null),
+      )
       .one(),
   );
 

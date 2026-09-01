@@ -155,6 +155,11 @@ export type RenameHouseholdCommandResult =
   | { kind: "unauthorized" }
   | { kind: "forbidden" };
 
+export type DeleteHouseholdCommandResult =
+  | { kind: "success" }
+  | { kind: "unauthorized" }
+  | { kind: "forbidden" };
+
 export type RevokeHouseholdInviteCommandInput = HouseholdReadCommandInput & {
   inviteId: string;
 };
@@ -233,6 +238,27 @@ export async function renameHousehold({
   if (!response.ok) {
     throw new Error("Failed to rename household");
   }
+
+  return { kind: "success" };
+}
+
+export async function deleteHousehold({
+  accessToken,
+  householdId,
+}: HouseholdReadCommandInput): Promise<DeleteHouseholdCommandResult> {
+  const response = await fetch(
+    `/api/households/${encodeURIComponent(householdId)}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+
+  if (response.status === 401) return { kind: "unauthorized" };
+  if (response.status === 403) return { kind: "forbidden" };
+  if (!response.ok) throw new Error("Failed to delete household");
 
   return { kind: "success" };
 }

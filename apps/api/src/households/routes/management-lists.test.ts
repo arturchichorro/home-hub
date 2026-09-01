@@ -37,6 +37,7 @@ function createTestRoutes(overrides: ServiceOverrides = {}) {
     acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
     createHousehold: async () => ({ kind: "unauthorized" }),
     createHouseholdInvite: async () => ({ kind: "forbidden" }),
+    deleteHousehold: async () => ({ kind: "forbidden" }),
     listHouseholds: async () => ({ kind: "unauthorized" }),
     listHouseholdInvites:
       overrides.listHouseholdInvites ?? (async () => ({ kind: "forbidden" })),

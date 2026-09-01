@@ -350,3 +350,29 @@ the backlog.
 - [x] Reuse expiring signed image URLs across route and component remounts without crossing sessions
 - [x] Verify optimistic, authorization, failure, drag, keyboard, touch, cover-image, and storage-cleanup behavior
 - [x] Update the system documentation and complete the recipe-operations checkpoint
+
+## Add an image delivery pipeline
+
+- [x] Define pre-generated thumbnail and viewer WebP variants; one-hour signed edge capabilities; fail-closed processing; deletion of all stored objects; and lazy repair for existing images, while retaining inaccessible originals in private R2
+- [x] Implement the agreed image processing and delivery pipeline while retaining original uploads
+- [x] Verify upload, processing, authorized display, original access, deletion, cleanup, and existing-image migration behavior
+- [x] Complete the image delivery pipeline checkpoint and commit
+
+## Replace Shopping with named Lists
+
+- [x] Define orderable household Lists and per-list items, retaining the Shopping schema during transition
+- [x] Write the initial backfill and temporary transactional Shopping-to-Lists bridge
+- [x] Apply migrations locally
+- [x] Add authorized Zero queries and mutations for Lists and list items
+- [x] Replace Shopping navigation with the Lists library and list detail routes, preserving item UX and adding list ordering
+- [x] Check the signed-in Lists flow in the app (confirmed in production)
+- [x] Verify production cutover and retire old writers
+- [x] Remove legacy application code and prepare the compatibility cleanup migration
+- [x] Apply cleanup migration `0017` locally and deploy it to production
+- [x] Complete the Lists concept checkpoint and commit
+
+## Misc
+
+- [x] Add ordering to recipes (to order recipe list)
+- [x] Add ordering to households in the sidebar
+- [x] In any page of the app, we could display where we are (e.g. "Germoir 83 > Recipes > Carbonara" or "Germoir 83 > Lists > Shopping") something like that

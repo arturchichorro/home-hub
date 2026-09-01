@@ -12,6 +12,7 @@ import { config } from "./config";
 import { createAcceptHouseholdInviteService } from "./households/accept-invite";
 import { createHouseholdService } from "./households/create";
 import { createHouseholdInviteService } from "./households/create-invite";
+import { createDeleteHouseholdService } from "./households/delete";
 import { createLeaveHouseholdService } from "./households/leave";
 import { createListHouseholdsService } from "./households/list";
 import { createListHouseholdInvitesService } from "./households/list-invites";
@@ -73,6 +74,7 @@ const households = {
   createHouseholdInvite: createHouseholdInviteService({
     db: infrastructure.db,
   }),
+  deleteHousehold: createDeleteHouseholdService({ db: infrastructure.db }),
   listHouseholds: createListHouseholdsService({ db: infrastructure.db }),
   listHouseholdInvites: createListHouseholdInvitesService({
     db: infrastructure.db,

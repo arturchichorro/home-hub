@@ -189,6 +189,7 @@ function HouseholdNavigationGroup({
     >
       <summary
         ref={sortable.handleRef}
+        data-base-ui-swipe-ignore
         draggable={false}
         className={`flex min-h-9 cursor-pointer list-none items-center gap-2 rounded-md px-2 text-sm font-medium outline-none hover:bg-raised focus-visible:ring-2 focus-visible:ring-focus-ring [&::-webkit-details-marker]:hidden ${householdSelected ? "text-foreground" : "text-muted"}`}
       >

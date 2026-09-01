@@ -22,6 +22,7 @@ const recipeDetailArgsSchema = z
 
 const myHouseholds = defineHomeHubQuery(z.object({}).strict(), ({ ctx }) =>
   zql.households
+    .where("deletedAt", "IS", null)
     .whereExists("members", (member) => member.where("userId", ctx.userId))
     .related("members", (member) => member.where("userId", ctx.userId))
     .orderBy("name", "asc")
@@ -33,8 +34,28 @@ const myHouseholdMemberships = defineHomeHubQuery(
   ({ ctx }) =>
     zql.householdMembers
       .where("userId", ctx.userId)
+      .whereExists("household", (household) =>
+        household.where("deletedAt", "IS", null),
+      )
       .related("household")
       .orderBy("sortKey", "desc")
+      .orderBy("id", "asc"),
+);
+
+const householdMembersByHousehold = defineHomeHubQuery(
+  householdIdArgsSchema,
+  ({ args, ctx }) =>
+    zql.householdMembers
+      .where("householdId", args.householdId)
+      .whereExists("household", (household) =>
+        household
+          .where("deletedAt", "IS", null)
+          .whereExists("members", (member) =>
+            member.where("userId", ctx.userId),
+          ),
+      )
+      .related("user")
+      .orderBy("createdAt", "asc")
       .orderBy("id", "asc"),
 );
 
@@ -44,9 +65,11 @@ const moduleSettingsByHousehold = defineHomeHubQuery(
     zql.householdModuleSettings
       .where("householdId", args.householdId)
       .whereExists("household", (household) =>
-        household.whereExists("members", (member) =>
-          member.where("userId", ctx.userId),
-        ),
+        household
+          .where("deletedAt", "IS", null)
+          .whereExists("members", (member) =>
+            member.where("userId", ctx.userId),
+          ),
       )
       .orderBy("moduleKey", "asc"),
 );
@@ -57,6 +80,7 @@ const authorizedLists = (householdId: string, userId: string) =>
     .where("deletedAt", "IS", null)
     .whereExists("household", (household) =>
       household
+        .where("deletedAt", "IS", null)
         .whereExists("members", (member) => member.where("userId", userId))
         .whereExists("moduleSettings", (setting) =>
           setting.where("moduleKey", "lists").where("enabled", true),
@@ -94,6 +118,7 @@ const authorizedRecipes = (householdId: string, userId: string) =>
     .where("deletedAt", "IS", null)
     .whereExists("household", (household) =>
       household
+        .where("deletedAt", "IS", null)
         .whereExists("members", (member) => member.where("userId", userId))
         .whereExists("moduleSettings", (setting) =>
           setting.where("moduleKey", "recipes").where("enabled", true),
@@ -143,6 +168,7 @@ const recipeDetail = defineHomeHubQuery(
 
 export const queries = defineHomeHubQueries({
   householdMemberships: {
+    byHousehold: householdMembersByHousehold,
     mine: myHouseholdMemberships,
   },
   lists: {

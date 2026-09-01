@@ -4,6 +4,10 @@ import * as drizzleSchema from "./src/schema";
 
 export default drizzleZeroConfig(drizzleSchema, {
   tables: {
+    users: {
+      id: true,
+      username: true,
+    },
     lists: {
       id: true,
       householdId: true,
@@ -28,6 +32,7 @@ export default drizzleZeroConfig(drizzleSchema, {
     households: {
       id: true,
       name: true,
+      deletedAt: true,
       createdAt: true,
       updatedAt: true,
     },

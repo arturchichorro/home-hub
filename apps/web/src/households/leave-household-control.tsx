@@ -1,5 +1,11 @@
-import { Button, InlineAlert } from "@home-hub/ui-web";
-import { useState } from "react";
+import {
+  ConfirmationPopover,
+  ErrorPopover,
+  IconButton,
+  LogOut,
+  Tooltip,
+} from "@home-hub/ui-web";
+import { useId, useRef, useState } from "react";
 import { leaveHousehold } from "./api";
 
 type LeaveHouseholdControlProps = {
@@ -17,26 +23,12 @@ export function LeaveHouseholdControl({
   onLeftHousehold,
   onSessionExpired,
 }: LeaveHouseholdControlProps) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (isOwner) {
-    return (
-      <InlineAlert variant="warning">
-        Transfer ownership before leaving this household.
-      </InlineAlert>
-    );
-  }
+  const errorId = useId();
 
   async function handleLeave() {
-    const confirmed = window.confirm(
-      "Leave this household? You will lose access to its data.",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     setSubmitting(true);
     setError(null);
 
@@ -67,20 +59,41 @@ export function LeaveHouseholdControl({
   }
 
   return (
-    <div className="grid justify-items-start gap-3">
-      {error ? (
-        <InlineAlert role="alert" variant="danger">
-          {error}
-        </InlineAlert>
-      ) : null}
-      <Button
-        type="button"
-        variant="danger"
-        busy={submitting}
-        onClick={handleLeave}
+    <>
+      <Tooltip
+        content="Transfer ownership before leaving this household."
+        disabled={!isOwner}
+        trigger={
+          <span className="inline-flex" tabIndex={isOwner ? 0 : undefined}>
+            <ConfirmationPopover
+              confirmLabel="Leave"
+              message="Are you sure you want to leave this household?"
+              trigger={
+                <IconButton
+                  ref={buttonRef}
+                  aria-label="Leave household"
+                  aria-errormessage={error ? errorId : undefined}
+                  aria-invalid={error ? true : undefined}
+                  busy={submitting}
+                  className="size-7!"
+                  disabled={isOwner}
+                >
+                  <LogOut aria-hidden="true" className="size-4" />
+                </IconButton>
+              }
+              onConfirm={() => void handleLeave()}
+            />
+          </span>
+        }
+      />
+      <ErrorPopover
+        anchor={buttonRef}
+        id={errorId}
+        open={error !== null}
+        onDismiss={() => setError(null)}
       >
-        Leave household
-      </Button>
-    </div>
+        {error}
+      </ErrorPopover>
+    </>
   );
 }
