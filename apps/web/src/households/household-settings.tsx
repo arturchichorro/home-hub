@@ -2,11 +2,10 @@ import { queries } from "@home-hub/shared/zero/queries";
 import { InlineAlert } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { useEffect, useState } from "react";
-import { HouseholdMemberList } from "./household-member-list";
+import { HouseholdAccessList } from "./household-access-list";
 import { HouseholdNameInput } from "./household-name-input";
 import { LeaveHouseholdControl } from "./leave-household-control";
 import { ModuleSettings } from "./module-settings";
-import { PendingInviteList } from "./pending-invite-list";
 
 type HouseholdSettingsProps = {
   accessToken: string;
@@ -50,7 +49,6 @@ export function HouseholdSettings({
   const isOwner =
     membership?.role === "owner" &&
     locallyTransferredHouseholdId !== household.id;
-
   return (
     <div className="grid gap-8" aria-busy={result.type !== "complete"}>
       <div className="flex min-w-0 items-center justify-between gap-3">
@@ -75,31 +73,21 @@ export function HouseholdSettings({
         />
       </div>
 
-      <section className="grid gap-4">
-        <h3 className="text-lg font-semibold">Members</h3>
-        <div className="grid">
-          <HouseholdMemberList
-            key={household.id}
-            accessToken={accessToken}
-            householdId={household.id}
-            onSessionExpired={onSessionExpired}
-            canManageMembers={isOwner}
-            onOwnershipTransferred={() =>
-              setLocallyTransferredHouseholdId(household.id)
-            }
-          />
-          {isOwner ? (
-            <PendingInviteList
-              accessToken={accessToken}
-              householdId={household.id}
-              onSessionExpired={onSessionExpired}
-            />
-          ) : null}
-        </div>
+      <section>
+        <HouseholdAccessList
+          key={household.id}
+          accessToken={accessToken}
+          householdId={household.id}
+          isOwner={isOwner}
+          onSessionExpired={onSessionExpired}
+          onOwnershipTransferred={() =>
+            setLocallyTransferredHouseholdId(household.id)
+          }
+        />
       </section>
 
       {isOwner ? (
-        <section className="grid gap-4 border-t border-border pt-6">
+        <section className="grid gap-4">
           <h3 className="text-lg font-semibold">Modules</h3>
           <ModuleSettings
             accessToken={accessToken}
