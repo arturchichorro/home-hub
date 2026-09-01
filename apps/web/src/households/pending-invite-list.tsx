@@ -197,26 +197,25 @@ export function PendingInviteList({
     );
   } else {
     listContent = (
-      <ul className="divide-y divide-border border-y border-border">
+      <ul className="divide-y divide-border border-b border-border">
         {state.invites.map((invite) => (
           <li
             key={invite.id}
-            className="grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3"
           >
-            <div className="grid gap-1 text-sm">
-              <span>
-                Created{` `}
+            <p className="min-w-0 truncate whitespace-nowrap text-sm">
+              <span className="font-medium">Invitation</span>
+              <span className="text-muted">
+                {` · `}Created:{` `}
                 <time dateTime={invite.createdAt}>
                   {dateTimeFormatter.format(new Date(invite.createdAt))}
                 </time>
-              </span>
-              <span className="text-muted">
-                Expires{` `}
+                {` · `}Expires:{` `}
                 <time dateTime={invite.expiresAt}>
                   {dateTimeFormatter.format(new Date(invite.expiresAt))}
                 </time>
               </span>
-            </div>
+            </p>
             <Button
               type="button"
               size="compact"
@@ -235,6 +234,8 @@ export function PendingInviteList({
 
   return (
     <div className="grid gap-4">
+      {listContent}
+
       <div>
         <Button
           busy={isCreating}
@@ -283,8 +284,6 @@ export function PendingInviteList({
           {revokeError}
         </InlineAlert>
       ) : null}
-
-      {listContent}
     </div>
   );
 }

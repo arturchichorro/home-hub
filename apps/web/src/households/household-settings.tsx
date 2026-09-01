@@ -66,45 +66,6 @@ export function HouseholdSettings({
             {household.name}
           </h2>
         )}
-      </div>
-
-      <section className="grid gap-4">
-        {isOwner ? (
-          <>
-            <section className="grid gap-4 pt-6">
-              <h3 className="text-lg font-semibold">Modules</h3>
-              <ModuleSettings
-                accessToken={accessToken}
-                householdId={household.id}
-                onSessionExpired={onSessionExpired}
-              />
-            </section>
-            <section className="grid gap-4">
-              <h3 className="text-lg font-semibold">Pending invitations</h3>
-              <PendingInviteList
-                accessToken={accessToken}
-                householdId={household.id}
-                onSessionExpired={onSessionExpired}
-              />
-            </section>
-          </>
-        ) : null}
-
-        <h3 className="text-lg font-semibold">Members</h3>
-        <HouseholdMemberList
-          key={household.id}
-          accessToken={accessToken}
-          householdId={household.id}
-          onSessionExpired={onSessionExpired}
-          canManageMembers={isOwner}
-          onOwnershipTransferred={() =>
-            setLocallyTransferredHouseholdId(household.id)
-          }
-        />
-      </section>
-
-      <section className="grid gap-4 border-t border-border pt-6">
-        <h3 className="text-lg font-semibold">Membership</h3>
         <LeaveHouseholdControl
           accessToken={accessToken}
           householdId={household.id}
@@ -112,7 +73,41 @@ export function HouseholdSettings({
           onLeftHousehold={onLeftHousehold}
           onSessionExpired={onSessionExpired}
         />
+      </div>
+
+      <section className="grid gap-4">
+        <h3 className="text-lg font-semibold">Members</h3>
+        <div className="grid">
+          <HouseholdMemberList
+            key={household.id}
+            accessToken={accessToken}
+            householdId={household.id}
+            onSessionExpired={onSessionExpired}
+            canManageMembers={isOwner}
+            onOwnershipTransferred={() =>
+              setLocallyTransferredHouseholdId(household.id)
+            }
+          />
+          {isOwner ? (
+            <PendingInviteList
+              accessToken={accessToken}
+              householdId={household.id}
+              onSessionExpired={onSessionExpired}
+            />
+          ) : null}
+        </div>
       </section>
+
+      {isOwner ? (
+        <section className="grid gap-4 border-t border-border pt-6">
+          <h3 className="text-lg font-semibold">Modules</h3>
+          <ModuleSettings
+            accessToken={accessToken}
+            householdId={household.id}
+            onSessionExpired={onSessionExpired}
+          />
+        </section>
+      ) : null}
     </div>
   );
 }

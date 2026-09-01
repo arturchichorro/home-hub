@@ -1,5 +1,11 @@
 import { queries } from "@home-hub/shared/zero/queries";
-import { Button, InlineAlert } from "@home-hub/ui-web";
+import {
+  Button,
+  ConfirmationPopover,
+  Crown,
+  IconButton,
+  InlineAlert,
+} from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { useState } from "react";
 import { removeHouseholdMember, transferHouseholdOwnership } from "./api";
@@ -63,15 +69,7 @@ export function HouseholdMemberList({
     }
   }
 
-  async function handleTransfer(membershipId: string, username: string) {
-    const confirmed = window.confirm(
-      `Transfer ownership to ${username}? You will become a member.`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
+  async function handleTransfer(membershipId: string) {
     setTransferringMembershipId(membershipId);
     setActionError(null);
 
@@ -158,18 +156,23 @@ export function HouseholdMemberList({
               </div>
               {canManage ? (
                 <div className="flex flex-wrap gap-2 sm:justify-end">
-                  <Button
-                    type="button"
-                    size="compact"
-                    variant="secondary"
-                    busy={transferringMembershipId === member.id}
-                    disabled={actionPending}
-                    onClick={() =>
-                      void handleTransfer(member.id, user.username)
+                  <ConfirmationPopover
+                    confirmLabel="Make owner"
+                    message={`Are you sure you want to make ${user.username} the household owner?`}
+                    trigger={
+                      <IconButton
+                        type="button"
+                        aria-label={`Make ${user.username} the household owner`}
+                        title="Make owner"
+                        className="size-7!"
+                        busy={transferringMembershipId === member.id}
+                        disabled={actionPending}
+                      >
+                        <Crown aria-hidden="true" className="size-4" />
+                      </IconButton>
                     }
-                  >
-                    Make owner
-                  </Button>
+                    onConfirm={() => void handleTransfer(member.id)}
+                  />
                   <Button
                     type="button"
                     size="compact"
