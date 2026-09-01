@@ -376,3 +376,5 @@ the backlog.
 - [x] Add ordering to recipes (to order recipe list)
 - [x] Add ordering to households in the sidebar
 - [x] In any page of the app, we could display where we are (e.g. "Germoir 83 > Recipes > Carbonara" or "Germoir 83 > Lists > Shopping") something like that
+- [x] Turn home hub web into a PWA
+- [x] Publish safe member profiles through Zero to prevent interface flashing
