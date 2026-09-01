@@ -68,7 +68,28 @@ export function HouseholdSettings({
         )}
       </div>
 
-      <section className="grid gap-4 border-t border-border pt-6">
+      <section className="grid gap-4">
+        {isOwner ? (
+          <>
+            <section className="grid gap-4 pt-6">
+              <h3 className="text-lg font-semibold">Modules</h3>
+              <ModuleSettings
+                accessToken={accessToken}
+                householdId={household.id}
+                onSessionExpired={onSessionExpired}
+              />
+            </section>
+            <section className="grid gap-4">
+              <h3 className="text-lg font-semibold">Pending invitations</h3>
+              <PendingInviteList
+                accessToken={accessToken}
+                householdId={household.id}
+                onSessionExpired={onSessionExpired}
+              />
+            </section>
+          </>
+        ) : null}
+
         <h3 className="text-lg font-semibold">Members</h3>
         <HouseholdMemberList
           key={household.id}
@@ -81,28 +102,6 @@ export function HouseholdSettings({
           }
         />
       </section>
-
-      {isOwner ? (
-        <>
-          <section className="grid gap-4 border-t border-border pt-6">
-            <h3 className="text-lg font-semibold">Pending invitations</h3>
-            <PendingInviteList
-              accessToken={accessToken}
-              householdId={household.id}
-              onSessionExpired={onSessionExpired}
-            />
-          </section>
-
-          <section className="grid gap-4 border-t border-border pt-6">
-            <h3 className="text-lg font-semibold">Modules</h3>
-            <ModuleSettings
-              accessToken={accessToken}
-              householdId={household.id}
-              onSessionExpired={onSessionExpired}
-            />
-          </section>
-        </>
-      ) : null}
 
       <section className="grid gap-4 border-t border-border pt-6">
         <h3 className="text-lg font-semibold">Membership</h3>
