@@ -1,6 +1,6 @@
 import type { Database } from "@home-hub/database";
 import { householdMembers, households } from "@home-hub/database/schema";
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { findActiveUser } from "../authorization/active-user";
 
 export type HouseholdSummary = {
@@ -31,7 +31,9 @@ export function createListHouseholdsService({ db }: { db: Database }) {
       })
       .from(householdMembers)
       .innerJoin(households, eq(householdMembers.householdId, households.id))
-      .where(eq(householdMembers.userId, userId))
+      .where(
+        and(eq(householdMembers.userId, userId), isNull(households.deletedAt)),
+      )
       .orderBy(desc(householdMembers.sortKey), asc(householdMembers.id));
 
     return {

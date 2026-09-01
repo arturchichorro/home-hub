@@ -1,6 +1,6 @@
 import type { Database } from "@home-hub/database";
 import { householdMembers, households } from "@home-hub/database/schema";
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 
 import { createListHouseholdsService, type HouseholdSummary } from "./list";
@@ -135,7 +135,9 @@ describe("list households service", () => {
         condition: eq(householdMembers.householdId, households.id),
       },
     ]);
-    expect(whereClauses).toEqual([eq(householdMembers.userId, userId)]);
+    expect(whereClauses).toEqual([
+      and(eq(householdMembers.userId, userId), isNull(households.deletedAt)),
+    ]);
     expect(orderClauses).toEqual([
       desc(householdMembers.sortKey),
       asc(householdMembers.id),

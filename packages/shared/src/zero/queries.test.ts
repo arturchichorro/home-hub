@@ -20,6 +20,15 @@ function equalsCondition(column: string, value: string | boolean | null) {
   };
 }
 
+function activeHouseholdCondition() {
+  return {
+    type: "simple",
+    left: { type: "column", name: "deletedAt" },
+    op: "IS",
+    right: { type: "literal", value: null },
+  };
+}
+
 function moduleAccessCondition(moduleKey: "recipes" | "lists") {
   return {
     type: "correlatedSubquery",
@@ -30,6 +39,7 @@ function moduleAccessCondition(moduleKey: "recipes" | "lists") {
         where: {
           type: "and",
           conditions: [
+            activeHouseholdCondition(),
             directMembershipCondition(),
             {
               type: "correlatedSubquery",
@@ -62,15 +72,22 @@ function membershipCondition() {
       subquery: {
         table: "households",
         where: {
-          type: "correlatedSubquery",
-          op: "EXISTS",
-          related: {
-            subquery: {
-              table: "householdMembers",
-              where: equalsCondition("userId", userId),
-            },
-          },
+          type: "and",
+          conditions: [activeHouseholdCondition(), directMembershipCondition()],
         },
+      },
+    },
+  };
+}
+
+function activeHouseholdRelation() {
+  return {
+    type: "correlatedSubquery",
+    op: "EXISTS",
+    related: {
+      subquery: {
+        table: "households",
+        where: activeHouseholdCondition(),
       },
     },
   };
@@ -245,7 +262,13 @@ describe("household queries", () => {
       ),
     ).toMatchObject({
       table: "householdMembers",
-      where: equalsCondition("userId", userId),
+      where: {
+        type: "and",
+        conditions: [
+          equalsCondition("userId", userId),
+          activeHouseholdRelation(),
+        ],
+      },
       orderBy: [
         ["sortKey", "desc"],
         ["id", "asc"],
@@ -273,7 +296,10 @@ describe("household queries", () => {
         ["name", "asc"],
         ["id", "asc"],
       ],
-      where: directMembershipCondition(),
+      where: {
+        type: "and",
+        conditions: [activeHouseholdCondition(), directMembershipCondition()],
+      },
       related: [
         {
           subquery: {

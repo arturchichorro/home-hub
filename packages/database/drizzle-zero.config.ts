@@ -32,6 +32,7 @@ export default drizzleZeroConfig(drizzleSchema, {
     households: {
       id: true,
       name: true,
+      deletedAt: true,
       createdAt: true,
       updatedAt: true,
     },

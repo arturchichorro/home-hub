@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { signAccessToken } from "../../auth/access-token";
-import type { LeaveHouseholdInput, LeaveHouseholdResult } from "../leave";
+import type { DeleteHouseholdInput, DeleteHouseholdResult } from "../delete";
 import { createHouseholdRoutes } from "./index";
 
 const jwtSecret = "test-jwt-secret";
@@ -17,14 +17,16 @@ function createAccessToken() {
 }
 
 function createTestRoutes(
-  leaveHousehold: (input: LeaveHouseholdInput) => Promise<LeaveHouseholdResult>,
+  deleteHousehold: (
+    input: DeleteHouseholdInput,
+  ) => Promise<DeleteHouseholdResult>,
 ) {
   return createHouseholdRoutes({
     acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
     createHousehold: async () => ({ kind: "unauthorized" }),
     createHouseholdInvite: async () => ({ kind: "forbidden" }),
-    deleteHousehold: async () => ({ kind: "forbidden" }),
-    leaveHousehold,
+    deleteHousehold,
+    leaveHousehold: async () => ({ kind: "forbidden" }),
     transferHouseholdOwnership: async () => ({ kind: "forbidden" }),
     setHouseholdModuleEnabled: async () => ({ kind: "forbidden" }),
     listHouseholds: async () => ({ kind: "unauthorized" }),
@@ -37,12 +39,12 @@ function createTestRoutes(
   });
 }
 
-function deleteMembership(input: {
+function request(input: {
   app: ReturnType<typeof createHouseholdRoutes>;
   accessToken?: string;
   householdId?: string;
 }) {
-  return input.app.request(`/${input.householdId ?? householdId}/membership`, {
+  return input.app.request(`/${input.householdId ?? householdId}`, {
     method: "DELETE",
     ...(input.accessToken
       ? { headers: { Authorization: `Bearer ${input.accessToken}` } }
@@ -50,62 +52,53 @@ function deleteMembership(input: {
   });
 }
 
-describe("leave household route", () => {
-  it("requires authentication before invoking the service", async () => {
-    const leaveHousehold = vi.fn(
-      async (): Promise<LeaveHouseholdResult> => ({ kind: "success" }),
+describe("delete household route", () => {
+  it("requires authentication", async () => {
+    const deleteHousehold = vi.fn(
+      async (): Promise<DeleteHouseholdResult> => ({ kind: "success" }),
     );
-    const response = await deleteMembership({
-      app: createTestRoutes(leaveHousehold),
-    });
+    const response = await request({ app: createTestRoutes(deleteHousehold) });
 
     expect(response.status).toBe(401);
-    expect(response.headers.get("WWW-Authenticate")).toBe("Bearer");
-    expect(leaveHousehold).not.toHaveBeenCalled();
+    expect(deleteHousehold).not.toHaveBeenCalled();
   });
 
   it("rejects an invalid household id", async () => {
-    const leaveHousehold = vi.fn(
-      async (): Promise<LeaveHouseholdResult> => ({ kind: "success" }),
+    const deleteHousehold = vi.fn(
+      async (): Promise<DeleteHouseholdResult> => ({ kind: "success" }),
     );
-    const response = await deleteMembership({
-      app: createTestRoutes(leaveHousehold),
+    const response = await request({
+      app: createTestRoutes(deleteHousehold),
       accessToken: createAccessToken(),
       householdId: "invalid-household",
     });
 
     expect(response.status).toBe(400);
-    expect(leaveHousehold).not.toHaveBeenCalled();
+    expect(deleteHousehold).not.toHaveBeenCalled();
   });
 
-  it("passes the authenticated user and household id to the service", async () => {
-    const leaveHousehold = vi.fn(
-      async (): Promise<LeaveHouseholdResult> => ({ kind: "success" }),
+  it("passes the authenticated owner and household to the service", async () => {
+    const deleteHousehold = vi.fn(
+      async (): Promise<DeleteHouseholdResult> => ({ kind: "success" }),
     );
-    const response = await deleteMembership({
-      app: createTestRoutes(leaveHousehold),
+    const response = await request({
+      app: createTestRoutes(deleteHousehold),
       accessToken: createAccessToken(),
     });
 
     expect(response.status).toBe(204);
-    expect(await response.text()).toBe("");
-    expect(leaveHousehold).toHaveBeenCalledWith({ userId, householdId });
+    expect(deleteHousehold).toHaveBeenCalledWith({ householdId, userId });
   });
 
   it.each([
-    ["unauthorized", 401, "Unauthorized"],
-    ["forbidden", 403, "Forbidden"],
-    ["owner_must_transfer", 409, "Transfer ownership before leaving"],
-  ] as const)("maps %s to %s", async (kind, status, error) => {
-    const response = await deleteMembership({
+    ["unauthorized", 401],
+    ["forbidden", 403],
+  ] as const)("maps %s to %s", async (kind, status) => {
+    const response = await request({
       app: createTestRoutes(async () => ({ kind })),
       accessToken: createAccessToken(),
     });
 
     expect(response.status).toBe(status);
-    await expect(response.json()).resolves.toEqual({ error });
-    if (kind === "unauthorized") {
-      expect(response.headers.get("WWW-Authenticate")).toBe("Bearer");
-    }
   });
 });

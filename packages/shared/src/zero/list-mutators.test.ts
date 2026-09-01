@@ -18,6 +18,7 @@ const scope = { householdId, listId };
 const times = { optimisticTimestamp: 1000, optimisticUpdatedAt: 1000 };
 type Row = Record<string, unknown>;
 type Table =
+  | "households"
   | "householdMembers"
   | "householdModuleSettings"
   | "lists"
@@ -29,16 +30,38 @@ function required<T>(value: T | undefined): T {
 type Condition =
   | { type: "and"; conditions: Condition[] }
   | {
+      type: "correlatedSubquery";
+      op: "EXISTS";
+      related: {
+        correlation: { parentField: string[]; childField: string[] };
+        subquery: { table: Table; where?: Condition };
+      };
+    }
+  | {
       type: "simple";
       op: string;
       left: { name: string };
       right: { value: unknown };
     };
 
-function matches(row: Row, condition?: Condition): boolean {
+function matches(
+  row: Row,
+  condition: Condition | undefined,
+  data: Record<Table, Row[]>,
+): boolean {
   if (!condition) return true;
   if (condition.type === "and")
-    return condition.conditions.every((entry) => matches(row, entry));
+    return condition.conditions.every((entry) => matches(row, entry, data));
+  if (condition.type === "correlatedSubquery") {
+    const { correlation, subquery } = condition.related;
+    return data[subquery.table].some((candidate) => {
+      const fieldsMatch = correlation.parentField.every(
+        (parentField, index) =>
+          row[parentField] === candidate[correlation.childField[index] ?? ""],
+      );
+      return fieldsMatch && matches(candidate, subquery.where, data);
+    });
+  }
   if (condition.op === "IS" && condition.right.value === null)
     return row[condition.left.name] == null;
   if (condition.op === "=")
@@ -50,6 +73,7 @@ function matches(row: Row, condition?: Condition): boolean {
 // could accidentally make an unscoped lookup look authorized.
 function setup(location: "server" | "client" = "server") {
   const data: Record<Table, Row[]> = {
+    households: [{ id: householdId, deletedAt: null }],
     householdMembers: [{ householdId, userId: ctx.userId }],
     householdModuleSettings: [
       { householdId, moduleKey: "lists", enabled: true },
@@ -94,7 +118,7 @@ function setup(location: "server" | "client" = "server") {
         };
         format: { singular: boolean };
       };
-      let rows = data[ast.table].filter((row) => matches(row, ast.where));
+      let rows = data[ast.table].filter((row) => matches(row, ast.where, data));
       for (const [key, direction] of [...(ast.orderBy ?? [])].reverse()) {
         rows.sort((a, b) => {
           const av = a[key] as string | number;

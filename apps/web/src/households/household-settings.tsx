@@ -2,6 +2,7 @@ import { queries } from "@home-hub/shared/zero/queries";
 import { InlineAlert } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { useEffect, useState } from "react";
+import { DeleteHouseholdControl } from "./delete-household-control";
 import { HouseholdAccessList } from "./household-access-list";
 import { HouseholdNameInput } from "./household-name-input";
 import { LeaveHouseholdControl } from "./leave-household-control";
@@ -64,13 +65,23 @@ export function HouseholdSettings({
             {household.name}
           </h2>
         )}
-        <LeaveHouseholdControl
-          accessToken={accessToken}
-          householdId={household.id}
-          isOwner={isOwner}
-          onLeftHousehold={onLeftHousehold}
-          onSessionExpired={onSessionExpired}
-        />
+        <div className="flex shrink-0 items-center gap-1">
+          <LeaveHouseholdControl
+            accessToken={accessToken}
+            householdId={household.id}
+            isOwner={isOwner}
+            onLeftHousehold={onLeftHousehold}
+            onSessionExpired={onSessionExpired}
+          />
+          {isOwner ? (
+            <DeleteHouseholdControl
+              accessToken={accessToken}
+              householdId={household.id}
+              onDeletedHousehold={onLeftHousehold}
+              onSessionExpired={onSessionExpired}
+            />
+          ) : null}
+        </div>
       </div>
 
       <section>

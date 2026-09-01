@@ -4,6 +4,7 @@ import {
   acceptHouseholdInvite,
   createHousehold,
   createHouseholdInvite,
+  deleteHousehold,
   leaveHousehold,
   listHouseholdInvites,
   listHouseholdMembers,
@@ -79,6 +80,30 @@ describe("setHouseholdModuleEnabled", () => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("deleteHousehold", () => {
+  it("sends the authenticated delete command", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await expect(
+      deleteHousehold({ accessToken: "access-token", householdId }),
+    ).resolves.toEqual({ kind: "success" });
+    expect(fetchMock).toHaveBeenCalledWith(`/api/households/${householdId}`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer access-token" },
+    });
+  });
+
+  it.each([
+    [401, "unauthorized"],
+    [403, "forbidden"],
+  ] as const)("maps %s", async (status, kind) => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status }));
+    await expect(
+      deleteHousehold({ accessToken: "token", householdId }),
+    ).resolves.toEqual({ kind });
+  });
 });
 
 describe("createHousehold", () => {

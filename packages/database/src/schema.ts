@@ -60,6 +60,7 @@ export const householdMemberRoleEnum = pgEnum("household_member_role", [
 export const households = pgTable("households", {
   id: uuid("id").primaryKey(),
   name: text("name").notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
