@@ -9,6 +9,7 @@ together before implementation begins.
 
 ## Improvements
 
+- [ ] Rethink the whole invitation flow (not really great at the moment)
 - [ ] While typing (e.g. recipe description), input keeps being trimmed (on debounce) which removes spaces the user just typed
 - [ ] Add user profile pictures and use base ui's Avatar
 - [ ] After having multiple lists, add the possibility to assign people to a list item (e.g. todo list, go to commune, Artur)
