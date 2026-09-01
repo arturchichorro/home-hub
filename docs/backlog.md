@@ -9,6 +9,7 @@ together before implementation begins.
 
 ## Improvements
 
+- [ ] Improve empty state UIs: empty recipe list, empty lists list, etc
 - [ ] Rethink the whole invitation flow (not really great at the moment)
 - [ ] While typing (e.g. recipe description), input keeps being trimmed (on debounce) which removes spaces the user just typed
 - [ ] Add user profile pictures and use base ui's Avatar
