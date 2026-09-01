@@ -198,9 +198,44 @@ describe("Lists queries", () => {
 describe("household queries", () => {
   it("registers a stable name", () => {
     expect(queries.households.mine.queryName).toBe("households.mine");
+    expect(queries.householdMemberships.byHousehold.queryName).toBe(
+      "householdMemberships.byHousehold",
+    );
     expect(queries.householdMemberships.mine.queryName).toBe(
       "householdMemberships.mine",
     );
+  });
+
+  it("publishes member profiles only within an authorized household", () => {
+    expect(
+      getAst(
+        queries.householdMemberships.byHousehold.fn({
+          args: { householdId },
+          ctx: { userId },
+        }),
+      ),
+    ).toMatchObject({
+      table: "householdMembers",
+      where: {
+        type: "and",
+        conditions: [
+          equalsCondition("householdId", householdId),
+          membershipCondition(),
+        ],
+      },
+      orderBy: [
+        ["createdAt", "asc"],
+        ["id", "asc"],
+      ],
+      related: [
+        {
+          subquery: {
+            table: "users",
+            alias: "user",
+          },
+        },
+      ],
+    });
   });
 
   it("orders the current user's sidebar memberships", () => {

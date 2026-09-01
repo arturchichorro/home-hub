@@ -146,8 +146,16 @@ export const householdMembersRelations = relations(
       fields: [householdMembers.householdId],
       references: [households.id],
     }),
+    user: one(users, {
+      fields: [householdMembers.userId],
+      references: [users.id],
+    }),
   }),
 );
+
+export const usersRelations = relations(users, ({ many }) => ({
+  householdMemberships: many(householdMembers),
+}));
 
 export const listItemStatusEnum = pgEnum("list_item_status", [
   "active",

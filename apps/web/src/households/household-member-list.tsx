@@ -1,11 +1,8 @@
-import type { ListHouseholdMembersResponse } from "@home-hub/shared/households";
+import { queries } from "@home-hub/shared/zero/queries";
 import { Button, InlineAlert } from "@home-hub/ui-web";
-import { useEffect, useState } from "react";
-import {
-  listHouseholdMembers,
-  removeHouseholdMember,
-  transferHouseholdOwnership,
-} from "./api";
+import { useQuery } from "@rocicorp/zero/react";
+import { useState } from "react";
+import { removeHouseholdMember, transferHouseholdOwnership } from "./api";
 
 type HouseholdMemberListProps = {
   accessToken: string;
@@ -14,13 +11,6 @@ type HouseholdMemberListProps = {
   canManageMembers: boolean;
   onOwnershipTransferred: () => void;
 };
-
-type HouseholdMember = ListHouseholdMembersResponse["members"][number];
-
-type MemberListState =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "success"; members: HouseholdMember[] };
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
@@ -33,7 +23,9 @@ export function HouseholdMemberList({
   canManageMembers,
   onOwnershipTransferred,
 }: HouseholdMemberListProps) {
-  const [state, setState] = useState<MemberListState>({ status: "loading" });
+  const [members, result] = useQuery(
+    queries.householdMemberships.byHousehold({ householdId }),
+  );
   const [removingMembershipId, setRemovingMembershipId] = useState<
     string | null
   >(null);
@@ -41,48 +33,6 @@ export function HouseholdMemberList({
   const [transferringMembershipId, setTransferringMembershipId] = useState<
     string | null
   >(null);
-
-  useEffect(() => {
-    let active = true;
-    setState({ status: "loading" });
-    setRemovingMembershipId(null);
-    setActionError(null);
-    setTransferringMembershipId(null);
-
-    void listHouseholdMembers({ accessToken, householdId })
-      .then((result) => {
-        if (!active) {
-          return;
-        }
-
-        if (result.kind === "unauthorized") {
-          onSessionExpired();
-          return;
-        }
-
-        if (result.kind === "forbidden") {
-          setState({
-            status: "error",
-            message: "You are no longer allowed to view this household.",
-          });
-          return;
-        }
-
-        setState({ status: "success", members: result.members });
-      })
-      .catch(() => {
-        if (active) {
-          setState({
-            status: "error",
-            message: "Unable to load household members.",
-          });
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [accessToken, householdId, onSessionExpired]);
 
   async function handleRemove(membershipId: string) {
     setRemovingMembershipId(membershipId);
@@ -105,18 +55,7 @@ export function HouseholdMemberList({
         return;
       }
 
-      if (result.kind === "success" || result.kind === "invalid_member") {
-        setState((current) =>
-          current.status === "success"
-            ? {
-                status: "success",
-                members: current.members.filter(
-                  (member) => member.id !== membershipId,
-                ),
-              }
-            : current,
-        );
-      }
+      // Successful database changes flow back through the live Zero query.
     } catch {
       setActionError("Unable to remove the household member.");
     } finally {
@@ -124,23 +63,23 @@ export function HouseholdMemberList({
     }
   }
 
-  async function handleTransfer(member: HouseholdMember) {
+  async function handleTransfer(membershipId: string, username: string) {
     const confirmed = window.confirm(
-      `Transfer ownership to ${member.username}? You will become a member.`,
+      `Transfer ownership to ${username}? You will become a member.`,
     );
 
     if (!confirmed) {
       return;
     }
 
-    setTransferringMembershipId(member.id);
+    setTransferringMembershipId(membershipId);
     setActionError(null);
 
     try {
       const result = await transferHouseholdOwnership({
         accessToken,
         householdId,
-        membershipId: member.id,
+        membershipId,
       });
 
       if (result.kind === "unauthorized") {
@@ -158,17 +97,6 @@ export function HouseholdMemberList({
         return;
       }
 
-      setState((current) =>
-        current.status === "success"
-          ? {
-              status: "success",
-              members: current.members.map((currentMember) => ({
-                ...currentMember,
-                role: currentMember.id === member.id ? "owner" : "member",
-              })),
-            }
-          : current,
-      );
       onOwnershipTransferred();
     } catch {
       setActionError("Unable to transfer household ownership.");
@@ -177,34 +105,34 @@ export function HouseholdMemberList({
     }
   }
 
-  if (state.status === "loading") {
-    return <InlineAlert>Loading household members…</InlineAlert>;
-  }
-
-  if (state.status === "error") {
+  if (result.type === "error") {
     return (
       <InlineAlert role="alert" variant="danger">
-        {state.message}
+        Unable to load household members.
       </InlineAlert>
     );
   }
 
-  if (state.members.length === 0) {
+  if (members.length === 0 && result.type === "complete") {
     return (
       <p className="text-sm text-muted">There are no household members.</p>
     );
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3" aria-busy={result.type !== "complete"}>
       {actionError ? (
         <InlineAlert role="alert" variant="danger">
           {actionError}
         </InlineAlert>
       ) : null}
       <ul className="divide-y divide-border border-y border-border">
-        {state.members.map((member) => {
-          const joinedAt = new Date(member.joinedAt);
+        {members.map((member) => {
+          const user = member.user;
+          if (!user) return null;
+
+          const joinedAt =
+            member.createdAt == null ? undefined : new Date(member.createdAt);
           const canManage = canManageMembers && member.role === "member";
           const actionPending =
             removingMembershipId !== null || transferringMembershipId !== null;
@@ -215,16 +143,18 @@ export function HouseholdMemberList({
               className="grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
             >
               <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="truncate font-medium">{member.username}</span>
+                <span className="truncate font-medium">{user.username}</span>
                 <span className="rounded-sm bg-raised px-2 py-1 text-xs capitalize text-muted">
                   {member.role}
                 </span>
-                <span className="text-sm text-muted">
-                  Joined{` `}
-                  <time dateTime={member.joinedAt}>
-                    {dateFormatter.format(joinedAt)}
-                  </time>
-                </span>
+                {joinedAt ? (
+                  <span className="text-sm text-muted">
+                    Joined{` `}
+                    <time dateTime={joinedAt.toISOString()}>
+                      {dateFormatter.format(joinedAt)}
+                    </time>
+                  </span>
+                ) : null}
               </div>
               {canManage ? (
                 <div className="flex flex-wrap gap-2 sm:justify-end">
@@ -234,7 +164,9 @@ export function HouseholdMemberList({
                     variant="secondary"
                     busy={transferringMembershipId === member.id}
                     disabled={actionPending}
-                    onClick={() => void handleTransfer(member)}
+                    onClick={() =>
+                      void handleTransfer(member.id, user.username)
+                    }
                   >
                     Make owner
                   </Button>

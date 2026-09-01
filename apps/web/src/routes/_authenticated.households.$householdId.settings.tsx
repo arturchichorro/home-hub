@@ -8,6 +8,11 @@ export const Route = createFileRoute(
   loader: ({ context, params }) => {
     void context.zero?.run(queries.households.mine({}));
     void context.zero?.run(
+      queries.householdMemberships.byHousehold({
+        householdId: params.householdId,
+      }),
+    );
+    void context.zero?.run(
       queries.modules.byHousehold({ householdId: params.householdId }),
     );
   },

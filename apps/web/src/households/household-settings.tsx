@@ -71,6 +71,7 @@ export function HouseholdSettings({
       <section className="grid gap-4 border-t border-border pt-6">
         <h3 className="text-lg font-semibold">Members</h3>
         <HouseholdMemberList
+          key={household.id}
           accessToken={accessToken}
           householdId={household.id}
           onSessionExpired={onSessionExpired}
