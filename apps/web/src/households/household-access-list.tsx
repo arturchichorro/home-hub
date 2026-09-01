@@ -293,7 +293,7 @@ export function HouseholdAccessList({
     (isOwner && inviteState.status === "loading");
 
   return (
-    <div className="grid gap-4" aria-busy={loading}>
+    <div className="grid" aria-busy={loading}>
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-lg font-semibold">Members</h3>
         {isOwner ? (
@@ -339,7 +339,7 @@ export function HouseholdAccessList({
               return (
                 <li
                   key={`invitation:${invite.id}`}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3"
+                  className="grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3"
                 >
                   <p className="min-w-0 truncate whitespace-nowrap text-sm">
                     <span className="font-medium">Invitation</span>
@@ -379,9 +379,9 @@ export function HouseholdAccessList({
             return (
               <li
                 key={`member:${member.id}`}
-                className="grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                className="grid min-h-16 gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
               >
-                <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-3">
                   <span className="truncate font-medium">{user.username}</span>
                   <span className="rounded-sm bg-raised px-2 py-1 text-xs capitalize text-muted">
                     {member.role}

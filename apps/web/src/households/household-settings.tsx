@@ -50,8 +50,8 @@ export function HouseholdSettings({
     membership?.role === "owner" &&
     locallyTransferredHouseholdId !== household.id;
   return (
-    <div className="grid gap-8" aria-busy={result.type !== "complete"}>
-      <div className="flex min-w-0 items-center justify-between gap-3">
+    <div className="grid gap-4" aria-busy={result.type !== "complete"}>
+      <div className="flex">
         {isOwner ? (
           <HouseholdNameInput
             accessToken={accessToken}
@@ -60,7 +60,7 @@ export function HouseholdSettings({
             onSessionExpired={onSessionExpired}
           />
         ) : (
-          <h2 className="flex h-10 min-w-0 flex-1 items-center truncate px-1 text-2xl font-semibold text-primary">
+          <h2 className="flex min-w-0 flex-1 items-center truncate px-1 text-2xl font-semibold text-primary">
             {household.name}
           </h2>
         )}

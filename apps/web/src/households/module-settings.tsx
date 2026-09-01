@@ -58,7 +58,7 @@ export function ModuleSettings({
           {error}
         </InlineAlert>
       ) : null}
-      <ul className="divide-y divide-border border-y border-border">
+      <ul className="divide-y divide-border">
         {householdModuleCatalog.map((module) => {
           const setting = settings.find(
             ({ moduleKey }) => moduleKey === module.key,
@@ -67,11 +67,6 @@ export function ModuleSettings({
             <li key={module.key} className="py-3">
               <Switch
                 label={module.label}
-                description={
-                  pendingKey === module.key
-                    ? "Saving…"
-                    : `Show ${module.label.toLowerCase()} in this household.`
-                }
                 checked={setting?.enabled ?? false}
                 disabled={!setting || pendingKey !== undefined}
                 onCheckedChange={(enabled) => void toggle(module.key, enabled)}
