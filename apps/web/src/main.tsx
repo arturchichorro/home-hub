@@ -3,12 +3,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { ApplicationState } from "./application-state.tsx";
-import { restoreSession } from "./auth/api.ts";
 import {
   clearSessionBootstrap,
-  loadOfflineSession,
   saveSessionBootstrap,
 } from "./auth/session-bootstrap.ts";
+import { restoreStartupSession } from "./auth/startup-session.ts";
 import { Root } from "./root.tsx";
 
 const rootElement = document.getElementById("root");
@@ -18,6 +17,31 @@ if (!rootElement) {
 }
 
 const root = createRoot(rootElement);
+
+function renderApplication(
+  initialSession: Parameters<typeof Root>[0]["initialSession"],
+) {
+  root.render(
+    <StrictMode>
+      <Root initialSession={initialSession} />
+    </StrictMode>,
+  );
+}
+
+function renderUnavailable(title: string, description: string) {
+  root.render(
+    <StrictMode>
+      <ApplicationState
+        title={title}
+        description={description}
+        role="alert"
+        actions={
+          <Button onClick={() => window.location.reload()}>Try again</Button>
+        }
+      />
+    </StrictMode>,
+  );
+}
 
 async function start() {
   if (import.meta.env.DEV && window.location.pathname === "/dev/ui") {
@@ -31,42 +55,43 @@ async function start() {
     return;
   }
 
-  try {
-    const initialSession = await restoreSession();
-    if (initialSession) saveSessionBootstrap(initialSession.user);
+  root.render(
+    <StrictMode>
+      <ApplicationState
+        title="Opening Home Hub"
+        description="Restoring your session…"
+        role="status"
+        actions={null}
+      />
+    </StrictMode>,
+  );
+
+  const result = await restoreStartupSession();
+
+  if (result.kind === "online") {
+    if (result.session) saveSessionBootstrap(result.session.user);
     else clearSessionBootstrap();
-
-    root.render(
-      <StrictMode>
-        <Root initialSession={initialSession} />
-      </StrictMode>,
-    );
-  } catch (error) {
-    const offlineSession =
-      error instanceof TypeError ? loadOfflineSession() : null;
-
-    if (offlineSession) {
-      root.render(
-        <StrictMode>
-          <Root initialSession={offlineSession} />
-        </StrictMode>,
-      );
-      return;
-    }
-
-    root.render(
-      <StrictMode>
-        <ApplicationState
-          title="Unable to restore your session"
-          description="Check your connection and try again."
-          role="alert"
-          actions={
-            <Button onClick={() => window.location.reload()}>Try again</Button>
-          }
-        />
-      </StrictMode>,
-    );
+    renderApplication(result.session);
+    return;
   }
+
+  if (result.kind === "offline" && result.session) {
+    renderApplication(result.session);
+    return;
+  }
+
+  if (result.kind === "offline") {
+    renderUnavailable(
+      "Home Hub is offline",
+      "Connect once to sign in and synchronize your household data.",
+    );
+    return;
+  }
+
+  renderUnavailable(
+    "Unable to restore your session",
+    "Check your connection and try again.",
+  );
 }
 
 void start();
