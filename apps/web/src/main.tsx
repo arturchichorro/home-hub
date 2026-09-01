@@ -55,17 +55,6 @@ async function start() {
     return;
   }
 
-  root.render(
-    <StrictMode>
-      <ApplicationState
-        title="Opening Home Hub"
-        description="Restoring your session…"
-        role="status"
-        actions={null}
-      />
-    </StrictMode>,
-  );
-
   const result = await restoreStartupSession();
 
   if (result.kind === "online") {

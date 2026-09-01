@@ -19,9 +19,8 @@ together before implementation begins.
 - [ ] Add ordering to household modules
 - [ ] Open last opened household on app start (through local storage or something) - or just open with the first module of the first household
 - [ ] Add recipe ingredients to a chosen list
-- [ ] Publish safe member profiles through Zero to prevent interface flashing
 - [ ] Add user comments to cook logs (recipes)
-- [ ] Check and fix flashing of pictures (maybe increase signing duration?)
+- [ ] Check and fix flashing of pictures - has to do with first displaying preview and then loading in the full quality webp
 - [ ] Improve separation between database access, domain behavior, and transport code
 = [ ] Make upload be faster by displaying user uploaded picture optimistically, until we get confirmation
 - [ ] Include image wrangler deployment in the deploy script as well
@@ -34,7 +33,6 @@ together before implementation begins.
 - [ ] Household finance
 - [ ] Friend list with timestamped notes
 - [ ] Module de lugares onde já fui (mapa)
-- [ ] Turn home hub web into a PWA
 
 ## Ideia
 
