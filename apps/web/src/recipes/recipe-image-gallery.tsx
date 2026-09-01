@@ -19,6 +19,7 @@ import {
   X,
 } from "@home-hub/ui-web";
 import { type KeyboardEvent, type Ref, useEffect, useState } from "react";
+import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { prefetchRecipeImage } from "./prefetch-recipe-image";
 import { getAdjacentRecipeImage } from "./recipe-image-navigation";
 import { useRecipeImageUrl } from "./use-recipe-image-url";
@@ -166,6 +167,8 @@ export function RecipeImageGallery({
   onReorder,
   userId,
 }: RecipeImageGalleryProps) {
+  const mutationEnabled = useZeroMutationEnabled();
+
   return (
     <div className="min-w-0">
       <DragDropProvider
@@ -191,7 +194,7 @@ export function RecipeImageGallery({
               recipeId={recipeId}
               image={image}
               index={index}
-              disabled={false}
+              disabled={!mutationEnabled}
               onSessionExpired={onSessionExpired}
               onOpen={onOpen}
               userId={userId}
@@ -223,6 +226,7 @@ export function RecipeImageViewer({
   onSelect,
   userId,
 }: RecipeImageViewerProps) {
+  const mutationEnabled = useZeroMutationEnabled();
   const { url: smallUrl } = useRecipeImageUrl({
     accessToken,
     householdId,
@@ -314,12 +318,15 @@ export function RecipeImageViewer({
               <IconButton
                 aria-label="Delete picture"
                 className="fixed! top-4 right-4 z-10 rounded-full"
+                disabled={!mutationEnabled}
                 variant="secondary"
               >
                 <Trash2 aria-hidden="true" />
               </IconButton>
             }
-            onConfirm={() => onDelete(image)}
+            onConfirm={() => {
+              if (mutationEnabled) onDelete(image);
+            }}
           />
         ) : null}
         {viewerUrl || smallUrl ? (

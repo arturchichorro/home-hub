@@ -4,6 +4,7 @@ import {
 } from "@home-hub/shared/recipe-images";
 import { Button, IconButton, ImagePlus, Plus } from "@home-hub/ui-web";
 import { type ChangeEvent, useRef, useState } from "react";
+import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
   confirmRecipeImageUpload,
   requestRecipeImageUpload,
@@ -32,10 +33,11 @@ export function RecipeImageUploadForm({
 }: RecipeImageUploadFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const mutationEnabled = useZeroMutationEnabled();
 
   function chooseImage() {
     const input = fileInputRef.current;
-    if (!input || busy) return;
+    if (!input || busy || !mutationEnabled) return;
 
     try {
       input.showPicker();
@@ -47,7 +49,7 @@ export function RecipeImageUploadForm({
   async function uploadImage(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file || busy) return;
+    if (!file || busy || !mutationEnabled) return;
 
     setBusy(true);
 
@@ -119,7 +121,7 @@ export function RecipeImageUploadForm({
             variant="ghost"
             aria-busy={busy || undefined}
             busy={busy}
-            disabled={busy}
+            disabled={busy || !mutationEnabled}
             className="h-7! px-1.5! ml-2 font-normal text-muted"
             onClick={chooseImage}
           >
@@ -135,7 +137,7 @@ export function RecipeImageUploadForm({
           }
           aria-busy={busy || undefined}
           busy={busy}
-          disabled={busy}
+          disabled={busy || !mutationEnabled}
           variant={appearance === "subtle" ? "ghost" : "primary"}
           className={
             appearance === "subtle"

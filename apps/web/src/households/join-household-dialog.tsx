@@ -8,6 +8,7 @@ import {
   InlineAlert,
 } from "@home-hub/ui-web";
 import { type SubmitEvent, useState } from "react";
+import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { acceptHouseholdInvite } from "./api";
 
 type JoinHouseholdDialogProps = {
@@ -28,6 +29,7 @@ export function JoinHouseholdDialog({
   const [token, setToken] = useState("");
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const mutationEnabled = useZeroMutationEnabled();
 
   function changeOpen(nextOpen: boolean) {
     if (isSubmitting) return;
@@ -41,6 +43,7 @@ export function JoinHouseholdDialog({
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!mutationEnabled) return;
     setError(undefined);
     setIsSubmitting(true);
 
@@ -89,6 +92,7 @@ export function JoinHouseholdDialog({
               type="submit"
               form="join-household-form"
               busy={isSubmitting}
+              disabled={!mutationEnabled}
             >
               Join household
             </Button>
@@ -104,6 +108,7 @@ export function JoinHouseholdDialog({
             <FieldControl
               name="token"
               autoComplete="off"
+              disabled={!mutationEnabled}
               required
               spellCheck={false}
               value={token}

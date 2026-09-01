@@ -14,6 +14,7 @@ import {
 } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { useEffect, useState } from "react";
+import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
   createHouseholdInvite,
   listHouseholdInvites,
@@ -72,6 +73,7 @@ export function HouseholdAccessList({
     string | null
   >(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const mutationEnabled = useZeroMutationEnabled();
 
   useEffect(() => {
     let active = true;
@@ -121,6 +123,7 @@ export function HouseholdAccessList({
   }, [accessToken, householdId, isOwner, onSessionExpired]);
 
   async function handleCreateInvite() {
+    if (!mutationEnabled) return;
     setCreateError(undefined);
     setCopyStatus(undefined);
     setIsCreating(true);
@@ -173,6 +176,7 @@ export function HouseholdAccessList({
   }
 
   async function handleRevokeInvite(inviteId: string) {
+    if (!mutationEnabled) return;
     setRevokingInviteId(inviteId);
     setActionError(null);
 
@@ -218,6 +222,7 @@ export function HouseholdAccessList({
   }
 
   async function handleRemoveMember(membershipId: string) {
+    if (!mutationEnabled) return;
     setRemovingMembershipId(membershipId);
     setActionError(null);
 
@@ -244,6 +249,7 @@ export function HouseholdAccessList({
   }
 
   async function handleTransferOwnership(membershipId: string) {
+    if (!mutationEnabled) return;
     setTransferringMembershipId(membershipId);
     setActionError(null);
 
@@ -302,7 +308,7 @@ export function HouseholdAccessList({
             title="Create invitation"
             className="size-7!"
             busy={isCreating}
-            disabled={inviteState.status !== "success"}
+            disabled={!mutationEnabled || inviteState.status !== "success"}
             onClick={() => void handleCreateInvite()}
           >
             <UserPlus aria-hidden="true" className="size-4" />
@@ -359,7 +365,7 @@ export function HouseholdAccessList({
                     title="Revoke invitation"
                     className="size-7!"
                     busy={revokingInviteId === invite.id}
-                    disabled={revokingInviteId !== null}
+                    disabled={!mutationEnabled || revokingInviteId !== null}
                     onClick={() => void handleRevokeInvite(invite.id)}
                   >
                     <Trash2 aria-hidden="true" className="size-4" />
@@ -406,7 +412,7 @@ export function HouseholdAccessList({
                           title="Make owner"
                           className="size-7!"
                           busy={transferringMembershipId === member.id}
-                          disabled={memberActionPending}
+                          disabled={!mutationEnabled || memberActionPending}
                         >
                           <Crown aria-hidden="true" className="size-4" />
                         </IconButton>
@@ -422,7 +428,7 @@ export function HouseholdAccessList({
                           title="Remove member"
                           className="size-7!"
                           busy={removingMembershipId === member.id}
-                          disabled={memberActionPending}
+                          disabled={!mutationEnabled || memberActionPending}
                         >
                           <Trash2 aria-hidden="true" className="size-4" />
                         </IconButton>

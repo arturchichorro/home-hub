@@ -4,6 +4,11 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import { ApplicationState } from "./application-state.tsx";
 import { restoreSession } from "./auth/api.ts";
+import {
+  clearSessionBootstrap,
+  loadOfflineSession,
+  saveSessionBootstrap,
+} from "./auth/session-bootstrap.ts";
 import { Root } from "./root.tsx";
 
 const rootElement = document.getElementById("root");
@@ -28,13 +33,27 @@ async function start() {
 
   try {
     const initialSession = await restoreSession();
+    if (initialSession) saveSessionBootstrap(initialSession.user);
+    else clearSessionBootstrap();
 
     root.render(
       <StrictMode>
         <Root initialSession={initialSession} />
       </StrictMode>,
     );
-  } catch {
+  } catch (error) {
+    const offlineSession =
+      error instanceof TypeError ? loadOfflineSession() : null;
+
+    if (offlineSession) {
+      root.render(
+        <StrictMode>
+          <Root initialSession={offlineSession} />
+        </StrictMode>,
+      );
+      return;
+    }
+
     root.render(
       <StrictMode>
         <ApplicationState

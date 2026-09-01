@@ -5,6 +5,7 @@ import {
   Trash2,
 } from "@home-hub/ui-web";
 import { useId, useRef, useState } from "react";
+import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { deleteHousehold } from "./api";
 
 type DeleteHouseholdControlProps = {
@@ -24,8 +25,10 @@ export function DeleteHouseholdControl({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string>();
   const errorId = useId();
+  const mutationEnabled = useZeroMutationEnabled();
 
   async function remove() {
+    if (!mutationEnabled) return;
     setDeleting(true);
     setError(undefined);
 
@@ -63,6 +66,7 @@ export function DeleteHouseholdControl({
             title="Delete household"
             className="size-7!"
             busy={deleting}
+            disabled={!mutationEnabled}
           >
             <Trash2 aria-hidden="true" className="size-4" />
           </IconButton>

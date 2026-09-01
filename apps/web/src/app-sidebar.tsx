@@ -329,6 +329,7 @@ function SidebarNavigation({
       <div className="grid gap-1 border-t border-border py-2">
         <Button
           variant="ghost"
+          disabled={!mutationEnabled}
           className="h-9! w-full justify-start! px-2! font-normal"
           onClick={onJoinHousehold}
         >
@@ -337,6 +338,7 @@ function SidebarNavigation({
         </Button>
         <Button
           variant="ghost"
+          disabled={!mutationEnabled}
           className="h-9! w-full justify-start! px-2! font-normal"
           onClick={onCreateHousehold}
         >

@@ -53,6 +53,13 @@ module-specific R2 CORS policy is documented in
 [Recipes image storage and security](./recipes/#image-storage-and-security).
 The private backup bucket does not use this browser CORS policy.
 
+Caddy serves hashed files under `/assets/` with a one-year immutable cache
+policy. It serves `index.html`, the service worker, the web manifest, icons,
+and SPA navigation fallbacks with revalidation so a deployment can install a
+new application shell without retaining stale entry points. The generated
+service worker precaches the complete static build and does not runtime-cache
+API, Zero, or recipe-image traffic.
+
 ## Cloudflare image delivery Worker
 
 `apps/image-delivery` owns the independently deployed Worker that generates
