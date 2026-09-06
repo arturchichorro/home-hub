@@ -33,6 +33,7 @@ together before implementation begins.
 - [ ] Household finance
 - [ ] Friend list with timestamped notes
 - [ ] Module de lugares onde já fui (mapa)
+- [ ] Moodboards, masonry shit tipo pinterest (para inspo de home decoration, por exemplo, para guardar lá imagens) - pode fazer parte do lists module atéß
 
 ## Ideia
 
