@@ -10,6 +10,10 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  draftMatchesSaveSnapshot,
+  shouldCanonicalizeVisibleDraft,
+} from "../seamless-text-editing";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 const autosaveDelayMs = 600;
@@ -44,9 +48,13 @@ export function ListItemNameInput({
   const saveInFlightRef = useRef(false);
   const queuedSaveRef = useRef(false);
   const queuedEmptyNameErrorRef = useRef(false);
-  const saveDraftRef = useRef<(showEmptyNameError: boolean) => Promise<void>>(
-    async () => undefined,
-  );
+  const queuedCanonicalizationRef = useRef(false);
+  const saveDraftRef = useRef<
+    (
+      showEmptyNameError: boolean,
+      canonicalizeVisibleDraft: boolean,
+    ) => Promise<void>
+  >(async () => undefined);
   const [draftName, setDraftName] = useState(currentName);
   const [error, setError] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
@@ -73,12 +81,13 @@ export function ListItemNameInput({
   }, [replaceDraft]);
 
   const saveDraft = useCallback(
-    async (showEmptyNameError: boolean) => {
+    async (showEmptyNameError: boolean, canonicalizeVisibleDraft: boolean) => {
       clearScheduledSave();
 
       if (saveInFlightRef.current) {
         queuedSaveRef.current = true;
         queuedEmptyNameErrorRef.current ||= showEmptyNameError;
+        queuedCanonicalizationRef.current ||= canonicalizeVisibleDraft;
         return;
       }
 
@@ -88,7 +97,8 @@ export function ListItemNameInput({
         return;
       }
 
-      const submittedName = cleanListItemName(draftNameRef.current);
+      const submittedDraftName = draftNameRef.current;
+      const submittedName = cleanListItemName(submittedDraftName);
 
       if (submittedName.length === 0) {
         if (showEmptyNameError) {
@@ -99,7 +109,15 @@ export function ListItemNameInput({
       }
 
       if (submittedName === confirmedNameRef.current) {
-        replaceDraft(submittedName);
+        if (
+          shouldCanonicalizeVisibleDraft(
+            canonicalizeVisibleDraft,
+            draftNameRef.current,
+            submittedDraftName,
+          )
+        ) {
+          replaceDraft(submittedName);
+        }
         return;
       }
 
@@ -124,10 +142,18 @@ export function ListItemNameInput({
       if (result.type === "success") {
         confirmedNameRef.current = submittedName;
 
-        if (cleanListItemName(draftNameRef.current) === submittedName) {
+        if (
+          shouldCanonicalizeVisibleDraft(
+            canonicalizeVisibleDraft,
+            draftNameRef.current,
+            submittedDraftName,
+          )
+        ) {
           replaceDraft(submittedName);
         }
-      } else if (cleanListItemName(draftNameRef.current) === submittedName) {
+      } else if (
+        draftMatchesSaveSnapshot(draftNameRef.current, submittedDraftName)
+      ) {
         revertDraft();
         if (mountedRef.current) {
           setError(
@@ -143,10 +169,15 @@ export function ListItemNameInput({
 
       if (queuedSaveRef.current) {
         const showQueuedEmptyNameError = queuedEmptyNameErrorRef.current;
+        const canonicalizeQueued = queuedCanonicalizationRef.current;
         queuedSaveRef.current = false;
         queuedEmptyNameErrorRef.current = false;
+        queuedCanonicalizationRef.current = false;
         timeoutRef.current = setTimeout(() => {
-          void saveDraftRef.current(showQueuedEmptyNameError);
+          void saveDraftRef.current(
+            showQueuedEmptyNameError,
+            canonicalizeQueued,
+          );
         }, 0);
       }
     },
@@ -189,14 +220,14 @@ export function ListItemNameInput({
     setError(undefined);
     clearScheduledSave();
     timeoutRef.current = setTimeout(() => {
-      void saveDraft(false);
+      void saveDraft(false, false);
     }, autosaveDelayMs);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Enter") {
       event.preventDefault();
-      void saveDraft(true);
+      void saveDraft(true, true);
       return;
     }
 
@@ -229,7 +260,7 @@ export function ListItemNameInput({
         maxLength={100}
         value={draftName}
         className={classes}
-        onBlur={() => void saveDraft(true)}
+        onBlur={() => void saveDraft(true, true)}
         onValueChange={handleChange}
         onKeyDown={handleKeyDown}
       />

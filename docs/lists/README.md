@@ -24,7 +24,9 @@ remain available on the focused card. New lists appear at the top. Each card ope
 `/households/:householdId/lists/:listId`, with a named breadcrumb, a seamless
 inline name editor, and confirmed deletion from a trash-icon action. Name
 edits debounce, save on blur or Enter, revert with Escape, and roll back with an
-anchored error when validation or persistence fails.
+anchored error when validation or persistence fails. Debounced saves normalize
+the persisted name without rewriting the live draft under the user's cursor;
+blur and Enter normalize the visible value as the editing boundary.
 
 Deleting sets the list's nullable `deleted_at` timestamp. Library and detail
 queries exclude deleted lists, while their items remain stored. All list and
@@ -36,6 +38,8 @@ inline editing, active items followed by crossed items, drag ordering within
 each status, and an archive toggle with restore controls. Re-adding a name
 reactivates its existing item in that list. Ordinary item actions change status
 rather than hard-delete records. Connection state disables mutations as before.
+Creation drafts ending in whitespace wait for more typing or an explicit blur or
+submission before transitioning to a saved row.
 
 ## Data model
 

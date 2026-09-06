@@ -6,6 +6,10 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  draftMatchesSaveSnapshot,
+  shouldCanonicalizeVisibleDraft,
+} from "../seamless-text-editing";
 
 const autosaveDelayMs = 600;
 
@@ -35,11 +39,15 @@ export function useDebouncedTextEditor({
   const saveInFlightRef = useRef(false);
   const queuedSaveRef = useRef(false);
   const queuedValidationRef = useRef(false);
+  const queuedCanonicalizationRef = useRef(false);
   const normalizeRef = useRef(normalize);
   const saveMutationRef = useRef(save);
-  const saveDraftRef = useRef<(validateRequired: boolean) => Promise<void>>(
-    async () => undefined,
-  );
+  const saveDraftRef = useRef<
+    (
+      validateRequired: boolean,
+      canonicalizeVisibleDraft: boolean,
+    ) => Promise<void>
+  >(async () => undefined);
   const [draftValue, setDraftValue] = useState(currentValue);
   const [error, setError] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
@@ -65,12 +73,13 @@ export function useDebouncedTextEditor({
   }, [replaceDraft]);
 
   const saveDraft = useCallback(
-    async (validateRequired: boolean) => {
+    async (validateRequired: boolean, canonicalizeVisibleDraft: boolean) => {
       clearScheduledSave();
 
       if (saveInFlightRef.current) {
         queuedSaveRef.current = true;
         queuedValidationRef.current ||= validateRequired;
+        queuedCanonicalizationRef.current ||= canonicalizeVisibleDraft;
         return;
       }
 
@@ -80,7 +89,8 @@ export function useDebouncedTextEditor({
         return;
       }
 
-      const submittedValue = normalizeRef.current(draftValueRef.current);
+      const submittedDraft = draftValueRef.current;
+      const submittedValue = normalizeRef.current(submittedDraft);
       if (required && submittedValue.length === 0) {
         if (validateRequired) {
           revertDraft();
@@ -90,7 +100,15 @@ export function useDebouncedTextEditor({
       }
 
       if (submittedValue === confirmedValueRef.current) {
-        replaceDraft(submittedValue);
+        if (
+          shouldCanonicalizeVisibleDraft(
+            canonicalizeVisibleDraft,
+            draftValueRef.current,
+            submittedDraft,
+          )
+        ) {
+          replaceDraft(submittedValue);
+        }
         return;
       }
 
@@ -101,11 +119,17 @@ export function useDebouncedTextEditor({
 
       if (success) {
         confirmedValueRef.current = submittedValue;
-        if (normalizeRef.current(draftValueRef.current) === submittedValue) {
+        if (
+          shouldCanonicalizeVisibleDraft(
+            canonicalizeVisibleDraft,
+            draftValueRef.current,
+            submittedDraft,
+          )
+        ) {
           replaceDraft(submittedValue);
         }
       } else if (
-        normalizeRef.current(draftValueRef.current) === submittedValue
+        draftMatchesSaveSnapshot(draftValueRef.current, submittedDraft)
       ) {
         revertDraft();
         if (mountedRef.current) setError(failureError);
@@ -116,10 +140,12 @@ export function useDebouncedTextEditor({
 
       if (queuedSaveRef.current) {
         const validateQueued = queuedValidationRef.current;
+        const canonicalizeQueued = queuedCanonicalizationRef.current;
         queuedSaveRef.current = false;
         queuedValidationRef.current = false;
+        queuedCanonicalizationRef.current = false;
         timeoutRef.current = setTimeout(() => {
-          void saveDraftRef.current(validateQueued);
+          void saveDraftRef.current(validateQueued, canonicalizeQueued);
         }, 0);
       }
     },
@@ -159,7 +185,7 @@ export function useDebouncedTextEditor({
     setError(undefined);
     clearScheduledSave();
     timeoutRef.current = setTimeout(() => {
-      void saveDraft(false);
+      void saveDraft(false, false);
     }, autosaveDelayMs);
   }
 
@@ -169,7 +195,7 @@ export function useDebouncedTextEditor({
   ) {
     if (saveOnEnter && event.key === "Enter") {
       event.preventDefault();
-      void saveDraft(true);
+      void saveDraft(true, true);
     } else if (event.key === "Escape") {
       event.preventDefault();
       clearScheduledSave();
@@ -183,7 +209,7 @@ export function useDebouncedTextEditor({
     changeValue,
     error,
     errorId,
-    handleBlur: () => void saveDraft(true),
+    handleBlur: () => void saveDraft(true, true),
     handleKeyDown,
     isSaving,
     dismissError: () => setError(undefined),

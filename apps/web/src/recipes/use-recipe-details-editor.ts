@@ -13,6 +13,10 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  draftMatchesSaveSnapshot,
+  shouldCanonicalizeVisibleDraft,
+} from "../seamless-text-editing";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 const autosaveDelayMs = 600;
@@ -61,9 +65,10 @@ export function useRecipeDetailsEditor({
   const saveInFlightRef = useRef(false);
   const queuedSaveRef = useRef(false);
   const queuedValidationRef = useRef(false);
-  const saveDraftRef = useRef<(validateTitle: boolean) => Promise<void>>(
-    async () => undefined,
-  );
+  const queuedCanonicalizationRef = useRef(false);
+  const saveDraftRef = useRef<
+    (validateTitle: boolean, canonicalizeVisibleDraft: boolean) => Promise<void>
+  >(async () => undefined);
   const [draft, setDraft] = useState(initialDraft);
   const [error, setError] = useState<string>();
   const [errorField, setErrorField] = useState<keyof RecipeDraft>("title");
@@ -87,12 +92,13 @@ export function useRecipeDetailsEditor({
   }, [replaceDraft]);
 
   const saveDraft = useCallback(
-    async (validateTitle: boolean) => {
+    async (validateTitle: boolean, canonicalizeVisibleDraft: boolean) => {
       clearScheduledSave();
 
       if (saveInFlightRef.current) {
         queuedSaveRef.current = true;
         queuedValidationRef.current ||= validateTitle;
+        queuedCanonicalizationRef.current ||= canonicalizeVisibleDraft;
         return;
       }
 
@@ -102,7 +108,8 @@ export function useRecipeDetailsEditor({
         return;
       }
 
-      const submittedDraft = cleanDraft(draftRef.current);
+      const rawSubmittedDraft = draftRef.current;
+      const submittedDraft = cleanDraft(rawSubmittedDraft);
 
       if (submittedDraft.title.length === 0) {
         if (validateTitle) {
@@ -114,7 +121,16 @@ export function useRecipeDetailsEditor({
       }
 
       if (draftsMatch(submittedDraft, confirmedDraftRef.current)) {
-        replaceDraft(submittedDraft);
+        if (
+          shouldCanonicalizeVisibleDraft(
+            canonicalizeVisibleDraft,
+            draftRef.current,
+            rawSubmittedDraft,
+            draftsMatch,
+          )
+        ) {
+          replaceDraft(submittedDraft);
+        }
         return;
       }
 
@@ -137,10 +153,23 @@ export function useRecipeDetailsEditor({
 
       if (result.type === "success") {
         confirmedDraftRef.current = submittedDraft;
-        if (draftsMatch(cleanDraft(draftRef.current), submittedDraft)) {
+        if (
+          shouldCanonicalizeVisibleDraft(
+            canonicalizeVisibleDraft,
+            draftRef.current,
+            rawSubmittedDraft,
+            draftsMatch,
+          )
+        ) {
           replaceDraft(submittedDraft);
         }
-      } else if (draftsMatch(cleanDraft(draftRef.current), submittedDraft)) {
+      } else if (
+        draftMatchesSaveSnapshot(
+          draftRef.current,
+          rawSubmittedDraft,
+          draftsMatch,
+        )
+      ) {
         revertDraft();
         if (mountedRef.current) setError("The changes could not be saved.");
       }
@@ -150,10 +179,12 @@ export function useRecipeDetailsEditor({
 
       if (queuedSaveRef.current) {
         const validateQueuedTitle = queuedValidationRef.current;
+        const canonicalizeQueued = queuedCanonicalizationRef.current;
         queuedSaveRef.current = false;
         queuedValidationRef.current = false;
+        queuedCanonicalizationRef.current = false;
         timeoutRef.current = setTimeout(() => {
-          void saveDraftRef.current(validateQueuedTitle);
+          void saveDraftRef.current(validateQueuedTitle, canonicalizeQueued);
         }, 0);
       }
     },
@@ -199,14 +230,14 @@ export function useRecipeDetailsEditor({
     setError(undefined);
     clearScheduledSave();
     timeoutRef.current = setTimeout(() => {
-      void saveDraft(false);
+      void saveDraft(false, false);
     }, autosaveDelayMs);
   }
 
   function handleTitleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Enter") {
       event.preventDefault();
-      void saveDraft(true);
+      void saveDraft(true, true);
     } else if (event.key === "Escape") {
       event.preventDefault();
       clearScheduledSave();
@@ -235,7 +266,7 @@ export function useRecipeDetailsEditor({
         error && errorField === "title" ? errorId : undefined,
       disabled: !mutationEnabled,
       value: draft.title,
-      onBlur: () => void saveDraft(true),
+      onBlur: () => void saveDraft(true, true),
       onKeyDown: handleTitleKeyDown,
       onValueChange: (value: string) => changeDraft("title", value),
     },
@@ -247,7 +278,7 @@ export function useRecipeDetailsEditor({
         error && errorField === "description" ? errorId : undefined,
       disabled: !mutationEnabled,
       value: draft.description,
-      onBlur: () => void saveDraft(true),
+      onBlur: () => void saveDraft(true, true),
       onChange: (event: ChangeEvent<HTMLTextAreaElement>) =>
         changeDraft("description", event.target.value),
       onKeyDown: handleDescriptionKeyDown,
