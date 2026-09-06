@@ -9,6 +9,7 @@ import {
 } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { type SubmitEvent, useEffect, useRef, useState } from "react";
+import { canDebounceCreateTextDraft } from "../seamless-text-editing";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 const autosaveDelayMs = 600;
@@ -106,7 +107,9 @@ export function RecipeIngredientDraftNameForm({
     setName(value);
     setError(undefined);
     clearScheduledSave();
-    if (cleanRecipeIngredientName(value).length === 0) return;
+    if (!canDebounceCreateTextDraft(value, cleanRecipeIngredientName(value))) {
+      return;
+    }
     timeoutRef.current = setTimeout(() => {
       void saveDraft(value, false);
     }, autosaveDelayMs);

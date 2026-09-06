@@ -54,7 +54,9 @@ Title, description, ingredient names, ingredient amounts and notes, and
 cooking-log comments use seamless debounced inline editing. Valid changes also
 save on blur. Server rejection reverts to the authoritative value and appears
 in an error popover without turning the fields into conventional bordered
-form controls.
+form controls. Autosave normalizes the persisted value while preserving the
+exact focused draft, including intentional trailing whitespace while the user
+pauses; blur or Enter canonicalizes the visible value.
 
 ### Images
 

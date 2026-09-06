@@ -313,6 +313,11 @@ Input owns presentation and control-state styling, not labels, validation
 rules, debouncing, persistence, or domain behavior. Inputs still require an
 accessible name, either through Field or an explicit label.
 
+Feature-level seamless editors keep their exact focused draft separate from the
+canonical persisted value. Debounced persistence must not rewrite text under the
+caret; normalization becomes visible only on blur, explicit submission, or
+reversion.
+
 ### Textarea
 
 Textarea is the shared multiline text-control foundation. It mirrors Input's
