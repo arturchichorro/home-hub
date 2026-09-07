@@ -7,6 +7,7 @@ describe("orderCurrentListItems", () => {
       { id: "crossed-high", sortKey: 20, status: "crossed" as const },
       { id: "active-low", sortKey: 10, status: "active" as const },
       { id: "archived", sortKey: 50, status: "archived" as const },
+      { id: "deleted", sortKey: 60, status: "deleted" as const },
       { id: "active-high", sortKey: 30, status: "active" as const },
       { id: "crossed-low", sortKey: 5, status: "crossed" as const },
       { id: "invalid-null", sortKey: 40, status: null },

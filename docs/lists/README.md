@@ -35,9 +35,11 @@ remain unique per household; names belonging only to deleted lists may be reused
 
 The actual item-list interactions are preserved: add-item drafts, debounced
 inline editing, active items followed by crossed items, drag ordering within
-each status, and an archive toggle with restore controls. Re-adding a name
-reactivates its existing item in that list. Ordinary item actions change status
-rather than hard-delete records. Connection state disables mutations as before.
+each status, and an archive toggle with restore and immediate delete controls.
+Deleting an archived item sets its status to `deleted`; detail queries omit that
+status entirely. Re-adding a name reactivates its existing item in that list.
+Ordinary item actions change status rather than hard-delete records. Connection
+state disables mutations as before.
 Creation drafts ending in whitespace wait for more typing or an explicit blur or
 submission before transitioning to a saved row.
 
@@ -45,9 +47,10 @@ submission before transitioning to a saved row.
 
 `lists` stores `id`, `household_id`, display and normalized names, `sort_key`,
 and timestamps. Normalized names are unique per household. `list_items` adds
-`list_id` and `active | crossed | archived` status to the same fields; item names
-are unique within a list. Names use Unicode NFKC, collapsed whitespace, trimming,
-and a 1–100-character limit. Normalized names are lowercase display names.
+`list_id` and `active | crossed | archived | deleted` status to the same fields;
+item names are unique within a list. Names use Unicode NFKC, collapsed whitespace,
+trimming, and a 1–100-character limit. Normalized names are lowercase display
+names.
 
 Both tables use descending integer sort keys with UUID tie-breakers. Reordering
 usually updates one key; exhausted gaps cause rebalancing. The composite item

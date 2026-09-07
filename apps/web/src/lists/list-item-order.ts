@@ -1,7 +1,7 @@
 type CurrentListItem = {
   id: string;
   sortKey: number;
-  status: "active" | "crossed" | "archived" | null;
+  status: "active" | "crossed" | "archived" | "deleted" | null;
 };
 
 function bySortKey<T extends CurrentListItem>(left: T, right: T): number {

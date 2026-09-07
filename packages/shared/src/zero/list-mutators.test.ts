@@ -445,7 +445,7 @@ describe("Lists mutators", () => {
       createdAt: 1000,
     });
   });
-  it.each(["active", "crossed", "archived"])(
+  it.each(["active", "crossed", "archived", "deleted"])(
     "reactivates an existing %s item with its identity and history",
     async (status) => {
       const { tx, data } = setup("client");
@@ -494,7 +494,7 @@ describe("Lists mutators", () => {
       }),
     ).rejects.toThrow("List item name already exists");
   });
-  it.each(["active", "crossed", "archived"] as const)(
+  it.each(["active", "crossed", "archived", "deleted"] as const)(
     "sets %s using authoritative server time",
     async (status) => {
       vi.spyOn(Date, "now").mockReturnValue(9000);

@@ -201,6 +201,12 @@ describe("Lists queries", () => {
           subquery: {
             table: "listItems",
             alias: "items",
+            where: {
+              type: "simple",
+              left: { type: "column", name: "status" },
+              op: "!=",
+              right: { type: "literal", value: "deleted" },
+            },
             orderBy: [
               ["sortKey", "desc"],
               ["id", "asc"],

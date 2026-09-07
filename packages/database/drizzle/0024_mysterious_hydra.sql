@@ -1,0 +1,1 @@
+ALTER TYPE "public"."list_item_status" ADD VALUE 'deleted';

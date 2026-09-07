@@ -162,6 +162,7 @@ export const listItemStatusEnum = pgEnum("list_item_status", [
   "active",
   "crossed",
   "archived",
+  "deleted",
 ]);
 
 export const lists = pgTable(

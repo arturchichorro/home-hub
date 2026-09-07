@@ -9,7 +9,12 @@ export const listItemNameSchema = z
   .string()
   .transform(cleanListItemName)
   .pipe(z.string().min(1).max(100));
-export const listItemStatusSchema = z.enum(["active", "crossed", "archived"]);
+export const listItemStatusSchema = z.enum([
+  "active",
+  "crossed",
+  "archived",
+  "deleted",
+]);
 export const listNameAlreadyExistsError = "List name already exists";
 export const listItemNameAlreadyExistsError = "List item name already exists";
 
