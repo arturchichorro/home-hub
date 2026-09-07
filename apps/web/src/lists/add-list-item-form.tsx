@@ -134,6 +134,7 @@ export function ListItemDraftNameForm({
         aria-errormessage={error ? errorId : undefined}
         autoComplete="off"
         disabled={!mutationEnabled}
+        className="w-full"
         maxLength={100}
         placeholder="Item name"
         value={name}
