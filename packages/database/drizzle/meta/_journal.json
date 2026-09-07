@@ -169,6 +169,13 @@
       "when": 1788273049095,
       "tag": "0023_soft-delete-households",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1788807567205,
+      "tag": "0024_mysterious_hydra",
+      "breakpoints": true
     }
   ]
 }

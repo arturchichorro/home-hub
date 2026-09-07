@@ -10,6 +10,7 @@ import {
   IconButton,
   InlineAlert,
   RotateCcw,
+  Trash2,
 } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { useLayoutEffect, useState } from "react";
@@ -28,7 +29,7 @@ type ListItemsProps = {
   items: readonly ListItem[];
 };
 
-type ListItemStatus = "active" | "crossed" | "archived";
+type ListItemStatus = "active" | "crossed" | "archived" | "deleted";
 
 type DraftListItem = {
   focusRequest: number;
@@ -343,6 +344,13 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
                     onClick={() => setStatus(item.id, "active")}
                   >
                     <RotateCcw aria-hidden="true" className="size-4" />
+                  </IconButton>
+                  <IconButton
+                    aria-label={`Delete ${item.name}`}
+                    disabled={!mutationEnabled}
+                    onClick={() => setStatus(item.id, "deleted")}
+                  >
+                    <Trash2 aria-hidden="true" className="size-4" />
                   </IconButton>
                 </li>
               ))

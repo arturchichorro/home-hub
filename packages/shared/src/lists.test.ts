@@ -42,7 +42,7 @@ describe("Lists contracts", () => {
       }).success,
     ).toBe(false);
   });
-  it.each(["active", "crossed", "archived"])(
+  it.each(["active", "crossed", "archived", "deleted"])(
     "preserves %s item status",
     (status) => {
       expect(listItemStatusSchema.parse(status)).toBe(status);
@@ -80,7 +80,7 @@ describe("Lists contracts", () => {
     expect(reorderListItemsMutationSchema.safeParse(args).success).toBe(true);
     for (const patch of [
       { listId: undefined },
-      { status: "deleted" },
+      { status: "unknown" },
       { orderedItemIds: [listId] },
       { orderedItemIds: [itemId, itemId] },
     ]) {

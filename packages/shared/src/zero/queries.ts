@@ -107,7 +107,10 @@ const listDetail = defineHomeHubQuery(listDetailArgsSchema, ({ args, ctx }) =>
   authorizedLists(args.householdId, ctx.userId)
     .where("id", args.listId)
     .related("items", (item) =>
-      item.orderBy("sortKey", "desc").orderBy("id", "asc"),
+      item
+        .where("status", "!=", "deleted")
+        .orderBy("sortKey", "desc")
+        .orderBy("id", "asc"),
     )
     .one(),
 );
