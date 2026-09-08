@@ -225,6 +225,7 @@ the backlog.
 - [x] Use focused pull requests from `develop` to `main` to trigger production deployments
 - [x] Document how to investigate failures while keeping the equivalent local verification commands available
 - [x] Rehearse the full migration history in CI and apply tested forward migrations automatically after a production backup
+- [x] Validate the image-delivery Worker bundle in CI and deploy it before the VPS production release
 - [x] Complete the Phase 19 checkpoint and commit
 
 ## Edit shopping item names
