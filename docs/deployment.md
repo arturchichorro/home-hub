@@ -88,8 +88,16 @@ pnpm --filter @home-hub/image-delivery deploy:production
 
 The Cloudflare account must have Images transformations available, the custom
 domain must be in the account's zone, and the deploying identity must be able
-to deploy Workers and bind the production R2 bucket. `wrangler deploy --dry-run
---env production` validates bundling without changing Cloudflare resources.
+to deploy Workers and bind the production R2 bucket. Configure the GitHub
+`production` environment with a narrowly scoped `CLOUDFLARE_API_TOKEN` secret
+and a `CLOUDFLARE_ACCOUNT_ID` variable. The signing secret remains stored in
+Cloudflare and is not passed through GitHub Actions.
+
+CI runs `wrangler deploy --dry-run --env production` to validate the production
+bundle without changing Cloudflare resources. After verification succeeds on a
+push to `main`, the production deployment job deploys that revision of the
+Worker before it invokes the VPS deployment script. A Worker deployment failure
+therefore prevents the API deployment from starting.
 
 For local development, put the same development-only secret in the root `.env`
 and the ignored `apps/image-delivery/.dev.vars`, start the Worker with `pnpm
@@ -97,10 +105,11 @@ and the ignored `apps/image-delivery/.dev.vars`, start the Worker with `pnpm
 `IMAGE_DELIVERY_BASE_URL=http://127.0.0.1:8787`. Remote Worker development reads
 the configured development R2 bucket, so never point it at production.
 
-Deploy the backward-compatible Worker before releasing the API version that
-calls its internal processing route; otherwise new upload confirmations will
-fail safely and remain pending. The VPS deployment script does not deploy
-Cloudflare resources. Roll back the Worker by deploying the previously verified
+Worker changes must remain backward-compatible with the currently deployed API
+because the Worker is released first. If the later VPS deployment fails, leave
+the new Worker in place while diagnosing or retrying the VPS release. The VPS
+deployment script does not hold Cloudflare credentials or deploy Cloudflare
+resources. Roll back the Worker deliberately by deploying a previously verified
 revision; both the one-hour read capability and five-minute processing
 capability must remain supported across the API/Worker rollout window.
 
@@ -190,10 +199,14 @@ application rollback.
 
 ### Automatic code deployment
 
+Before connecting to the VPS, the production job deploys the verified
+`apps/image-delivery` Worker revision from the GitHub runner. The runner holds
+the narrowly scoped Cloudflare deployment credential; the VPS does not.
+
 `scripts/deploy-production.sh` is the sole command authorized for the
-dedicated GitHub Actions deployment key. It serializes deployments with a host
-lock, requires a clean `main` checkout and a fast-forward update, creates an
-off-host PostgreSQL backup, pulls the verified revision, builds all release
+dedicated GitHub Actions VPS deployment key. It serializes deployments with a
+host lock, requires a clean `main` checkout and a fast-forward update, creates
+an off-host PostgreSQL backup, pulls the verified revision, builds all release
 images, applies pending forward migrations with the one-shot `migrate` service,
 starts the new services, waits for container health, and verifies the public
 web, API readiness, and Zero keepalive routes. A migration failure stops the
@@ -231,6 +244,9 @@ git status --short -- packages/database/drizzle
 
 VITE_ZERO_CACHE_URL=https://home.achichorro.com/zero \
   pnpm --filter @home-hub/web build
+
+pnpm --filter @home-hub/image-delivery exec wrangler deploy \
+  --dry-run --env production
 ```
 
 Zero generation is expected to print warnings about database defaults; the
@@ -249,6 +265,9 @@ the investigation:
   private key material.
 - Migration rehearsal failure: correct the committed migration chain before
   merging; no production deployment has started.
+- Image Worker deployment failure: verify the Cloudflare account ID, scoped API
+  token, Worker bindings, R2 bucket, Images availability, and custom domain. The
+  VPS deployment has not started.
 - Production migration failure: inspect the migration output and database state
   before retrying. Do not automatically restore the backup or reverse SQL.
 - Backup failure: run the backup script directly on the VPS and inspect

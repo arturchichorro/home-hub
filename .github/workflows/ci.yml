@@ -131,6 +131,11 @@ jobs:
           VITE_ZERO_CACHE_URL: https://home.achichorro.com/zero
         run: pnpm --filter @home-hub/web build
 
+      - name: Verify production image Worker bundle
+        run: >-
+          pnpm --filter @home-hub/image-delivery exec wrangler deploy
+          --dry-run --env production
+
   deploy:
     name: Deploy production
     needs: verify
@@ -148,6 +153,27 @@ jobs:
       cancel-in-progress: false
 
     steps:
+      - name: Check out verified revision
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy production image Worker
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm --filter @home-hub/image-delivery deploy:production
+
       - name: Configure deployment SSH key
         env:
           SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}

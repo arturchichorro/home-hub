@@ -22,7 +22,6 @@ together before implementation begins.
 - [ ] Check and fix flashing of pictures - has to do with first displaying preview and then loading in the full quality webp
 - [ ] Improve separation between database access, domain behavior, and transport code
 = [ ] Make upload be faster by displaying user uploaded picture optimistically, until we get confirmation
-- [ ] Include image wrangler deployment in the deploy script as well
 
 ## Future modules and capabilities
 
