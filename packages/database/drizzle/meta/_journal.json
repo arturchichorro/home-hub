@@ -183,6 +183,13 @@
       "when": 1788976686793,
       "tag": "0025_expand-recipe-sort-keys",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1788991508882,
+      "tag": "0026_contract-recipe-sort-keys",
+      "breakpoints": true
     }
   ]
 }

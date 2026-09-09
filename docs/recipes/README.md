@@ -149,7 +149,6 @@ store an empty description as `null`.
 - `amount`: nullable text
 - `note`: nullable text
 - `sort_key`: integer
-- `position`: temporary compatibility integer
 - `created_at`, `updated_at`
 
 Amount remains text so combined measurements such as `12g`, `1 ½ cups`, `2–3`,
@@ -157,10 +156,6 @@ and `to taste` remain representable without a separate unit input. Ingredients
 use descending sparse integer sort keys with UUID tie-breakers. New ingredients
 are appended at the bottom. Reordering normally changes only the moved row;
 exhausted gaps cause the recipe's ingredients to be rebalanced.
-`position` is retained only for the expand/contract deployment window. A
-database trigger mirrors it as the inverse of `sort_key` so the previous
-application version and code-only rollbacks keep the same visible order. A
-later contract migration removes it after all deployed code reads `sort_key`.
 
 ### `recipe_cook_logs`
 
@@ -187,7 +182,6 @@ images as general recipe pictures.
 - `byte_size`
 - `width`, `height`: display dimensions supplied by the browser
 - `sort_key`: integer
-- `position`: temporary compatibility integer
 - `confirmed_at`, nullable
 - `created_at`, `updated_at`
 
@@ -200,8 +194,6 @@ appended at the bottom. Reordering normally changes only the moved row;
 exhausted gaps cause the recipe's image keys to be rebalanced. Pending images
 are retained during that operation. The first confirmed image in that order is
 the recipe cover.
-As with ingredients, `position` is a temporary inverse compatibility column
-maintained by a database trigger and removed in the later contract migration.
 
 Object keys are server-controlled, unique, and independent of public
 hostnames. Pending metadata exists before an upload is authorized;

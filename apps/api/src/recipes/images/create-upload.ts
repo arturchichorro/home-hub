@@ -120,7 +120,6 @@ export function createRecipeImageUploadService({
           byteSize,
           width,
           height,
-          position: -sortKey,
           sortKey,
           confirmedAt: null,
         })

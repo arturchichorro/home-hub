@@ -164,7 +164,6 @@ describe("create recipe image upload service", () => {
         byteSize: 2_048,
         width: 800,
         height: 600,
-        position: -0,
         sortKey: 0,
         confirmedAt: null,
       },
@@ -208,7 +207,6 @@ describe("create recipe image upload service", () => {
       kind: "success",
     });
     expect(insertedValues[0]).toMatchObject({
-      position: 1024,
       sortKey: -1024,
     });
   });
