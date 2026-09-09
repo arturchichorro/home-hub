@@ -9,6 +9,7 @@ together before implementation begins.
 
 ## Improvements
 
+- [ ] Find a solution to the problem of old frontend still being served for a bit after deployment because of PWA
 - [ ] Abstract the whole images pipeline away from recipe images, because we'll need images in other parts of the app
 - [ ] Improve empty state UIs: empty recipe list, empty lists list, etc
 - [ ] Rethink the whole invitation flow (not really great at the moment)
