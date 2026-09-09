@@ -18,7 +18,6 @@ type RecipeImageUploadFormProps = {
   cookLogId?: string;
   householdId: string;
   recipeId: string;
-  position: number;
   onSessionExpired: () => void;
 };
 
@@ -28,7 +27,6 @@ export function RecipeImageUploadForm({
   cookLogId,
   householdId,
   recipeId,
-  position,
   onSessionExpired,
 }: RecipeImageUploadFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -64,7 +62,6 @@ export function RecipeImageUploadForm({
         byteSize: file.size,
         width: dimensions.width,
         height: dimensions.height,
-        position,
       });
 
       if (!request.success) return;

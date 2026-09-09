@@ -20,7 +20,6 @@ const input = {
   byteSize: 1_024,
   width: 800,
   height: 600,
-  position: 0,
 };
 
 describe("createRecipeImageUploadRequestSchema", () => {
@@ -52,8 +51,6 @@ describe("createRecipeImageUploadRequestSchema", () => {
     ["height", 0],
     ["height", maxRecipeImageDimension + 1],
     ["height", 1.5],
-    ["position", -1],
-    ["position", 1.5],
   ] as const)("rejects invalid %s %j", (field, value) => {
     expect(
       createRecipeImageUploadRequestSchema.safeParse({

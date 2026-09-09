@@ -31,7 +31,6 @@ type RecipeIngredientListProps = {
 type DraftIngredient = {
   focusRequest: number;
   id: string;
-  position: number;
 };
 
 type RecipeIngredientRowCommonProps = {
@@ -99,7 +98,6 @@ function RecipeIngredientRow({
           focusRequest={row.draft.focusRequest}
           householdId={householdId}
           ingredientId={row.draft.id}
-          position={row.draft.position}
           recipeId={recipeId}
           onCancel={row.onCancelDraft}
           onServerError={row.onDraftServerError}
@@ -203,13 +201,6 @@ export function RecipeIngredientList({
   const draftIsPersisted =
     draft !== undefined &&
     ingredients.some((ingredient) => ingredient.id === draft.id);
-  const nextPosition =
-    ingredients.reduce(
-      (highestPosition, ingredient) =>
-        Math.max(highestPosition, ingredient.position),
-      -1,
-    ) + 1;
-
   useEffect(() => {
     if (draftIsPersisted) setDraft(undefined);
   }, [draftIsPersisted]);
@@ -240,6 +231,7 @@ export function RecipeIngredientList({
           mutators.recipes.reorderIngredients({
             householdId,
             recipeId,
+            ingredientId: moved.id,
             orderedIngredientIds: reordered.map((ingredient) => ingredient.id),
             optimisticUpdatedAt: Date.now(),
           }),
@@ -285,7 +277,6 @@ export function RecipeIngredientList({
                 : {
                     focusRequest: 0,
                     id: crypto.randomUUID(),
-                    position: nextPosition,
                   },
             );
           }}

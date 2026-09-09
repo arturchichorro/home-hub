@@ -127,7 +127,7 @@ export function RecipeImageThumbnail({
 type RecipeImageGalleryProps = RecipeImageContext & {
   images: readonly RecipeImage[];
   onOpen: (image: RecipeImage) => void;
-  onReorder: (orderedImageIds: string[]) => void;
+  onReorder: (imageId: string, orderedImageIds: string[]) => void;
 };
 
 function SortableRecipeImageThumbnail({
@@ -182,7 +182,10 @@ export function RecipeImageGallery({
           const [moved] = reordered.splice(source.initialIndex, 1);
           if (!moved) return;
           reordered.splice(source.index, 0, moved);
-          onReorder(reordered.map((image) => image.id));
+          onReorder(
+            moved.id,
+            reordered.map((image) => image.id),
+          );
         }}
       >
         <ul className="-mr-4 grid auto-cols-[40%] sm:auto-cols-[25%] lg:auto-cols-[20%] grid-flow-col gap-3 overflow-x-auto pr-4 sm:-mr-6 sm:pr-6 lg:-mr-8 lg:pr-8">

@@ -196,7 +196,6 @@ const ingredientInput = {
   householdId: input.householdId,
   recipeId: input.recipeId,
   name: "Fresh Basil",
-  position: 0,
   optimisticTimestamp: input.optimisticTimestamp,
 };
 
@@ -235,8 +234,6 @@ describe("createRecipeIngredientMutationSchema", () => {
   });
 
   it.each([
-    ["position", -1],
-    ["position", 1.5],
     ["optimisticTimestamp", -1],
     ["optimisticTimestamp", 1.5],
   ] as const)("rejects an invalid %s", (field, value) => {
@@ -507,31 +504,49 @@ describe.each([
   [
     "ingredients",
     reorderRecipeIngredientsMutationSchema,
+    "ingredientId",
     "orderedIngredientIds",
   ],
-  ["images", reorderRecipeImagesMutationSchema, "orderedImageIds"],
-] as const)("reorder recipe %s schema", (_name, schema, orderedIdsKey) => {
-  const entityId = "5944cb0d-931a-4723-b981-77eacb122314";
+  ["images", reorderRecipeImagesMutationSchema, "imageId", "orderedImageIds"],
+] as const)(
+  "reorder recipe %s schema",
+  (_name, schema, entityIdKey, orderedIdsKey) => {
+    const entityId = "5944cb0d-931a-4723-b981-77eacb122314";
 
-  it("accepts a unique ordered ID list", () => {
-    expect(
-      schema.safeParse({
-        householdId: input.householdId,
-        recipeId: input.recipeId,
-        [orderedIdsKey]: [entityId],
-        optimisticUpdatedAt: input.optimisticTimestamp,
-      }).success,
-    ).toBe(true);
-  });
+    it("accepts a unique ordered ID list", () => {
+      expect(
+        schema.safeParse({
+          householdId: input.householdId,
+          recipeId: input.recipeId,
+          [entityIdKey]: entityId,
+          [orderedIdsKey]: [entityId],
+          optimisticUpdatedAt: input.optimisticTimestamp,
+        }).success,
+      ).toBe(true);
+    });
 
-  it("rejects duplicate IDs", () => {
-    expect(
-      schema.safeParse({
-        householdId: input.householdId,
-        recipeId: input.recipeId,
-        [orderedIdsKey]: [entityId, entityId],
-        optimisticUpdatedAt: input.optimisticTimestamp,
-      }).success,
-    ).toBe(false);
-  });
-});
+    it("rejects duplicate IDs", () => {
+      expect(
+        schema.safeParse({
+          householdId: input.householdId,
+          recipeId: input.recipeId,
+          [entityIdKey]: entityId,
+          [orderedIdsKey]: [entityId, entityId],
+          optimisticUpdatedAt: input.optimisticTimestamp,
+        }).success,
+      ).toBe(false);
+    });
+
+    it("requires the ordered IDs to contain the moved row", () => {
+      expect(
+        schema.safeParse({
+          householdId: input.householdId,
+          recipeId: input.recipeId,
+          [entityIdKey]: entityId,
+          [orderedIdsKey]: ["4a7bb0d3-e2d9-4907-98b8-9865473785b0"],
+          optimisticUpdatedAt: input.optimisticTimestamp,
+        }).success,
+      ).toBe(false);
+    });
+  },
+);

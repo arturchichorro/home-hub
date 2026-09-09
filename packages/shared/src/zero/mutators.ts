@@ -18,7 +18,7 @@ import {
 import type { ZeroAuthContext } from "./context";
 import { listMutatorDefinitions } from "./list-mutators";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
-import { nextSortKey, planReorder } from "./ordering";
+import { appendSortKey, nextSortKey, planReorder } from "./ordering";
 import { type Schema, zql } from "./schema.gen";
 
 const defineHomeHubMutator = defineMutatorWithType<Schema, ZeroAuthContext>();
@@ -175,6 +175,14 @@ const addRecipeIngredient = defineHomeHubMutator(
 
     const timestamp =
       tx.location === "server" ? Date.now() : args.optimisticTimestamp;
+    const bottom = await tx.run(
+      zql.recipeIngredients
+        .where("householdId", args.householdId)
+        .where("recipeId", args.recipeId)
+        .orderBy("sortKey", "asc")
+        .orderBy("id", "asc")
+        .one(),
+    );
 
     await tx.mutate.recipeIngredients.insert({
       id: args.ingredientId,
@@ -183,7 +191,7 @@ const addRecipeIngredient = defineHomeHubMutator(
       name: args.name,
       amount: null,
       note: null,
-      position: args.position,
+      sortKey: appendSortKey(bottom?.sortKey),
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -364,29 +372,26 @@ const reorderRecipeIngredients = defineHomeHubMutator(
       moduleKey: "recipes",
     });
 
+    const rows = await tx.run(
+      zql.recipeIngredients
+        .where("householdId", args.householdId)
+        .where("recipeId", args.recipeId)
+        .whereExists("recipe", (recipe) =>
+          recipe.where("deletedAt", "IS", null),
+        ),
+    );
+    const updates = planReorder(
+      rows,
+      args.orderedIngredientIds,
+      args.ingredientId,
+    );
     const timestamp =
       tx.location === "server" ? Date.now() : args.optimisticUpdatedAt;
-    for (const [
-      position,
-      ingredientId,
-    ] of args.orderedIngredientIds.entries()) {
-      const ingredient = await tx.run(
-        zql.recipeIngredients
-          .where("id", ingredientId)
-          .where("householdId", args.householdId)
-          .where("recipeId", args.recipeId)
-          .whereExists("recipe", (recipe) =>
-            recipe.where("deletedAt", "IS", null),
-          )
-          .one(),
-      );
-      if (!ingredient) throw new Error("Recipe ingredient reorder not allowed");
+    for (const update of updates)
       await tx.mutate.recipeIngredients.update({
-        id: ingredientId,
-        position,
+        ...update,
         updatedAt: timestamp,
       });
-    }
   },
 );
 
@@ -435,26 +440,19 @@ const reorderRecipeImages = defineHomeHubMutator(
       moduleKey: "recipes",
     });
 
+    const rows = await tx.run(
+      zql.recipeImages
+        .where("householdId", args.householdId)
+        .where("recipeId", args.recipeId)
+        .whereExists("recipe", (recipe) =>
+          recipe.where("deletedAt", "IS", null),
+        ),
+    );
+    const updates = planReorder(rows, args.orderedImageIds, args.imageId);
     const timestamp =
       tx.location === "server" ? Date.now() : args.optimisticUpdatedAt;
-    for (const [position, imageId] of args.orderedImageIds.entries()) {
-      const image = await tx.run(
-        zql.recipeImages
-          .where("id", imageId)
-          .where("householdId", args.householdId)
-          .where("recipeId", args.recipeId)
-          .whereExists("recipe", (recipe) =>
-            recipe.where("deletedAt", "IS", null),
-          )
-          .one(),
-      );
-      if (!image) throw new Error("Recipe image reorder not allowed");
-      await tx.mutate.recipeImages.update({
-        id: imageId,
-        position,
-        updatedAt: timestamp,
-      });
-    }
+    for (const update of updates)
+      await tx.mutate.recipeImages.update({ ...update, updatedAt: timestamp });
   },
 );
 

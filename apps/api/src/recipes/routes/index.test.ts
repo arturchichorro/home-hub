@@ -83,7 +83,6 @@ const body = {
   byteSize: 2_048,
   width: 800,
   height: 600,
-  position: 0,
 };
 
 describe("recipe routes", () => {

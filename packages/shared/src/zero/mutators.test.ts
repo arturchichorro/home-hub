@@ -41,7 +41,6 @@ const addRecipeIngredientArgs = {
   householdId,
   recipeId,
   name: "Fresh Basil",
-  position: 0,
   optimisticTimestamp: optimisticUpdatedAt,
 };
 
@@ -539,7 +538,7 @@ describe("recipes.addIngredient mutator", () => {
   it("optimistically inserts an ingredient for a cached household recipe", async () => {
     const { ingredientInsert, queries, transaction } = createFakeTransaction({
       location: "client",
-      results: [{ id: recipeId, householdId }],
+      results: [{ id: recipeId, householdId }, undefined],
     });
 
     await mutators.recipes.addIngredient.fn({
@@ -548,7 +547,7 @@ describe("recipes.addIngredient mutator", () => {
       tx: transaction,
     });
 
-    expect(queries).toHaveLength(1);
+    expect(queries).toHaveLength(2);
     expect(ingredientInsert).toHaveBeenCalledWith({
       id: ingredientId,
       householdId,
@@ -556,7 +555,7 @@ describe("recipes.addIngredient mutator", () => {
       name: "Fresh Basil",
       amount: null,
       note: null,
-      position: 0,
+      sortKey: 0,
       createdAt: optimisticUpdatedAt,
       updatedAt: optimisticUpdatedAt,
     });
@@ -611,6 +610,7 @@ describe("recipes.addIngredient mutator", () => {
         { id: "membership-id" },
         { householdId, moduleKey: "recipes", enabled: true },
         { id: recipeId, householdId },
+        { id: "bottom", sortKey: 1024 },
       ],
     });
 
@@ -620,7 +620,7 @@ describe("recipes.addIngredient mutator", () => {
       tx: transaction,
     });
 
-    expect(queries).toHaveLength(3);
+    expect(queries).toHaveLength(4);
     expect(ingredientInsert).toHaveBeenCalledWith({
       id: ingredientId,
       householdId,
@@ -628,7 +628,7 @@ describe("recipes.addIngredient mutator", () => {
       name: "Fresh Basil",
       amount: null,
       note: null,
-      position: 0,
+      sortKey: 0,
       createdAt: authoritativeTimestamp,
       updatedAt: authoritativeTimestamp,
     });
@@ -983,8 +983,15 @@ describe("recipe organization mutators", () => {
     const { ingredientUpdate, transaction } = createFakeTransaction({
       location: "client",
       results: [
-        { id: secondIngredientId, householdId, recipeId },
-        { id: ingredientId, householdId, recipeId },
+        [
+          { id: ingredientId, householdId, recipeId, sortKey: 2048 },
+          {
+            id: secondIngredientId,
+            householdId,
+            recipeId,
+            sortKey: 1024,
+          },
+        ],
       ],
     });
 
@@ -992,6 +999,7 @@ describe("recipe organization mutators", () => {
       args: {
         householdId,
         recipeId,
+        ingredientId: secondIngredientId,
         orderedIngredientIds: [secondIngredientId, ingredientId],
         optimisticUpdatedAt,
       },
@@ -999,14 +1007,10 @@ describe("recipe organization mutators", () => {
       tx: transaction,
     });
 
-    expect(ingredientUpdate).toHaveBeenNthCalledWith(1, {
+    expect(ingredientUpdate).toHaveBeenCalledTimes(1);
+    expect(ingredientUpdate).toHaveBeenCalledWith({
       id: secondIngredientId,
-      position: 0,
-      updatedAt: optimisticUpdatedAt,
-    });
-    expect(ingredientUpdate).toHaveBeenNthCalledWith(2, {
-      id: ingredientId,
-      position: 1,
+      sortKey: 3072,
       updatedAt: optimisticUpdatedAt,
     });
   });
@@ -1035,8 +1039,10 @@ describe("recipe organization mutators", () => {
     const { imageUpdate, transaction } = createFakeTransaction({
       location: "client",
       results: [
-        { id: secondImageId, householdId, recipeId },
-        { id: imageId, householdId, recipeId },
+        [
+          { id: imageId, householdId, recipeId, sortKey: 2048 },
+          { id: secondImageId, householdId, recipeId, sortKey: 1024 },
+        ],
       ],
     });
 
@@ -1044,6 +1050,7 @@ describe("recipe organization mutators", () => {
       args: {
         householdId,
         recipeId,
+        imageId: secondImageId,
         orderedImageIds: [secondImageId, imageId],
         optimisticUpdatedAt,
       },
@@ -1051,14 +1058,10 @@ describe("recipe organization mutators", () => {
       tx: transaction,
     });
 
-    expect(imageUpdate).toHaveBeenNthCalledWith(1, {
+    expect(imageUpdate).toHaveBeenCalledTimes(1);
+    expect(imageUpdate).toHaveBeenCalledWith({
       id: secondImageId,
-      position: 0,
-      updatedAt: optimisticUpdatedAt,
-    });
-    expect(imageUpdate).toHaveBeenNthCalledWith(2, {
-      id: imageId,
-      position: 1,
+      sortKey: 3072,
       updatedAt: optimisticUpdatedAt,
     });
   });

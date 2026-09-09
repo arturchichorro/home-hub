@@ -26,7 +26,6 @@ const input = {
   byteSize: 2_048,
   width: 800,
   height: 600,
-  position: 0,
 };
 
 function createFakeDatabase({
@@ -35,6 +34,7 @@ function createFakeDatabase({
   moduleEnabled = true,
   recipeExists = true,
   cookLogExists = true,
+  bottomSortKey,
   insertReturnsRow = true,
 }: {
   userExists?: boolean;
@@ -42,30 +42,46 @@ function createFakeDatabase({
   moduleEnabled?: boolean;
   recipeExists?: boolean;
   cookLogExists?: boolean;
+  bottomSortKey?: number;
   insertReturnsRow?: boolean;
 } = {}) {
   const findUser = vi.fn(async () => (userExists ? { id: userId } : undefined));
   const tables: unknown[] = [];
   const lockStrengths: unknown[] = [];
   const insertedValues: Array<Record<string, unknown>> = [];
-  const selectResults = [
-    membershipExists ? { id: "membership-id" } : undefined,
-    moduleEnabled ? { householdId } : undefined,
-    recipeExists ? { id: recipeId } : undefined,
-    cookLogExists ? { id: cookLogId } : undefined,
-  ];
-
   const select = vi.fn((_selection: unknown) => {
-    const result = selectResults.shift();
+    let selectedTable: unknown;
     const builder = {
       from: (table: unknown) => {
         tables.push(table);
+        selectedTable = table;
         return builder;
       },
       where: (_condition: unknown) => builder,
       limit: (_limit: unknown) => builder,
+      orderBy: (..._ordering: unknown[]) => builder,
+      execute: async () =>
+        selectedTable === recipeImages && bottomSortKey !== undefined
+          ? [{ sortKey: bottomSortKey }]
+          : [],
       for: async (strength: unknown) => {
         lockStrengths.push(strength);
+        const result =
+          selectedTable === householdMembers
+            ? membershipExists
+              ? { id: "membership-id" }
+              : undefined
+            : selectedTable === householdModuleSettings
+              ? moduleEnabled
+                ? { householdId }
+                : undefined
+              : selectedTable === recipes
+                ? recipeExists
+                  ? { id: recipeId }
+                  : undefined
+                : selectedTable === recipeCookLogs && cookLogExists
+                  ? { id: cookLogId }
+                  : undefined;
         return result ? [result] : [];
       },
     };
@@ -134,6 +150,7 @@ describe("create recipe image upload service", () => {
       householdModuleSettings,
       recipes,
       recipeImages,
+      recipeImages,
     ]);
     expect(lockStrengths).toEqual(["share", "share", "share"]);
     expect(insertedValues).toEqual([
@@ -147,7 +164,8 @@ describe("create recipe image upload service", () => {
         byteSize: 2_048,
         width: 800,
         height: 600,
-        position: 0,
+        position: -0,
+        sortKey: 0,
         confirmedAt: null,
       },
     ]);
@@ -172,8 +190,27 @@ describe("create recipe image upload service", () => {
       recipes,
       recipeCookLogs,
       recipeImages,
+      recipeImages,
     ]);
     expect(lockStrengths).toEqual(["share", "share", "share", "share"]);
+  });
+
+  it("appends a pending image after the current bottom image", async () => {
+    const { db, insertedValues } = createFakeDatabase({
+      bottomSortKey: 0,
+    });
+    const createUpload = createRecipeImageUploadService({
+      db,
+      signUpload: async () => "https://signed-upload.example",
+    });
+
+    await expect(createUpload(input)).resolves.toMatchObject({
+      kind: "success",
+    });
+    expect(insertedValues[0]).toMatchObject({
+      position: 1024,
+      sortKey: -1024,
+    });
   });
 
   it("returns unauthorized before authorization or writes for a missing user", async () => {

@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
 import type { Database } from "@home-hub/database";
 import { recipeImages } from "@home-hub/database/schema";
+import { appendSortKey } from "@home-hub/shared/ordering";
 import { recipeImageOriginalObjectKey } from "@home-hub/shared/recipe-image-delivery";
 import type {
   CreateRecipeImageUploadRequest,
   RecipeImageContentType,
 } from "@home-hub/shared/recipe-images";
+import { and, asc, eq } from "drizzle-orm";
 import { findActiveUser } from "../../authorization/active-user";
 import {
   findEnabledHouseholdModuleForShare,
@@ -57,7 +59,6 @@ export function createRecipeImageUploadService({
     byteSize,
     width,
     height,
-    position,
   }: CreateRecipeImageUploadInput): Promise<CreateRecipeImageUploadResult> {
     return db.transaction(async (tx) => {
       const user = await findActiveUser(tx, userId);
@@ -93,6 +94,19 @@ export function createRecipeImageUploadService({
         recipeId,
         imageId,
       });
+      const [bottom] = await tx
+        .select({ sortKey: recipeImages.sortKey })
+        .from(recipeImages)
+        .where(
+          and(
+            eq(recipeImages.householdId, householdId),
+            eq(recipeImages.recipeId, recipeId),
+          ),
+        )
+        .orderBy(asc(recipeImages.sortKey), recipeImages.id)
+        .limit(1)
+        .execute();
+      const sortKey = appendSortKey(bottom?.sortKey);
 
       const [image] = await tx
         .insert(recipeImages)
@@ -106,7 +120,8 @@ export function createRecipeImageUploadService({
           byteSize,
           width,
           height,
-          position,
+          position: -sortKey,
+          sortKey,
           confirmedAt: null,
         })
         .returning({ id: recipeImages.id });

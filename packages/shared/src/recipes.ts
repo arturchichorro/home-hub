@@ -86,7 +86,6 @@ export const createRecipeIngredientMutationSchema = z
     householdId: z.uuid(),
     recipeId: z.uuid(),
     name: recipeIngredientNameSchema,
-    position: z.number().int().nonnegative(),
     optimisticTimestamp: z.number().int().nonnegative(),
   })
   .strict();
@@ -183,10 +182,15 @@ export const reorderRecipeIngredientsMutationSchema = z
   .object({
     householdId: z.uuid(),
     recipeId: z.uuid(),
+    ingredientId: z.uuid(),
     orderedIngredientIds: orderedIdsSchema,
     optimisticUpdatedAt: z.number().int().nonnegative(),
   })
-  .strict();
+  .strict()
+  .refine((args) => args.orderedIngredientIds.includes(args.ingredientId), {
+    message: "Ordered IDs must contain the moved ingredient",
+    path: ["orderedIngredientIds"],
+  });
 
 export const deleteRecipeCookLogMutationSchema = z
   .object({
@@ -200,7 +204,12 @@ export const reorderRecipeImagesMutationSchema = z
   .object({
     householdId: z.uuid(),
     recipeId: z.uuid(),
+    imageId: z.uuid(),
     orderedImageIds: orderedIdsSchema,
     optimisticUpdatedAt: z.number().int().nonnegative(),
   })
-  .strict();
+  .strict()
+  .refine((args) => args.orderedImageIds.includes(args.imageId), {
+    message: "Ordered IDs must contain the moved image",
+    path: ["orderedImageIds"],
+  });

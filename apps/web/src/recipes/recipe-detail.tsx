@@ -113,11 +113,6 @@ export function RecipeDetail({
     return deleting ? <p className="text-muted">Deleting recipe…</p> : null;
   }
 
-  const nextImagePosition =
-    recipe.images.reduce(
-      (highestPosition, image) => Math.max(highestPosition, image.position),
-      -1,
-    ) + 1;
   const visibleImages = recipe.images.filter(
     (image) => !hiddenImageIds.has(image.id),
   );
@@ -134,12 +129,13 @@ export function RecipeDetail({
     setSelectedImage(image);
   }
 
-  function reorderImages(orderedImageIds: string[]) {
+  function reorderImages(imageId: string, orderedImageIds: string[]) {
     if (!mutationEnabled) return;
     zero.mutate(
       mutators.recipes.reorderImages({
         householdId,
         recipeId,
+        imageId,
         orderedImageIds,
         optimisticUpdatedAt: Date.now(),
       }),
@@ -276,7 +272,6 @@ export function RecipeDetail({
           appearance="row"
           householdId={householdId}
           recipeId={recipeId}
-          position={nextImagePosition}
           onSessionExpired={onSessionExpired}
         />
       </section>
@@ -309,7 +304,6 @@ export function RecipeDetail({
               cookLogs={recipe.cookLogs}
               householdId={householdId}
               images={visibleImages}
-              nextImagePosition={nextImagePosition}
               recipeId={recipeId}
               onOpenImage={(image, cookLogIds) => {
                 setSelectedCookLogIds(cookLogIds);

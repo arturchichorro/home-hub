@@ -18,7 +18,6 @@ type RecipeCookingHistoryListProps = {
   cookLogs: readonly RecipeCookLog[];
   householdId: string;
   images: readonly RecipeImage[];
-  nextImagePosition: number;
   recipeId: string;
   onOpenImage: (image: RecipeImage, cookLogIds: readonly string[]) => void;
   onSessionExpired: () => void;
@@ -34,7 +33,6 @@ export function RecipeCookingHistoryList({
   cookLogs,
   householdId,
   images,
-  nextImagePosition,
   recipeId,
   onOpenImage,
   onSessionExpired,
@@ -94,7 +92,6 @@ export function RecipeCookingHistoryList({
               cookLogId={cookLog.id}
               householdId={householdId}
               recipeId={recipeId}
-              position={nextImagePosition}
               onSessionExpired={onSessionExpired}
             />
             <ConfirmationPopover

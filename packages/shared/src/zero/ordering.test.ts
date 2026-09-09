@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextSortKey, planReorder } from "./ordering";
+import { appendSortKey, nextSortKey, planReorder } from "./ordering";
 
 describe("Sort-key ordering", () => {
   const rows = [
@@ -11,6 +11,12 @@ describe("Sort-key ordering", () => {
     expect(nextSortKey()).toBe(1024);
     expect(nextSortKey(3072)).toBe(4096);
     expect(() => nextSortKey(2147483647)).toThrow("rebalancing");
+  });
+  it("appends new entries at the bottom", () => {
+    expect(appendSortKey()).toBe(0);
+    expect(appendSortKey(1024)).toBe(0);
+    expect(appendSortKey(0)).toBe(-1024);
+    expect(() => appendSortKey(-2147483648)).toThrow("rebalancing");
   });
   it.each([
     { order: ["c", "a", "b"], moved: "c", key: 4096 },
@@ -46,6 +52,18 @@ describe("Sort-key ordering", () => {
       { id: "a", sortKey: 3072 },
       { id: "c", sortKey: 2048 },
       { id: "b", sortKey: 1024 },
+    ]);
+  });
+  it("rebalances instead of colliding with an omitted row", () => {
+    const current = [
+      { id: "a", sortKey: 3072 },
+      { id: "b", sortKey: 2048 },
+      { id: "new", sortKey: 1024 },
+    ];
+    expect(planReorder(current, ["b", "a"], "a")).toEqual([
+      { id: "b", sortKey: 3072 },
+      { id: "a", sortKey: 2048 },
+      { id: "new", sortKey: 1024 },
     ]);
   });
   it.each([2147483647, -2147483648])(

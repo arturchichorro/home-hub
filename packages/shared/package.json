@@ -8,6 +8,7 @@
     "./modules": "./src/modules.ts",
     "./lists": "./src/lists.ts",
     "./normalization": "./src/normalization.ts",
+    "./ordering": "./src/zero/ordering.ts",
     "./recipe-image-delivery": "./src/recipe-image-delivery.ts",
     "./recipe-images": "./src/recipe-images.ts",
     "./recipes": "./src/recipes.ts",
