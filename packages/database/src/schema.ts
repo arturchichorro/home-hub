@@ -288,9 +288,6 @@ export const recipeIngredients = pgTable(
     name: text("name").notNull(),
     amount: text("amount"),
     note: text("note"),
-    // Temporary expand/contract compatibility column. Remove after every
-    // deployed application version reads sortKey.
-    position: integer("position").notNull(),
     sortKey: integer("sort_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -308,11 +305,6 @@ export const recipeIngredients = pgTable(
     index("recipe_ingredients_recipe_id_sort_key_id_idx").on(
       table.recipeId,
       table.sortKey,
-      table.id,
-    ),
-    index("recipe_ingredients_recipe_id_position_id_idx").on(
-      table.recipeId,
-      table.position,
       table.id,
     ),
   ],
@@ -434,9 +426,6 @@ export const recipeImages = pgTable(
     objectKey: text("object_key").notNull().unique(),
     contentType: text("content_type").notNull(),
     byteSize: integer("byte_size").notNull(),
-    // Temporary expand/contract compatibility column. Remove after every
-    // deployed application version reads sortKey.
-    position: integer("position").notNull(),
     sortKey: integer("sort_key").notNull(),
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
     width: integer("width").notNull(),
@@ -483,16 +472,6 @@ export const recipeImages = pgTable(
     index("recipe_images_cook_log_id_sort_key_id_idx").on(
       table.cookLogId,
       table.sortKey,
-      table.id,
-    ),
-    index("recipe_images_recipe_id_position_id_idx").on(
-      table.recipeId,
-      table.position,
-      table.id,
-    ),
-    index("recipe_images_cook_log_id_position_id_idx").on(
-      table.cookLogId,
-      table.position,
       table.id,
     ),
   ],
