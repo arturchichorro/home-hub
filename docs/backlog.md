@@ -9,6 +9,7 @@ together before implementation begins.
 
 ## Improvements
 
+- [ ] Abstract the whole images pipeline away from recipe images, because we'll need images in other parts of the app
 - [ ] Improve empty state UIs: empty recipe list, empty lists list, etc
 - [ ] Rethink the whole invitation flow (not really great at the moment)
 - [ ] Add user profile pictures and use base ui's Avatar
