@@ -10,6 +10,12 @@ export function nextSortKey(topSortKey = 0): number {
   return next;
 }
 
+export function appendSortKey(bottomSortKey = gap): number {
+  const next = bottomSortKey - gap;
+  if (next < minSortKey) throw new Error("Ordering requires rebalancing");
+  return next;
+}
+
 export function planReorder(
   rows: readonly OrderedRow[],
   orderedIds: readonly string[],
@@ -36,7 +42,8 @@ export function planReorder(
     sortKey >= minSortKey &&
     sortKey <= maxSortKey &&
     (!previous || sortKey < previous.sortKey) &&
-    (!next || sortKey > next.sortKey)
+    (!next || sortKey > next.sortKey) &&
+    !rows.some((row) => row.id !== movedId && row.sortKey === sortKey)
   ) {
     return [{ id: movedId, sortKey }];
   }

@@ -288,7 +288,10 @@ export const recipeIngredients = pgTable(
     name: text("name").notNull(),
     amount: text("amount"),
     note: text("note"),
+    // Temporary expand/contract compatibility column. Remove after every
+    // deployed application version reads sortKey.
     position: integer("position").notNull(),
+    sortKey: integer("sort_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -302,9 +305,10 @@ export const recipeIngredients = pgTable(
       foreignColumns: [recipes.householdId, recipes.id],
       name: "recipe_ingredients_household_recipe_fk",
     }),
-    check(
-      "recipe_ingredients_position_nonnegative",
-      sql`${table.position} >= 0`,
+    index("recipe_ingredients_recipe_id_sort_key_id_idx").on(
+      table.recipeId,
+      table.sortKey,
+      table.id,
     ),
     index("recipe_ingredients_recipe_id_position_id_idx").on(
       table.recipeId,
@@ -430,7 +434,10 @@ export const recipeImages = pgTable(
     objectKey: text("object_key").notNull().unique(),
     contentType: text("content_type").notNull(),
     byteSize: integer("byte_size").notNull(),
+    // Temporary expand/contract compatibility column. Remove after every
+    // deployed application version reads sortKey.
     position: integer("position").notNull(),
+    sortKey: integer("sort_key").notNull(),
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
     width: integer("width").notNull(),
     height: integer("height").notNull(),
@@ -464,10 +471,19 @@ export const recipeImages = pgTable(
       "recipe_images_byte_size_range",
       sql`${table.byteSize} > 0 AND ${table.byteSize} <= 10485760`,
     ),
-    check("recipe_images_position_nonnegative", sql`${table.position} >= 0`),
     check(
       "recipe_images_dimensions_range",
       sql`${table.width} > 0 AND ${table.width} <= 16384 AND ${table.height} > 0 AND ${table.height} <= 16384`,
+    ),
+    index("recipe_images_recipe_id_sort_key_id_idx").on(
+      table.recipeId,
+      table.sortKey,
+      table.id,
+    ),
+    index("recipe_images_cook_log_id_sort_key_id_idx").on(
+      table.cookLogId,
+      table.sortKey,
+      table.id,
     ),
     index("recipe_images_recipe_id_position_id_idx").on(
       table.recipeId,

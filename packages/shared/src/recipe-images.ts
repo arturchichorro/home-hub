@@ -23,7 +23,6 @@ export const createRecipeImageUploadRequestSchema = z
     byteSize: z.number().int().min(1).max(maxRecipeImageByteSize),
     width: z.number().int().min(1).max(maxRecipeImageDimension),
     height: z.number().int().min(1).max(maxRecipeImageDimension),
-    position: z.number().int().nonnegative(),
   })
   .strict();
 

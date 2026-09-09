@@ -367,7 +367,7 @@ describe("recipe queries", () => {
               right: { type: "literal", value: null },
             },
             orderBy: [
-              ["position", "asc"],
+              ["sortKey", "desc"],
               ["id", "asc"],
             ],
           },
@@ -377,7 +377,7 @@ describe("recipe queries", () => {
             alias: "ingredients",
             table: "recipeIngredients",
             orderBy: [
-              ["position", "asc"],
+              ["sortKey", "desc"],
               ["id", "asc"],
             ],
           },
@@ -430,7 +430,7 @@ describe("recipe queries", () => {
             alias: "ingredients",
             table: "recipeIngredients",
             orderBy: [
-              ["position", "asc"],
+              ["sortKey", "desc"],
               ["id", "asc"],
             ],
           },
@@ -464,7 +464,7 @@ describe("recipe queries", () => {
               right: { type: "literal", value: null },
             },
             orderBy: [
-              ["position", "asc"],
+              ["sortKey", "desc"],
               ["id", "asc"],
             ],
           },

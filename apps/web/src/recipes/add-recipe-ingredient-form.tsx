@@ -20,7 +20,6 @@ type RecipeIngredientDraftNameFormProps = {
   ingredientId: string;
   onCancel: () => void;
   onServerError: (message: string) => void;
-  position: number;
   recipeId: string;
 };
 
@@ -30,7 +29,6 @@ export function RecipeIngredientDraftNameForm({
   ingredientId,
   onCancel,
   onServerError,
-  position,
   recipeId,
 }: RecipeIngredientDraftNameFormProps) {
   const zero = useZero();
@@ -84,7 +82,6 @@ export function RecipeIngredientDraftNameForm({
         householdId,
         recipeId,
         name: submittedName,
-        position,
         optimisticTimestamp: Date.now(),
       }),
     );

@@ -135,12 +135,12 @@ const recipesByHousehold = defineHomeHubQuery(
       .related("images", (image) =>
         image
           .where("confirmedAt", "IS NOT", null)
-          .orderBy("position", "asc")
+          .orderBy("sortKey", "desc")
           .orderBy("id", "asc")
           .limit(1),
       )
       .related("ingredients", (ingredient) =>
-        ingredient.orderBy("position", "asc").orderBy("id", "asc"),
+        ingredient.orderBy("sortKey", "desc").orderBy("id", "asc"),
       )
       .related("cookLogs", (cookLog) =>
         cookLog.orderBy("cookedAt", "desc").orderBy("id", "desc").limit(1),
@@ -155,7 +155,7 @@ const recipeDetail = defineHomeHubQuery(
     authorizedRecipes(args.householdId, ctx.userId)
       .where("id", args.recipeId)
       .related("ingredients", (ingredient) =>
-        ingredient.orderBy("position", "asc").orderBy("id", "asc"),
+        ingredient.orderBy("sortKey", "desc").orderBy("id", "asc"),
       )
       .related("cookLogs", (cookLog) =>
         cookLog.orderBy("cookedAt", "desc").orderBy("id", "desc"),
@@ -163,7 +163,7 @@ const recipeDetail = defineHomeHubQuery(
       .related("images", (image) =>
         image
           .where("confirmedAt", "IS NOT", null)
-          .orderBy("position", "asc")
+          .orderBy("sortKey", "desc")
           .orderBy("id", "asc"),
       )
       .one(),

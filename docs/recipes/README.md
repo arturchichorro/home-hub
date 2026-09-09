@@ -148,14 +148,19 @@ store an empty description as `null`.
 - `name`
 - `amount`: nullable text
 - `note`: nullable text
-- `position`: integer
+- `sort_key`: integer
+- `position`: temporary compatibility integer
 - `created_at`, `updated_at`
 
 Amount remains text so combined measurements such as `12g`, `1 ½ cups`, `2–3`,
-and `to taste` remain representable without a separate unit input. Position
-must be nonnegative. Positions are indexed but not unique; equal positions are
-ordered by row ID for deterministic display. Reordering renumbers the visible
-ingredient collection from zero.
+and `to taste` remain representable without a separate unit input. Ingredients
+use descending sparse integer sort keys with UUID tie-breakers. New ingredients
+are appended at the bottom. Reordering normally changes only the moved row;
+exhausted gaps cause the recipe's ingredients to be rebalanced.
+`position` is retained only for the expand/contract deployment window. A
+database trigger mirrors it as the inverse of `sort_key` so the previous
+application version and code-only rollbacks keep the same visible order. A
+later contract migration removes it after all deployed code reads `sort_key`.
 
 ### `recipe_cook_logs`
 
@@ -181,21 +186,28 @@ images as general recipe pictures.
 - `content_type`
 - `byte_size`
 - `width`, `height`: display dimensions supplied by the browser
-- `position`: integer
+- `sort_key`: integer
+- `position`: temporary compatibility integer
 - `confirmed_at`, nullable
 - `created_at`, `updated_at`
 
 Every image belongs to one recipe and may optionally provide context for one
 cooking log from that recipe. Cooking-log images remain part of the recipe's
 overall image collection. The optional cooking-log relationship includes the
-household and recipe IDs so it cannot cross either boundary. Reordering
-renumbers confirmed images from zero; the lowest position is the recipe cover.
+household and recipe IDs so it cannot cross either boundary. Confirmed images
+use descending sparse integer sort keys with UUID tie-breakers. New images are
+appended at the bottom. Reordering normally changes only the moved row;
+exhausted gaps cause the recipe's image keys to be rebalanced. Pending images
+are retained during that operation. The first confirmed image in that order is
+the recipe cover.
+As with ingredients, `position` is a temporary inverse compatibility column
+maintained by a database trigger and removed in the later contract migration.
 
 Object keys are server-controlled, unique, and independent of public
 hostnames. Pending metadata exists before an upload is authorized;
 `confirmed_at` remains null until the API verifies the R2 object, content type,
-and size. Only confirmed images are readable or synchronized. Position must be
-nonnegative. Width and height are untrusted layout metadata constrained to
+and size. Only confirmed images are readable or synchronized. Width and height
+are untrusted layout metadata constrained to
 1–16,384 pixels.
 
 ## Synchronization and authorization

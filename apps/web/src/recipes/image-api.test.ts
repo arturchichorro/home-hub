@@ -47,7 +47,6 @@ describe("recipe image API", () => {
         byteSize: 2_048,
         width: 800,
         height: 600,
-        position: 0,
       }),
     ).resolves.toMatchObject({ kind: "success", imageId });
     expect(fetchMock).toHaveBeenCalledWith(
@@ -64,7 +63,6 @@ describe("recipe image API", () => {
           byteSize: 2_048,
           width: 800,
           height: 600,
-          position: 0,
         }),
       },
     );
@@ -87,7 +85,6 @@ describe("recipe image API", () => {
         byteSize: 1,
         width: 1,
         height: 1,
-        position: 0,
       }),
     ).resolves.toEqual({ kind });
   });
