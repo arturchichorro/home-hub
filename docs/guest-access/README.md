@@ -1,6 +1,6 @@
 # Guest access
 
-**Status:** planned; not yet implemented
+**Status:** implemented
 
 This document specifies accountless access to Home Hub for people who have a
 household's QR code. It owns the product behavior, terminology, interface

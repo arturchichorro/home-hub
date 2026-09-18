@@ -155,7 +155,11 @@ The household index route chooses the first enabled module, and each optional
 module route redirects only when its completed settings query says that module
 is disabled. The shell does not perform global fallback redirects.
 
-There will be no PowerSync, TanStack DB, Redux persistence layer, or custom offline mutation queue.
+The same compiled SPA is served from `guest.achichorro.com`. A reduced Guest
+shell restores a host-only Guest session and composes the same Recipes
+components used by the authenticated shell. A principal-neutral access context
+supplies the household, bearer token, Zero cache identity, and write
+capability; feature components do not maintain separate guest versions.
 
 ### Progressive web application
 
@@ -197,6 +201,8 @@ The API owns:
 - transformation of named Zero queries using trusted user context;
 - transactional execution and authorization of Zero mutations;
 - R2 presigned original-upload URLs and signed derivative-delivery capabilities;
+- Guest link management, QR redemption, Guest-session refresh/logout, and
+  resolution of account or guest tokens into a discriminated access principal;
 - the health endpoint.
 
 The API remains stateless apart from PostgreSQL and R2. Feature dependencies

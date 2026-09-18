@@ -105,7 +105,7 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
-        VITE_ZERO_CACHE_URL: https://home.achichorro.com/zero
+        VITE_ZERO_CACHE_URL: /zero
     restart: unless-stopped
     ports:
       - "80:80"

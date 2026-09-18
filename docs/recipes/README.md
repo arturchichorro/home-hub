@@ -18,6 +18,12 @@ Disabling Recipes hides its navigation and blocks its queries, mutations,
 uploads, and signed image reads. It does not delete recipe data; re-enabling the
 module restores access for every current household member.
 
+Recipes supports Guest principals. Read guests use the same library, detail
+views, cooking history, and image gallery without mutation controls. Write
+guests receive the ordinary Recipes interface. Server-side Zero and image
+authorization independently enforce the current capability and household
+boundary.
+
 Recipe ingredients and list items are separate domain records. A future
 operation may copy ingredient names into a chosen list and insert or reactivate
 its normalized rows, but that cross-module operation is not implemented and
@@ -149,6 +155,7 @@ store an empty description as `null`.
 - `amount`: nullable text
 - `note`: nullable text
 - `sort_key`: integer
+- `deleted_at`
 - `created_at`, `updated_at`
 
 Amount remains text so combined measurements such as `12g`, `1 ½ cups`, `2–3`,
@@ -164,12 +171,14 @@ exhausted gaps cause the recipe's ingredients to be rebalanced.
 - `recipe_id`
 - `cooked_at`: timestamp with time zone
 - `comment`: nullable text
+- `deleted_at`
 - `created_at`, `updated_at`
 
 Each row represents one cooking event. Multiple events may have the same
 `cooked_at` value. Logs do not attribute who cooked or recorded the event.
-Deleting a cooking log first clears its images' `cook_log_id`, preserving those
-images as general recipe pictures.
+Deleting a cooking log sets `deleted_at`. Its image relationships remain, so a
+manual restore also restores the event context; those images remain visible in
+the recipe's general gallery while the log is deleted.
 
 ### `recipe_images`
 
@@ -183,6 +192,7 @@ images as general recipe pictures.
 - `width`, `height`: display dimensions supplied by the browser
 - `sort_key`: integer
 - `confirmed_at`, nullable
+- `deleted_at`
 - `created_at`, `updated_at`
 
 Every image belongs to one recipe and may optionally provide context for one
@@ -204,15 +214,15 @@ are untrusted layout metadata constrained to
 
 ## Synchronization and authorization
 
-Named Recipes queries constrain results through current household membership,
-an enabled Recipes module setting, and `deleted_at IS NULL`. The Zero publication is only a coarse
+Named Recipes queries constrain results through an authorized account or Guest
+principal, an enabled Recipes module setting, and `deleted_at IS NULL`. The Zero publication is only a coarse
 allowlist: it omits recipe-image object keys, and query authorization still
 determines which rows a client may synchronize.
 
 Recipe, ingredient, cooking-log, and confirmed-image metadata changes use
 validated custom Zero mutators where implemented. Their optimistic client run
 provides immediate feedback; their authoritative server run verifies the
-authenticated user, current household membership, the enabled Recipes setting,
+   access principal, current household permission, the enabled Recipes setting,
 and every referenced active recipe-scoped row inside the transaction. Deleted
 recipes cannot receive metadata or image mutations. Foreign IDs are
 indistinguishable from missing IDs. Scalar conflicts use the last write
@@ -247,7 +257,7 @@ transformation parameters or obtain the private source object URL.
 
 The upload flow is:
 
-1. The authenticated browser requests permission for a specific recipe, image
+1. The authorized account or Guest browser requests permission for a specific recipe, image
    ID, optional cooking log, content type, and size.
 2. The API verifies household membership, the enabled Recipes setting, recipe
    ownership, and any cooking-log relationship.
@@ -272,7 +282,7 @@ bearer credentials, never log them, and never expose R2 credentials through a
 `VITE_` environment variable.
 
 The web client caches signed derivative read URLs and in-flight requests by
-user, household, recipe, image, and display variant. Unexpired URL metadata is
+principal cache identity, household, recipe, image, and display variant. Unexpired URL metadata is
 persisted in browser storage so reloads reuse the exact URL and browser HTTP
 cache; entries refresh shortly before expiry, are cleared on logout, and are
 invalidated when an image is deleted. Simultaneous misses are authorized in
@@ -282,8 +292,8 @@ The derivative read flow is:
 
 1. The authenticated browser requests one or more fixed display variants from
    the API, omitting URLs that remain valid in its persistent cache.
-2. The API verifies the active user, household membership, enabled Recipes
-   setting, and confirmed recipe-scoped image under shared locks.
+2. The API verifies the account membership or current Guest link capability,
+   enabled Recipes setting, and confirmed recipe-scoped image under shared locks.
 3. Outside the transaction, the API returns one-hour HMAC-signed Worker URLs
    containing only the variant and route-scoped IDs.
 4. The Worker validates the method, fixed variant, IDs, expiry, and signature
@@ -301,13 +311,11 @@ returns `404`; a transformation or storage failure returns a generic `500` and
 never falls back to exposing the original. Existing confirmed images require
 no eager data migration because missing derivatives are repaired lazily.
 
-Image deletion is idempotent. A short transaction authorizes and reads
-metadata, the original and both derivatives are deleted from R2 without
-database locks held, and a second
-transaction reauthorizes and locks the row before hard-deleting its metadata.
-If R2 deletion fails, metadata remains. If the database step fails after R2
-deletion, retrying can finish cleanup. A transactional outbox may replace this
-recovery policy if background jobs are introduced.
+Image deletion is idempotent and recoverable: it sets `deleted_at` on confirmed
+metadata and retains the private original and derivatives in R2. Active
+queries, reorder operations, upload checks, and read authorization exclude
+deleted child rows. Restoration is a deliberate manual PostgreSQL operation in
+this version; there is no recycle-bin interface or automatic purge policy.
 
 Deleting an image does not synchronously purge its content-addressed edge-cache
 entry. The API stops issuing capabilities as soon as metadata is deleted, an
@@ -316,8 +324,8 @@ authorizes before reading cache, and image UUIDs are never reused. The orphaned
 cache entry then expires or is evicted without making the deleted image
 reachable.
 
-The R2 bucket permits `PUT` from
-`https://home.achichorro.com` and `http://127.0.0.1:5173`, with
+The R2 bucket permits `PUT` from `https://home.achichorro.com`,
+`https://guest.achichorro.com`, and `http://127.0.0.1:5173`, with
 `Content-Type` allowed and `ETag` exposed. This restricted CORS policy does not
 make the bucket public; each upload still requires a valid presigned URL.
 Derivative reads go through the delivery Worker and do not require browser

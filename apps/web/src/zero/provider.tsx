@@ -7,11 +7,13 @@ import { type ReactNode, useMemo } from "react";
 import { ModuleAccessProvider } from "../access/module-access";
 import { ZeroAuthRefresh } from "./zero-auth-refresh";
 
-const cacheURL = import.meta.env.VITE_ZERO_CACHE_URL;
+const configuredCacheURL = import.meta.env.VITE_ZERO_CACHE_URL;
 
-if (!cacheURL) {
+if (!configuredCacheURL) {
   throw new Error("VITE_ZERO_CACHE_URL is not configured");
 }
+
+const cacheURL = new URL(configuredCacheURL, window.location.origin).href;
 
 type HomeHubZeroProviderProps = {
   cacheIdentity: string;

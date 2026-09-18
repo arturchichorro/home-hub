@@ -15,6 +15,12 @@ The household is the collaboration and authorization boundary. Data belonging
 to one household must never be visible or mutable through membership in
 another household.
 
+Household owners may issue named **Guest access links** for accountless use. A
+QR code redeems one link into a device-specific Guest session. Links apply to
+guest-capable, enabled modules in one household and may be read-only or
+read-write; they never expose household administration. Recipes is the first
+guest-capable module. See [Guest access](./guest-access/) for full behavior.
+
 ## Built-in modules
 
 Home Hub is organized into small built-in modules:
@@ -74,6 +80,8 @@ shared identity or metadata rather than merely copying values.
   appears, but it is not part of the initial model.
 - Membership, ownership, module configuration, and destructive household
   changes are online-only API operations.
+- Only the owner may create, change, disable, or regenerate Guest access
+  links. Disabling or regenerating one revokes every session created from it.
 
 The exact authorization, privacy, and transaction-locking requirements for
 these operations are defined in

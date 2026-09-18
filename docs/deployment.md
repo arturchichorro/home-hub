@@ -41,9 +41,11 @@ Caddy is the only public entry point to services running on the VPS. It:
 - proxies Zero HTTP and WebSocket traffic to `zero-cache`.
 
 PostgreSQL and direct container ports are not published to the internet. The
-application uses one public origin, `https://home.achichorro.com`. Caddy serves
-the SPA at that origin, proxies `/api/*` to Hono, and proxies `/zero/*` HTTP and
-WebSocket traffic to `zero-cache`. Production configuration must keep the
+application uses `https://home.achichorro.com` for accounts and
+`https://guest.achichorro.com` for Guest access. Caddy serves the same SPA at
+both origins, proxies `/api/*` to Hono, and proxies `/zero/*` HTTP and WebSocket
+traffic to `zero-cache`. `VITE_ZERO_CACHE_URL=/zero` keeps Zero on the current
+origin. Production configuration must keep the
 `/api/auth` refresh-cookie path, Zero callback URLs, and
 `VITE_ZERO_CACHE_URL` aligned with this routing. The browser uses the same
 origin for the SPA and API, so production does not require cross-origin API
@@ -52,6 +54,13 @@ use the authorization Worker at `https://images.home.achichorro.com`; the
 module-specific R2 CORS policy is documented in
 [Recipes image storage and security](./recipes/#image-storage-and-security).
 The private backup bucket does not use this browser CORS policy.
+
+The recipe-image upload bucket's CORS allowlist must include both
+`https://home.achichorro.com` and `https://guest.achichorro.com` for `PUT` with
+the `Content-Type` header. Add an A/AAAA record for the guest hostname pointing
+at the same VPS before deployment so Caddy can obtain its certificate. Release
+verification checks the SPA, API readiness, and Zero keepalive through both
+origins.
 
 Caddy serves hashed files under `/assets/` with a one-year immutable cache
 policy. It serves `index.html`, the service worker, the web manifest, icons,

@@ -44,6 +44,30 @@ Login accepts email and password only. Normalize the email with `trim().toLowerC
 
 Login performs one Argon2id verification even when the email is unknown, using a dummy password hash, to reduce timing differences that could otherwise reveal whether an account exists.
 
+## Guest principals
+
+A Guest access link is an intentionally shareable bearer credential scoped to
+one household. QR secrets and device-session cookie secrets are 32 random bytes
+encoded as base64url; only SHA-256 hashes are stored. The QR secret is carried
+in a URL fragment, exchanged once in a request body, removed from browser
+history immediately, and never used as ongoing request authentication.
+
+Each redemption creates a `household_guest_sessions` row and a host-only
+`Secure`, `HttpOnly`, `SameSite=Lax`, `Path=/api/guest` cookie. The cookie only
+refreshes an in-memory, short-lived Guest JWT. Guest JWTs are marked distinctly
+and account middleware rejects them.
+
+Protected module routes resolve an account or guest principal. Guest resolution
+reloads the session, link, household, current read/write level, and revocation
+state from PostgreSQL on every request. Guest operations must target the
+principal's household and an explicitly guest-capable, enabled module. Writes
+also require the link's current `write` level. Guest principals are never
+accepted by household administration routes.
+
+Disabling or regenerating a link transactionally revokes its active sessions.
+Anyone who sees or receives a QR code can use it from anywhere until then;
+there is no proximity or personal identity claim.
+
 ## Refresh tokens
 
 Refresh tokens provide continuity and revocation:
@@ -209,7 +233,8 @@ logs.
 Define named Zero queries in shared TypeScript. At the API query endpoint:
 
 1. Verify the forwarded access JWT.
-2. construct a trusted context containing the user ID;
+2. construct a trusted context containing the account identity or validated
+   Guest session, household, and current access level;
 3. find the requested named query;
 4. transform it with relationship filters requiring household membership and,
    for module-owned data, an enabled module setting;

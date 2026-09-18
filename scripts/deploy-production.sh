@@ -60,5 +60,11 @@ curl --fail --silent --show-error \
   https://home.achichorro.com/zero/keepalive >/dev/null
 curl --fail --silent --show-error \
   https://home.achichorro.com/ >/dev/null
+curl --fail --silent --show-error \
+  https://guest.achichorro.com/ >/dev/null
+curl --fail --silent --show-error \
+  https://guest.achichorro.com/api/ready >/dev/null
+curl --fail --silent --show-error \
+  https://guest.achichorro.com/zero/keepalive >/dev/null
 
 printf 'Deployment completed successfully: %s\n' "$(git rev-parse HEAD)"
