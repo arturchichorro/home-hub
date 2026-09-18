@@ -14,15 +14,5 @@ export const Route = createFileRoute(
 });
 
 function RecipeLibraryRoute() {
-  const { householdId } = Route.useParams();
-  const { onSessionExpired, session } = Route.useRouteContext();
-
-  return (
-    <RecipeLibrary
-      accessToken={session.accessToken}
-      householdId={householdId}
-      onSessionExpired={onSessionExpired}
-      cacheIdentity={session.user.id}
-    />
-  );
+  return <RecipeLibrary />;
 }

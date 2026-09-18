@@ -1,11 +1,14 @@
 import type { AST } from "@rocicorp/zero";
 import { describe, expect, it } from "vitest";
-
+import type { ZeroAuthContext } from "./context";
 import { queries } from "./queries";
 
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+const ctx: ZeroAuthContext = {
+  actor: { kind: "account", accountId: userId },
+};
 
 function getAst(query: unknown): AST {
   return (query as { ast: AST }).ast;
@@ -109,7 +112,7 @@ function directMembershipCondition() {
 describe("Lists queries", () => {
   it("previews only the first four current items in detail-list order", () => {
     const ast = getAst(
-      queries.lists.byHousehold.fn({ args: { householdId }, ctx: { userId } }),
+      queries.lists.byHousehold.fn({ args: { householdId }, ctx }),
     );
     expect(ast.related).toMatchObject([
       {
@@ -142,7 +145,7 @@ describe("Lists queries", () => {
       getAst(
         queries.lists.byHousehold.fn({
           args: { householdId },
-          ctx: { userId },
+          ctx,
         }),
       ),
     ).toMatchObject({
@@ -172,7 +175,7 @@ describe("Lists queries", () => {
       getAst(
         queries.lists.detail.fn({
           args: { householdId, listId: recipeId },
-          ctx: { userId },
+          ctx,
         }),
       ),
     ).toMatchObject({
@@ -234,7 +237,7 @@ describe("household queries", () => {
       getAst(
         queries.householdMemberships.byHousehold.fn({
           args: { householdId },
-          ctx: { userId },
+          ctx,
         }),
       ),
     ).toMatchObject({
@@ -263,9 +266,7 @@ describe("household queries", () => {
 
   it("orders the current user's sidebar memberships", () => {
     expect(
-      getAst(
-        queries.householdMemberships.mine.fn({ args: {}, ctx: { userId } }),
-      ),
+      getAst(queries.householdMemberships.mine.fn({ args: {}, ctx })),
     ).toMatchObject({
       table: "householdMembers",
       where: {
@@ -293,7 +294,7 @@ describe("household queries", () => {
   it("returns authorized households and only the current user's membership", () => {
     const query = queries.households.mine.fn({
       args: {},
-      ctx: { userId },
+      ctx,
     });
 
     expect(getAst(query)).toMatchObject({
@@ -327,9 +328,9 @@ describe("recipe queries", () => {
 
   it("lets a guest query recipes only in its pinned household", () => {
     const guestContext = {
-      userId: "guest:session-id",
-      guest: { householdId, access: "read" as const },
-    };
+      actor: { kind: "guest" },
+      householdScope: { householdId, permission: "read" },
+    } as const;
     const allowed = getAst(
       queries.recipes.byHousehold.fn({
         args: { householdId },
@@ -356,7 +357,7 @@ describe("recipe queries", () => {
   it("scopes the recipe list to an authorized household with deterministic ordering", () => {
     const query = queries.recipes.byHousehold.fn({
       args: { householdId },
-      ctx: { userId },
+      ctx,
     });
 
     expect(getAst(query)).toMatchObject({
@@ -434,7 +435,7 @@ describe("recipe queries", () => {
   it("scopes recipe detail to the household and user and orders related rows", () => {
     const query = queries.recipes.detail.fn({
       args: { householdId, recipeId },
-      ctx: { userId },
+      ctx,
     });
 
     expect(getAst(query)).toMatchObject({
@@ -518,7 +519,7 @@ describe("module settings queries", () => {
   it("scopes settings to an authorized household", () => {
     const query = queries.modules.byHousehold.fn({
       args: { householdId },
-      ctx: { userId },
+      ctx,
     });
 
     expect(getAst(query)).toMatchObject({

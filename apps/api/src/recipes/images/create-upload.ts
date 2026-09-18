@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Database } from "@home-hub/database";
 import { recipeImages } from "@home-hub/database/schema";
+import type { RequestAccess } from "@home-hub/shared/access";
 import { appendSortKey } from "@home-hub/shared/ordering";
 import { recipeImageOriginalObjectKey } from "@home-hub/shared/recipe-image-delivery";
 import type {
@@ -8,11 +9,7 @@ import type {
   RecipeImageContentType,
 } from "@home-hub/shared/recipe-images";
 import { and, asc, eq, isNull } from "drizzle-orm";
-import {
-  authorizeHouseholdModule,
-  type PrincipalOrLegacyUser,
-  resolvePrincipal,
-} from "../../authorization/module-access";
+import { authorizeHouseholdModule } from "../../authorization/module-access";
 import {
   findRecipeCookLogForShare,
   findRecipeForShare,
@@ -24,11 +21,11 @@ type SignUpload = (input: {
   contentType: RecipeImageContentType;
 }) => Promise<string>;
 
-export type CreateRecipeImageUploadInput = CreateRecipeImageUploadRequest &
-  PrincipalOrLegacyUser & {
-    householdId: string;
-    recipeId: string;
-  };
+export type CreateRecipeImageUploadInput = CreateRecipeImageUploadRequest & {
+  requestAccess: RequestAccess;
+  householdId: string;
+  recipeId: string;
+};
 
 export type CreateRecipeImageUploadResult =
   | { kind: "unauthorized" }
@@ -62,10 +59,9 @@ export function createRecipeImageUploadService({
       width,
       height,
     } = input;
-    const principal = resolvePrincipal(input);
     return db.transaction(async (tx) => {
       const failure = await authorizeHouseholdModule(tx, {
-        principal,
+        requestAccess: input.requestAccess,
         householdId,
         moduleKey: "recipes",
         write: true,

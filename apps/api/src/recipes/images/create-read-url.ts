@@ -1,10 +1,7 @@
 import type { Database } from "@home-hub/database";
+import type { RequestAccess } from "@home-hub/shared/access";
 import type { RecipeImageVariant } from "@home-hub/shared/recipe-image-delivery";
-import {
-  authorizeHouseholdModule,
-  type PrincipalOrLegacyUser,
-  resolvePrincipal,
-} from "../../authorization/module-access";
+import { authorizeHouseholdModule } from "../../authorization/module-access";
 import { findConfirmedRecipeImageForShare } from "./scoped-entities";
 import { recipeImageReadUrlLifetimeSeconds } from "./sign-read";
 
@@ -15,7 +12,8 @@ export type SignRead = (input: {
   variant: RecipeImageVariant;
 }) => Promise<string>;
 
-export type CreateRecipeImageReadUrlInput = PrincipalOrLegacyUser & {
+export type CreateRecipeImageReadUrlInput = {
+  requestAccess: RequestAccess;
   householdId: string;
   recipeId: string;
   imageId: string;
@@ -43,10 +41,9 @@ export function createRecipeImageReadUrlService({
     input: CreateRecipeImageReadUrlInput,
   ): Promise<CreateRecipeImageReadUrlResult> {
     const { householdId, recipeId, imageId, variant } = input;
-    const principal = resolvePrincipal(input);
     const authorizedImage = await db.transaction(async (tx) => {
       const failure = await authorizeHouseholdModule(tx, {
-        principal,
+        requestAccess: input.requestAccess,
         householdId,
         moduleKey: "recipes",
         write: false,

@@ -2,10 +2,7 @@ import { createRecipeImageReadUrlRequestSchema } from "@home-hub/shared/recipe-i
 import type { Context } from "hono";
 import * as z from "zod";
 
-import {
-  type PrincipalEnv,
-  principalServiceInput,
-} from "../../authorization/principal";
+import type { RequestAccessEnv } from "../../authorization/request-access";
 import type {
   CreateRecipeImageReadUrlInput,
   CreateRecipeImageReadUrlResult,
@@ -20,7 +17,7 @@ export type CreateRecipeImageReadUrlRouteInput = {
 export function createRecipeImageReadUrlRoute({
   createRecipeImageReadUrl,
 }: CreateRecipeImageReadUrlRouteInput) {
-  return async (c: Context<PrincipalEnv>) => {
+  return async (c: Context<RequestAccessEnv>) => {
     const parsedHouseholdId = z.uuid().safeParse(c.req.param("householdId"));
     const parsedRecipeId = z.uuid().safeParse(c.req.param("recipeId"));
     const parsedImageId = z.uuid().safeParse(c.req.param("imageId"));
@@ -37,7 +34,7 @@ export function createRecipeImageReadUrlRoute({
     }
 
     const result = await createRecipeImageReadUrl({
-      ...principalServiceInput(c.get("principal"), c.get("userId")),
+      requestAccess: c.get("requestAccess"),
       householdId: parsedHouseholdId.data,
       recipeId: parsedRecipeId.data,
       imageId: parsedImageId.data,

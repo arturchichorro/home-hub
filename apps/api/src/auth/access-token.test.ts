@@ -92,7 +92,7 @@ describe("signAccessToken", () => {
 });
 
 describe("signGuestAccessToken", () => {
-  it("marks a guest session without changing account-token claims", () => {
+  it("marks the token subject as a guest session", () => {
     const token = signGuestAccessToken({
       guestSessionId: "guest-session-123",
       jwtId: "jwt-123",
@@ -102,7 +102,7 @@ describe("signGuestAccessToken", () => {
 
     expect(verifyAccessToken({ token, secret, now })).toMatchObject({
       sub: "guest-session-123",
-      principalType: "guest",
+      subjectType: "guest-session",
     });
   });
 });
@@ -129,6 +129,7 @@ describe("verifyAccessToken", () => {
       iat: issuedAt,
       exp: issuedAt + 600,
       jti: "jwt-123",
+      subjectType: "account",
     });
   });
 

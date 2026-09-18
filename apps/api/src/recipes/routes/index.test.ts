@@ -1,7 +1,8 @@
+import type { Database } from "@home-hub/database";
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
-
 import { signAccessToken } from "../../auth/access-token";
+import { createRequestAccessAuth } from "../../authorization/request-access";
 import type {
   ConfirmRecipeImageUploadInput,
   ConfirmRecipeImageUploadResult,
@@ -28,6 +29,9 @@ const jwtSecret = "test-jwt-secret";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+const requestAccess = {
+  actor: { kind: "account", accountId: userId },
+} as const;
 
 function createAccessToken() {
   return signAccessToken({
@@ -71,7 +75,10 @@ function createTestApp(
       createRecipeImageReadUrls,
       createRecipeImageUpload,
       deleteRecipeImage,
-      jwtSecret,
+      authenticateRequest: createRequestAccessAuth({
+        db: {} as Database,
+        jwtSecret,
+      }),
     }),
   );
   return app;
@@ -133,7 +140,7 @@ describe("recipe routes", () => {
 
     expect(response.status).toBe(201);
     expect(createRecipeImageUpload).toHaveBeenCalledWith({
-      userId,
+      requestAccess,
       householdId,
       recipeId,
       ...body,
@@ -164,7 +171,7 @@ describe("recipe routes", () => {
 
     expect(response.status).toBe(200);
     expect(confirmRecipeImageUpload).toHaveBeenCalledWith({
-      userId,
+      requestAccess,
       householdId,
       recipeId,
       imageId,
@@ -200,7 +207,7 @@ describe("recipe routes", () => {
 
     expect(response.status).toBe(200);
     expect(createRecipeImageReadUrl).toHaveBeenCalledWith({
-      userId,
+      requestAccess,
       householdId,
       recipeId,
       imageId,
@@ -248,7 +255,7 @@ describe("recipe routes", () => {
 
     expect(response.status).toBe(200);
     expect(createRecipeImageReadUrls).toHaveBeenCalledWith({
-      userId,
+      requestAccess,
       householdId,
       requests: [{ imageId, recipeId, variant: "thumbnail" }],
     });
@@ -276,7 +283,7 @@ describe("recipe routes", () => {
 
     expect(response.status).toBe(204);
     expect(deleteRecipeImage).toHaveBeenCalledWith({
-      userId,
+      requestAccess,
       householdId,
       recipeId,
       imageId,

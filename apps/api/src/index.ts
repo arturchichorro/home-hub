@@ -199,7 +199,7 @@ const app = createApp({
     jwtSecret: infrastructure.config.API_JWT_SECRET,
     isProduction: infrastructure.config.NODE_ENV === "production",
     logger: consoleStructuredLogger,
-    principalDatabase: infrastructure.db,
+    database: infrastructure.db,
     readinessCheck: createDatabaseReadinessCheck({ db: infrastructure.db }),
   },
 });

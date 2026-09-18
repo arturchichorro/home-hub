@@ -1,10 +1,7 @@
 import type { Context } from "hono";
 import * as z from "zod";
 
-import {
-  type PrincipalEnv,
-  principalServiceInput,
-} from "../../authorization/principal";
+import type { RequestAccessEnv } from "../../authorization/request-access";
 import type {
   DeleteRecipeImageInput,
   DeleteRecipeImageResult,
@@ -19,7 +16,7 @@ export type DeleteRecipeImageRouteInput = {
 export function deleteRecipeImageRoute({
   deleteRecipeImage,
 }: DeleteRecipeImageRouteInput) {
-  return async (c: Context<PrincipalEnv>) => {
+  return async (c: Context<RequestAccessEnv>) => {
     const parsedHouseholdId = z.uuid().safeParse(c.req.param("householdId"));
     const parsedRecipeId = z.uuid().safeParse(c.req.param("recipeId"));
     const parsedImageId = z.uuid().safeParse(c.req.param("imageId"));
@@ -33,7 +30,7 @@ export function deleteRecipeImageRoute({
     }
 
     const result = await deleteRecipeImage({
-      ...principalServiceInput(c.get("principal"), c.get("userId")),
+      requestAccess: c.get("requestAccess"),
       householdId: parsedHouseholdId.data,
       recipeId: parsedRecipeId.data,
       imageId: parsedImageId.data,

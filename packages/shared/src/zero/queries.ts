@@ -1,11 +1,14 @@
 import { defineQueriesWithType, defineQueryWithType } from "@rocicorp/zero";
 import * as z from "zod";
 import { listDetailArgsSchema } from "../lists";
-import type { ZeroAuthContext } from "./context";
+import { isGuestZeroAuthContext, type ZeroAuthContext } from "./context";
 import { type Schema, zql } from "./schema.gen";
 
 const defineHomeHubQuery = defineQueryWithType<Schema, ZeroAuthContext>();
 const defineHomeHubQueries = defineQueriesWithType<Schema>();
+const noAccountId = "00000000-0000-0000-0000-000000000000";
+const accountId = (ctx: ZeroAuthContext) =>
+  ctx.actor.kind === "account" ? ctx.actor.accountId : noAccountId;
 
 const householdIdArgsSchema = z
   .object({
@@ -23,8 +26,8 @@ const recipeDetailArgsSchema = z
 const myHouseholds = defineHomeHubQuery(z.object({}).strict(), ({ ctx }) =>
   zql.households
     .where("deletedAt", "IS", null)
-    .whereExists("members", (member) => member.where("userId", ctx.userId))
-    .related("members", (member) => member.where("userId", ctx.userId))
+    .whereExists("members", (member) => member.where("userId", accountId(ctx)))
+    .related("members", (member) => member.where("userId", accountId(ctx)))
     .orderBy("name", "asc")
     .orderBy("id", "asc"),
 );
@@ -33,7 +36,7 @@ const myHouseholdMemberships = defineHomeHubQuery(
   z.object({}).strict(),
   ({ ctx }) =>
     zql.householdMembers
-      .where("userId", ctx.userId)
+      .where("userId", accountId(ctx))
       .whereExists("household", (household) =>
         household.where("deletedAt", "IS", null),
       )
@@ -51,7 +54,7 @@ const householdMembersByHousehold = defineHomeHubQuery(
         household
           .where("deletedAt", "IS", null)
           .whereExists("members", (member) =>
-            member.where("userId", ctx.userId),
+            member.where("userId", accountId(ctx)),
           ),
       )
       .related("user")
@@ -68,7 +71,7 @@ const moduleSettingsByHousehold = defineHomeHubQuery(
         household
           .where("deletedAt", "IS", null)
           .whereExists("members", (member) =>
-            member.where("userId", ctx.userId),
+            member.where("userId", accountId(ctx)),
           ),
       )
       .orderBy("moduleKey", "asc"),
@@ -90,7 +93,7 @@ const authorizedLists = (householdId: string, userId: string) =>
 const listsByHousehold = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
-    authorizedLists(args.householdId, ctx.userId)
+    authorizedLists(args.householdId, accountId(ctx))
       .related("items", (item) =>
         item
           .where("status", "IN", ["active", "crossed"])
@@ -104,7 +107,7 @@ const listsByHousehold = defineHomeHubQuery(
 );
 
 const listDetail = defineHomeHubQuery(listDetailArgsSchema, ({ args, ctx }) =>
-  authorizedLists(args.householdId, ctx.userId)
+  authorizedLists(args.householdId, accountId(ctx))
     .where("id", args.listId)
     .related("items", (item) =>
       item
@@ -119,15 +122,18 @@ const authorizedRecipes = (householdId: string, ctx: ZeroAuthContext) => {
   const recipes = zql.recipes
     .where("householdId", householdId)
     .where("deletedAt", "IS", null);
-  if (ctx.guest && ctx.guest.householdId !== householdId) {
+  if (
+    isGuestZeroAuthContext(ctx) &&
+    ctx.householdScope.householdId !== householdId
+  ) {
     return recipes.where("id", "=", "00000000-0000-0000-0000-000000000000");
   }
   return recipes.whereExists("household", (household) => {
     let authorizedHousehold = household.where("deletedAt", "IS", null);
-    if (!ctx.guest) {
+    if (!isGuestZeroAuthContext(ctx)) {
       authorizedHousehold = authorizedHousehold.whereExists(
         "members",
-        (member) => member.where("userId", ctx.userId),
+        (member) => member.where("userId", ctx.actor.accountId),
       );
     }
     return authorizedHousehold.whereExists("moduleSettings", (setting) =>

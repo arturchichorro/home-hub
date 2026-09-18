@@ -29,7 +29,9 @@ export function createBearerAuth(jwtSecret: string) {
         token: parts[1],
         secret: jwtSecret,
       });
-      if (claims.principalType) throw new Error("Invalid account token");
+      if (claims.subjectType !== "account") {
+        throw new Error("Invalid account token");
+      }
       userId = claims.sub;
     } catch {
       c.header("WWW-Authenticate", "Bearer");

@@ -18,7 +18,7 @@ const cacheURL = new URL(configuredCacheURL, window.location.origin).href;
 type HomeHubZeroProviderProps = {
   cacheIdentity: string;
   canWrite: boolean;
-  guest?: ZeroAuthContext["guest"];
+  requestAccess: ZeroAuthContext;
   accessToken: string;
   onAccessTokenRefreshed: (accessToken: string) => void;
   refreshAccessToken?: () => Promise<
@@ -32,7 +32,7 @@ type HomeHubZeroProviderProps = {
 export function HomeHubZeroProvider({
   cacheIdentity,
   canWrite,
-  guest,
+  requestAccess,
   accessToken,
   onAccessTokenRefreshed,
   refreshAccessToken,
@@ -40,10 +40,7 @@ export function HomeHubZeroProvider({
   onReady,
   children,
 }: HomeHubZeroProviderProps) {
-  const context = useMemo<ZeroAuthContext>(
-    () => ({ userId: cacheIdentity, ...(guest ? { guest } : {}) }),
-    [cacheIdentity, guest],
-  );
+  const context = useMemo(() => requestAccess, [requestAccess]);
 
   return (
     <ZeroProvider

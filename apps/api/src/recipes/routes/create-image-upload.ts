@@ -5,10 +5,7 @@ import {
 import type { Context } from "hono";
 import * as z from "zod";
 
-import {
-  type PrincipalEnv,
-  principalServiceInput,
-} from "../../authorization/principal";
+import type { RequestAccessEnv } from "../../authorization/request-access";
 import type {
   CreateRecipeImageUploadInput,
   CreateRecipeImageUploadResult,
@@ -23,7 +20,7 @@ export type CreateRecipeImageUploadRouteInput = {
 export function createRecipeImageUploadRoute({
   createRecipeImageUpload,
 }: CreateRecipeImageUploadRouteInput) {
-  return async (c: Context<PrincipalEnv>) => {
+  return async (c: Context<RequestAccessEnv>) => {
     const parsedHouseholdId = z.uuid().safeParse(c.req.param("householdId"));
     const parsedRecipeId = z.uuid().safeParse(c.req.param("recipeId"));
     const body = await c.req.json().catch(() => undefined);
@@ -39,7 +36,7 @@ export function createRecipeImageUploadRoute({
 
     const request: CreateRecipeImageUploadRequest = parsedRequest.data;
     const result = await createRecipeImageUpload({
-      ...principalServiceInput(c.get("principal"), c.get("userId")),
+      requestAccess: c.get("requestAccess"),
       householdId: parsedHouseholdId.data,
       recipeId: parsedRecipeId.data,
       ...request,

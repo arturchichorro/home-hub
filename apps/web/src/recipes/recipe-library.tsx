@@ -28,17 +28,21 @@ import { useMemo, useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { CreateRecipeDialog } from "./create-recipe-dialog";
+import { useRecipeModule } from "./recipe-module";
 import { useRecipeImageUrl } from "./use-recipe-image-url";
 
-type RecipeLibraryProps = {
+type RecipeModuleProps = {
   accessToken: string;
   cacheIdentity: string;
   householdId: string;
   onSessionExpired: () => void;
-  routeMode?: "account" | "guest";
 };
 
-type RecipeCardImageProps = RecipeLibraryProps & {
+type RecipeLibraryProps = RecipeModuleProps & {
+  mode: "account" | "guest";
+};
+
+type RecipeCardImageProps = RecipeModuleProps & {
   image:
     | {
         id: string;
@@ -153,7 +157,7 @@ function RecipeCard({
   index,
   onSessionExpired,
   recipe,
-  routeMode = "account",
+  mode,
   cacheIdentity,
 }: RecipeLibraryProps & {
   disabled: boolean;
@@ -176,12 +180,12 @@ function RecipeCard({
       <Link
         ref={sortable.handleRef}
         to={
-          (routeMode === "guest"
+          (mode === "guest"
             ? "/recipes/$recipeId"
             : "/households/$householdId/recipes/$recipeId") as never
         }
         params={
-          (routeMode === "guest"
+          (mode === "guest"
             ? { recipeId: recipe.id }
             : { householdId, recipeId: recipe.id }) as never
         }
@@ -232,7 +236,7 @@ function RecipeCardGrid({
   onSessionExpired,
   recipes,
   cacheIdentity,
-  routeMode = "account",
+  mode,
 }: RecipeLibraryProps & {
   disabled: boolean;
   onMove: (from: number, to: number) => void;
@@ -263,7 +267,7 @@ function RecipeCardGrid({
             index={index}
             onSessionExpired={onSessionExpired}
             recipe={recipe}
-            routeMode={routeMode}
+            mode={mode}
             cacheIdentity={cacheIdentity}
           />
         ))}
@@ -272,13 +276,9 @@ function RecipeCardGrid({
   );
 }
 
-export function RecipeLibrary({
-  accessToken,
-  householdId,
-  onSessionExpired,
-  routeMode = "account",
-  cacheIdentity,
-}: RecipeLibraryProps) {
+export function RecipeLibrary() {
+  const { accessToken, cacheIdentity, householdId, mode, onSessionExpired } =
+    useRecipeModule();
   const zero = useZero();
   const navigate = useNavigate();
   const enabled = useZeroMutationEnabled();
@@ -373,7 +373,7 @@ export function RecipeLibrary({
         onSessionExpired={onSessionExpired}
         recipes={recipes}
         cacheIdentity={cacheIdentity}
-        routeMode={routeMode}
+        mode={mode}
       />
 
       <CreateRecipeDialog
@@ -381,7 +381,7 @@ export function RecipeLibrary({
         open={creating}
         onOpenChange={setCreating}
         onCreated={(recipeId) => {
-          if (routeMode === "guest") {
+          if (mode === "guest") {
             void navigate({ to: "/recipes/$recipeId", params: { recipeId } });
           } else {
             void navigate({

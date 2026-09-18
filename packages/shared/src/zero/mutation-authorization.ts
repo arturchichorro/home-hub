@@ -1,5 +1,6 @@
 import type { Transaction } from "@rocicorp/zero";
 import type { HouseholdModuleKey } from "../modules";
+import { isGuestZeroAuthContext, type ZeroAuthContext } from "./context";
 import { type Schema, zql } from "./schema.gen";
 
 export async function requireServerHouseholdMembership({
@@ -33,29 +34,30 @@ export async function requireServerHouseholdMembership({
 export async function requireServerHouseholdModuleAccess({
   tx,
   householdId,
-  userId,
-  guest,
+  requestAccess,
   moduleKey,
 }: {
   tx: Transaction<Schema>;
   householdId: string;
-  userId: string;
-  guest?: { householdId: string; access: "read" | "write" } | undefined;
+  requestAccess: ZeroAuthContext;
   moduleKey: HouseholdModuleKey;
 }): Promise<void> {
   if (tx.location !== "server") {
     return;
   }
 
-  if (guest) {
-    if (guest.householdId !== householdId || guest.access !== "write") {
+  if (isGuestZeroAuthContext(requestAccess)) {
+    if (
+      requestAccess.householdScope.householdId !== householdId ||
+      requestAccess.householdScope.permission !== "write"
+    ) {
       throw new Error("Household module mutation not allowed");
     }
   } else {
     const membership = await tx.run(
       zql.householdMembers
         .where("householdId", householdId)
-        .where("userId", userId)
+        .where("userId", requestAccess.actor.accountId)
         .whereExists("household", (household) =>
           household.where("deletedAt", "IS", null),
         )

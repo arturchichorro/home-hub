@@ -28,25 +28,16 @@ import { RecipeImageGallery, RecipeImageViewer } from "./recipe-image-gallery";
 import { RecipeImageUploadForm } from "./recipe-image-upload-form";
 import { invalidateRecipeImageUrl } from "./recipe-image-url-cache";
 import { RecipeIngredientList } from "./recipe-ingredient-list";
+import { useRecipeModule } from "./recipe-module";
 import { useRecipeDetailsEditor } from "./use-recipe-details-editor";
 
 type RecipeDetailProps = {
-  accessToken: string;
-  cacheIdentity: string;
-  householdId: string;
   recipeId: string;
-  onSessionExpired: () => void;
-  routeMode?: "account" | "guest";
 };
 
-export function RecipeDetail({
-  accessToken,
-  cacheIdentity,
-  householdId,
-  recipeId,
-  onSessionExpired,
-  routeMode = "account",
-}: RecipeDetailProps) {
+export function RecipeDetail({ recipeId }: RecipeDetailProps) {
+  const { accessToken, cacheIdentity, householdId, mode, onSessionExpired } =
+    useRecipeModule();
   const zero = useZero();
   const navigate = useNavigate();
   const mutationEnabled = useZeroMutationEnabled();
@@ -162,7 +153,7 @@ export function RecipeDetail({
         setDeleteError("The recipe could not be deleted.");
         return;
       }
-      if (routeMode === "guest") {
+      if (mode === "guest") {
         await navigate({ to: "/recipes", replace: true });
       } else {
         await navigate({

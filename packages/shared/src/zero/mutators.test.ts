@@ -78,7 +78,9 @@ const updateRecipeCookLogArgs = {
   optimisticUpdatedAt,
 };
 
-const ctx: ZeroAuthContext = { userId };
+const ctx: ZeroAuthContext = {
+  actor: { kind: "account", accountId: userId },
+};
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -380,8 +382,8 @@ describe("recipes.create mutator", () => {
     await mutators.recipes.create.fn({
       args: createRecipeArgs,
       ctx: {
-        userId: "guest:session-id",
-        guest: { householdId, access: "write" },
+        actor: { kind: "guest" },
+        householdScope: { householdId, permission: "write" },
       },
       tx: transaction,
     });
@@ -400,8 +402,8 @@ describe("recipes.create mutator", () => {
       mutators.recipes.create.fn({
         args: createRecipeArgs,
         ctx: {
-          userId: "guest:session-id",
-          guest: { householdId, access: "read" },
+          actor: { kind: "guest" },
+          householdScope: { householdId, permission: "read" },
         },
         tx: transaction,
       }),
@@ -421,8 +423,8 @@ describe("recipes.create mutator", () => {
       mutators.recipes.create.fn({
         args: createRecipeArgs,
         ctx: {
-          userId: "guest:session-id",
-          guest: { householdId: recipeId, access: "write" },
+          actor: { kind: "guest" },
+          householdScope: { householdId: recipeId, permission: "write" },
         },
         tx: transaction,
       }),

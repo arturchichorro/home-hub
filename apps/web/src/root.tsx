@@ -1,6 +1,7 @@
 import type { Zero } from "@rocicorp/zero";
 import { RouterProvider } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ApplicationMode } from "./application-mode";
 import { refreshSession, type Session } from "./auth/api";
 import {
   clearSessionBootstrap,
@@ -10,10 +11,11 @@ import { clearRecipeImageUrlCache } from "./recipes/recipe-image-url-cache";
 import { createAppRouter } from "./router";
 
 type RootProps = {
+  applicationMode: ApplicationMode;
   initialSession: Session | null;
 };
 
-export function Root({ initialSession }: RootProps) {
+export function Root({ applicationMode, initialSession }: RootProps) {
   const [session, setSession] = useState(initialSession);
   const [zero, setZero] = useState<Zero>();
   const onAuthenticated = useCallback((nextSession: Session) => {
@@ -57,6 +59,7 @@ export function Root({ initialSession }: RootProps) {
   }, []);
   const [router] = useState(() =>
     createAppRouter({
+      applicationMode,
       session: initialSession,
       zero: undefined,
       onAuthenticated,
@@ -84,6 +87,7 @@ export function Root({ initialSession }: RootProps) {
     <RouterProvider
       router={router}
       context={{
+        applicationMode,
         session,
         zero,
         onAuthenticated,

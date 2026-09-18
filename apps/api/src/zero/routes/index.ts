@@ -1,10 +1,7 @@
-import type { Database } from "@home-hub/database";
 import { Hono } from "hono";
+import type { MiddlewareHandler } from "hono/types";
 
-import {
-  createAccessPrincipalAuth,
-  type PrincipalEnv,
-} from "../../authorization/principal";
+import type { RequestAccessEnv } from "../../authorization/request-access";
 import {
   type CreateZeroMutateRouteInput,
   createZeroMutateRoute,
@@ -12,20 +9,19 @@ import {
 import { createZeroQueryRoute } from "./query";
 
 export type CreateZeroRoutesInput = CreateZeroMutateRouteInput & {
-  jwtSecret: string;
-  principalDatabase?: Database;
+  authenticateRequest: MiddlewareHandler<RequestAccessEnv>;
 };
 
 export function createZeroRoutes(input: CreateZeroRoutesInput) {
-  const zeroRoutes = new Hono<PrincipalEnv>();
-  const principalAuth = createAccessPrincipalAuth({
-    db: input.principalDatabase ?? ({} as Database),
-    jwtSecret: input.jwtSecret,
-  });
+  const zeroRoutes = new Hono<RequestAccessEnv>();
 
-  zeroRoutes.post("/query", principalAuth, createZeroQueryRoute());
+  zeroRoutes.post("/query", input.authenticateRequest, createZeroQueryRoute());
 
-  zeroRoutes.post("/mutate", principalAuth, createZeroMutateRoute(input));
+  zeroRoutes.post(
+    "/mutate",
+    input.authenticateRequest,
+    createZeroMutateRoute(input),
+  );
 
   return zeroRoutes;
 }

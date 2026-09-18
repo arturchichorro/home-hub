@@ -2,6 +2,7 @@ import type { Database } from "@home-hub/database";
 import { Hono } from "hono";
 
 import { type CreateAuthRoutesInput, createAuthRoutes } from "./auth/routes";
+import { createRequestAccessAuth } from "./authorization/request-access";
 import {
   type CreateGuestAccessRoutesInput,
   createGuestAccessRoutes,
@@ -24,7 +25,7 @@ import { type CreateZeroRoutesInput, createZeroRoutes } from "./zero/routes";
 
 type AuthServices = Omit<CreateAuthRoutesInput, "isProduction" | "jwtSecret">;
 type HouseholdServices = Omit<CreateHouseholdRoutesInput, "jwtSecret">;
-type RecipeImageServices = Omit<CreateRecipeRoutesInput, "jwtSecret">;
+type RecipeImageServices = Omit<CreateRecipeRoutesInput, "authenticateRequest">;
 
 export type CreateAppInput = {
   auth: AuthServices;
@@ -35,7 +36,7 @@ export type CreateAppInput = {
     isProduction: boolean;
     jwtSecret: string;
     logger: StructuredLogger;
-    principalDatabase: Database;
+    database: Database;
     readinessCheck: ReadinessCheck;
     zeroDbProvider: CreateZeroRoutesInput["dbProvider"];
   };
@@ -47,12 +48,16 @@ export function createApp(input: CreateAppInput) {
     isProduction,
     jwtSecret,
     logger,
-    principalDatabase,
+    database,
     readinessCheck,
     zeroDbProvider,
   } = input.infrastructure;
 
   installApiObservability(app, { logger });
+  const authenticateRequest = createRequestAccessAuth({
+    db: database,
+    jwtSecret,
+  });
 
   app.get("/api/health", (c) => c.json({ ok: true }));
   app.get("/api/ready", async (c) => {
@@ -79,16 +84,15 @@ export function createApp(input: CreateAppInput) {
     "/api/households/:householdId/recipes",
     createRecipeRoutes({
       ...input.recipeImages,
-      jwtSecret,
-      principalDatabase,
+      authenticateRequest,
     }),
   );
   app.route(
     "/api/zero",
     createZeroRoutes({
       dbProvider: zeroDbProvider,
-      jwtSecret,
-      principalDatabase,
+      authorizationDatabase: database,
+      authenticateRequest,
     }),
   );
 

@@ -1,11 +1,8 @@
 import type { Database } from "@home-hub/database";
 import { recipeImages } from "@home-hub/database/schema";
+import type { RequestAccess } from "@home-hub/shared/access";
 import { and, eq } from "drizzle-orm";
-import {
-  authorizeHouseholdModule,
-  type PrincipalOrLegacyUser,
-  resolvePrincipal,
-} from "../../authorization/module-access";
+import { authorizeHouseholdModule } from "../../authorization/module-access";
 import type { InspectR2ObjectResult } from "./inspect-object";
 import {
   findRecipeImageForShare,
@@ -22,7 +19,8 @@ type ProcessDerivatives = (input: {
   recipeId: string;
 }) => Promise<void>;
 
-export type ConfirmRecipeImageUploadInput = PrincipalOrLegacyUser & {
+export type ConfirmRecipeImageUploadInput = {
+  requestAccess: RequestAccess;
   householdId: string;
   recipeId: string;
   imageId: string;
@@ -49,10 +47,9 @@ export function createConfirmRecipeImageUploadService({
     input: ConfirmRecipeImageUploadInput,
   ): Promise<ConfirmRecipeImageUploadResult> {
     const { householdId, recipeId, imageId } = input;
-    const principal = resolvePrincipal(input);
     const initial = await db.transaction(async (tx) => {
       const failure = await authorizeHouseholdModule(tx, {
-        principal,
+        requestAccess: input.requestAccess,
         householdId,
         moduleKey: "recipes",
         write: true,
@@ -93,7 +90,7 @@ export function createConfirmRecipeImageUploadService({
 
     return db.transaction(async (tx) => {
       const failure = await authorizeHouseholdModule(tx, {
-        principal,
+        requestAccess: input.requestAccess,
         householdId,
         moduleKey: "recipes",
         write: true,

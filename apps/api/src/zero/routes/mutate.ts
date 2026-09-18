@@ -1,58 +1,48 @@
 import type { Database } from "@home-hub/database";
+import { isGuestRequestAccess } from "@home-hub/shared/access";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { mustGetMutator } from "@rocicorp/zero";
 import { handleMutateRequest } from "@rocicorp/zero/server";
 import type { Context } from "hono";
-import { lockCurrentGuestPrincipal } from "../../authorization/module-access";
-import type { PrincipalEnv } from "../../authorization/principal";
+import { lockCurrentGuestAccess } from "../../authorization/module-access";
+import type { RequestAccessEnv } from "../../authorization/request-access";
+import { toZeroAuthContext, zeroCacheIdentity } from "../access-context";
 import type { ZeroDbProvider } from "../db-provider";
 
 export type CreateZeroMutateRouteInput = {
   dbProvider: ZeroDbProvider;
-  principalDatabase?: Database;
+  authorizationDatabase: Database;
 };
 
 export function createZeroMutateRoute({
   dbProvider,
-  principalDatabase,
+  authorizationDatabase,
 }: CreateZeroMutateRouteInput) {
-  return async (c: Context<PrincipalEnv>) => {
-    let principal = c.get("principal");
+  return async (c: Context<RequestAccessEnv>) => {
+    let requestAccess = c.get("requestAccess");
     let releaseGuestLock: (() => Promise<Response>) | undefined;
-    if (principal.kind === "guest") {
-      const guestPrincipal = principal;
-      if (!principalDatabase) {
-        c.header("WWW-Authenticate", "Bearer");
-        return c.json({ error: "Unauthorized" }, 401);
-      }
+    if (isGuestRequestAccess(requestAccess)) {
+      const guestAccess = requestAccess;
       releaseGuestLock = () =>
-        principalDatabase.transaction(async (tx) => {
-          const current = await lockCurrentGuestPrincipal(tx, guestPrincipal);
+        authorizationDatabase.transaction(async (tx) => {
+          const current = await lockCurrentGuestAccess(tx, guestAccess);
           if (!current) {
             c.header("WWW-Authenticate", "Bearer");
             return c.json({ error: "Unauthorized" }, 401);
           }
-          principal = current;
+          requestAccess = current;
           return processMutation();
         });
     }
 
     const processMutation = async () => {
-      const ctx =
-        principal.kind === "account"
-          ? { userId: principal.userId }
-          : {
-              userId: `guest:${principal.guestSessionId}`,
-              guest: {
-                householdId: principal.householdId,
-                access: principal.access,
-              },
-            };
+      const userID = zeroCacheIdentity(requestAccess);
+      const context = toZeroAuthContext(requestAccess);
 
       const response = await handleMutateRequest({
         dbProvider,
         request: c.req.raw,
-        userID: ctx.userId,
+        userID,
         handler: (transact) =>
           transact(async (tx, name, args) => {
             const mutator = mustGetMutator(mutators, name);
@@ -60,7 +50,7 @@ export function createZeroMutateRoute({
             return mutator.fn({
               tx,
               args,
-              ctx,
+              ctx: context,
             });
           }),
       });

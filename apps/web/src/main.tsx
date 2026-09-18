@@ -2,6 +2,7 @@ import { Button } from "@home-hub/ui-web";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
+import { getApplicationMode } from "./application-mode.ts";
 import { ApplicationState } from "./application-state.tsx";
 import {
   clearSessionBootstrap,
@@ -17,13 +18,14 @@ if (!rootElement) {
 }
 
 const root = createRoot(rootElement);
+const applicationMode = getApplicationMode();
 
 function renderApplication(
   initialSession: Parameters<typeof Root>[0]["initialSession"],
 ) {
   root.render(
     <StrictMode>
-      <Root initialSession={initialSession} />
+      <Root applicationMode={applicationMode} initialSession={initialSession} />
     </StrictMode>,
   );
 }
@@ -55,14 +57,7 @@ async function start() {
     return;
   }
 
-  if (
-    window.location.hostname === "guest.achichorro.com" ||
-    window.location.pathname === "/join" ||
-    window.location.pathname.startsWith("/recipes")
-  ) {
-    if (window.location.pathname === "/") {
-      window.history.replaceState(null, "", "/recipes");
-    }
+  if (applicationMode === "guest") {
     renderApplication(null);
     return;
   }

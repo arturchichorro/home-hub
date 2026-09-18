@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5173",
+    "dev:guest": "VITE_APPLICATION_MODE=guest vite --host 127.0.0.1 --port 5174",
     "build": "tsc -b && NODE_ENV=production vite build",
     "preview": "vite preview",
     "test": "vitest run",

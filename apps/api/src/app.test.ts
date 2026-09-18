@@ -53,7 +53,7 @@ const defaultInput: CreateAppInput = {
     jwtSecret,
     isProduction: false,
     logger: silentLogger,
-    principalDatabase: {} as Database,
+    database: {} as Database,
     readinessCheck: async () => undefined,
   },
 };

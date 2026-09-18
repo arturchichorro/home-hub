@@ -7,10 +7,12 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
+import type { ApplicationMode } from "../application-mode";
 import { ApplicationState } from "../application-state";
 import type { Session } from "../auth/api";
 
 export type RouterContext = {
+  applicationMode: ApplicationMode;
   session: Session | null;
   zero: Zero | undefined;
   onAuthenticated: (session: Session) => void;

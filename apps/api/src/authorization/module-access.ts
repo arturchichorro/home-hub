@@ -4,7 +4,11 @@ import {
   householdGuestSessions,
   households,
 } from "@home-hub/database/schema";
-import type { AccessPrincipal } from "@home-hub/shared/access";
+import {
+  type GuestRequestAccess,
+  isGuestRequestAccess,
+  type RequestAccess,
+} from "@home-hub/shared/access";
 import type { HouseholdModuleKey } from "@home-hub/shared/modules";
 import { and, eq, isNull } from "drizzle-orm";
 import { findActiveUser } from "./active-user";
@@ -13,20 +17,10 @@ import {
   findHouseholdMembershipForShare,
 } from "./household-access";
 
-export type PrincipalOrLegacyUser =
-  | { principal: AccessPrincipal; userId?: never }
-  | { principal?: never; userId: string };
-
-export function resolvePrincipal(
-  input: PrincipalOrLegacyUser,
-): AccessPrincipal {
-  return input.principal ?? { kind: "account", userId: input.userId };
-}
-
-export async function lockCurrentGuestPrincipal(
+export async function lockCurrentGuestAccess(
   tx: DatabaseTransaction,
-  principal: Extract<AccessPrincipal, { kind: "guest" }>,
-): Promise<Extract<AccessPrincipal, { kind: "guest" }> | undefined> {
+  requestAccess: Extract<RequestAccess, { actor: { kind: "guest" } }>,
+): Promise<GuestRequestAccess | undefined> {
   const [current] = await tx
     .select({
       guestAccessLinkId: householdGuestAccessLinks.id,
@@ -47,8 +41,8 @@ export async function lockCurrentGuestPrincipal(
     )
     .where(
       and(
-        eq(householdGuestSessions.id, principal.guestSessionId),
-        eq(householdGuestAccessLinks.id, principal.guestAccessLinkId),
+        eq(householdGuestSessions.id, requestAccess.actor.guestSessionId),
+        eq(householdGuestAccessLinks.id, requestAccess.actor.guestAccessLinkId),
         isNull(householdGuestSessions.revokedAt),
         isNull(householdGuestAccessLinks.disabledAt),
         isNull(households.deletedAt),
@@ -59,11 +53,15 @@ export async function lockCurrentGuestPrincipal(
 
   return current
     ? {
-        kind: "guest",
-        guestSessionId: principal.guestSessionId,
-        guestAccessLinkId: current.guestAccessLinkId,
-        householdId: current.householdId,
-        access: current.access,
+        actor: {
+          kind: "guest",
+          guestSessionId: requestAccess.actor.guestSessionId,
+          guestAccessLinkId: current.guestAccessLinkId,
+        },
+        householdScope: {
+          householdId: current.householdId,
+          permission: current.access,
+        },
       }
     : undefined;
 }
@@ -71,26 +69,27 @@ export async function lockCurrentGuestPrincipal(
 export async function authorizeHouseholdModule(
   tx: DatabaseTransaction,
   input: {
-    principal: AccessPrincipal;
+    requestAccess: RequestAccess;
     householdId: string;
     moduleKey: HouseholdModuleKey;
     write: boolean;
   },
 ): Promise<"unauthorized" | "forbidden" | undefined> {
-  if (input.principal.kind === "account") {
-    const user = await findActiveUser(tx, input.principal.userId);
+  if (!isGuestRequestAccess(input.requestAccess)) {
+    const accountId = input.requestAccess.actor.accountId;
+    const user = await findActiveUser(tx, accountId);
     if (!user) return "unauthorized";
     const membership = await findHouseholdMembershipForShare(tx, {
       householdId: input.householdId,
-      userId: input.principal.userId,
+      userId: accountId,
     });
     if (!membership) return "forbidden";
   } else {
-    const current = await lockCurrentGuestPrincipal(tx, input.principal);
+    const current = await lockCurrentGuestAccess(tx, input.requestAccess);
     if (
       !current ||
-      current.householdId !== input.householdId ||
-      (input.write && current.access !== "write")
+      current.householdScope.householdId !== input.householdId ||
+      (input.write && current.householdScope.permission !== "write")
     ) {
       return "forbidden";
     }

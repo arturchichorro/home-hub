@@ -10,12 +10,15 @@ import { createRecipeImageReadUrlService } from "./create-read-url";
 import { recipeImageReadUrlLifetimeSeconds } from "./sign-read";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+const requestAccess = {
+  actor: { kind: "account", accountId: userId },
+} as const;
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 const objectKey = `households/${householdId}/recipes/${recipeId}/${imageId}`;
 const input = {
-  userId,
+  requestAccess,
   householdId,
   recipeId,
   imageId,

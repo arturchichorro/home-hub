@@ -1,16 +1,30 @@
 import type { GuestAccessLevel } from "./guest-access";
 
-export type AccountPrincipal = {
+export type AccountActor = {
   kind: "account";
-  userId: string;
+  accountId: string;
 };
 
-export type GuestPrincipal = {
+export type GuestActor = {
   kind: "guest";
   guestSessionId: string;
   guestAccessLinkId: string;
-  householdId: string;
-  access: GuestAccessLevel;
 };
 
-export type AccessPrincipal = AccountPrincipal | GuestPrincipal;
+export type HouseholdAccessScope = {
+  householdId: string;
+  permission: GuestAccessLevel;
+};
+
+export type AccountRequestAccess = { actor: AccountActor };
+export type GuestRequestAccess = {
+  actor: GuestActor;
+  householdScope: HouseholdAccessScope;
+};
+export type RequestAccess = AccountRequestAccess | GuestRequestAccess;
+
+export function isGuestRequestAccess(
+  access: RequestAccess,
+): access is GuestRequestAccess {
+  return access.actor.kind === "guest";
+}

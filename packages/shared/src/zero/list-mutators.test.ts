@@ -13,7 +13,8 @@ const otherListId = "5944cb0d-931a-4723-b981-77eacb122314";
 const foreignHouseholdId = "e467b00a-5f80-4c13-aa5b-d2e59996dd82";
 const itemId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const otherItemId = "b5b8a5ea-89cb-4c31-a93d-33049ab11c73";
-const ctx = { userId: "9f8a6942-f721-499d-957d-7bb3ed1158db" };
+const accountId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+const ctx = { actor: { kind: "account", accountId } } as const;
 const scope = { householdId, listId };
 const times = { optimisticTimestamp: 1000, optimisticUpdatedAt: 1000 };
 type Row = Record<string, unknown>;
@@ -74,7 +75,7 @@ function matches(
 function setup(location: "server" | "client" = "server") {
   const data: Record<Table, Row[]> = {
     households: [{ id: householdId, deletedAt: null }],
-    householdMembers: [{ householdId, userId: ctx.userId }],
+    householdMembers: [{ householdId, userId: accountId }],
     householdModuleSettings: [
       { householdId, moduleKey: "lists", enabled: true },
     ],

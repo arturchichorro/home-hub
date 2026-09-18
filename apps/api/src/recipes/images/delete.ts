@@ -1,14 +1,12 @@
 import type { Database } from "@home-hub/database";
 import { recipeImages } from "@home-hub/database/schema";
+import type { RequestAccess } from "@home-hub/shared/access";
 import { and, eq } from "drizzle-orm";
-import {
-  authorizeHouseholdModule,
-  type PrincipalOrLegacyUser,
-  resolvePrincipal,
-} from "../../authorization/module-access";
+import { authorizeHouseholdModule } from "../../authorization/module-access";
 import { findRecipeImageObjectForUpdate } from "./scoped-entities";
 
-export type DeleteRecipeImageInput = PrincipalOrLegacyUser & {
+export type DeleteRecipeImageInput = {
+  requestAccess: RequestAccess;
   householdId: string;
   recipeId: string;
   imageId: string;
@@ -24,10 +22,9 @@ export function createDeleteRecipeImageService({ db }: { db: Database }) {
     input: DeleteRecipeImageInput,
   ): Promise<DeleteRecipeImageResult> {
     const { householdId, recipeId, imageId } = input;
-    const principal = resolvePrincipal(input);
     return db.transaction(async (tx) => {
       const failure = await authorizeHouseholdModule(tx, {
-        principal,
+        requestAccess: input.requestAccess,
         householdId,
         moduleKey: "recipes",
         write: true,

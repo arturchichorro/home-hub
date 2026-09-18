@@ -13,8 +13,7 @@ export type AccessTokenClaims = {
   iat: number;
   exp: number;
   jti: string;
-  principalType?: "guest";
-};
+} & ({ subjectType: "account" } | { subjectType: "guest-session" });
 
 type AccessTokenHeader = {
   typ: typeof accessTokenType;
@@ -65,7 +64,8 @@ function assertValidClaims(value: unknown): asserts value is AccessTokenClaims {
   if (
     typeof value.sub !== "string" ||
     typeof value.jti !== "string" ||
-    (value.principalType !== undefined && value.principalType !== "guest") ||
+    (value.subjectType !== "account" &&
+      value.subjectType !== "guest-session") ||
     value.iss !== accessTokenIssuer ||
     value.aud !== accessTokenAudience ||
     !Number.isInteger(value.iat) ||
@@ -101,7 +101,7 @@ function signToken(input: {
   secret: string;
   now?: Date;
   ttlSeconds?: number;
-  principalType?: "guest";
+  subjectType: AccessTokenClaims["subjectType"];
 }): string {
   const now = input.now ?? new Date();
   const issuedAt = secondsSinceEpoch(now);
@@ -117,7 +117,7 @@ function signToken(input: {
     iat: issuedAt,
     exp: issuedAt + ttlSeconds,
     jti: input.jwtId,
-    ...(input.principalType ? { principalType: input.principalType } : {}),
+    subjectType: input.subjectType,
   };
   const encodedHeader = base64UrlEncodeJson(header);
   const encodedPayload = base64UrlEncodeJson(claims);
@@ -138,6 +138,7 @@ export function signAccessToken(input: {
     subject: input.userId,
     jwtId: input.jwtId,
     secret: input.secret,
+    subjectType: "account",
     ...(input.now ? { now: input.now } : {}),
     ...(input.ttlSeconds === undefined ? {} : { ttlSeconds: input.ttlSeconds }),
   });
@@ -156,7 +157,7 @@ export function signGuestAccessToken(input: {
     secret: input.secret,
     ...(input.now ? { now: input.now } : {}),
     ...(input.ttlSeconds === undefined ? {} : { ttlSeconds: input.ttlSeconds }),
-    principalType: "guest",
+    subjectType: "guest-session",
   });
 }
 

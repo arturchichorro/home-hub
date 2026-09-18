@@ -1,7 +1,9 @@
+import type { Database } from "@home-hub/database";
 import type { TransactionProviderHooks } from "@rocicorp/zero/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { signAccessToken } from "../../auth/access-token";
+import { createRequestAccessAuth } from "../../authorization/request-access";
 import type { ZeroDbProvider } from "../db-provider";
 import { createZeroRoutes } from "./index";
 
@@ -11,6 +13,19 @@ const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const itemId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const listId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 const dbProvider = {} as ZeroDbProvider;
+const authorizationDatabase = {} as Database;
+const authenticateRequest = createRequestAccessAuth({
+  db: authorizationDatabase,
+  jwtSecret,
+});
+
+function createTestRoutes(provider: ZeroDbProvider) {
+  return createZeroRoutes({
+    authorizationDatabase,
+    authenticateRequest,
+    dbProvider: provider,
+  });
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -140,7 +155,7 @@ function postQuery(input: {
 
 describe("Zero routes", () => {
   it("rejects an unauthenticated request", async () => {
-    const app = createZeroRoutes({ dbProvider, jwtSecret });
+    const app = createTestRoutes(dbProvider);
 
     const response = await postQuery({
       app,
@@ -153,7 +168,7 @@ describe("Zero routes", () => {
   });
 
   it("returns an authorized query transformation", async () => {
-    const app = createZeroRoutes({ dbProvider, jwtSecret });
+    const app = createTestRoutes(dbProvider);
 
     const response = await postQuery({
       app,
@@ -186,7 +201,7 @@ describe("Zero routes", () => {
   });
 
   it("returns an application error for an invalid household ID", async () => {
-    const app = createZeroRoutes({ dbProvider, jwtSecret });
+    const app = createTestRoutes(dbProvider);
 
     const response = await postQuery({
       app,
@@ -210,7 +225,7 @@ describe("Zero routes", () => {
   });
 
   it("returns an application error for an unknown query", async () => {
-    const app = createZeroRoutes({ dbProvider, jwtSecret });
+    const app = createTestRoutes(dbProvider);
 
     const response = await postQuery({
       app,
@@ -234,7 +249,7 @@ describe("Zero routes", () => {
   });
 
   it("rejects an unauthenticated mutation request before using the database provider", async () => {
-    const app = createZeroRoutes({ dbProvider, jwtSecret });
+    const app = createTestRoutes(dbProvider);
 
     const response = await app.request("/mutate", {
       method: "POST",
@@ -251,7 +266,7 @@ describe("Zero routes", () => {
     const authoritativeUpdatedAt = 1_786_000_001_000;
     vi.spyOn(Date, "now").mockReturnValue(authoritativeUpdatedAt);
     const { dbProvider, transaction, update } = createMutationTestProvider();
-    const app = createZeroRoutes({ dbProvider, jwtSecret });
+    const app = createTestRoutes(dbProvider);
 
     const response = await app.request("/mutate?schema=zero_0&appID=home-hub", {
       method: "POST",
@@ -286,7 +301,7 @@ describe("Zero routes", () => {
     const { dbProvider, update } = createMutationTestProvider({
       membershipExists: false,
     });
-    const app = createZeroRoutes({ dbProvider, jwtSecret });
+    const app = createTestRoutes(dbProvider);
 
     const response = await app.request("/mutate?schema=zero_0&appID=home-hub", {
       method: "POST",
@@ -320,7 +335,7 @@ describe("Zero routes", () => {
     const { dbProvider, update } = createMutationTestProvider({
       moduleEnabled: false,
     });
-    const app = createZeroRoutes({ dbProvider, jwtSecret });
+    const app = createTestRoutes(dbProvider);
 
     const response = await app.request("/mutate?schema=zero_0&appID=home-hub", {
       method: "POST",

@@ -1,11 +1,8 @@
-import type { Database } from "@home-hub/database";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
+import type { MiddlewareHandler } from "hono/types";
 
-import {
-  createAccessPrincipalAuth,
-  type PrincipalEnv,
-} from "../../authorization/principal";
+import type { RequestAccessEnv } from "../../authorization/request-access";
 import { FixedWindowRateLimiter } from "../../rate-limit";
 import {
   type ConfirmRecipeImageUploadRouteInput,
@@ -33,23 +30,18 @@ export type CreateRecipeRoutesInput = ConfirmRecipeImageUploadRouteInput &
   CreateRecipeImageReadUrlsRouteInput &
   CreateRecipeImageUploadRouteInput &
   DeleteRecipeImageRouteInput & {
-    jwtSecret: string;
-    principalDatabase?: Database;
+    authenticateRequest: MiddlewareHandler<RequestAccessEnv>;
   };
 
 export function createRecipeRoutes(input: CreateRecipeRoutesInput) {
-  const recipeRoutes = new Hono<PrincipalEnv>();
-  const principalAuth = createAccessPrincipalAuth({
-    db: input.principalDatabase ?? ({} as Database),
-    jwtSecret: input.jwtSecret,
-  });
+  const recipeRoutes = new Hono<RequestAccessEnv>();
   const uploadLimiter = new FixedWindowRateLimiter(60, 60_000);
-  const limitUploads = createMiddleware<PrincipalEnv>(async (c, next) => {
-    const principal = c.get("principal");
+  const limitUploads = createMiddleware<RequestAccessEnv>(async (c, next) => {
+    const requestAccess = c.get("requestAccess");
     const key =
-      principal.kind === "account"
-        ? `account:${principal.userId}`
-        : `guest:${principal.guestSessionId}`;
+      requestAccess.actor.kind === "account"
+        ? `account:${requestAccess.actor.accountId}`
+        : `guest:${requestAccess.actor.guestSessionId}`;
     if (!uploadLimiter.allow(key)) {
       c.header("Retry-After", "60");
       return c.json({ error: "Too many requests" }, 429);
@@ -59,32 +51,32 @@ export function createRecipeRoutes(input: CreateRecipeRoutesInput) {
 
   recipeRoutes.post(
     "/:recipeId/images/uploads",
-    principalAuth,
+    input.authenticateRequest,
     limitUploads,
     createRecipeImageUploadRoute(input),
   );
 
   recipeRoutes.delete(
     "/:recipeId/images/:imageId",
-    principalAuth,
+    input.authenticateRequest,
     deleteRecipeImageRoute(input),
   );
 
   recipeRoutes.post(
     "/:recipeId/images/:imageId/confirm",
-    principalAuth,
+    input.authenticateRequest,
     confirmRecipeImageUploadRoute(input),
   );
 
   recipeRoutes.post(
     "/images/read-urls",
-    principalAuth,
+    input.authenticateRequest,
     createRecipeImageReadUrlsRoute(input),
   );
 
   recipeRoutes.post(
     "/:recipeId/images/:imageId/read-url",
-    principalAuth,
+    input.authenticateRequest,
     createRecipeImageReadUrlRoute(input),
   );
 

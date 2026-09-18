@@ -50,12 +50,9 @@ describe("guest module authorization", () => {
     const { locks, tx } = createTransaction("write");
     await expect(
       authorizeHouseholdModule(tx, {
-        principal: {
-          kind: "guest",
-          guestSessionId,
-          guestAccessLinkId,
-          householdId,
-          access: "write",
+        requestAccess: {
+          actor: { kind: "guest", guestSessionId, guestAccessLinkId },
+          householdScope: { householdId, permission: "write" },
         },
         householdId,
         moduleKey: "recipes",
@@ -69,12 +66,9 @@ describe("guest module authorization", () => {
     const { tx } = createTransaction("read");
     await expect(
       authorizeHouseholdModule(tx, {
-        principal: {
-          kind: "guest",
-          guestSessionId,
-          guestAccessLinkId,
-          householdId,
-          access: "write",
+        requestAccess: {
+          actor: { kind: "guest", guestSessionId, guestAccessLinkId },
+          householdScope: { householdId, permission: "write" },
         },
         householdId,
         moduleKey: "recipes",
@@ -87,12 +81,9 @@ describe("guest module authorization", () => {
     const { tx } = createTransaction(undefined);
     await expect(
       authorizeHouseholdModule(tx, {
-        principal: {
-          kind: "guest",
-          guestSessionId,
-          guestAccessLinkId,
-          householdId,
-          access: "write",
+        requestAccess: {
+          actor: { kind: "guest", guestSessionId, guestAccessLinkId },
+          householdScope: { householdId, permission: "write" },
         },
         householdId,
         moduleKey: "recipes",

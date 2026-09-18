@@ -36,7 +36,7 @@ async function requireAccess(
 ) {
   await requireServerHouseholdModuleAccess({
     tx,
-    userId: ctx.userId,
+    requestAccess: ctx,
     householdId,
     moduleKey: "lists",
   });

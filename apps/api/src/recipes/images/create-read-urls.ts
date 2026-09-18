@@ -1,15 +1,13 @@
 import type { Database } from "@home-hub/database";
+import type { RequestAccess } from "@home-hub/shared/access";
 import type { RecipeImageVariant } from "@home-hub/shared/recipe-image-delivery";
-import {
-  authorizeHouseholdModule,
-  type PrincipalOrLegacyUser,
-  resolvePrincipal,
-} from "../../authorization/module-access";
+import { authorizeHouseholdModule } from "../../authorization/module-access";
 import type { SignRead } from "./create-read-url";
 import { findConfirmedHouseholdRecipeImagesForShare } from "./scoped-entities";
 import { recipeImageReadUrlLifetimeSeconds } from "./sign-read";
 
-export type CreateRecipeImageReadUrlsInput = PrincipalOrLegacyUser & {
+export type CreateRecipeImageReadUrlsInput = {
+  requestAccess: RequestAccess;
   householdId: string;
   requests: Array<{
     imageId: string;
@@ -43,7 +41,6 @@ export function createRecipeImageReadUrlsService({
     input: CreateRecipeImageReadUrlsInput,
   ): Promise<CreateRecipeImageReadUrlsResult> {
     const { householdId, requests } = input;
-    const principal = resolvePrincipal(input);
     const uniqueRequests = Array.from(
       new Map(
         requests.map((request) => [
@@ -54,7 +51,7 @@ export function createRecipeImageReadUrlsService({
     );
     const authorizedImageIds = await db.transaction(async (tx) => {
       const failure = await authorizeHouseholdModule(tx, {
-        principal,
+        requestAccess: input.requestAccess,
         householdId,
         moduleKey: "recipes",
         write: false,

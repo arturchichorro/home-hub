@@ -2,6 +2,7 @@ import { Button } from "@home-hub/ui-web";
 import {
   createFileRoute,
   Outlet,
+  redirect,
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
@@ -10,9 +11,13 @@ import { logoutGuestAccess, refreshGuestAccessToken } from "../guest/api";
 import { GuestApp } from "../guest/guest-app";
 import { GuestSessionProvider, useGuestSession } from "../guest/session";
 import { clearRecipeImageUrlCache } from "../recipes/recipe-image-url-cache";
+import { RecipeModuleProvider } from "../recipes/recipe-module";
 import { HomeHubZeroProvider } from "../zero/provider";
 
 export const Route = createFileRoute("/_guest")({
+  beforeLoad: ({ context }) => {
+    if (context.applicationMode !== "guest") throw redirect({ to: "/" });
+  },
   component: GuestLayout,
 });
 
@@ -66,7 +71,13 @@ function GuestSessionLayout() {
     <HomeHubZeroProvider
       cacheIdentity={session.cacheIdentity}
       canWrite={session.access === "write"}
-      guest={{ householdId: session.household.id, access: session.access }}
+      requestAccess={{
+        actor: { kind: "guest" },
+        householdScope: {
+          householdId: session.household.id,
+          permission: session.access,
+        },
+      }}
       accessToken={session.accessToken}
       refreshAccessToken={refreshGuestAccessToken}
       onAccessTokenRefreshed={(accessToken) =>
@@ -80,7 +91,15 @@ function GuestSessionLayout() {
         householdName={session.household.name}
         onLeave={() => void logoutGuestAccess().finally(closeSession)}
       >
-        <Outlet />
+        <RecipeModuleProvider
+          accessToken={session.accessToken}
+          cacheIdentity={session.cacheIdentity}
+          householdId={session.household.id}
+          mode="guest"
+          onSessionExpired={closeSession}
+        >
+          <Outlet />
+        </RecipeModuleProvider>
       </GuestApp>
     </HomeHubZeroProvider>
   );

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 
-import type { AuthEnv } from "../../auth/bearer-auth";
+import type { RequestAccessEnv } from "../../authorization/request-access";
 import type {
   ConfirmRecipeImageUploadInput,
   ConfirmRecipeImageUploadResult,
@@ -12,15 +12,18 @@ const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+const requestAccess = {
+  actor: { kind: "account", accountId: userId },
+} as const;
 
 type ConfirmUpload = (
   input: ConfirmRecipeImageUploadInput,
 ) => Promise<ConfirmRecipeImageUploadResult>;
 
 function createTestApp(confirmRecipeImageUpload: ConfirmUpload) {
-  const app = new Hono<AuthEnv>();
+  const app = new Hono<RequestAccessEnv>();
   app.use("*", async (c, next) => {
-    c.set("userId", userId);
+    c.set("requestAccess", requestAccess);
     await next();
   });
   app.post(
@@ -82,7 +85,7 @@ describe("confirm recipe image upload route", () => {
       image: { id: imageId, confirmedAt: confirmedAt.toISOString() },
     });
     expect(confirmRecipeImageUpload).toHaveBeenCalledWith({
-      userId,
+      requestAccess,
       householdId,
       recipeId,
       imageId,

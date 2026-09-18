@@ -23,6 +23,12 @@ import { type Schema, zql } from "./schema.gen";
 
 const defineHomeHubMutator = defineMutatorWithType<Schema, ZeroAuthContext>();
 const defineHomeHubMutators = defineMutatorsWithType<Schema>();
+const requireAccountId = (ctx: ZeroAuthContext) => {
+  if (ctx.actor.kind !== "account") {
+    throw new Error("Account access required");
+  }
+  return ctx.actor.accountId;
+};
 const activeRecipes = (householdId: string) =>
   zql.recipes.where("householdId", householdId).where("deletedAt", "IS", null);
 const activeRecipe = (householdId: string, recipeId: string) =>
@@ -30,7 +36,9 @@ const activeRecipe = (householdId: string, recipeId: string) =>
 const reorderHouseholds = defineHomeHubMutator(
   reorderHouseholdsMutationSchema,
   async ({ args, ctx, tx }) => {
-    const rows = await tx.run(zql.householdMembers.where("userId", ctx.userId));
+    const rows = await tx.run(
+      zql.householdMembers.where("userId", requireAccountId(ctx)),
+    );
     const updates = planReorder(
       rows.map(({ householdId, sortKey }) => ({ id: householdId, sortKey })),
       args.orderedHouseholdIds,
@@ -58,8 +66,7 @@ const createRecipe = defineHomeHubMutator(
     await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
-      userId: ctx.userId,
-      guest: ctx.guest,
+      requestAccess: ctx,
       moduleKey: "recipes",
     });
 
@@ -92,8 +99,7 @@ const reorderRecipes = defineHomeHubMutator(
     await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
-      userId: ctx.userId,
-      guest: ctx.guest,
+      requestAccess: ctx,
       moduleKey: "recipes",
     });
 
@@ -112,8 +118,7 @@ const updateRecipe = defineHomeHubMutator(
     await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
-      userId: ctx.userId,
-      guest: ctx.guest,
+      requestAccess: ctx,
       moduleKey: "recipes",
     });
 
@@ -141,8 +146,7 @@ const deleteRecipe = defineHomeHubMutator(
     await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
-      userId: ctx.userId,
-      guest: ctx.guest,
+      requestAccess: ctx,
       moduleKey: "recipes",
     });
 
@@ -165,8 +169,7 @@ const addRecipeIngredient = defineHomeHubMutator(
     await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
-      userId: ctx.userId,
-      guest: ctx.guest,
+      requestAccess: ctx,
       moduleKey: "recipes",
     });
 
@@ -211,8 +214,7 @@ const updateRecipeIngredient = defineHomeHubMutator(
     await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
-      userId: ctx.userId,
-      guest: ctx.guest,
+      requestAccess: ctx,
       moduleKey: "recipes",
     });
 
@@ -252,8 +254,7 @@ const renameRecipeIngredient = defineHomeHubMutator(
     await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
-      userId: ctx.userId,
-      guest: ctx.guest,
+      requestAccess: ctx,
       moduleKey: "recipes",
     });
 
@@ -285,8 +286,7 @@ const addRecipeCookLog = defineHomeHubMutator(
     await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
-      userId: ctx.userId,
-      guest: ctx.guest,
+      requestAccess: ctx,
       moduleKey: "recipes",
     });
 
@@ -324,8 +324,7 @@ const updateRecipeCookLog = defineHomeHubMutator(
     await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
-      userId: ctx.userId,
-      guest: ctx.guest,
+      requestAccess: ctx,
       moduleKey: "recipes",
     });
 
@@ -357,8 +356,7 @@ const deleteRecipeIngredient = defineHomeHubMutator(
     await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
-      userId: ctx.userId,
-      guest: ctx.guest,
+      requestAccess: ctx,
       moduleKey: "recipes",
     });
 
@@ -390,8 +388,7 @@ const reorderRecipeIngredients = defineHomeHubMutator(
     await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
-      userId: ctx.userId,
-      guest: ctx.guest,
+      requestAccess: ctx,
       moduleKey: "recipes",
     });
 
@@ -425,8 +422,7 @@ const deleteRecipeCookLog = defineHomeHubMutator(
     await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
-      userId: ctx.userId,
-      guest: ctx.guest,
+      requestAccess: ctx,
       moduleKey: "recipes",
     });
 
@@ -458,8 +454,7 @@ const reorderRecipeImages = defineHomeHubMutator(
     await requireServerHouseholdModuleAccess({
       tx,
       householdId: args.householdId,
-      userId: ctx.userId,
-      guest: ctx.guest,
+      requestAccess: ctx,
       moduleKey: "recipes",
     });
 
