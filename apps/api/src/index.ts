@@ -9,6 +9,12 @@ import { createMeService } from "./auth/me";
 import { createRefreshService } from "./auth/refresh";
 import { createSignupService } from "./auth/signup";
 import { config } from "./config";
+import {
+  createGuestAccessLinkService,
+  createListGuestAccessLinksService,
+  createRegenerateGuestAccessLinkService,
+  createUpdateGuestAccessLinkService,
+} from "./guest-access/manage";
 import { createAcceptHouseholdInviteService } from "./households/accept-invite";
 import { createHouseholdService } from "./households/create";
 import { createHouseholdInviteService } from "./households/create-invite";
@@ -73,12 +79,18 @@ const households = {
   createHouseholdInvite: createHouseholdInviteService({
     db: infrastructure.db,
   }),
+  createGuestAccessLink: createGuestAccessLinkService({
+    db: infrastructure.db,
+  }),
   deleteHousehold: createDeleteHouseholdService({ db: infrastructure.db }),
   listHouseholds: createListHouseholdsService({ db: infrastructure.db }),
   listHouseholdInvites: createListHouseholdInvitesService({
     db: infrastructure.db,
   }),
   listHouseholdMembers: createListHouseholdMembersService({
+    db: infrastructure.db,
+  }),
+  listGuestAccessLinks: createListGuestAccessLinksService({
     db: infrastructure.db,
   }),
   leaveHousehold: createLeaveHouseholdService({ db: infrastructure.db }),
@@ -89,10 +101,16 @@ const households = {
   removeHouseholdMember: createRemoveHouseholdMemberService({
     db: infrastructure.db,
   }),
+  regenerateGuestAccessLink: createRegenerateGuestAccessLinkService({
+    db: infrastructure.db,
+  }),
   transferHouseholdOwnership: createTransferHouseholdOwnershipService({
     db: infrastructure.db,
   }),
   setHouseholdModuleEnabled: createSetHouseholdModuleEnabledService({
+    db: infrastructure.db,
+  }),
+  updateGuestAccessLink: createUpdateGuestAccessLinkService({
     db: infrastructure.db,
   }),
 };

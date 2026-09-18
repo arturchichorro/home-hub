@@ -57,6 +57,11 @@ export const householdMemberRoleEnum = pgEnum("household_member_role", [
   "member",
 ]);
 
+export const householdGuestAccessLevelEnum = pgEnum(
+  "household_guest_access_level",
+  ["read", "write"],
+);
+
 export const households = pgTable("households", {
   id: uuid("id").primaryKey(),
   name: text("name").notNull(),
@@ -132,6 +137,7 @@ export const householdInvites = pgTable(
 );
 
 export const householdsRelations = relations(households, ({ many }) => ({
+  guestAccessLinks: many(householdGuestAccessLinks),
   images: many(recipeImages),
   listItems: many(listItems),
   lists: many(lists),
@@ -155,8 +161,87 @@ export const householdMembersRelations = relations(
 );
 
 export const usersRelations = relations(users, ({ many }) => ({
+  createdGuestAccessLinks: many(householdGuestAccessLinks),
   householdMemberships: many(householdMembers),
 }));
+
+export const householdGuestAccessLinks = pgTable(
+  "household_guest_access_links",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    name: text("name").notNull(),
+    access: householdGuestAccessLevelEnum().notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    disabledAt: timestamp("disabled_at", { withTimezone: true }),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("household_guest_access_links_household_id_created_at_idx").on(
+      table.householdId,
+      table.createdAt,
+      table.id,
+    ),
+  ],
+);
+
+export const householdGuestSessions = pgTable(
+  "household_guest_sessions",
+  {
+    id: uuid("id").primaryKey(),
+    guestAccessLinkId: uuid("guest_access_link_id")
+      .notNull()
+      .references(() => householdGuestAccessLinks.id),
+    tokenHash: text("token_hash").notNull().unique(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("household_guest_sessions_guest_access_link_id_idx").on(
+      table.guestAccessLinkId,
+    ),
+  ],
+);
+
+export const householdGuestAccessLinksRelations = relations(
+  householdGuestAccessLinks,
+  ({ many, one }) => ({
+    household: one(households, {
+      fields: [householdGuestAccessLinks.householdId],
+      references: [households.id],
+    }),
+    creator: one(users, {
+      fields: [householdGuestAccessLinks.createdByUserId],
+      references: [users.id],
+    }),
+    sessions: many(householdGuestSessions),
+  }),
+);
+
+export const householdGuestSessionsRelations = relations(
+  householdGuestSessions,
+  ({ one }) => ({
+    accessLink: one(householdGuestAccessLinks, {
+      fields: [householdGuestSessions.guestAccessLinkId],
+      references: [householdGuestAccessLinks.id],
+    }),
+  }),
+);
 
 export const listItemStatusEnum = pgEnum("list_item_status", [
   "active",

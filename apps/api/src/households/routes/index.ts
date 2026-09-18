@@ -15,6 +15,14 @@ import {
   type DeleteHouseholdRouteInput,
 } from "./delete";
 import {
+  type ConfiguredGuestAccessLinkRouteInput,
+  createGuestAccessLinkRoute,
+  type GuestAccessLinkRouteInput,
+  listGuestAccessLinksRoute,
+  regenerateGuestAccessLinkRoute,
+  updateGuestAccessLinkRoute,
+} from "./guest-access-links";
+import {
   createLeaveHouseholdRoute,
   type LeaveHouseholdRouteInput,
 } from "./leave";
@@ -54,6 +62,7 @@ import {
 export type CreateHouseholdRoutesInput = AcceptHouseholdInviteRouteInput &
   CreateHouseholdRouteInput &
   CreateHouseholdInviteRouteInput &
+  GuestAccessLinkRouteInput &
   DeleteHouseholdRouteInput &
   CreateListHouseholdsRouteInput &
   LeaveHouseholdRouteInput &
@@ -110,6 +119,39 @@ export function createHouseholdRoutes(input: CreateHouseholdRoutesInput) {
     createBearerAuth(input.jwtSecret),
     createHouseholdInviteRoute(input),
   );
+  if (
+    input.createGuestAccessLink &&
+    input.listGuestAccessLinks &&
+    input.regenerateGuestAccessLink &&
+    input.updateGuestAccessLink
+  ) {
+    const guestAccessInput: ConfiguredGuestAccessLinkRouteInput = {
+      createGuestAccessLink: input.createGuestAccessLink,
+      listGuestAccessLinks: input.listGuestAccessLinks,
+      regenerateGuestAccessLink: input.regenerateGuestAccessLink,
+      updateGuestAccessLink: input.updateGuestAccessLink,
+    };
+    householdRoutes.get(
+      "/:householdId/guest-access-links",
+      createBearerAuth(input.jwtSecret),
+      listGuestAccessLinksRoute(guestAccessInput),
+    );
+    householdRoutes.post(
+      "/:householdId/guest-access-links",
+      createBearerAuth(input.jwtSecret),
+      createGuestAccessLinkRoute(guestAccessInput),
+    );
+    householdRoutes.patch(
+      "/:householdId/guest-access-links/:guestAccessLinkId",
+      createBearerAuth(input.jwtSecret),
+      updateGuestAccessLinkRoute(guestAccessInput),
+    );
+    householdRoutes.post(
+      "/:householdId/guest-access-links/:guestAccessLinkId/regenerate",
+      createBearerAuth(input.jwtSecret),
+      regenerateGuestAccessLinkRoute(guestAccessInput),
+    );
+  }
   householdRoutes.post(
     "/invites/accept",
     createBearerAuth(input.jwtSecret),
