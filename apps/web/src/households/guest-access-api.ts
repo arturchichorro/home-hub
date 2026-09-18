@@ -22,18 +22,21 @@ function endpoint(householdId: string, linkId?: string) {
   return linkId ? `${base}/${encodeURIComponent(linkId)}` : base;
 }
 
-async function requireOwnerResponse(response: Response) {
-  if (response.status === 401) return "unauthorized" as const;
-  if (response.status === 403) return "forbidden" as const;
+type OwnerRequestFailure = { kind: "unauthorized" } | { kind: "forbidden" };
+
+function ownerRequestFailure(response: Response): OwnerRequestFailure | null {
+  if (response.status === 401) return { kind: "unauthorized" };
+  if (response.status === 403) return { kind: "forbidden" };
   if (!response.ok) throw new Error("Guest access request failed");
+  return null;
 }
 
 export async function listGuestAccessLinks(input: Input) {
   const response = await fetch(endpoint(input.householdId), {
     headers: headers(input.accessToken),
   });
-  const failure = await requireOwnerResponse(response);
-  if (failure) return { kind: failure } as const;
+  const failure = ownerRequestFailure(response);
+  if (failure) return failure;
   return {
     kind: "success" as const,
     links: listGuestAccessLinksResponseSchema.parse(await response.json())
@@ -53,8 +56,8 @@ export async function createGuestAccessLink(
     headers: headers(input.accessToken, true),
     body: JSON.stringify(request),
   });
-  const failure = await requireOwnerResponse(response);
-  if (failure) return { kind: failure } as const;
+  const failure = ownerRequestFailure(response);
+  if (failure) return failure;
   return {
     kind: "success" as const,
     link: createGuestAccessLinkResponseSchema.parse(await response.json()).link,
@@ -79,8 +82,8 @@ export async function updateGuestAccessLink(
     headers: headers(input.accessToken, true),
     body: JSON.stringify(request),
   });
-  const failure = await requireOwnerResponse(response);
-  if (failure) return { kind: failure } as const;
+  const failure = ownerRequestFailure(response);
+  if (failure) return failure;
   return {
     kind: "success" as const,
     link: updateGuestAccessLinkResponseSchema.parse(await response.json()).link,
@@ -97,8 +100,8 @@ export async function regenerateGuestAccessLink(
       headers: headers(input.accessToken),
     },
   );
-  const failure = await requireOwnerResponse(response);
-  if (failure) return { kind: failure } as const;
+  const failure = ownerRequestFailure(response);
+  if (failure) return failure;
   return {
     kind: "success" as const,
     link: regenerateGuestAccessLinkResponseSchema.parse(await response.json())

@@ -26,6 +26,7 @@ function publicSession(session: GuestSessionDetails) {
     accessToken: session.accessToken,
     access: session.access,
     cacheIdentity: session.cacheIdentity,
+    enabledModules: session.enabledModules,
     household: session.household,
   };
 }

@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { householdModuleKeySchema } from "./modules";
 
 export const guestAccessLevels = ["read", "write"] as const;
 export const guestAccessLevelSchema = z.enum(guestAccessLevels);
@@ -106,6 +107,7 @@ export const guestSessionResponseSchema = z
     accessToken: z.string().min(1),
     access: guestAccessLevelSchema,
     cacheIdentity: z.string().min(1),
+    enabledModules: z.array(householdModuleKeySchema),
     household: z
       .object({ id: z.uuid(), name: z.string().min(1).max(100) })
       .strict(),

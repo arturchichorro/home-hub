@@ -18,7 +18,7 @@ Disabling Recipes hides its navigation and blocks its queries, mutations,
 uploads, and signed image reads. It does not delete recipe data; re-enabling the
 module restores access for every current household member.
 
-Recipes supports Guest principals. Read guests use the same library, detail
+Recipes supports Guest actors. Read guests use the same library, detail
 views, cooking history, and image gallery without mutation controls. Write
 guests receive the ordinary Recipes interface. Server-side Zero and image
 authorization independently enforce the current capability and household
@@ -215,14 +215,14 @@ are untrusted layout metadata constrained to
 ## Synchronization and authorization
 
 Named Recipes queries constrain results through an authorized account or Guest
-principal, an enabled Recipes module setting, and `deleted_at IS NULL`. The Zero publication is only a coarse
+actor, an enabled Recipes module setting, and `deleted_at IS NULL`. The Zero publication is only a coarse
 allowlist: it omits recipe-image object keys, and query authorization still
 determines which rows a client may synchronize.
 
 Recipe, ingredient, cooking-log, and confirmed-image metadata changes use
 validated custom Zero mutators where implemented. Their optimistic client run
 provides immediate feedback; their authoritative server run verifies the
-   access principal, current household permission, the enabled Recipes setting,
+the request actor, current household permission, the enabled Recipes setting,
 and every referenced active recipe-scoped row inside the transaction. Deleted
 recipes cannot receive metadata or image mutations. Foreign IDs are
 indistinguishable from missing IDs. Scalar conflicts use the last write
@@ -282,7 +282,7 @@ bearer credentials, never log them, and never expose R2 credentials through a
 `VITE_` environment variable.
 
 The web client caches signed derivative read URLs and in-flight requests by
-principal cache identity, household, recipe, image, and display variant. Unexpired URL metadata is
+actor cache identity, household, recipe, image, and display variant. Unexpired URL metadata is
 persisted in browser storage so reloads reuse the exact URL and browser HTTP
 cache; entries refresh shortly before expiry, are cleared on logout, and are
 invalidated when an image is deleted. Simultaneous misses are authorized in

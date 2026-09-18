@@ -8,6 +8,11 @@ import {
   useState,
 } from "react";
 import { refreshGuestSession } from "./api";
+import {
+  clearGuestSessionBootstrap,
+  loadOfflineGuestSession,
+  saveGuestSessionBootstrap,
+} from "./session-bootstrap";
 
 type GuestSessionState = {
   loading: boolean;
@@ -25,6 +30,8 @@ export function GuestSessionProvider({ children }: { children: ReactNode }) {
     null,
   );
   const setSession = useCallback((next: GuestSessionResponse | null) => {
+    if (next) saveGuestSessionBootstrap(next);
+    else clearGuestSessionBootstrap();
     setStoredSession(next);
   }, []);
 
@@ -32,11 +39,23 @@ export function GuestSessionProvider({ children }: { children: ReactNode }) {
     let active = true;
     void refreshGuestSession()
       .then((result) => {
-        if (active)
-          setStoredSession(result.kind === "success" ? result.session : null);
+        if (!active) return;
+        if (result.kind === "success") {
+          saveGuestSessionBootstrap(result.session);
+          setStoredSession(result.session);
+        } else {
+          clearGuestSessionBootstrap();
+          setStoredSession(null);
+        }
       })
-      .catch(() => {
-        if (active) setStoredSession(null);
+      .catch((error) => {
+        if (!active) return;
+        if (error instanceof TypeError) {
+          setStoredSession(loadOfflineGuestSession());
+        } else {
+          clearGuestSessionBootstrap();
+          setStoredSession(null);
+        }
       })
       .finally(() => {
         if (active) setLoading(false);

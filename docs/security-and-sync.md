@@ -44,7 +44,7 @@ Login accepts email and password only. Normalize the email with `trim().toLowerC
 
 Login performs one Argon2id verification even when the email is unknown, using a dummy password hash, to reduce timing differences that could otherwise reveal whether an account exists.
 
-## Guest principals
+## Guest actors
 
 A Guest access link is an intentionally shareable bearer credential scoped to
 one household. QR secrets and device-session cookie secrets are 32 random bytes
@@ -57,11 +57,11 @@ Each redemption creates a `household_guest_sessions` row and a host-only
 refreshes an in-memory, short-lived Guest JWT. Guest JWTs are marked distinctly
 and account middleware rejects them.
 
-Protected module routes resolve an account or guest principal. Guest resolution
+Protected module routes resolve an account or guest actor. Guest resolution
 reloads the session, link, household, current read/write level, and revocation
 state from PostgreSQL on every request. Guest operations must target the
-principal's household and an explicitly guest-capable, enabled module. Writes
-also require the link's current `write` level. Guest principals are never
+guest access scope's household and an explicitly guest-capable, enabled module. Writes
+also require the link's current `write` level. Guest actors are never
 accepted by household administration routes.
 
 Disabling or regenerating a link transactionally revokes its active sessions.

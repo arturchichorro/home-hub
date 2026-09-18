@@ -12,7 +12,7 @@ import type {
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { findActiveUser } from "../authorization/active-user";
 import { findHouseholdOwnerForShare } from "../authorization/household-access";
-import { generateGuestAccessToken, hashGuestAccessToken } from "./token";
+import { generateGuestAccessToken, hashGuestLinkToken } from "./token";
 
 export type GuestAccessLinkRecord = {
   id: string;
@@ -71,7 +71,7 @@ export function createGuestAccessLinkService({ db }: { db: Database }) {
           householdId: input.householdId,
           name: input.name,
           access: input.access,
-          tokenHash: hashGuestAccessToken(token),
+          tokenHash: hashGuestLinkToken(token),
           createdByUserId: input.userId,
           createdAt: now,
           updatedAt: now,
@@ -202,7 +202,7 @@ export function createRegenerateGuestAccessLinkService({
       const now = new Date();
       const [link] = await tx
         .update(householdGuestAccessLinks)
-        .set({ tokenHash: hashGuestAccessToken(token), updatedAt: now })
+        .set({ tokenHash: hashGuestLinkToken(token), updatedAt: now })
         .where(eq(householdGuestAccessLinks.id, existing.id))
         .returning(linkSelection);
       if (!link)

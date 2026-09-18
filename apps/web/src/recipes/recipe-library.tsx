@@ -24,7 +24,7 @@ import {
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { CreateRecipeDialog } from "./create-recipe-dialog";
@@ -150,6 +150,41 @@ function formatCookedDate(cookedAt: number): string {
   }).format(date);
 }
 
+function RecipeCardLink({
+  children,
+  handleRef,
+  householdId,
+  mode,
+  recipeId,
+}: {
+  children: ReactNode;
+  handleRef: ReturnType<typeof useSortable>["handleRef"];
+  householdId: string;
+  mode: "account" | "guest";
+  recipeId: string;
+}) {
+  const common = {
+    ref: handleRef,
+    preload: "intent" as const,
+    draggable: false,
+    className:
+      "block min-w-0 touch-pan-y select-none outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
+  };
+  return mode === "guest" ? (
+    <Link {...common} to="/recipes/$recipeId" params={{ recipeId }}>
+      {children}
+    </Link>
+  ) : (
+    <Link
+      {...common}
+      to="/households/$householdId/recipes/$recipeId"
+      params={{ householdId, recipeId }}
+    >
+      {children}
+    </Link>
+  );
+}
+
 function RecipeCard({
   accessToken,
   disabled,
@@ -177,21 +212,11 @@ function RecipeCard({
       ref={sortable.ref}
       className={`min-w-0 ${sortable.isDragging ? "opacity-60" : ""}`}
     >
-      <Link
-        ref={sortable.handleRef}
-        to={
-          (mode === "guest"
-            ? "/recipes/$recipeId"
-            : "/households/$householdId/recipes/$recipeId") as never
-        }
-        params={
-          (mode === "guest"
-            ? { recipeId: recipe.id }
-            : { householdId, recipeId: recipe.id }) as never
-        }
-        preload="intent"
-        draggable={false}
-        className="block min-w-0 touch-pan-y select-none outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+      <RecipeCardLink
+        handleRef={sortable.handleRef}
+        householdId={householdId}
+        mode={mode}
+        recipeId={recipe.id}
       >
         <div className="w-full">
           <div className="aspect-3/2 w-full overflow-hidden rounded-md">
@@ -223,7 +248,7 @@ function RecipeCard({
             </span>
           </div>
         </div>
-      </Link>
+      </RecipeCardLink>
     </div>
   );
 }

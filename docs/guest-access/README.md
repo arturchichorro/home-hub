@@ -38,9 +38,10 @@ Use the following terms in product copy and documentation:
 - A **Guest session** represents one browser or device that redeemed a Guest
   access link. Sessions are distinct even when they came from the same QR
   code.
-- A **guest principal** is the trusted server-side identity derived from an
-  active Guest session. An **account principal** is the existing identity
-  derived from a signed-in user.
+- A **guest actor** is the trusted server-side identity derived from an active
+  Guest session. An **account actor** is the existing identity derived from a
+  signed-in user. The actor answers “who is making this request?”; a separate
+  household access scope answers “which household and permission apply?”.
 
 `Grant` or `capability` may be used as implementation and security terminology,
 but neither should be the primary user-facing name.
@@ -77,9 +78,9 @@ modules, not to household administration. The household's existing module
 settings remain authoritative and are the only per-household module
 configuration:
 
-- disabling a module blocks it for account and guest principals;
+- disabling a module blocks it for account and guest actors;
 - enabling a module does not bypass the requirement for its code to support
-guest principals;
+guest actors;
 - there is no second set of guest-specific module toggles;
 - a Guest access link cannot override a disabled module.
 
@@ -90,7 +91,7 @@ for that household. This expansion must be called out during rollout because
 existing QR codes will gain access without being reprinted or reconfigured.
 
 Core household administration is never a shared feature module. A guest
-principal cannot manage household names, members, invitations, ownership,
+actor cannot manage household names, members, invitations, ownership,
 module settings, or Guest access links, regardless of whether its link has
 write access.
 
@@ -225,7 +226,7 @@ type ModuleAccessContext = {
 ```
 
 The exact type may evolve during implementation, but module components should
-normally depend on capabilities such as `canWrite`, not on the principal kind.
+normally depend on capabilities such as `canWrite`, not on the actor kind.
 Authentication-specific behavior belongs in the application shells and
 session providers.
 
@@ -250,20 +251,24 @@ remembering and switching among multiple guest households is deferred.
 
 ## Authentication and authorization
 
-### Principal model
+### Actor and access model
 
-Trusted server context becomes a discriminated principal rather than an
-unconditional `userId`:
+Trusted server context separates the authenticated actor from any household
+scope rather than overloading an unconditional `userId`:
 
 ```ts
-type AccessPrincipal =
-  | { kind: "account"; userId: string }
+type RequestAccess =
+  | { actor: { kind: "account"; accountId: string } }
   | {
-      kind: "guest";
-      guestSessionId: string;
-      guestAccessLinkId: string;
-      householdId: string;
-      access: "read" | "write";
+      actor: {
+        kind: "guest";
+        guestSessionId: string;
+        guestAccessLinkId: string;
+      };
+      householdScope: {
+        householdId: string;
+        permission: "read" | "write";
+      };
     };
 ```
 
@@ -278,14 +283,14 @@ Guest access requires all of the following:
 - its Guest access link exists and is active;
 - the link belongs to the household addressed by the operation;
 - the requested module is enabled for the household;
-- the module operation explicitly supports guest principals;
+- the module operation explicitly supports guest actors;
 - a mutation additionally requires the link's current access level to be
   `write`;
 - every referenced entity belongs to that same household and remains active.
 
 Foreign household and entity identifiers remain indistinguishable from
-missing identifiers. Client-supplied household IDs, access modes, principal
-kinds, link IDs, and session IDs are untrusted.
+missing identifiers. Client-supplied household IDs, access modes, actor kinds,
+link IDs, and session IDs are untrusted.
 
 ### Guest sessions and bearer tokens
 
@@ -320,15 +325,16 @@ Guest module screens continue to use Zero rather than introducing a parallel
 REST data layer. Each Guest session supplies a stable, namespaced Zero
 `userID` and browser cache identity that cannot collide with account user IDs.
 
-Named queries and custom mutators accept trusted principal context. Account
-principals retain the current membership checks. Guest principals use the
-Guest-session and Guest-access-link checks above. Recipe query shapes and
-optimistic mutations remain shared after authorization is established.
+Named queries and custom mutators accept a trusted access context. Account
+actors retain the current membership checks. Guest actors use the
+Guest-session and Guest-access-link checks above. The client-side Guest
+context contains no synthetic account ID. Recipe query shapes and optimistic
+mutations remain shared after authorization is established.
 
 The client must not send an account `userId` as the authority for guest
 operations. Existing web properties named `userId` but used only as local
 cache namespaces, including recipe-image URL caches, should be generalized to
-`cacheIdentity` or another principal-neutral name.
+`cacheIdentity` or another actor-neutral name.
 
 Changing a link's access level, disabling a module, disabling or regenerating
 the link, and revoking the session must take effect without clearing a Zero
@@ -340,7 +346,7 @@ bootstrap data.
 ### Recipe images
 
 The existing direct-to-R2 upload and signed derivative-read design remains in
-place. Image routes authorize an account or guest principal through the same
+place. Image routes authorize an account or guest actor through the same
 recipe and household boundary. Guest reads require read access; uploads and
 deletions require write access.
 
@@ -444,7 +450,7 @@ host-only and are never sent to `home.achichorro.com`.
 
 The web application selects the appropriate root shell from the trusted
 deployment hostname. Host selection controls presentation and session
-bootstrap only; the API principal and authorization checks remain the security
+bootstrap only; the API actor resolution and authorization checks remain the security
 boundary.
 
 Production DNS, Caddy configuration, environment examples, health checks, and
@@ -468,7 +474,7 @@ guest:
 - enforce read-only access on the server;
 - rate-limit redemption attempts and image-upload authorization;
 - retain existing image type and size limits;
-- never expose household administration through a guest principal.
+- never expose household administration through a guest actor.
 
 The first version accepts that a person may intentionally share the QR code,
 that guests are anonymous, and that all devices using one link share its
@@ -483,7 +489,7 @@ Implementation should proceed in reviewable phases:
    queries, mutators, image services, and tests.
 2. Add Guest access link and Guest session tables, contracts, owner-only
    management services, and transactional disable/regeneration behavior.
-3. Introduce the discriminated server principal and adapt Recipes queries,
+3. Introduce the discriminated server access context and adapt Recipes queries,
    mutations, and image authorization without weakening account membership
    checks.
 4. Add redemption, guest-cookie refresh, logout, and guest bearer-token

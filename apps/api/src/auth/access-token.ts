@@ -6,6 +6,8 @@ const accessTokenAlgorithm = "HS256";
 const accessTokenType = "JWT";
 const defaultAccessTokenTtlSeconds = 10 * 60;
 
+export type AccessTokenSubjectType = "account" | "guest-session";
+
 export type AccessTokenClaims = {
   sub: string;
   iss: typeof accessTokenIssuer;
@@ -13,7 +15,8 @@ export type AccessTokenClaims = {
   iat: number;
   exp: number;
   jti: string;
-} & ({ subjectType: "account" } | { subjectType: "guest-session" });
+  subjectType: AccessTokenSubjectType;
+};
 
 type AccessTokenHeader = {
   typ: typeof accessTokenType;
@@ -101,7 +104,7 @@ function signToken(input: {
   secret: string;
   now?: Date;
   ttlSeconds?: number;
-  subjectType: AccessTokenClaims["subjectType"];
+  subjectType: AccessTokenSubjectType;
 }): string {
   const now = input.now ?? new Date();
   const issuedAt = secondsSinceEpoch(now);

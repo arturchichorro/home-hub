@@ -11,6 +11,7 @@ import {
 } from "@home-hub/ui-web";
 import QRCode from "qrcode";
 import { type FormEvent, useEffect, useState } from "react";
+import { guestJoinUrl } from "../guest/entry-url";
 import {
   createGuestAccessLink,
   listGuestAccessLinks,
@@ -240,13 +241,13 @@ function IssuedQr({
   link: IssuedLink;
   onClose: () => void;
 }) {
-  const url = `https://guest.achichorro.com/join#${link.token}`;
+  const url = guestJoinUrl(link.token);
   const [imageUrl, setImageUrl] = useState<string>();
   useEffect(() => {
     void QRCode.toDataURL(url, { width: 768, margin: 3 }).then(setImageUrl);
   }, [url]);
   return (
-    <section className="grid justify-items-center gap-3 rounded-lg border border-border bg-surface p-5 text-center">
+    <section className="guest-qr-print grid justify-items-center gap-3 rounded-lg border border-border bg-surface p-5 text-center">
       <InlineAlert variant="info">
         Save this QR code now. Its secret cannot be shown again.
       </InlineAlert>
@@ -258,7 +259,7 @@ function IssuedQr({
         />
       ) : null}
       <p className="font-semibold">{link.name}</p>
-      <div className="flex flex-wrap justify-center gap-2">
+      <div className="guest-qr-print-actions flex flex-wrap justify-center gap-2">
         <Button
           variant="secondary"
           onClick={() => void navigator.clipboard.writeText(url)}

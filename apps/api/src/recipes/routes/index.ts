@@ -1,6 +1,5 @@
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import { createMiddleware } from "hono/factory";
-import type { MiddlewareHandler } from "hono/types";
 
 import type { RequestAccessEnv } from "../../authorization/request-access";
 import { FixedWindowRateLimiter } from "../../rate-limit";
@@ -35,6 +34,7 @@ export type CreateRecipeRoutesInput = ConfirmRecipeImageUploadRouteInput &
 
 export function createRecipeRoutes(input: CreateRecipeRoutesInput) {
   const recipeRoutes = new Hono<RequestAccessEnv>();
+  recipeRoutes.use("*", input.authenticateRequest);
   const uploadLimiter = new FixedWindowRateLimiter(60, 60_000);
   const limitUploads = createMiddleware<RequestAccessEnv>(async (c, next) => {
     const requestAccess = c.get("requestAccess");
@@ -51,32 +51,24 @@ export function createRecipeRoutes(input: CreateRecipeRoutesInput) {
 
   recipeRoutes.post(
     "/:recipeId/images/uploads",
-    input.authenticateRequest,
     limitUploads,
     createRecipeImageUploadRoute(input),
   );
 
   recipeRoutes.delete(
     "/:recipeId/images/:imageId",
-    input.authenticateRequest,
     deleteRecipeImageRoute(input),
   );
 
   recipeRoutes.post(
     "/:recipeId/images/:imageId/confirm",
-    input.authenticateRequest,
     confirmRecipeImageUploadRoute(input),
   );
 
-  recipeRoutes.post(
-    "/images/read-urls",
-    input.authenticateRequest,
-    createRecipeImageReadUrlsRoute(input),
-  );
+  recipeRoutes.post("/images/read-urls", createRecipeImageReadUrlsRoute(input));
 
   recipeRoutes.post(
     "/:recipeId/images/:imageId/read-url",
-    input.authenticateRequest,
     createRecipeImageReadUrlRoute(input),
   );
 

@@ -1,19 +1,26 @@
 import { randomUUID } from "node:crypto";
-import type { Database } from "@home-hub/database";
+import type { Database, DatabaseTransaction } from "@home-hub/database";
 import {
   householdGuestAccessLinks,
   householdGuestSessions,
+  householdModuleSettings,
   households,
 } from "@home-hub/database/schema";
 import type { GuestAccessLevel } from "@home-hub/shared/guest-access";
+import type { HouseholdModuleKey } from "@home-hub/shared/modules";
 import { and, eq, isNull } from "drizzle-orm";
 import { signGuestAccessToken } from "../auth/access-token";
-import { generateGuestAccessToken, hashGuestAccessToken } from "./token";
+import {
+  generateGuestAccessToken,
+  hashGuestLinkToken,
+  hashGuestSessionToken,
+} from "./token";
 
 export type GuestSessionDetails = {
   accessToken: string;
   access: GuestAccessLevel;
   cacheIdentity: string;
+  enabledModules: HouseholdModuleKey[];
   household: { id: string; name: string };
   sessionToken: string;
 };
@@ -34,6 +41,7 @@ function sessionDetails(input: {
   householdId: string;
   householdName: string;
   access: GuestAccessLevel;
+  enabledModules: HouseholdModuleKey[];
   jwtSecret: string;
   now: Date;
 }): GuestSessionDetails {
@@ -45,10 +53,28 @@ function sessionDetails(input: {
       now: input.now,
     }),
     access: input.access,
-    cacheIdentity: `guest:${input.sessionId}`,
+    cacheIdentity: `guest-session:${input.sessionId}`,
+    enabledModules: input.enabledModules,
     household: { id: input.householdId, name: input.householdName },
     sessionToken: input.sessionToken,
   };
+}
+
+async function enabledGuestModules(
+  tx: DatabaseTransaction,
+  householdId: string,
+): Promise<HouseholdModuleKey[]> {
+  const settings = await tx
+    .select({ moduleKey: householdModuleSettings.moduleKey })
+    .from(householdModuleSettings)
+    .where(
+      and(
+        eq(householdModuleSettings.householdId, householdId),
+        eq(householdModuleSettings.moduleKey, "recipes"),
+        eq(householdModuleSettings.enabled, true),
+      ),
+    );
+  return settings.map(() => "recipes" as const);
 }
 
 export function createRedeemGuestAccessService({
@@ -73,7 +99,7 @@ export function createRedeemGuestAccessService({
           and(
             eq(
               householdGuestAccessLinks.tokenHash,
-              hashGuestAccessToken(rawToken),
+              hashGuestLinkToken(rawToken),
             ),
             isNull(householdGuestAccessLinks.disabledAt),
             isNull(households.deletedAt),
@@ -86,10 +112,11 @@ export function createRedeemGuestAccessService({
       const sessionId = randomUUID();
       const sessionToken = generateGuestAccessToken();
       const now = new Date();
+      const enabledModules = await enabledGuestModules(tx, link.householdId);
       await tx.insert(householdGuestSessions).values({
         id: sessionId,
         guestAccessLinkId: link.id,
-        tokenHash: hashGuestAccessToken(sessionToken),
+        tokenHash: hashGuestSessionToken(sessionToken),
         createdAt: now,
         updatedAt: now,
       });
@@ -102,6 +129,7 @@ export function createRedeemGuestAccessService({
           householdId: link.householdId,
           householdName: link.householdName,
           access: link.access,
+          enabledModules,
           jwtSecret,
           now,
         }),
@@ -144,7 +172,7 @@ export function createRefreshGuestAccessService({
           and(
             eq(
               householdGuestSessions.tokenHash,
-              hashGuestAccessToken(rawSessionToken),
+              hashGuestSessionToken(rawSessionToken),
             ),
             isNull(householdGuestSessions.revokedAt),
             isNull(householdGuestAccessLinks.disabledAt),
@@ -156,6 +184,7 @@ export function createRefreshGuestAccessService({
       if (!session) return { kind: "invalid_token" };
 
       const now = new Date();
+      const enabledModules = await enabledGuestModules(tx, session.householdId);
       await tx
         .update(householdGuestSessions)
         .set({ updatedAt: now })
@@ -169,6 +198,7 @@ export function createRefreshGuestAccessService({
           householdId: session.householdId,
           householdName: session.householdName,
           access: session.access,
+          enabledModules,
           jwtSecret,
           now,
         }),
@@ -187,7 +217,7 @@ export function createLogoutGuestAccessService({ db }: { db: Database }) {
         and(
           eq(
             householdGuestSessions.tokenHash,
-            hashGuestAccessToken(rawSessionToken),
+            hashGuestSessionToken(rawSessionToken),
           ),
           isNull(householdGuestSessions.revokedAt),
         ),

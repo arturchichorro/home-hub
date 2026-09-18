@@ -5,7 +5,8 @@ const sessionToken = "s".repeat(43);
 const session = {
   accessToken: "guest.jwt.token",
   access: "write" as const,
-  cacheIdentity: "guest:8d46a4c4-4845-4a6d-a937-139633ae1bb9",
+  cacheIdentity: "guest-session:8d46a4c4-4845-4a6d-a937-139633ae1bb9",
+  enabledModules: ["recipes" as const],
   household: {
     id: "d92e5c4e-1c68-4942-9cc9-710207661bca",
     name: "Coliving",
@@ -42,6 +43,7 @@ describe("Guest access session routes", () => {
       accessToken: session.accessToken,
       access: "write",
       cacheIdentity: session.cacheIdentity,
+      enabledModules: session.enabledModules,
       household: session.household,
     });
     expect(response.headers.get("set-cookie")).toContain(

@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
 import { Route as GuestJoinRouteImport } from './routes/_guest.join'
+import { Route as GuestRecipesRouteImport } from './routes/_guest.recipes'
 import { Route as AuthenticatedHouseholdsHouseholdIdRouteImport } from './routes/_authenticated.households.$householdId'
 import { Route as GuestRecipesIndexRouteImport } from './routes/_guest.recipes.index'
 import { Route as GuestRecipesRecipeIdRouteImport } from './routes/_guest.recipes.$recipeId'
@@ -55,6 +56,11 @@ const GuestJoinRoute = GuestJoinRouteImport.update({
   path: '/join',
   getParentRoute: () => GuestRoute,
 } as any)
+const GuestRecipesRoute = GuestRecipesRouteImport.update({
+  id: '/recipes',
+  path: '/recipes',
+  getParentRoute: () => GuestRoute,
+} as any)
 const AuthenticatedHouseholdsHouseholdIdRoute =
   AuthenticatedHouseholdsHouseholdIdRouteImport.update({
     id: '/households/$householdId',
@@ -62,14 +68,14 @@ const AuthenticatedHouseholdsHouseholdIdRoute =
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const GuestRecipesIndexRoute = GuestRecipesIndexRouteImport.update({
-  id: '/recipes/',
-  path: '/recipes/',
-  getParentRoute: () => GuestRoute,
+  id: '/',
+  path: '/',
+  getParentRoute: () => GuestRecipesRoute,
 } as any)
 const GuestRecipesRecipeIdRoute = GuestRecipesRecipeIdRouteImport.update({
-  id: '/recipes/$recipeId',
-  path: '/recipes/$recipeId',
-  getParentRoute: () => GuestRoute,
+  id: '/$recipeId',
+  path: '/$recipeId',
+  getParentRoute: () => GuestRecipesRoute,
 } as any)
 const AuthenticatedHouseholdsHouseholdIdIndexRoute =
   AuthenticatedHouseholdsHouseholdIdIndexRouteImport.update({
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/join': typeof GuestJoinRoute
+  '/recipes': typeof GuestRecipesRouteWithChildren
   '/households/$householdId': typeof AuthenticatedHouseholdsHouseholdIdRouteWithChildren
   '/recipes/$recipeId': typeof GuestRecipesRecipeIdRoute
   '/recipes/': typeof GuestRecipesIndexRoute
@@ -158,6 +165,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/_guest/join': typeof GuestJoinRoute
+  '/_guest/recipes': typeof GuestRecipesRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/households/$householdId': typeof AuthenticatedHouseholdsHouseholdIdRouteWithChildren
   '/_guest/recipes/$recipeId': typeof GuestRecipesRecipeIdRoute
@@ -178,6 +186,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/join'
+    | '/recipes'
     | '/households/$householdId'
     | '/recipes/$recipeId'
     | '/recipes/'
@@ -210,6 +219,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/_guest/join'
+    | '/_guest/recipes'
     | '/_authenticated/'
     | '/_authenticated/households/$householdId'
     | '/_guest/recipes/$recipeId'
@@ -275,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuestJoinRouteImport
       parentRoute: typeof GuestRoute
     }
+    '/_guest/recipes': {
+      id: '/_guest/recipes'
+      path: '/recipes'
+      fullPath: '/recipes'
+      preLoaderRoute: typeof GuestRecipesRouteImport
+      parentRoute: typeof GuestRoute
+    }
     '/_authenticated/households/$householdId': {
       id: '/_authenticated/households/$householdId'
       path: '/households/$householdId'
@@ -284,17 +301,17 @@ declare module '@tanstack/react-router' {
     }
     '/_guest/recipes/': {
       id: '/_guest/recipes/'
-      path: '/recipes'
+      path: '/'
       fullPath: '/recipes/'
       preLoaderRoute: typeof GuestRecipesIndexRouteImport
-      parentRoute: typeof GuestRoute
+      parentRoute: typeof GuestRecipesRoute
     }
     '/_guest/recipes/$recipeId': {
       id: '/_guest/recipes/$recipeId'
-      path: '/recipes/$recipeId'
+      path: '/$recipeId'
       fullPath: '/recipes/$recipeId'
       preLoaderRoute: typeof GuestRecipesRecipeIdRouteImport
-      parentRoute: typeof GuestRoute
+      parentRoute: typeof GuestRecipesRoute
     }
     '/_authenticated/households/$householdId/': {
       id: '/_authenticated/households/$householdId/'
@@ -430,16 +447,28 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
-interface GuestRouteChildren {
-  GuestJoinRoute: typeof GuestJoinRoute
+interface GuestRecipesRouteChildren {
   GuestRecipesRecipeIdRoute: typeof GuestRecipesRecipeIdRoute
   GuestRecipesIndexRoute: typeof GuestRecipesIndexRoute
 }
 
-const GuestRouteChildren: GuestRouteChildren = {
-  GuestJoinRoute: GuestJoinRoute,
+const GuestRecipesRouteChildren: GuestRecipesRouteChildren = {
   GuestRecipesRecipeIdRoute: GuestRecipesRecipeIdRoute,
   GuestRecipesIndexRoute: GuestRecipesIndexRoute,
+}
+
+const GuestRecipesRouteWithChildren = GuestRecipesRoute._addFileChildren(
+  GuestRecipesRouteChildren,
+)
+
+interface GuestRouteChildren {
+  GuestJoinRoute: typeof GuestJoinRoute
+  GuestRecipesRoute: typeof GuestRecipesRouteWithChildren
+}
+
+const GuestRouteChildren: GuestRouteChildren = {
+  GuestJoinRoute: GuestJoinRoute,
+  GuestRecipesRoute: GuestRecipesRouteWithChildren,
 }
 
 const GuestRouteWithChildren = GuestRoute._addFileChildren(GuestRouteChildren)
