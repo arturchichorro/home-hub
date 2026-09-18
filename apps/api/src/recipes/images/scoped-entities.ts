@@ -62,6 +62,7 @@ export async function findRecipeCookLogForShare(
         eq(recipeCookLogs.householdId, householdId),
         eq(recipeCookLogs.recipeId, recipeId),
         eq(recipeCookLogs.id, cookLogId),
+        isNull(recipeCookLogs.deletedAt),
       ),
     )
     .limit(1)
@@ -83,6 +84,7 @@ export async function findConfirmedRecipeImageForShare(
         eq(recipeImages.householdId, householdId),
         eq(recipeImages.recipeId, recipeId),
         isNotNull(recipeImages.confirmedAt),
+        isNull(recipeImages.deletedAt),
         activeRecipeExists(tx, { householdId, recipeId }),
       ),
     )
@@ -104,6 +106,7 @@ export async function findConfirmedHouseholdRecipeImagesForShare(
         inArray(recipeImages.id, imageIds),
         eq(recipeImages.householdId, householdId),
         isNotNull(recipeImages.confirmedAt),
+        isNull(recipeImages.deletedAt),
         exists(
           tx
             .select({ id: recipes.id })
@@ -141,6 +144,7 @@ export async function findRecipeImageForShare(
         eq(recipeImages.id, imageId),
         eq(recipeImages.householdId, householdId),
         eq(recipeImages.recipeId, recipeId),
+        isNull(recipeImages.deletedAt),
         activeRecipeExists(tx, { householdId, recipeId }),
       ),
     )
@@ -162,6 +166,7 @@ export async function findRecipeImageForUpdate(
         eq(recipeImages.id, imageId),
         eq(recipeImages.householdId, householdId),
         eq(recipeImages.recipeId, recipeId),
+        isNull(recipeImages.deletedAt),
         activeRecipeExists(tx, { householdId, recipeId }),
       ),
     )
@@ -183,6 +188,7 @@ export async function findRecipeImageObjectForShare(
         eq(recipeImages.id, imageId),
         eq(recipeImages.householdId, householdId),
         eq(recipeImages.recipeId, recipeId),
+        isNull(recipeImages.deletedAt),
         activeRecipeExists(tx, { householdId, recipeId }),
       ),
     )
@@ -204,6 +210,7 @@ export async function findRecipeImageObjectForUpdate(
         eq(recipeImages.id, imageId),
         eq(recipeImages.householdId, householdId),
         eq(recipeImages.recipeId, recipeId),
+        isNull(recipeImages.deletedAt),
         activeRecipeExists(tx, { householdId, recipeId }),
       ),
     )
