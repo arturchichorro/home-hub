@@ -22,7 +22,7 @@ function RecipeLibraryRoute() {
       accessToken={session.accessToken}
       householdId={householdId}
       onSessionExpired={onSessionExpired}
-      userId={session.user.id}
+      cacheIdentity={session.user.id}
     />
   );
 }

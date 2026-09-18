@@ -55,6 +55,18 @@ async function start() {
     return;
   }
 
+  if (
+    window.location.hostname === "guest.achichorro.com" ||
+    window.location.pathname === "/join" ||
+    window.location.pathname.startsWith("/recipes")
+  ) {
+    if (window.location.pathname === "/") {
+      window.history.replaceState(null, "", "/recipes");
+    }
+    renderApplication(null);
+    return;
+  }
+
   const result = await restoreStartupSession();
 
   if (result.kind === "online") {

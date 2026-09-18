@@ -10,10 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as GuestRouteImport } from './routes/_guest'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
+import { Route as GuestJoinRouteImport } from './routes/_guest.join'
 import { Route as AuthenticatedHouseholdsHouseholdIdRouteImport } from './routes/_authenticated.households.$householdId'
+import { Route as GuestRecipesIndexRouteImport } from './routes/_guest.recipes.index'
+import { Route as GuestRecipesRecipeIdRouteImport } from './routes/_guest.recipes.$recipeId'
 import { Route as AuthenticatedHouseholdsHouseholdIdIndexRouteImport } from './routes/_authenticated.households.$householdId.index'
 import { Route as AuthenticatedHouseholdsHouseholdIdListsRouteImport } from './routes/_authenticated.households.$householdId.lists'
 import { Route as AuthenticatedHouseholdsHouseholdIdRecipesRouteImport } from './routes/_authenticated.households.$householdId.recipes'
@@ -25,6 +29,10 @@ import { Route as AuthenticatedHouseholdsHouseholdIdRecipesRecipeIdRouteImport }
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuestRoute = GuestRouteImport.update({
+  id: '/_guest',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -42,12 +50,27 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const GuestJoinRoute = GuestJoinRouteImport.update({
+  id: '/join',
+  path: '/join',
+  getParentRoute: () => GuestRoute,
+} as any)
 const AuthenticatedHouseholdsHouseholdIdRoute =
   AuthenticatedHouseholdsHouseholdIdRouteImport.update({
     id: '/households/$householdId',
     path: '/households/$householdId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const GuestRecipesIndexRoute = GuestRecipesIndexRouteImport.update({
+  id: '/recipes/',
+  path: '/recipes/',
+  getParentRoute: () => GuestRoute,
+} as any)
+const GuestRecipesRecipeIdRoute = GuestRecipesRecipeIdRouteImport.update({
+  id: '/recipes/$recipeId',
+  path: '/recipes/$recipeId',
+  getParentRoute: () => GuestRoute,
+} as any)
 const AuthenticatedHouseholdsHouseholdIdIndexRoute =
   AuthenticatedHouseholdsHouseholdIdIndexRouteImport.update({
     id: '/',
@@ -101,7 +124,10 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/join': typeof GuestJoinRoute
   '/households/$householdId': typeof AuthenticatedHouseholdsHouseholdIdRouteWithChildren
+  '/recipes/$recipeId': typeof GuestRecipesRecipeIdRoute
+  '/recipes/': typeof GuestRecipesIndexRoute
   '/households/$householdId/lists': typeof AuthenticatedHouseholdsHouseholdIdListsRouteWithChildren
   '/households/$householdId/recipes': typeof AuthenticatedHouseholdsHouseholdIdRecipesRouteWithChildren
   '/households/$householdId/settings': typeof AuthenticatedHouseholdsHouseholdIdSettingsRoute
@@ -112,9 +138,12 @@ export interface FileRoutesByFullPath {
   '/households/$householdId/recipes/': typeof AuthenticatedHouseholdsHouseholdIdRecipesIndexRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/': typeof AuthenticatedIndexRoute
+  '/join': typeof GuestJoinRoute
+  '/recipes/$recipeId': typeof GuestRecipesRecipeIdRoute
+  '/recipes': typeof GuestRecipesIndexRoute
   '/households/$householdId/settings': typeof AuthenticatedHouseholdsHouseholdIdSettingsRoute
   '/households/$householdId': typeof AuthenticatedHouseholdsHouseholdIdIndexRoute
   '/households/$householdId/lists/$listId': typeof AuthenticatedHouseholdsHouseholdIdListsListIdRoute
@@ -125,10 +154,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/_guest': typeof GuestRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/_guest/join': typeof GuestJoinRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/households/$householdId': typeof AuthenticatedHouseholdsHouseholdIdRouteWithChildren
+  '/_guest/recipes/$recipeId': typeof GuestRecipesRecipeIdRoute
+  '/_guest/recipes/': typeof GuestRecipesIndexRoute
   '/_authenticated/households/$householdId/lists': typeof AuthenticatedHouseholdsHouseholdIdListsRouteWithChildren
   '/_authenticated/households/$householdId/recipes': typeof AuthenticatedHouseholdsHouseholdIdRecipesRouteWithChildren
   '/_authenticated/households/$householdId/settings': typeof AuthenticatedHouseholdsHouseholdIdSettingsRoute
@@ -144,7 +177,10 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signup'
+    | '/join'
     | '/households/$householdId'
+    | '/recipes/$recipeId'
+    | '/recipes/'
     | '/households/$householdId/lists'
     | '/households/$householdId/recipes'
     | '/households/$householdId/settings'
@@ -155,9 +191,12 @@ export interface FileRouteTypes {
     | '/households/$householdId/recipes/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/login'
     | '/signup'
-    | '/'
+    | '/join'
+    | '/recipes/$recipeId'
+    | '/recipes'
     | '/households/$householdId/settings'
     | '/households/$householdId'
     | '/households/$householdId/lists/$listId'
@@ -167,10 +206,14 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authenticated'
+    | '/_guest'
     | '/login'
     | '/signup'
+    | '/_guest/join'
     | '/_authenticated/'
     | '/_authenticated/households/$householdId'
+    | '/_guest/recipes/$recipeId'
+    | '/_guest/recipes/'
     | '/_authenticated/households/$householdId/lists'
     | '/_authenticated/households/$householdId/recipes'
     | '/_authenticated/households/$householdId/settings'
@@ -183,6 +226,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  GuestRoute: typeof GuestRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
 }
@@ -194,6 +238,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_guest': {
+      id: '/_guest'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof GuestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -217,12 +268,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_guest/join': {
+      id: '/_guest/join'
+      path: '/join'
+      fullPath: '/join'
+      preLoaderRoute: typeof GuestJoinRouteImport
+      parentRoute: typeof GuestRoute
+    }
     '/_authenticated/households/$householdId': {
       id: '/_authenticated/households/$householdId'
       path: '/households/$householdId'
       fullPath: '/households/$householdId'
       preLoaderRoute: typeof AuthenticatedHouseholdsHouseholdIdRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_guest/recipes/': {
+      id: '/_guest/recipes/'
+      path: '/recipes'
+      fullPath: '/recipes/'
+      preLoaderRoute: typeof GuestRecipesIndexRouteImport
+      parentRoute: typeof GuestRoute
+    }
+    '/_guest/recipes/$recipeId': {
+      id: '/_guest/recipes/$recipeId'
+      path: '/recipes/$recipeId'
+      fullPath: '/recipes/$recipeId'
+      preLoaderRoute: typeof GuestRecipesRecipeIdRouteImport
+      parentRoute: typeof GuestRoute
     }
     '/_authenticated/households/$householdId/': {
       id: '/_authenticated/households/$householdId/'
@@ -358,8 +430,23 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface GuestRouteChildren {
+  GuestJoinRoute: typeof GuestJoinRoute
+  GuestRecipesRecipeIdRoute: typeof GuestRecipesRecipeIdRoute
+  GuestRecipesIndexRoute: typeof GuestRecipesIndexRoute
+}
+
+const GuestRouteChildren: GuestRouteChildren = {
+  GuestJoinRoute: GuestJoinRoute,
+  GuestRecipesRecipeIdRoute: GuestRecipesRecipeIdRoute,
+  GuestRecipesIndexRoute: GuestRecipesIndexRoute,
+}
+
+const GuestRouteWithChildren = GuestRoute._addFileChildren(GuestRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  GuestRoute: GuestRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
 }

@@ -32,9 +32,10 @@ import { useRecipeImageUrl } from "./use-recipe-image-url";
 
 type RecipeLibraryProps = {
   accessToken: string;
+  cacheIdentity: string;
   householdId: string;
   onSessionExpired: () => void;
-  userId: string;
+  routeMode?: "account" | "guest";
 };
 
 type RecipeCardImageProps = RecipeLibraryProps & {
@@ -99,7 +100,7 @@ function RecipeCardImage({
   image,
   onSessionExpired,
   recipeId,
-  userId,
+  cacheIdentity,
 }: RecipeCardImageProps) {
   const imageState = useRecipeImageUrl({
     accessToken,
@@ -107,7 +108,7 @@ function RecipeCardImage({
     imageId: image?.id,
     onSessionExpired,
     recipeId,
-    userId,
+    userId: cacheIdentity,
     variant: "thumbnail",
   });
 
@@ -152,7 +153,8 @@ function RecipeCard({
   index,
   onSessionExpired,
   recipe,
-  userId,
+  routeMode = "account",
+  cacheIdentity,
 }: RecipeLibraryProps & {
   disabled: boolean;
   index: number;
@@ -173,8 +175,16 @@ function RecipeCard({
     >
       <Link
         ref={sortable.handleRef}
-        to="/households/$householdId/recipes/$recipeId"
-        params={{ householdId, recipeId: recipe.id }}
+        to={
+          (routeMode === "guest"
+            ? "/recipes/$recipeId"
+            : "/households/$householdId/recipes/$recipeId") as never
+        }
+        params={
+          (routeMode === "guest"
+            ? { recipeId: recipe.id }
+            : { householdId, recipeId: recipe.id }) as never
+        }
         preload="intent"
         draggable={false}
         className="block min-w-0 touch-pan-y select-none outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
@@ -187,7 +197,7 @@ function RecipeCard({
               recipeId={recipe.id}
               image={recipe.images[0]}
               onSessionExpired={onSessionExpired}
-              userId={userId}
+              cacheIdentity={cacheIdentity}
             />
           </div>
         </div>
@@ -221,7 +231,8 @@ function RecipeCardGrid({
   onMove,
   onSessionExpired,
   recipes,
-  userId,
+  cacheIdentity,
+  routeMode = "account",
 }: RecipeLibraryProps & {
   disabled: boolean;
   onMove: (from: number, to: number) => void;
@@ -252,7 +263,8 @@ function RecipeCardGrid({
             index={index}
             onSessionExpired={onSessionExpired}
             recipe={recipe}
-            userId={userId}
+            routeMode={routeMode}
+            cacheIdentity={cacheIdentity}
           />
         ))}
       </div>
@@ -264,7 +276,8 @@ export function RecipeLibrary({
   accessToken,
   householdId,
   onSessionExpired,
-  userId,
+  routeMode = "account",
+  cacheIdentity,
 }: RecipeLibraryProps) {
   const zero = useZero();
   const navigate = useNavigate();
@@ -278,12 +291,13 @@ export function RecipeLibrary({
         variant="ghost"
         className="h-7! px-1.5! font-normal text-muted"
         onClick={() => setCreating(true)}
+        disabled={!enabled}
       >
         <Plus aria-hidden="true" className="size-4" />
         Add recipe
       </Button>
     ),
-    [],
+    [enabled],
   );
   useAppHeaderRightComponent(headerRightComponent);
   const [recipes, result] = useQuery(
@@ -340,7 +354,11 @@ export function RecipeLibrary({
             <BookOpen aria-hidden="true" className="size-6" />
           </span>
           <h2 className="mt-4 font-semibold">No recipes yet</h2>
-          <Button className="mt-5" onClick={() => setCreating(true)}>
+          <Button
+            className="mt-5"
+            disabled={!enabled}
+            onClick={() => setCreating(true)}
+          >
             <Plus aria-hidden="true" className="size-4" />
             Add your first recipe
           </Button>
@@ -354,19 +372,24 @@ export function RecipeLibrary({
         onMove={(from, to) => void move(from, to)}
         onSessionExpired={onSessionExpired}
         recipes={recipes}
-        userId={userId}
+        cacheIdentity={cacheIdentity}
+        routeMode={routeMode}
       />
 
       <CreateRecipeDialog
         householdId={householdId}
         open={creating}
         onOpenChange={setCreating}
-        onCreated={(recipeId) =>
-          void navigate({
-            to: "/households/$householdId/recipes/$recipeId",
-            params: { householdId, recipeId },
-          })
-        }
+        onCreated={(recipeId) => {
+          if (routeMode === "guest") {
+            void navigate({ to: "/recipes/$recipeId", params: { recipeId } });
+          } else {
+            void navigate({
+              to: "/households/$householdId/recipes/$recipeId",
+              params: { householdId, recipeId },
+            });
+          }
+        }}
       />
     </section>
   );

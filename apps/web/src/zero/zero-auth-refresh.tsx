@@ -1,16 +1,20 @@
 import { useConnectionState } from "@rocicorp/zero/react";
 import { useEffect, useState } from "react";
-import { refreshAccessToken } from "../auth/api";
+import { refreshAccessToken as refreshAccountAccessToken } from "../auth/api";
 
 const initialRefreshRetryDelayMilliseconds = 5_000;
 const maximumRefreshRetryDelayMilliseconds = 30_000;
 
 type ZeroAuthRefreshProps = {
+  refreshAccessToken?: () => Promise<
+    { kind: "success"; accessToken: string } | { kind: "unauthorized" }
+  >;
   onAccessTokenRefreshed: (accessToken: string) => void;
   onSessionExpired: () => void;
 };
 
 export function ZeroAuthRefresh({
+  refreshAccessToken = refreshAccountAccessToken,
   onAccessTokenRefreshed,
   onSessionExpired,
 }: ZeroAuthRefreshProps) {
@@ -64,6 +68,7 @@ export function ZeroAuthRefresh({
     onAccessTokenRefreshed,
     onSessionExpired,
     retryAttempt,
+    refreshAccessToken,
   ]);
 
   return null;

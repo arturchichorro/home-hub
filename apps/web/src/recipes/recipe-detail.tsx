@@ -32,18 +32,20 @@ import { useRecipeDetailsEditor } from "./use-recipe-details-editor";
 
 type RecipeDetailProps = {
   accessToken: string;
+  cacheIdentity: string;
   householdId: string;
   recipeId: string;
   onSessionExpired: () => void;
-  userId: string;
+  routeMode?: "account" | "guest";
 };
 
 export function RecipeDetail({
   accessToken,
+  cacheIdentity,
   householdId,
   recipeId,
   onSessionExpired,
-  userId,
+  routeMode = "account",
 }: RecipeDetailProps) {
   const zero = useZero();
   const navigate = useNavigate();
@@ -75,7 +77,7 @@ export function RecipeDetail({
     return scheduleIdleRecipeImagePrefetch(() => {
       void prefetchRecipeImage({
         accessToken,
-        userId,
+        userId: cacheIdentity,
         householdId,
         imageId: firstVisibleImageId,
         recipeId,
@@ -90,7 +92,7 @@ export function RecipeDetail({
     householdId,
     onSessionExpired,
     recipeId,
-    userId,
+    cacheIdentity,
   ]);
 
   if (result.type === "error") {
@@ -160,11 +162,15 @@ export function RecipeDetail({
         setDeleteError("The recipe could not be deleted.");
         return;
       }
-      await navigate({
-        to: "/households/$householdId/recipes",
-        params: { householdId },
-        replace: true,
-      });
+      if (routeMode === "guest") {
+        await navigate({ to: "/recipes", replace: true });
+      } else {
+        await navigate({
+          to: "/households/$householdId/recipes",
+          params: { householdId },
+          replace: true,
+        });
+      }
     } catch {
       setDeleteError("The recipe could not be deleted.");
     } finally {
@@ -197,7 +203,7 @@ export function RecipeDetail({
           householdId,
           recipeId,
           imageId: image.id,
-          userId,
+          userId: cacheIdentity,
         });
       } else {
         restoreImage();
@@ -263,7 +269,7 @@ export function RecipeDetail({
               onSessionExpired={onSessionExpired}
               onOpen={openGalleryImage}
               onReorder={reorderImages}
-              userId={userId}
+              userId={cacheIdentity}
             />
           </div>
         ) : null}
@@ -310,7 +316,7 @@ export function RecipeDetail({
                 setSelectedImage(image);
               }}
               onSessionExpired={onSessionExpired}
-              userId={userId}
+              userId={cacheIdentity}
             />
           )}
         </div>
@@ -328,7 +334,7 @@ export function RecipeDetail({
         onOpenChange={(open) => {
           if (!open) setSelectedImage(undefined);
         }}
-        userId={userId}
+        userId={cacheIdentity}
       />
     </article>
   );

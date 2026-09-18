@@ -21,7 +21,8 @@ function AuthenticatedLayout() {
 
   return (
     <HomeHubZeroProvider
-      userId={session.user.id}
+      cacheIdentity={session.user.id}
+      canWrite
       accessToken={session.accessToken}
       onAccessTokenRefreshed={onAccessTokenRefreshed}
       onSessionExpired={onLoggedOut}
