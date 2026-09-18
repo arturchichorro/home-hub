@@ -1,10 +1,12 @@
 import type { Database } from "@home-hub/database";
 import { Hono } from "hono";
+import { createMiddleware } from "hono/factory";
 
 import {
   createAccessPrincipalAuth,
   type PrincipalEnv,
 } from "../../authorization/principal";
+import { FixedWindowRateLimiter } from "../../rate-limit";
 import {
   type ConfirmRecipeImageUploadRouteInput,
   confirmRecipeImageUploadRoute,
@@ -41,10 +43,24 @@ export function createRecipeRoutes(input: CreateRecipeRoutesInput) {
     db: input.principalDatabase ?? ({} as Database),
     jwtSecret: input.jwtSecret,
   });
+  const uploadLimiter = new FixedWindowRateLimiter(60, 60_000);
+  const limitUploads = createMiddleware<PrincipalEnv>(async (c, next) => {
+    const principal = c.get("principal");
+    const key =
+      principal.kind === "account"
+        ? `account:${principal.userId}`
+        : `guest:${principal.guestSessionId}`;
+    if (!uploadLimiter.allow(key)) {
+      c.header("Retry-After", "60");
+      return c.json({ error: "Too many requests" }, 429);
+    }
+    await next();
+  });
 
   recipeRoutes.post(
     "/:recipeId/images/uploads",
     principalAuth,
+    limitUploads,
     createRecipeImageUploadRoute(input),
   );
 

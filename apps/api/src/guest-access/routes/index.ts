@@ -1,6 +1,7 @@
 import { redeemGuestAccessRequestSchema } from "@home-hub/shared/guest-access";
 import { Hono } from "hono";
 import { getCookie } from "hono/cookie";
+import { FixedWindowRateLimiter, requestClientKey } from "../../rate-limit";
 import type {
   createLogoutGuestAccessService,
   createRedeemGuestAccessService,
@@ -31,8 +32,13 @@ function publicSession(session: GuestSessionDetails) {
 
 export function createGuestAccessRoutes(input: CreateGuestAccessRoutesInput) {
   const routes = new Hono();
+  const redemptionLimiter = new FixedWindowRateLimiter(20, 60_000);
 
   routes.post("/redeem", async (c) => {
+    if (!redemptionLimiter.allow(requestClientKey(c.req.raw.headers))) {
+      c.header("Retry-After", "60");
+      return c.json({ error: "Guest access is unavailable" }, 429);
+    }
     const parsed = redeemGuestAccessRequestSchema.safeParse(
       await c.req.json().catch(() => undefined),
     );

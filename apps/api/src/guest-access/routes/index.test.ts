@@ -96,4 +96,28 @@ describe("Guest access session routes", () => {
     expect(logoutGuestAccess).toHaveBeenCalledWith(sessionToken);
     expect(response.headers.get("set-cookie")).toContain("home_hub_guest=;");
   });
+
+  it("rate-limits repeated redemption attempts without disclosing token state", async () => {
+    const redeemGuestAccess = vi.fn(async () => ({
+      kind: "invalid_token" as const,
+    }));
+    const app = createRoutes({ redeemGuestAccess });
+    let response: Response | undefined;
+    for (let attempt = 0; attempt < 21; attempt += 1) {
+      response = await app.request("/redeem", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Forwarded-For": "192.0.2.42",
+        },
+        body: JSON.stringify({ token: "q".repeat(43) }),
+      });
+    }
+
+    expect(response?.status).toBe(429);
+    await expect(response?.json()).resolves.toEqual({
+      error: "Guest access is unavailable",
+    });
+    expect(redeemGuestAccess).toHaveBeenCalledTimes(20);
+  });
 });
