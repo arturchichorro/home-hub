@@ -556,6 +556,7 @@ describe("recipes.addIngredient mutator", () => {
       amount: null,
       note: null,
       sortKey: 0,
+      deletedAt: null,
       createdAt: optimisticUpdatedAt,
       updatedAt: optimisticUpdatedAt,
     });
@@ -629,6 +630,7 @@ describe("recipes.addIngredient mutator", () => {
       amount: null,
       note: null,
       sortKey: 0,
+      deletedAt: null,
       createdAt: authoritativeTimestamp,
       updatedAt: authoritativeTimestamp,
     });
@@ -825,6 +827,7 @@ describe("recipes.addCookLog mutator", () => {
       recipeId,
       cookedAt: addRecipeCookLogArgs.cookedAt,
       comment: "Made it less spicy.",
+      deletedAt: null,
       createdAt: optimisticUpdatedAt,
       updatedAt: optimisticUpdatedAt,
     });
@@ -895,6 +898,7 @@ describe("recipes.addCookLog mutator", () => {
       recipeId,
       cookedAt: addRecipeCookLogArgs.cookedAt,
       comment: "Made it less spicy.",
+      deletedAt: null,
       createdAt: authoritativeTimestamp,
       updatedAt: authoritativeTimestamp,
     });
@@ -944,7 +948,8 @@ describe("recipes.updateCookLog mutator", () => {
 
 describe("recipe organization mutators", () => {
   it("optimistically deletes only a scoped ingredient", async () => {
-    const { ingredientDelete, transaction } = createFakeTransaction({
+    vi.spyOn(Date, "now").mockReturnValue(optimisticUpdatedAt);
+    const { ingredientUpdate, transaction } = createFakeTransaction({
       location: "client",
       results: [{ id: ingredientId, householdId, recipeId }],
     });
@@ -955,7 +960,11 @@ describe("recipe organization mutators", () => {
       tx: transaction,
     });
 
-    expect(ingredientDelete).toHaveBeenCalledWith({ id: ingredientId });
+    expect(ingredientUpdate).toHaveBeenCalledWith({
+      id: ingredientId,
+      deletedAt: optimisticUpdatedAt,
+      updatedAt: optimisticUpdatedAt,
+    });
   });
 
   it("rejects ingredient deletion outside the recipe", async () => {
@@ -1015,13 +1024,11 @@ describe("recipe organization mutators", () => {
     });
   });
 
-  it("preserves cooking-log pictures before optimistically deleting the log", async () => {
-    const { cookLogDelete, imageUpdate, transaction } = createFakeTransaction({
+  it("soft-deletes a cooking log while preserving its picture relationships", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(optimisticUpdatedAt);
+    const { cookLogUpdate, imageUpdate, transaction } = createFakeTransaction({
       location: "client",
-      results: [
-        { id: cookLogId, householdId, recipeId },
-        [{ id: imageId, cookLogId }],
-      ],
+      results: [{ id: cookLogId, householdId, recipeId }],
     });
 
     await mutators.recipes.deleteCookLog.fn({
@@ -1030,8 +1037,12 @@ describe("recipe organization mutators", () => {
       tx: transaction,
     });
 
-    expect(imageUpdate).toHaveBeenCalledWith({ id: imageId, cookLogId: null });
-    expect(cookLogDelete).toHaveBeenCalledWith({ id: cookLogId });
+    expect(imageUpdate).not.toHaveBeenCalled();
+    expect(cookLogUpdate).toHaveBeenCalledWith({
+      id: cookLogId,
+      deletedAt: optimisticUpdatedAt,
+      updatedAt: optimisticUpdatedAt,
+    });
   });
 
   it("optimistically reorders scoped images", async () => {
