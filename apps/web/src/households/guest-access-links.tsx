@@ -83,7 +83,7 @@ export function GuestAccessLinks({
 
   async function update(
     link: GuestAccessLinkSummary,
-    change: { access?: GuestAccessLevel; enabled?: boolean },
+    change: { name?: string; access?: GuestAccessLevel; enabled?: boolean },
   ) {
     setBusy(true);
     setError(undefined);
@@ -177,7 +177,22 @@ export function GuestAccessLinks({
         {links.map((link) => (
           <li key={link.id} className="flex flex-wrap items-center gap-3 py-3">
             <div className="min-w-40 flex-1">
-              <p className="font-medium">{link.name}</p>
+              <Input
+                aria-label={`Name for ${link.name}`}
+                appearance="seamless"
+                className="font-medium"
+                defaultValue={link.name}
+                disabled={busy}
+                maxLength={100}
+                onBlur={(event) => {
+                  const nextName = event.currentTarget.value.trim();
+                  if (nextName && nextName !== link.name) {
+                    void update(link, { name: nextName });
+                  } else {
+                    event.currentTarget.value = link.name;
+                  }
+                }}
+              />
               <p className="text-xs text-muted">
                 {link.access === "write" ? "Can edit" : "View only"}
               </p>
