@@ -325,6 +325,34 @@ describe("recipe queries", () => {
     expect(queries.recipes.detail.queryName).toBe("recipes.detail");
   });
 
+  it("lets a guest query recipes only in its pinned household", () => {
+    const guestContext = {
+      userId: "guest:session-id",
+      guest: { householdId, access: "read" as const },
+    };
+    const allowed = getAst(
+      queries.recipes.byHousehold.fn({
+        args: { householdId },
+        ctx: guestContext,
+      }),
+    );
+    const denied = getAst(
+      queries.recipes.byHousehold.fn({
+        args: { householdId: recipeId },
+        ctx: guestContext,
+      }),
+    );
+
+    expect(JSON.stringify(allowed)).not.toContain("householdMembers");
+    expect(JSON.stringify(allowed)).toContain("householdModuleSettings");
+    expect(denied.where).toMatchObject({
+      type: "and",
+      conditions: expect.arrayContaining([
+        equalsCondition("id", "00000000-0000-0000-0000-000000000000"),
+      ]),
+    });
+  });
+
   it("scopes the recipe list to an authorized household with deterministic ordering", () => {
     const query = queries.recipes.byHousehold.fn({
       args: { householdId },

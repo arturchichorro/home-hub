@@ -8,11 +8,11 @@ import type {
   RecipeImageContentType,
 } from "@home-hub/shared/recipe-images";
 import { and, asc, eq, isNull } from "drizzle-orm";
-import { findActiveUser } from "../../authorization/active-user";
 import {
-  findEnabledHouseholdModuleForShare,
-  findHouseholdMembershipForShare,
-} from "../../authorization/household-access";
+  authorizeHouseholdModule,
+  type PrincipalOrLegacyUser,
+  resolvePrincipal,
+} from "../../authorization/module-access";
 import {
   findRecipeCookLogForShare,
   findRecipeForShare,
@@ -24,11 +24,11 @@ type SignUpload = (input: {
   contentType: RecipeImageContentType;
 }) => Promise<string>;
 
-export type CreateRecipeImageUploadInput = CreateRecipeImageUploadRequest & {
-  userId: string;
-  householdId: string;
-  recipeId: string;
-};
+export type CreateRecipeImageUploadInput = CreateRecipeImageUploadRequest &
+  PrincipalOrLegacyUser & {
+    householdId: string;
+    recipeId: string;
+  };
 
 export type CreateRecipeImageUploadResult =
   | { kind: "unauthorized" }
@@ -50,31 +50,27 @@ export function createRecipeImageUploadService({
   db: Database;
   signUpload: SignUpload;
 }) {
-  return async function createRecipeImageUpload({
-    userId,
-    householdId,
-    recipeId,
-    cookLogId,
-    contentType,
-    byteSize,
-    width,
-    height,
-  }: CreateRecipeImageUploadInput): Promise<CreateRecipeImageUploadResult> {
+  return async function createRecipeImageUpload(
+    input: CreateRecipeImageUploadInput,
+  ): Promise<CreateRecipeImageUploadResult> {
+    const {
+      householdId,
+      recipeId,
+      cookLogId,
+      contentType,
+      byteSize,
+      width,
+      height,
+    } = input;
+    const principal = resolvePrincipal(input);
     return db.transaction(async (tx) => {
-      const user = await findActiveUser(tx, userId);
-      if (!user) return { kind: "unauthorized" };
-
-      const membership = await findHouseholdMembershipForShare(tx, {
-        householdId,
-        userId,
-      });
-      if (!membership) return { kind: "forbidden" };
-
-      const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
+      const failure = await authorizeHouseholdModule(tx, {
+        principal,
         householdId,
         moduleKey: "recipes",
+        write: true,
       });
-      if (!moduleSetting) return { kind: "forbidden" };
+      if (failure) return { kind: failure };
 
       const recipe = await findRecipeForShare(tx, { householdId, recipeId });
       if (!recipe) return { kind: "not_found" };

@@ -1,16 +1,15 @@
 import type { Database } from "@home-hub/database";
 import type { RecipeImageVariant } from "@home-hub/shared/recipe-image-delivery";
-import { findActiveUser } from "../../authorization/active-user";
 import {
-  findEnabledHouseholdModuleForShare,
-  findHouseholdMembershipForShare,
-} from "../../authorization/household-access";
+  authorizeHouseholdModule,
+  type PrincipalOrLegacyUser,
+  resolvePrincipal,
+} from "../../authorization/module-access";
 import type { SignRead } from "./create-read-url";
 import { findConfirmedHouseholdRecipeImagesForShare } from "./scoped-entities";
 import { recipeImageReadUrlLifetimeSeconds } from "./sign-read";
 
-export type CreateRecipeImageReadUrlsInput = {
-  userId: string;
+export type CreateRecipeImageReadUrlsInput = PrincipalOrLegacyUser & {
   householdId: string;
   requests: Array<{
     imageId: string;
@@ -40,11 +39,11 @@ export function createRecipeImageReadUrlsService({
   db: Database;
   signRead: SignRead;
 }) {
-  return async function createRecipeImageReadUrls({
-    userId,
-    householdId,
-    requests,
-  }: CreateRecipeImageReadUrlsInput): Promise<CreateRecipeImageReadUrlsResult> {
+  return async function createRecipeImageReadUrls(
+    input: CreateRecipeImageReadUrlsInput,
+  ): Promise<CreateRecipeImageReadUrlsResult> {
+    const { householdId, requests } = input;
+    const principal = resolvePrincipal(input);
     const uniqueRequests = Array.from(
       new Map(
         requests.map((request) => [
@@ -54,20 +53,13 @@ export function createRecipeImageReadUrlsService({
       ).values(),
     );
     const authorizedImageIds = await db.transaction(async (tx) => {
-      const user = await findActiveUser(tx, userId);
-      if (!user) return { kind: "unauthorized" as const };
-
-      const membership = await findHouseholdMembershipForShare(tx, {
-        householdId,
-        userId,
-      });
-      if (!membership) return { kind: "forbidden" as const };
-
-      const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
+      const failure = await authorizeHouseholdModule(tx, {
+        principal,
         householdId,
         moduleKey: "recipes",
+        write: false,
       });
-      if (!moduleSetting) return { kind: "forbidden" as const };
+      if (failure) return { kind: failure };
 
       const images = await findConfirmedHouseholdRecipeImagesForShare(tx, {
         householdId,

@@ -1,11 +1,11 @@
 import type { Database } from "@home-hub/database";
 import { recipeImages } from "@home-hub/database/schema";
 import { and, eq } from "drizzle-orm";
-import { findActiveUser } from "../../authorization/active-user";
 import {
-  findEnabledHouseholdModuleForShare,
-  findHouseholdMembershipForShare,
-} from "../../authorization/household-access";
+  authorizeHouseholdModule,
+  type PrincipalOrLegacyUser,
+  resolvePrincipal,
+} from "../../authorization/module-access";
 import type { InspectR2ObjectResult } from "./inspect-object";
 import {
   findRecipeImageForShare,
@@ -22,8 +22,7 @@ type ProcessDerivatives = (input: {
   recipeId: string;
 }) => Promise<void>;
 
-export type ConfirmRecipeImageUploadInput = {
-  userId: string;
+export type ConfirmRecipeImageUploadInput = PrincipalOrLegacyUser & {
   householdId: string;
   recipeId: string;
   imageId: string;
@@ -46,27 +45,19 @@ export function createConfirmRecipeImageUploadService({
   inspectObject: InspectObject;
   processDerivatives: ProcessDerivatives;
 }) {
-  return async function confirmRecipeImageUpload({
-    userId,
-    householdId,
-    recipeId,
-    imageId,
-  }: ConfirmRecipeImageUploadInput): Promise<ConfirmRecipeImageUploadResult> {
+  return async function confirmRecipeImageUpload(
+    input: ConfirmRecipeImageUploadInput,
+  ): Promise<ConfirmRecipeImageUploadResult> {
+    const { householdId, recipeId, imageId } = input;
+    const principal = resolvePrincipal(input);
     const initial = await db.transaction(async (tx) => {
-      const user = await findActiveUser(tx, userId);
-      if (!user) return { kind: "unauthorized" as const };
-
-      const membership = await findHouseholdMembershipForShare(tx, {
-        householdId,
-        userId,
-      });
-      if (!membership) return { kind: "forbidden" as const };
-
-      const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
+      const failure = await authorizeHouseholdModule(tx, {
+        principal,
         householdId,
         moduleKey: "recipes",
+        write: true,
       });
-      if (!moduleSetting) return { kind: "forbidden" as const };
+      if (failure) return { kind: failure };
 
       const image = await findRecipeImageForShare(tx, {
         householdId,
@@ -101,20 +92,13 @@ export function createConfirmRecipeImageUploadService({
     await processDerivatives({ householdId, imageId, recipeId });
 
     return db.transaction(async (tx) => {
-      const user = await findActiveUser(tx, userId);
-      if (!user) return { kind: "unauthorized" };
-
-      const membership = await findHouseholdMembershipForShare(tx, {
-        householdId,
-        userId,
-      });
-      if (!membership) return { kind: "forbidden" };
-
-      const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
+      const failure = await authorizeHouseholdModule(tx, {
+        principal,
         householdId,
         moduleKey: "recipes",
+        write: true,
       });
-      if (!moduleSetting) return { kind: "forbidden" };
+      if (failure) return { kind: failure };
 
       const image = await findRecipeImageForUpdate(tx, {
         householdId,

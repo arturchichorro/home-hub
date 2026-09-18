@@ -34,29 +34,37 @@ export async function requireServerHouseholdModuleAccess({
   tx,
   householdId,
   userId,
+  guest,
   moduleKey,
 }: {
   tx: Transaction<Schema>;
   householdId: string;
   userId: string;
+  guest?: { householdId: string; access: "read" | "write" } | undefined;
   moduleKey: HouseholdModuleKey;
 }): Promise<void> {
   if (tx.location !== "server") {
     return;
   }
 
-  const membership = await tx.run(
-    zql.householdMembers
-      .where("householdId", householdId)
-      .where("userId", userId)
-      .whereExists("household", (household) =>
-        household.where("deletedAt", "IS", null),
-      )
-      .one(),
-  );
+  if (guest) {
+    if (guest.householdId !== householdId || guest.access !== "write") {
+      throw new Error("Household module mutation not allowed");
+    }
+  } else {
+    const membership = await tx.run(
+      zql.householdMembers
+        .where("householdId", householdId)
+        .where("userId", userId)
+        .whereExists("household", (household) =>
+          household.where("deletedAt", "IS", null),
+        )
+        .one(),
+    );
 
-  if (!membership) {
-    throw new Error("Household module mutation not allowed");
+    if (!membership) {
+      throw new Error("Household module mutation not allowed");
+    }
   }
 
   const setting = await tx.run(

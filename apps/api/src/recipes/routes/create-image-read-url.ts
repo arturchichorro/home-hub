@@ -2,7 +2,10 @@ import { createRecipeImageReadUrlRequestSchema } from "@home-hub/shared/recipe-i
 import type { Context } from "hono";
 import * as z from "zod";
 
-import type { AuthEnv } from "../../auth/bearer-auth";
+import {
+  type PrincipalEnv,
+  principalServiceInput,
+} from "../../authorization/principal";
 import type {
   CreateRecipeImageReadUrlInput,
   CreateRecipeImageReadUrlResult,
@@ -17,7 +20,7 @@ export type CreateRecipeImageReadUrlRouteInput = {
 export function createRecipeImageReadUrlRoute({
   createRecipeImageReadUrl,
 }: CreateRecipeImageReadUrlRouteInput) {
-  return async (c: Context<AuthEnv>) => {
+  return async (c: Context<PrincipalEnv>) => {
     const parsedHouseholdId = z.uuid().safeParse(c.req.param("householdId"));
     const parsedRecipeId = z.uuid().safeParse(c.req.param("recipeId"));
     const parsedImageId = z.uuid().safeParse(c.req.param("imageId"));
@@ -34,7 +37,7 @@ export function createRecipeImageReadUrlRoute({
     }
 
     const result = await createRecipeImageReadUrl({
-      userId: c.get("userId"),
+      ...principalServiceInput(c.get("principal"), c.get("userId")),
       householdId: parsedHouseholdId.data,
       recipeId: parsedRecipeId.data,
       imageId: parsedImageId.data,

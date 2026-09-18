@@ -3,21 +3,33 @@ import { schema } from "@home-hub/shared/zero/schema";
 import { mustGetQuery } from "@rocicorp/zero";
 import { handleQueryRequest } from "@rocicorp/zero/server";
 import type { Context } from "hono";
+import type { PrincipalEnv } from "../../authorization/principal";
 
-import type { AuthEnv } from "../../auth/bearer-auth";
+function zeroContext(c: Context<PrincipalEnv>) {
+  const principal = c.get("principal");
+  return principal.kind === "account"
+    ? { userId: principal.userId }
+    : {
+        userId: `guest:${principal.guestSessionId}`,
+        guest: {
+          householdId: principal.householdId,
+          access: principal.access,
+        },
+      };
+}
 
 export function createZeroQueryRoute() {
-  return async (c: Context<AuthEnv>) => {
-    const userId = c.get("userId");
+  return async (c: Context<PrincipalEnv>) => {
+    const ctx = zeroContext(c);
 
     const response = await handleQueryRequest({
       request: c.req.raw,
       schema,
-      userID: userId,
+      userID: ctx.userId,
       handler: (name, args) =>
         mustGetQuery(queries, name).fn({
           args,
-          ctx: { userId },
+          ctx,
         }),
     });
 

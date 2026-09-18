@@ -1,3 +1,4 @@
+import type { Database } from "@home-hub/database";
 import { describe, expect, it, vi } from "vitest";
 
 import { type CreateAppInput, createApp } from "./app";
@@ -52,6 +53,7 @@ const defaultInput: CreateAppInput = {
     jwtSecret,
     isProduction: false,
     logger: silentLogger,
+    principalDatabase: {} as Database,
     readinessCheck: async () => undefined,
   },
 };

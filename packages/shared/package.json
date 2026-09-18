@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./access": "./src/access.ts",
     "./auth": "./src/auth.ts",
     "./guest-access": "./src/guest-access.ts",
     "./households": "./src/households.ts",

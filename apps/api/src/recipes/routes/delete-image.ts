@@ -1,7 +1,10 @@
 import type { Context } from "hono";
 import * as z from "zod";
 
-import type { AuthEnv } from "../../auth/bearer-auth";
+import {
+  type PrincipalEnv,
+  principalServiceInput,
+} from "../../authorization/principal";
 import type {
   DeleteRecipeImageInput,
   DeleteRecipeImageResult,
@@ -16,7 +19,7 @@ export type DeleteRecipeImageRouteInput = {
 export function deleteRecipeImageRoute({
   deleteRecipeImage,
 }: DeleteRecipeImageRouteInput) {
-  return async (c: Context<AuthEnv>) => {
+  return async (c: Context<PrincipalEnv>) => {
     const parsedHouseholdId = z.uuid().safeParse(c.req.param("householdId"));
     const parsedRecipeId = z.uuid().safeParse(c.req.param("recipeId"));
     const parsedImageId = z.uuid().safeParse(c.req.param("imageId"));
@@ -30,7 +33,7 @@ export function deleteRecipeImageRoute({
     }
 
     const result = await deleteRecipeImage({
-      userId: c.get("userId"),
+      ...principalServiceInput(c.get("principal"), c.get("userId")),
       householdId: parsedHouseholdId.data,
       recipeId: parsedRecipeId.data,
       imageId: parsedImageId.data,

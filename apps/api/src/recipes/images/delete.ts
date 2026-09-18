@@ -1,15 +1,14 @@
 import type { Database } from "@home-hub/database";
 import { recipeImages } from "@home-hub/database/schema";
 import { and, eq } from "drizzle-orm";
-import { findActiveUser } from "../../authorization/active-user";
 import {
-  findEnabledHouseholdModuleForShare,
-  findHouseholdMembershipForShare,
-} from "../../authorization/household-access";
+  authorizeHouseholdModule,
+  type PrincipalOrLegacyUser,
+  resolvePrincipal,
+} from "../../authorization/module-access";
 import { findRecipeImageObjectForUpdate } from "./scoped-entities";
 
-export type DeleteRecipeImageInput = {
-  userId: string;
+export type DeleteRecipeImageInput = PrincipalOrLegacyUser & {
   householdId: string;
   recipeId: string;
   imageId: string;
@@ -21,27 +20,19 @@ export type DeleteRecipeImageResult =
   | { kind: "success" };
 
 export function createDeleteRecipeImageService({ db }: { db: Database }) {
-  return async function deleteRecipeImage({
-    userId,
-    householdId,
-    recipeId,
-    imageId,
-  }: DeleteRecipeImageInput): Promise<DeleteRecipeImageResult> {
+  return async function deleteRecipeImage(
+    input: DeleteRecipeImageInput,
+  ): Promise<DeleteRecipeImageResult> {
+    const { householdId, recipeId, imageId } = input;
+    const principal = resolvePrincipal(input);
     return db.transaction(async (tx) => {
-      const user = await findActiveUser(tx, userId);
-      if (!user) return { kind: "unauthorized" as const };
-
-      const membership = await findHouseholdMembershipForShare(tx, {
-        householdId,
-        userId,
-      });
-      if (!membership) return { kind: "forbidden" as const };
-
-      const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
+      const failure = await authorizeHouseholdModule(tx, {
+        principal,
         householdId,
         moduleKey: "recipes",
+        write: true,
       });
-      if (!moduleSetting) return { kind: "forbidden" as const };
+      if (failure) return { kind: failure };
 
       const image = await findRecipeImageObjectForUpdate(tx, {
         householdId,

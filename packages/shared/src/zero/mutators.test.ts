@@ -368,6 +368,70 @@ describe("recipes.create mutator", () => {
     expect(recipeInsert).not.toHaveBeenCalled();
   });
 
+  it("allows a write guest without requiring household membership", async () => {
+    const { queries, recipeInsert, transaction } = createFakeTransaction({
+      location: "server",
+      results: [
+        { householdId, moduleKey: "recipes", enabled: true },
+        undefined,
+      ],
+    });
+
+    await mutators.recipes.create.fn({
+      args: createRecipeArgs,
+      ctx: {
+        userId: "guest:session-id",
+        guest: { householdId, access: "write" },
+      },
+      tx: transaction,
+    });
+
+    expect(queries).toHaveLength(2);
+    expect(recipeInsert).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a read guest mutation before querying module settings", async () => {
+    const { queries, recipeInsert, transaction } = createFakeTransaction({
+      location: "server",
+      results: [],
+    });
+
+    await expect(
+      mutators.recipes.create.fn({
+        args: createRecipeArgs,
+        ctx: {
+          userId: "guest:session-id",
+          guest: { householdId, access: "read" },
+        },
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Household module mutation not allowed");
+
+    expect(queries).toHaveLength(0);
+    expect(recipeInsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a write guest targeting another household", async () => {
+    const { queries, recipeInsert, transaction } = createFakeTransaction({
+      location: "server",
+      results: [],
+    });
+
+    await expect(
+      mutators.recipes.create.fn({
+        args: createRecipeArgs,
+        ctx: {
+          userId: "guest:session-id",
+          guest: { householdId: recipeId, access: "write" },
+        },
+        tx: transaction,
+      }),
+    ).rejects.toThrow("Household module mutation not allowed");
+
+    expect(queries).toHaveLength(0);
+    expect(recipeInsert).not.toHaveBeenCalled();
+  });
+
   it("authorizes membership and uses the server timestamp", async () => {
     const authoritativeTimestamp = 1_786_000_001_000;
     vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);

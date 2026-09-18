@@ -59,6 +59,7 @@ const createRecipe = defineHomeHubMutator(
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      guest: ctx.guest,
       moduleKey: "recipes",
     });
 
@@ -92,6 +93,7 @@ const reorderRecipes = defineHomeHubMutator(
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      guest: ctx.guest,
       moduleKey: "recipes",
     });
 
@@ -111,6 +113,7 @@ const updateRecipe = defineHomeHubMutator(
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      guest: ctx.guest,
       moduleKey: "recipes",
     });
 
@@ -139,6 +142,7 @@ const deleteRecipe = defineHomeHubMutator(
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      guest: ctx.guest,
       moduleKey: "recipes",
     });
 
@@ -162,6 +166,7 @@ const addRecipeIngredient = defineHomeHubMutator(
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      guest: ctx.guest,
       moduleKey: "recipes",
     });
 
@@ -207,6 +212,7 @@ const updateRecipeIngredient = defineHomeHubMutator(
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      guest: ctx.guest,
       moduleKey: "recipes",
     });
 
@@ -247,6 +253,7 @@ const renameRecipeIngredient = defineHomeHubMutator(
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      guest: ctx.guest,
       moduleKey: "recipes",
     });
 
@@ -279,6 +286,7 @@ const addRecipeCookLog = defineHomeHubMutator(
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      guest: ctx.guest,
       moduleKey: "recipes",
     });
 
@@ -317,6 +325,7 @@ const updateRecipeCookLog = defineHomeHubMutator(
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      guest: ctx.guest,
       moduleKey: "recipes",
     });
 
@@ -349,6 +358,7 @@ const deleteRecipeIngredient = defineHomeHubMutator(
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      guest: ctx.guest,
       moduleKey: "recipes",
     });
 
@@ -381,6 +391,7 @@ const reorderRecipeIngredients = defineHomeHubMutator(
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      guest: ctx.guest,
       moduleKey: "recipes",
     });
 
@@ -415,6 +426,7 @@ const deleteRecipeCookLog = defineHomeHubMutator(
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      guest: ctx.guest,
       moduleKey: "recipes",
     });
 
@@ -447,6 +459,7 @@ const reorderRecipeImages = defineHomeHubMutator(
       tx,
       householdId: args.householdId,
       userId: ctx.userId,
+      guest: ctx.guest,
       moduleKey: "recipes",
     });
 

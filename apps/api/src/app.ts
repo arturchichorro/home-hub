@@ -1,3 +1,4 @@
+import type { Database } from "@home-hub/database";
 import { Hono } from "hono";
 
 import { type CreateAuthRoutesInput, createAuthRoutes } from "./auth/routes";
@@ -34,6 +35,7 @@ export type CreateAppInput = {
     isProduction: boolean;
     jwtSecret: string;
     logger: StructuredLogger;
+    principalDatabase: Database;
     readinessCheck: ReadinessCheck;
     zeroDbProvider: CreateZeroRoutesInput["dbProvider"];
   };
@@ -41,8 +43,14 @@ export type CreateAppInput = {
 
 export function createApp(input: CreateAppInput) {
   const app = new Hono<ObservabilityEnv>();
-  const { isProduction, jwtSecret, logger, readinessCheck, zeroDbProvider } =
-    input.infrastructure;
+  const {
+    isProduction,
+    jwtSecret,
+    logger,
+    principalDatabase,
+    readinessCheck,
+    zeroDbProvider,
+  } = input.infrastructure;
 
   installApiObservability(app, { logger });
 
@@ -69,11 +77,19 @@ export function createApp(input: CreateAppInput) {
   );
   app.route(
     "/api/households/:householdId/recipes",
-    createRecipeRoutes({ ...input.recipeImages, jwtSecret }),
+    createRecipeRoutes({
+      ...input.recipeImages,
+      jwtSecret,
+      principalDatabase,
+    }),
   );
   app.route(
     "/api/zero",
-    createZeroRoutes({ dbProvider: zeroDbProvider, jwtSecret }),
+    createZeroRoutes({
+      dbProvider: zeroDbProvider,
+      jwtSecret,
+      principalDatabase,
+    }),
   );
 
   return app;

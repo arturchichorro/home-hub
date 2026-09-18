@@ -1,6 +1,10 @@
+import type { Database } from "@home-hub/database";
 import { Hono } from "hono";
 
-import { type AuthEnv, createBearerAuth } from "../../auth/bearer-auth";
+import {
+  createAccessPrincipalAuth,
+  type PrincipalEnv,
+} from "../../authorization/principal";
 import {
   type ConfirmRecipeImageUploadRouteInput,
   confirmRecipeImageUploadRoute,
@@ -28,38 +32,43 @@ export type CreateRecipeRoutesInput = ConfirmRecipeImageUploadRouteInput &
   CreateRecipeImageUploadRouteInput &
   DeleteRecipeImageRouteInput & {
     jwtSecret: string;
+    principalDatabase?: Database;
   };
 
 export function createRecipeRoutes(input: CreateRecipeRoutesInput) {
-  const recipeRoutes = new Hono<AuthEnv>();
+  const recipeRoutes = new Hono<PrincipalEnv>();
+  const principalAuth = createAccessPrincipalAuth({
+    db: input.principalDatabase ?? ({} as Database),
+    jwtSecret: input.jwtSecret,
+  });
 
   recipeRoutes.post(
     "/:recipeId/images/uploads",
-    createBearerAuth(input.jwtSecret),
+    principalAuth,
     createRecipeImageUploadRoute(input),
   );
 
   recipeRoutes.delete(
     "/:recipeId/images/:imageId",
-    createBearerAuth(input.jwtSecret),
+    principalAuth,
     deleteRecipeImageRoute(input),
   );
 
   recipeRoutes.post(
     "/:recipeId/images/:imageId/confirm",
-    createBearerAuth(input.jwtSecret),
+    principalAuth,
     confirmRecipeImageUploadRoute(input),
   );
 
   recipeRoutes.post(
     "/images/read-urls",
-    createBearerAuth(input.jwtSecret),
+    principalAuth,
     createRecipeImageReadUrlsRoute(input),
   );
 
   recipeRoutes.post(
     "/:recipeId/images/:imageId/read-url",
-    createBearerAuth(input.jwtSecret),
+    principalAuth,
     createRecipeImageReadUrlRoute(input),
   );
 

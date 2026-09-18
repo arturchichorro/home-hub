@@ -1,6 +1,10 @@
+import type { Database } from "@home-hub/database";
 import { Hono } from "hono";
 
-import { type AuthEnv, createBearerAuth } from "../../auth/bearer-auth";
+import {
+  createAccessPrincipalAuth,
+  type PrincipalEnv,
+} from "../../authorization/principal";
 import {
   type CreateZeroMutateRouteInput,
   createZeroMutateRoute,
@@ -9,22 +13,19 @@ import { createZeroQueryRoute } from "./query";
 
 export type CreateZeroRoutesInput = CreateZeroMutateRouteInput & {
   jwtSecret: string;
+  principalDatabase?: Database;
 };
 
 export function createZeroRoutes(input: CreateZeroRoutesInput) {
-  const zeroRoutes = new Hono<AuthEnv>();
+  const zeroRoutes = new Hono<PrincipalEnv>();
+  const principalAuth = createAccessPrincipalAuth({
+    db: input.principalDatabase ?? ({} as Database),
+    jwtSecret: input.jwtSecret,
+  });
 
-  zeroRoutes.post(
-    "/query",
-    createBearerAuth(input.jwtSecret),
-    createZeroQueryRoute(),
-  );
+  zeroRoutes.post("/query", principalAuth, createZeroQueryRoute());
 
-  zeroRoutes.post(
-    "/mutate",
-    createBearerAuth(input.jwtSecret),
-    createZeroMutateRoute(input),
-  );
+  zeroRoutes.post("/mutate", principalAuth, createZeroMutateRoute(input));
 
   return zeroRoutes;
 }
