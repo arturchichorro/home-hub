@@ -3,6 +3,7 @@ import { InlineAlert } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { useEffect, useState } from "react";
 import { DeleteHouseholdControl } from "./delete-household-control";
+import { GuestAccessLinks } from "./guest-access-links";
 import { HouseholdAccessList } from "./household-access-list";
 import { HouseholdNameInput } from "./household-name-input";
 import { LeaveHouseholdControl } from "./leave-household-control";
@@ -101,6 +102,16 @@ export function HouseholdSettings({
         <section className="grid gap-4">
           <h3 className="text-lg font-semibold">Modules</h3>
           <ModuleSettings
+            accessToken={accessToken}
+            householdId={household.id}
+            onSessionExpired={onSessionExpired}
+          />
+        </section>
+      ) : null}
+
+      {isOwner ? (
+        <section>
+          <GuestAccessLinks
             accessToken={accessToken}
             householdId={household.id}
             onSessionExpired={onSessionExpired}
