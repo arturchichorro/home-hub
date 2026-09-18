@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { signAccessToken } from "./access-token";
+import { signAccessToken, signGuestAccessToken } from "./access-token";
 import { type AuthEnv, createBearerAuth } from "./bearer-auth";
 
 const jwtSecret = "test-jwt-secret-that-is-long-enough";
@@ -87,6 +87,22 @@ describe("bearer authentication", () => {
 
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
+  });
+
+  it("rejects a Guest access token on account-only routes", async () => {
+    const app = createProtectedApp();
+    const token = signGuestAccessToken({
+      guestSessionId: "guest-session-123",
+      jwtId: "jwt-123",
+      secret: jwtSecret,
+      now,
+    });
+
+    const response = await app.request("/", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    expect(response.status).toBe(401);
   });
 
   it("exposes the verified user ID to downstream handlers", async () => {

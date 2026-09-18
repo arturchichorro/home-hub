@@ -25,10 +25,12 @@ export function createBearerAuth(jwtSecret: string) {
     let userId: string;
 
     try {
-      userId = verifyAccessToken({
+      const claims = verifyAccessToken({
         token: parts[1],
         secret: jwtSecret,
-      }).sub;
+      });
+      if (claims.principalType) throw new Error("Invalid account token");
+      userId = claims.sub;
     } catch {
       c.header("WWW-Authenticate", "Bearer");
       return c.json({ error: "Unauthorized" }, 401);

@@ -1,7 +1,11 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
-import { signAccessToken, verifyAccessToken } from "./access-token";
+import {
+  signAccessToken,
+  signGuestAccessToken,
+  verifyAccessToken,
+} from "./access-token";
 
 const secret = "super-secret";
 const now = new Date("2026-01-01T00:00:00Z");
@@ -84,6 +88,22 @@ describe("signAccessToken", () => {
     });
 
     expect(claims.exp - claims.iat).toBe(120);
+  });
+});
+
+describe("signGuestAccessToken", () => {
+  it("marks a guest session without changing account-token claims", () => {
+    const token = signGuestAccessToken({
+      guestSessionId: "guest-session-123",
+      jwtId: "jwt-123",
+      secret,
+      now,
+    });
+
+    expect(verifyAccessToken({ token, secret, now })).toMatchObject({
+      sub: "guest-session-123",
+      principalType: "guest",
+    });
   });
 });
 

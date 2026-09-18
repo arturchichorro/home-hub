@@ -13,6 +13,7 @@ export type AccessTokenClaims = {
   iat: number;
   exp: number;
   jti: string;
+  principalType?: "guest";
 };
 
 type AccessTokenHeader = {
@@ -64,6 +65,7 @@ function assertValidClaims(value: unknown): asserts value is AccessTokenClaims {
   if (
     typeof value.sub !== "string" ||
     typeof value.jti !== "string" ||
+    (value.principalType !== undefined && value.principalType !== "guest") ||
     value.iss !== accessTokenIssuer ||
     value.aud !== accessTokenAudience ||
     !Number.isInteger(value.iat) ||
@@ -93,12 +95,13 @@ function assertValidSignature(input: {
   }
 }
 
-export function signAccessToken(input: {
-  userId: string;
+function signToken(input: {
+  subject: string;
   jwtId: string;
   secret: string;
   now?: Date;
   ttlSeconds?: number;
+  principalType?: "guest";
 }): string {
   const now = input.now ?? new Date();
   const issuedAt = secondsSinceEpoch(now);
@@ -108,12 +111,13 @@ export function signAccessToken(input: {
     alg: accessTokenAlgorithm,
   };
   const claims: AccessTokenClaims = {
-    sub: input.userId,
+    sub: input.subject,
     iss: accessTokenIssuer,
     aud: accessTokenAudience,
     iat: issuedAt,
     exp: issuedAt + ttlSeconds,
     jti: input.jwtId,
+    ...(input.principalType ? { principalType: input.principalType } : {}),
   };
   const encodedHeader = base64UrlEncodeJson(header);
   const encodedPayload = base64UrlEncodeJson(claims);
@@ -121,6 +125,39 @@ export function signAccessToken(input: {
   const signature = sign({ signingInput, secret: input.secret });
 
   return `${signingInput}.${signature}`;
+}
+
+export function signAccessToken(input: {
+  userId: string;
+  jwtId: string;
+  secret: string;
+  now?: Date;
+  ttlSeconds?: number;
+}): string {
+  return signToken({
+    subject: input.userId,
+    jwtId: input.jwtId,
+    secret: input.secret,
+    ...(input.now ? { now: input.now } : {}),
+    ...(input.ttlSeconds === undefined ? {} : { ttlSeconds: input.ttlSeconds }),
+  });
+}
+
+export function signGuestAccessToken(input: {
+  guestSessionId: string;
+  jwtId: string;
+  secret: string;
+  now?: Date;
+  ttlSeconds?: number;
+}): string {
+  return signToken({
+    subject: input.guestSessionId,
+    jwtId: input.jwtId,
+    secret: input.secret,
+    ...(input.now ? { now: input.now } : {}),
+    ...(input.ttlSeconds === undefined ? {} : { ttlSeconds: input.ttlSeconds }),
+    principalType: "guest",
+  });
 }
 
 export function verifyAccessToken(input: {

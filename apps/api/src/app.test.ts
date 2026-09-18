@@ -20,6 +20,11 @@ const defaultInput: CreateAppInput = {
     logout: async () => undefined,
     getMe: async () => ({ kind: "not_found" }),
   },
+  guestAccess: {
+    logoutGuestAccess: async () => undefined,
+    redeemGuestAccess: async () => ({ kind: "invalid_token" }),
+    refreshGuestAccess: async () => ({ kind: "invalid_token" }),
+  },
   households: {
     acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
     createHousehold: async () => ({ kind: "unauthorized" }),
@@ -58,6 +63,7 @@ type CreateTestAppOverrides = {
 function createTestApp(overrides: CreateTestAppOverrides = {}) {
   return createApp({
     auth: { ...defaultInput.auth, ...overrides.auth },
+    guestAccess: { ...defaultInput.guestAccess, ...overrides.guestAccess },
     households: { ...defaultInput.households, ...overrides.households },
     recipeImages: { ...defaultInput.recipeImages, ...overrides.recipeImages },
     infrastructure: {

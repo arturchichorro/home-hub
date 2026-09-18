@@ -2,6 +2,10 @@ import { Hono } from "hono";
 
 import { type CreateAuthRoutesInput, createAuthRoutes } from "./auth/routes";
 import {
+  type CreateGuestAccessRoutesInput,
+  createGuestAccessRoutes,
+} from "./guest-access/routes";
+import {
   type CreateHouseholdRoutesInput,
   createHouseholdRoutes,
 } from "./households/routes";
@@ -23,6 +27,7 @@ type RecipeImageServices = Omit<CreateRecipeRoutesInput, "jwtSecret">;
 
 export type CreateAppInput = {
   auth: AuthServices;
+  guestAccess: Omit<CreateGuestAccessRoutesInput, "isProduction">;
   households: HouseholdServices;
   recipeImages: RecipeImageServices;
   infrastructure: {
@@ -53,6 +58,10 @@ export function createApp(input: CreateAppInput) {
   app.route(
     "/api/auth",
     createAuthRoutes({ ...input.auth, isProduction, jwtSecret }),
+  );
+  app.route(
+    "/api/guest",
+    createGuestAccessRoutes({ ...input.guestAccess, isProduction }),
   );
   app.route(
     "/api/households",

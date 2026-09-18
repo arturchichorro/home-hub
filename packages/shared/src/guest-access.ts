@@ -92,3 +92,24 @@ export const regenerateGuestAccessLinkResponseSchema = z
 export type RegenerateGuestAccessLinkResponse = z.infer<
   typeof regenerateGuestAccessLinkResponseSchema
 >;
+
+export const redeemGuestAccessRequestSchema = z
+  .object({ token: guestAccessTokenSchema })
+  .strict();
+
+export type RedeemGuestAccessRequest = z.infer<
+  typeof redeemGuestAccessRequestSchema
+>;
+
+export const guestSessionResponseSchema = z
+  .object({
+    accessToken: z.string().min(1),
+    access: guestAccessLevelSchema,
+    cacheIdentity: z.string().min(1),
+    household: z
+      .object({ id: z.uuid(), name: z.string().min(1).max(100) })
+      .strict(),
+  })
+  .strict();
+
+export type GuestSessionResponse = z.infer<typeof guestSessionResponseSchema>;

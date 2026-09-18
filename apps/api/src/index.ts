@@ -15,6 +15,11 @@ import {
   createRegenerateGuestAccessLinkService,
   createUpdateGuestAccessLinkService,
 } from "./guest-access/manage";
+import {
+  createLogoutGuestAccessService,
+  createRedeemGuestAccessService,
+  createRefreshGuestAccessService,
+} from "./guest-access/session";
 import { createAcceptHouseholdInviteService } from "./households/accept-invite";
 import { createHouseholdService } from "./households/create";
 import { createHouseholdInviteService } from "./households/create-invite";
@@ -115,6 +120,18 @@ const households = {
   }),
 };
 
+const guestAccess = {
+  logoutGuestAccess: createLogoutGuestAccessService({ db: infrastructure.db }),
+  redeemGuestAccess: createRedeemGuestAccessService({
+    db: infrastructure.db,
+    jwtSecret: infrastructure.config.API_JWT_SECRET,
+  }),
+  refreshGuestAccess: createRefreshGuestAccessService({
+    db: infrastructure.db,
+    jwtSecret: infrastructure.config.API_JWT_SECRET,
+  }),
+};
+
 const recipeImages = {
   createRecipeImageUpload: createRecipeImageUploadService({
     db: infrastructure.db,
@@ -174,6 +191,7 @@ const recipeImages = {
 
 const app = createApp({
   auth,
+  guestAccess,
   households,
   recipeImages,
   infrastructure: {
