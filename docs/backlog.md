@@ -23,17 +23,16 @@ together before implementation begins.
 - [ ] Add user comments to cook logs (recipes)
 - [ ] Check and fix flashing of pictures - has to do with first displaying preview and then loading in the full quality webp
 - [ ] Improve separation between database access, domain behavior, and transport code
-= [ ] Make upload be faster by displaying user uploaded picture optimistically, until we get confirmation
+- [ ] Make upload be faster by displaying user uploaded picture optimistically, until we get confirmation
 
 ## Future modules and capabilities
 
-- [ ] Multiple household lists, after reconsidering the current product non-goal - UI inspired by Gkeep
-- [ ] French Vocabulary
+- [ ] French Vocabulary - Flashcards instead
 - [ ] Goals / sport logs / logs in general (log things by category I guess)
 - [ ] Household finance
 - [ ] Friend list with timestamped notes
 - [ ] Module de lugares onde já fui (mapa)
-- [ ] Moodboards, masonry shit tipo pinterest (para inspo de home decoration, por exemplo, para guardar lá imagens) - pode fazer parte do lists module atéß
+- [ ] Moodboards, masonry shit tipo pinterest (para inspo de home decoration, por exemplo, para guardar lá imagens) - pode fazer parte do lists module até
 
 ## Ideia
 
