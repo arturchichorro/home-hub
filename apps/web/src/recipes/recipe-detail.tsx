@@ -154,7 +154,11 @@ export function RecipeDetail({ recipeId }: RecipeDetailProps) {
         return;
       }
       if (mode === "guest") {
-        await navigate({ to: "/recipes", replace: true });
+        await navigate({
+          to: "/recipes",
+          hash: window.location.hash.slice(1),
+          replace: true,
+        });
       } else {
         await navigate({
           to: "/households/$householdId/recipes",

@@ -1,9 +1,9 @@
 import { Button } from "@home-hub/ui-web";
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { ApplicationState } from "../application-state";
-import { logoutGuestAccess, refreshGuestAccessToken } from "../guest/api";
+import { useGuestAccess } from "../guest/access";
+import { guestAuthorization } from "../guest/api";
 import { GuestApp } from "../guest/guest-app";
-import { useGuestSession } from "../guest/session";
 import { clearRecipeImageUrlCache } from "../recipes/recipe-image-url-cache";
 import { RecipeModuleProvider } from "../recipes/recipe-module";
 import { HomeHubZeroProvider } from "../zero/provider";
@@ -14,7 +14,8 @@ export const Route = createFileRoute("/_guest/recipes")({
 
 function GuestRecipesLayout() {
   const navigate = useNavigate();
-  const { loading, session, setSession } = useGuestSession();
+  const { loading, credential, context, clear, refreshAuthorization } =
+    useGuestAccess();
   const { onZeroReady } = Route.useRouteContext();
 
   if (loading) {
@@ -26,7 +27,7 @@ function GuestRecipesLayout() {
       />
     );
   }
-  if (!session) {
+  if (!credential || !context) {
     return (
       <ApplicationState
         title="Guest access unavailable"
@@ -40,52 +41,51 @@ function GuestRecipesLayout() {
     );
   }
 
-  const closeSession = () => {
-    clearRecipeImageUrlCache(session.cacheIdentity);
-    setSession(null);
+  const closeAccess = () => {
+    clearRecipeImageUrlCache(context.cacheIdentity);
+    clear();
+    window.history.replaceState(null, "", "/join");
     void navigate({ to: "/join", replace: true });
   };
 
-  if (!session.enabledModules.includes("recipes")) {
+  if (!context.enabledModules.includes("recipes")) {
     return (
       <ApplicationState
         title="No shared modules available"
         description="This household is not currently sharing Recipes."
-        actions={<Button onClick={closeSession}>Leave Guest access</Button>}
+        actions={<Button onClick={closeAccess}>Leave Guest access</Button>}
       />
     );
   }
 
   return (
     <HomeHubZeroProvider
-      cacheIdentity={session.cacheIdentity}
-      canWrite={session.access === "write" && session.accessToken.length > 0}
+      cacheIdentity={context.cacheIdentity}
+      canWrite={context.access === "write"}
       requestAccess={{
         actor: { kind: "guest" },
         householdScope: {
-          householdId: session.household.id,
-          permission: session.access,
+          householdId: context.household.id,
+          permission: context.access,
         },
       }}
-      accessToken={session.accessToken}
-      refreshAccessToken={refreshGuestAccessToken}
-      onAccessTokenRefreshed={(accessToken) =>
-        setSession({ ...session, accessToken })
-      }
-      onSessionExpired={closeSession}
+      accessToken={guestAuthorization(credential)}
+      refreshAccessToken={refreshAuthorization}
+      onAccessTokenRefreshed={() => undefined}
+      onSessionExpired={closeAccess}
       onReady={onZeroReady}
     >
       <GuestApp
-        access={session.access}
-        householdName={session.household.name}
-        onLeave={() => void logoutGuestAccess().finally(closeSession)}
+        access={context.access}
+        householdName={context.household.name}
+        onLeave={closeAccess}
       >
         <RecipeModuleProvider
-          accessToken={session.accessToken}
-          cacheIdentity={session.cacheIdentity}
-          householdId={session.household.id}
+          accessToken={guestAuthorization(credential)}
+          cacheIdentity={context.cacheIdentity}
+          householdId={context.household.id}
           mode="guest"
-          onSessionExpired={closeSession}
+          onSessionExpired={closeAccess}
         >
           <Outlet />
         </RecipeModuleProvider>

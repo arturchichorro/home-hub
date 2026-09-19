@@ -117,27 +117,3 @@ export const guestAccessContextResponseSchema = z
 export type GuestAccessContextResponse = z.infer<
   typeof guestAccessContextResponseSchema
 >;
-
-/** @deprecated Removed with the device-session system in implementation Step 4. */
-export const redeemGuestAccessRequestSchema = z
-  .object({ token: guestAccessTokenSchema })
-  .strict();
-
-export type RedeemGuestAccessRequest = z.infer<
-  typeof redeemGuestAccessRequestSchema
->;
-
-/** @deprecated Removed with the device-session system in implementation Step 4. */
-export const guestSessionResponseSchema = z
-  .object({
-    accessToken: z.string().min(1),
-    access: guestAccessLevelSchema,
-    cacheIdentity: z.string().min(1),
-    enabledModules: z.array(householdModuleKeySchema),
-    household: z
-      .object({ id: z.uuid(), name: z.string().min(1).max(100) })
-      .strict(),
-  })
-  .strict();
-
-export type GuestSessionResponse = z.infer<typeof guestSessionResponseSchema>;

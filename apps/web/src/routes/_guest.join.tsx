@@ -1,9 +1,8 @@
 import { Button } from "@home-hub/ui-web";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { ApplicationState } from "../application-state";
-import { redeemGuestAccess } from "../guest/api";
-import { useGuestSession } from "../guest/session";
+import { useGuestAccess } from "../guest/access";
 
 export const Route = createFileRoute("/_guest/join")({
   component: JoinGuestAccess,
@@ -11,37 +10,15 @@ export const Route = createFileRoute("/_guest/join")({
 
 function JoinGuestAccess() {
   const navigate = useNavigate();
-  const { setSession } = useGuestSession();
-  const [status, setStatus] = useState<"joining" | "unavailable">("joining");
+  const { loading, credential, context } = useGuestAccess();
 
   useEffect(() => {
-    const token = window.location.hash.slice(1);
-    window.history.replaceState(null, "", "/join");
-    if (!token) {
-      setStatus("unavailable");
-      return;
+    if (!loading && credential && context) {
+      void navigate({ to: "/recipes", hash: credential, replace: true });
     }
+  }, [context, credential, loading, navigate]);
 
-    let active = true;
-    void redeemGuestAccess(token)
-      .then((result) => {
-        if (!active) return;
-        if (result.kind === "unavailable") {
-          setStatus("unavailable");
-          return;
-        }
-        setSession(result.session);
-        void navigate({ to: "/recipes", replace: true });
-      })
-      .catch(() => {
-        if (active) setStatus("unavailable");
-      });
-    return () => {
-      active = false;
-    };
-  }, [navigate, setSession]);
-
-  return status === "joining" ? (
+  return loading || (credential && context) ? (
     <ApplicationState
       title="Opening household…"
       description="Checking this Guest access link."

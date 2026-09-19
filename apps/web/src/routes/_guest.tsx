@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { GuestSessionProvider } from "../guest/session";
+import { GuestAccessProvider } from "../guest/access";
 
 export const Route = createFileRoute("/_guest")({
   beforeLoad: ({ context }) => {
@@ -10,8 +10,8 @@ export const Route = createFileRoute("/_guest")({
 
 function GuestLayout() {
   return (
-    <GuestSessionProvider>
+    <GuestAccessProvider>
       <Outlet />
-    </GuestSessionProvider>
+    </GuestAccessProvider>
   );
 }

@@ -14,7 +14,7 @@ const pendingGroups = new Map<string, PendingRead[]>();
 let flushScheduled = false;
 
 function groupKey(identity: RecipeImageUrlIdentity) {
-  return JSON.stringify([identity.accessToken, identity.householdId]);
+  return JSON.stringify([identity.userId, identity.householdId]);
 }
 
 async function flushGroup(reads: PendingRead[]) {

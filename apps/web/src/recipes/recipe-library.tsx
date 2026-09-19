@@ -171,7 +171,12 @@ function RecipeCardLink({
       "block min-w-0 touch-pan-y select-none outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
   };
   return mode === "guest" ? (
-    <Link {...common} to="/recipes/$recipeId" params={{ recipeId }}>
+    <Link
+      {...common}
+      to="/recipes/$recipeId"
+      params={{ recipeId }}
+      hash={window.location.hash.slice(1)}
+    >
       {children}
     </Link>
   ) : (
@@ -407,7 +412,11 @@ export function RecipeLibrary() {
         onOpenChange={setCreating}
         onCreated={(recipeId) => {
           if (mode === "guest") {
-            void navigate({ to: "/recipes/$recipeId", params: { recipeId } });
+            void navigate({
+              to: "/recipes/$recipeId",
+              params: { recipeId },
+              hash: window.location.hash.slice(1),
+            });
           } else {
             void navigate({
               to: "/households/$householdId/recipes/$recipeId",

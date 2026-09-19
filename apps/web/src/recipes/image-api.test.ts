@@ -68,6 +68,38 @@ describe("recipe image API", () => {
     );
   });
 
+  it("passes a direct Guest authorization value through unchanged", async () => {
+    const guestAuthorization = `Guest ${"g".repeat(43)}`;
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        imageId,
+        upload: {
+          url: "https://upload.example/image",
+          expiresInSeconds: 300,
+          requiredHeaders: { "Content-Type": "image/webp" },
+        },
+      }),
+    );
+
+    await requestRecipeImageUpload({
+      accessToken: guestAuthorization,
+      householdId,
+      recipeId,
+      cookLogId: null,
+      contentType: "image/webp",
+      byteSize: 2_048,
+      width: 800,
+      height: 600,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: guestAuthorization }),
+      }),
+    );
+  });
+
   it.each([
     [401, "unauthorized"],
     [403, "forbidden"],
