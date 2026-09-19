@@ -25,7 +25,7 @@ import { type CreateZeroRoutesInput, createZeroRoutes } from "./zero/routes";
 
 type AuthServices = Omit<CreateAuthRoutesInput, "isProduction" | "jwtSecret">;
 type HouseholdServices = Omit<CreateHouseholdRoutesInput, "jwtSecret">;
-type RecipeImageServices = Omit<CreateRecipeRoutesInput, "authenticateRequest">;
+type RecipeImageServices = CreateRecipeRoutesInput;
 
 export type CreateAppInput = {
   auth: AuthServices;
@@ -80,19 +80,17 @@ export function createApp(input: CreateAppInput) {
     "/api/households",
     createHouseholdRoutes({ ...input.households, jwtSecret }),
   );
+  app.use("/api/households/:householdId/recipes/*", authenticateRequest);
   app.route(
     "/api/households/:householdId/recipes",
-    createRecipeRoutes({
-      ...input.recipeImages,
-      authenticateRequest,
-    }),
+    createRecipeRoutes(input.recipeImages),
   );
+  app.use("/api/zero/*", authenticateRequest);
   app.route(
     "/api/zero",
     createZeroRoutes({
       dbProvider: zeroDbProvider,
       authorizationDatabase: database,
-      authenticateRequest,
     }),
   );
 

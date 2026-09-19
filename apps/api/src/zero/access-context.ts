@@ -18,5 +18,5 @@ export function toZeroAuthContext(
 export function zeroCacheIdentity(requestAccess: RequestAccess): string {
   return requestAccess.actor.kind === "account"
     ? requestAccess.actor.accountId
-    : `guest-session:${requestAccess.actor.guestSessionId}`;
+    : `guest-link:${requestAccess.actor.guestAccessLinkId}`;
 }

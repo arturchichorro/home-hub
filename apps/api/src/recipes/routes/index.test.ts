@@ -67,6 +67,13 @@ function createTestApp(
   }),
 ) {
   const app = new Hono();
+  app.use(
+    "/:householdId/recipes/*",
+    createRequestAccessAuth({
+      db: {} as Database,
+      jwtSecret,
+    }),
+  );
   app.route(
     "/:householdId/recipes",
     createRecipeRoutes({
@@ -75,10 +82,6 @@ function createTestApp(
       createRecipeImageReadUrls,
       createRecipeImageUpload,
       deleteRecipeImage,
-      authenticateRequest: createRequestAccessAuth({
-        db: {} as Database,
-        jwtSecret,
-      }),
     }),
   );
   return app;
@@ -111,7 +114,7 @@ describe("recipe routes", () => {
     );
 
     expect(response.status).toBe(401);
-    expect(response.headers.get("WWW-Authenticate")).toBe("Bearer");
+    expect(response.headers.get("WWW-Authenticate")).toBe("Bearer, Guest");
     expect(createRecipeImageUpload).not.toHaveBeenCalled();
   });
 

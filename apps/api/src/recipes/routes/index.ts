@@ -1,4 +1,4 @@
-import { Hono, type MiddlewareHandler } from "hono";
+import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 
 import type { RequestAccessEnv } from "../../authorization/request-access";
@@ -28,20 +28,17 @@ export type CreateRecipeRoutesInput = ConfirmRecipeImageUploadRouteInput &
   CreateRecipeImageReadUrlRouteInput &
   CreateRecipeImageReadUrlsRouteInput &
   CreateRecipeImageUploadRouteInput &
-  DeleteRecipeImageRouteInput & {
-    authenticateRequest: MiddlewareHandler<RequestAccessEnv>;
-  };
+  DeleteRecipeImageRouteInput;
 
 export function createRecipeRoutes(input: CreateRecipeRoutesInput) {
   const recipeRoutes = new Hono<RequestAccessEnv>();
-  recipeRoutes.use("*", input.authenticateRequest);
   const uploadLimiter = new FixedWindowRateLimiter(60, 60_000);
   const limitUploads = createMiddleware<RequestAccessEnv>(async (c, next) => {
     const requestAccess = c.get("requestAccess");
     const key =
       requestAccess.actor.kind === "account"
         ? `account:${requestAccess.actor.accountId}`
-        : `guest:${requestAccess.actor.guestSessionId}`;
+        : `guest:${requestAccess.actor.guestAccessLinkId}`;
     if (!uploadLimiter.allow(key)) {
       c.header("Retry-After", "60");
       return c.json({ error: "Too many requests" }, 429);

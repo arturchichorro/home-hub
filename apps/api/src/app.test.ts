@@ -166,6 +166,21 @@ describe("app", () => {
     expect(infoRecords[0]).not.toHaveProperty("error");
   });
 
+  it("rejects Guest credentials on account-only household administration", async () => {
+    const listHouseholds = vi.fn(async () => ({
+      kind: "unauthorized" as const,
+    }));
+    const app = createTestApp({ households: { listHouseholds } });
+
+    const response = await app.request("/api/households", {
+      headers: { Authorization: `Guest ${"g".repeat(43)}` },
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("WWW-Authenticate")).toBe("Bearer");
+    expect(listHouseholds).not.toHaveBeenCalled();
+  });
+
   it("logs unexpected errors once without exposing secret-bearing messages", async () => {
     const secret =
       "password=hunter2 token=secret-token signedUrl=https://example.test/?signature=secret";

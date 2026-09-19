@@ -1,7 +1,6 @@
 import type { DatabaseTransaction } from "@home-hub/database";
 import {
   householdGuestAccessLinks,
-  householdGuestSessions,
   households,
 } from "@home-hub/database/schema";
 import {
@@ -10,7 +9,7 @@ import {
   type RequestAccess,
 } from "@home-hub/shared/access";
 import type { HouseholdModuleKey } from "@home-hub/shared/modules";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { findActiveUser } from "./active-user";
 import {
   findEnabledHouseholdModuleForShare,
@@ -27,24 +26,16 @@ export async function lockCurrentGuestAccess(
       householdId: householdGuestAccessLinks.householdId,
       access: householdGuestAccessLinks.access,
     })
-    .from(householdGuestSessions)
-    .innerJoin(
-      householdGuestAccessLinks,
-      eq(
-        householdGuestAccessLinks.id,
-        householdGuestSessions.guestAccessLinkId,
-      ),
-    )
+    .from(householdGuestAccessLinks)
     .innerJoin(
       households,
       eq(households.id, householdGuestAccessLinks.householdId),
     )
     .where(
       and(
-        eq(householdGuestSessions.id, requestAccess.actor.guestSessionId),
         eq(householdGuestAccessLinks.id, requestAccess.actor.guestAccessLinkId),
-        isNull(householdGuestSessions.revokedAt),
         isNull(householdGuestAccessLinks.disabledAt),
+        gt(householdGuestAccessLinks.expiresAt, new Date()),
         isNull(households.deletedAt),
       ),
     )
@@ -55,7 +46,6 @@ export async function lockCurrentGuestAccess(
     ? {
         actor: {
           kind: "guest",
-          guestSessionId: requestAccess.actor.guestSessionId,
           guestAccessLinkId: current.guestAccessLinkId,
         },
         householdScope: {

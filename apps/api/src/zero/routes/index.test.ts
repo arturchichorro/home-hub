@@ -1,9 +1,13 @@
 import type { Database } from "@home-hub/database";
 import type { TransactionProviderHooks } from "@rocicorp/zero/server";
+import { Hono } from "hono";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { signAccessToken } from "../../auth/access-token";
-import { createRequestAccessAuth } from "../../authorization/request-access";
+import {
+  createRequestAccessAuth,
+  type RequestAccessEnv,
+} from "../../authorization/request-access";
 import type { ZeroDbProvider } from "../db-provider";
 import { createZeroRoutes } from "./index";
 
@@ -20,11 +24,16 @@ const authenticateRequest = createRequestAccessAuth({
 });
 
 function createTestRoutes(provider: ZeroDbProvider) {
-  return createZeroRoutes({
-    authorizationDatabase,
-    authenticateRequest,
-    dbProvider: provider,
-  });
+  const app = new Hono<RequestAccessEnv>();
+  app.use("/*", authenticateRequest);
+  app.route(
+    "/",
+    createZeroRoutes({
+      authorizationDatabase,
+      dbProvider: provider,
+    }),
+  );
+  return app;
 }
 
 afterEach(() => {
@@ -163,7 +172,7 @@ describe("Zero routes", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(response.headers.get("WWW-Authenticate")).toBe("Bearer");
+    expect(response.headers.get("WWW-Authenticate")).toBe("Bearer, Guest");
     await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
   });
 
@@ -258,7 +267,7 @@ describe("Zero routes", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(response.headers.get("WWW-Authenticate")).toBe("Bearer");
+    expect(response.headers.get("WWW-Authenticate")).toBe("Bearer, Guest");
     await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
   });
 

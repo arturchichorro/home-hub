@@ -7,7 +7,6 @@ export type AccountActor = {
 
 export type GuestActor = {
   kind: "guest";
-  guestSessionId: string;
   guestAccessLinkId: string;
 };
 

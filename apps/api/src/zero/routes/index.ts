@@ -1,4 +1,4 @@
-import { Hono, type MiddlewareHandler } from "hono";
+import { Hono } from "hono";
 
 import type { RequestAccessEnv } from "../../authorization/request-access";
 import {
@@ -7,13 +7,10 @@ import {
 } from "./mutate";
 import { createZeroQueryRoute } from "./query";
 
-export type CreateZeroRoutesInput = CreateZeroMutateRouteInput & {
-  authenticateRequest: MiddlewareHandler<RequestAccessEnv>;
-};
+export type CreateZeroRoutesInput = CreateZeroMutateRouteInput;
 
 export function createZeroRoutes(input: CreateZeroRoutesInput) {
   const zeroRoutes = new Hono<RequestAccessEnv>();
-  zeroRoutes.use("*", input.authenticateRequest);
 
   zeroRoutes.post("/query", createZeroQueryRoute());
 

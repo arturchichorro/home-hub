@@ -1,13 +1,12 @@
 import type { DatabaseTransaction } from "@home-hub/database";
 import {
-  householdGuestSessions,
+  householdGuestAccessLinks,
   householdModuleSettings,
 } from "@home-hub/database/schema";
 import { describe, expect, it, vi } from "vitest";
 import { authorizeHouseholdModule } from "./module-access";
 
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
-const guestSessionId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const guestAccessLinkId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 
 function createTransaction(access: "read" | "write" | undefined) {
@@ -30,7 +29,7 @@ function createTransaction(access: "read" | "write" | undefined) {
       },
       async for(strength: unknown) {
         locks.push(strength);
-        if (table === householdGuestSessions && access) {
+        if (table === householdGuestAccessLinks && access) {
           return [{ guestAccessLinkId, householdId, access }];
         }
         if (table === householdModuleSettings) return [{ householdId }];
@@ -51,7 +50,7 @@ describe("guest module authorization", () => {
     await expect(
       authorizeHouseholdModule(tx, {
         requestAccess: {
-          actor: { kind: "guest", guestSessionId, guestAccessLinkId },
+          actor: { kind: "guest", guestAccessLinkId },
           householdScope: { householdId, permission: "write" },
         },
         householdId,
@@ -67,7 +66,7 @@ describe("guest module authorization", () => {
     await expect(
       authorizeHouseholdModule(tx, {
         requestAccess: {
-          actor: { kind: "guest", guestSessionId, guestAccessLinkId },
+          actor: { kind: "guest", guestAccessLinkId },
           householdScope: { householdId, permission: "write" },
         },
         householdId,
@@ -82,7 +81,7 @@ describe("guest module authorization", () => {
     await expect(
       authorizeHouseholdModule(tx, {
         requestAccess: {
-          actor: { kind: "guest", guestSessionId, guestAccessLinkId },
+          actor: { kind: "guest", guestAccessLinkId },
           householdScope: { householdId, permission: "write" },
         },
         householdId,
