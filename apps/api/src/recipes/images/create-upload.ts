@@ -7,7 +7,7 @@ import type {
   CreateRecipeImageUploadRequest,
   RecipeImageContentType,
 } from "@home-hub/shared/recipe-images";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { findActiveUser } from "../../authorization/active-user";
 import {
   findEnabledHouseholdModuleForShare,
@@ -101,6 +101,7 @@ export function createRecipeImageUploadService({
           and(
             eq(recipeImages.householdId, householdId),
             eq(recipeImages.recipeId, recipeId),
+            isNull(recipeImages.deletedAt),
           ),
         )
         .orderBy(asc(recipeImages.sortKey), recipeImages.id)
@@ -122,6 +123,7 @@ export function createRecipeImageUploadService({
           height,
           sortKey,
           confirmedAt: null,
+          deletedAt: null,
         })
         .returning({ id: recipeImages.id });
       if (!image)

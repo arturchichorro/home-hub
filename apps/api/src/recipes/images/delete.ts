@@ -1,21 +1,12 @@
 import type { Database } from "@home-hub/database";
 import { recipeImages } from "@home-hub/database/schema";
-import {
-  recipeImageDerivativeObjectKey,
-  recipeImageStoredVariants,
-} from "@home-hub/shared/recipe-image-delivery";
 import { and, eq } from "drizzle-orm";
 import { findActiveUser } from "../../authorization/active-user";
 import {
   findEnabledHouseholdModuleForShare,
   findHouseholdMembershipForShare,
 } from "../../authorization/household-access";
-import {
-  findRecipeImageObjectForShare,
-  findRecipeImageObjectForUpdate,
-} from "./scoped-entities";
-
-type DeleteObjects = (input: { objectKeys: string[] }) => Promise<void>;
+import { findRecipeImageObjectForUpdate } from "./scoped-entities";
 
 export type DeleteRecipeImageInput = {
   userId: string;
@@ -29,20 +20,14 @@ export type DeleteRecipeImageResult =
   | { kind: "forbidden" }
   | { kind: "success" };
 
-export function createDeleteRecipeImageService({
-  db,
-  deleteObjects,
-}: {
-  db: Database;
-  deleteObjects: DeleteObjects;
-}) {
+export function createDeleteRecipeImageService({ db }: { db: Database }) {
   return async function deleteRecipeImage({
     userId,
     householdId,
     recipeId,
     imageId,
   }: DeleteRecipeImageInput): Promise<DeleteRecipeImageResult> {
-    const initial = await db.transaction(async (tx) => {
+    return db.transaction(async (tx) => {
       const user = await findActiveUser(tx, userId);
       if (!user) return { kind: "unauthorized" as const };
 
@@ -58,49 +43,6 @@ export function createDeleteRecipeImageService({
       });
       if (!moduleSetting) return { kind: "forbidden" as const };
 
-      const image = await findRecipeImageObjectForShare(tx, {
-        householdId,
-        recipeId,
-        imageId,
-      });
-
-      return image
-        ? { kind: "image" as const, objectKey: image.objectKey }
-        : { kind: "success" as const };
-    });
-
-    if (initial.kind !== "image") return initial;
-
-    await deleteObjects({
-      objectKeys: [
-        initial.objectKey,
-        ...recipeImageStoredVariants.map((variant) =>
-          recipeImageDerivativeObjectKey({
-            householdId,
-            imageId,
-            recipeId,
-            variant,
-          }),
-        ),
-      ],
-    });
-
-    return db.transaction(async (tx) => {
-      const user = await findActiveUser(tx, userId);
-      if (!user) return { kind: "unauthorized" };
-
-      const membership = await findHouseholdMembershipForShare(tx, {
-        householdId,
-        userId,
-      });
-      if (!membership) return { kind: "forbidden" };
-
-      const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
-        householdId,
-        moduleKey: "recipes",
-      });
-      if (!moduleSetting) return { kind: "forbidden" };
-
       const image = await findRecipeImageObjectForUpdate(tx, {
         householdId,
         recipeId,
@@ -108,18 +50,16 @@ export function createDeleteRecipeImageService({
       });
       if (!image) return { kind: "success" };
 
-      if (image.objectKey !== initial.objectKey) {
-        throw new Error("Recipe image changed during deletion");
-      }
-
+      const deletedAt = new Date();
       const [deletedImage] = await tx
-        .delete(recipeImages)
+        .update(recipeImages)
+        .set({ deletedAt, updatedAt: deletedAt })
         .where(
           and(
             eq(recipeImages.id, imageId),
             eq(recipeImages.householdId, householdId),
             eq(recipeImages.recipeId, recipeId),
-            eq(recipeImages.objectKey, initial.objectKey),
+            eq(recipeImages.objectKey, image.objectKey),
           ),
         )
         .returning({ id: recipeImages.id });

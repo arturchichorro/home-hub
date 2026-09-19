@@ -166,6 +166,7 @@ describe("create recipe image upload service", () => {
         height: 600,
         sortKey: 0,
         confirmedAt: null,
+        deletedAt: null,
       },
     ]);
     expect(signUpload).toHaveBeenCalledWith({

@@ -361,10 +361,16 @@ describe("recipe queries", () => {
             table: "recipeImages",
             limit: 1,
             where: {
-              type: "simple",
-              left: { type: "column", name: "confirmedAt" },
-              op: "IS NOT",
-              right: { type: "literal", value: null },
+              type: "and",
+              conditions: [
+                {
+                  type: "simple",
+                  left: { type: "column", name: "confirmedAt" },
+                  op: "IS NOT",
+                  right: { type: "literal", value: null },
+                },
+                activeHouseholdCondition(),
+              ],
             },
             orderBy: [
               ["sortKey", "desc"],
@@ -458,10 +464,16 @@ describe("recipe queries", () => {
             alias: "images",
             table: "recipeImages",
             where: {
-              type: "simple",
-              left: { type: "column", name: "confirmedAt" },
-              op: "IS NOT",
-              right: { type: "literal", value: null },
+              type: "and",
+              conditions: [
+                {
+                  type: "simple",
+                  left: { type: "column", name: "confirmedAt" },
+                  op: "IS NOT",
+                  right: { type: "literal", value: null },
+                },
+                activeHouseholdCondition(),
+              ],
             },
             orderBy: [
               ["sortKey", "desc"],

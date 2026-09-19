@@ -6,24 +6,7 @@ import {
   recipes,
 } from "@home-hub/database/schema";
 import { describe, expect, it, vi } from "vitest";
-import { createDeleteRecipeImageService as createDeleteRecipeImageServiceBase } from "./delete";
-
-type DeleteServiceInput = Parameters<
-  typeof createDeleteRecipeImageServiceBase
->[0];
-
-function createDeleteRecipeImageService({
-  db,
-  deleteObject,
-}: {
-  db: DeleteServiceInput["db"];
-  deleteObject: DeleteServiceInput["deleteObjects"];
-}) {
-  return createDeleteRecipeImageServiceBase({
-    db,
-    deleteObjects: deleteObject,
-  });
-}
+import { createDeleteRecipeImageService } from "./delete";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
@@ -33,128 +16,91 @@ const objectKey = `households/${householdId}/recipes/${recipeId}/${imageId}`;
 const input = { userId, householdId, recipeId, imageId };
 
 function createFakeDatabase({
-  users = [true, true],
-  memberships = [true, true],
-  modules = [true, true],
-  images = [objectKey, objectKey],
-  deleteReturnsRow = true,
-  events = [],
+  user = true,
+  membership = true,
+  module = true,
+  image = true,
+  updateReturnsRow = true,
 }: {
-  users?: readonly boolean[];
-  memberships?: readonly boolean[];
-  modules?: readonly boolean[];
-  images?: ReadonlyArray<string | null>;
-  deleteReturnsRow?: boolean;
-  events?: string[];
+  user?: boolean;
+  membership?: boolean;
+  module?: boolean;
+  image?: boolean;
+  updateReturnsRow?: boolean;
 } = {}) {
-  const userResults = [...users];
-  const selectResults: unknown[] = [];
-  for (
-    let index = 0;
-    index < Math.max(memberships.length, modules.length, images.length);
-    index += 1
-  ) {
-    selectResults.push(
-      memberships[index] ? { id: "membership-id" } : undefined,
-      modules[index] ? { householdId } : undefined,
-      images[index] ? { objectKey: images[index] } : undefined,
-    );
-  }
-
+  const results = [
+    membership ? { id: "membership-id" } : undefined,
+    module ? { householdId } : undefined,
+    image ? { objectKey } : undefined,
+  ];
   const tables: unknown[] = [];
   const lockStrengths: unknown[] = [];
-  const findUser = vi.fn(async () =>
-    userResults.shift() ? { id: userId } : undefined,
-  );
-  const select = vi.fn((_selection: unknown) => {
+  const select = vi.fn(() => {
     const builder = {
       from: (table: unknown) => {
         tables.push(table);
         return builder;
       },
-      where: (_condition: unknown) => builder,
-      limit: (_limit: unknown) => builder,
+      where: () => builder,
+      limit: () => builder,
       for: async (strength: unknown) => {
         lockStrengths.push(strength);
-        const result = selectResults.shift();
+        const result = results.shift();
         return result ? [result] : [];
       },
     };
     return builder;
   });
-  const deleteRow = vi.fn((table: unknown) => {
+  const returning = vi.fn(async () =>
+    updateReturnsRow ? [{ id: imageId }] : [],
+  );
+  const where = vi.fn(() => ({ returning }));
+  const set = vi.fn(() => ({ where }));
+  const update = vi.fn((table: unknown) => {
     tables.push(table);
-    return {
-      where: (_condition: unknown) => ({
-        returning: async () => (deleteReturnsRow ? [{ id: imageId }] : []),
-      }),
-    };
+    return { set };
   });
   const tx = {
-    query: { users: { findFirst: findUser } },
+    query: {
+      users: {
+        findFirst: vi.fn(async () => (user ? { id: userId } : undefined)),
+      },
+    },
     select,
-    delete: deleteRow,
+    update,
   };
   const transaction = vi.fn(
-    async <T>(operation: (transaction: typeof tx) => Promise<T>) => {
-      events.push("transaction:start");
-      const result = await operation(tx);
-      events.push("transaction:end");
-      return result;
-    },
+    async <T>(operation: (transaction: typeof tx) => Promise<T>) =>
+      operation(tx),
   );
 
   return {
     db: { transaction } as unknown as Database,
-    deleteRow,
     lockStrengths,
+    set,
     tables,
     transaction,
+    update,
   };
 }
 
 describe("delete recipe image service", () => {
-  it("deletes R2 outside transactions before deleting locked metadata", async () => {
-    const events: string[] = [];
-    const { db, deleteRow, lockStrengths, tables, transaction } =
-      createFakeDatabase({ events });
-    const deleteObject = vi.fn(async () => {
-      events.push("object:delete");
-    });
+  it("soft-deletes metadata without removing retained image objects", async () => {
+    const { db, lockStrengths, set, tables, transaction, update } =
+      createFakeDatabase();
 
     await expect(
-      createDeleteRecipeImageService({ db, deleteObject })(input),
+      createDeleteRecipeImageService({ db })(input),
     ).resolves.toEqual({ kind: "success" });
 
-    expect(events).toEqual([
-      "transaction:start",
-      "transaction:end",
-      "object:delete",
-      "transaction:start",
-      "transaction:end",
-    ]);
-    expect(transaction).toHaveBeenCalledTimes(2);
-    expect(deleteObject).toHaveBeenCalledWith({
-      objectKeys: [
-        objectKey,
-        `${objectKey}/derivatives/thumbnail.webp`,
-        `${objectKey}/derivatives/viewer.webp`,
-      ],
+    expect(transaction).toHaveBeenCalledOnce();
+    expect(update).toHaveBeenCalledOnce();
+    expect(set).toHaveBeenCalledWith({
+      deletedAt: expect.any(Date),
+      updatedAt: expect.any(Date),
     });
-    expect(deleteRow).toHaveBeenCalledOnce();
-    expect(lockStrengths).toEqual([
-      "share",
-      "share",
-      "share",
-      "share",
-      "share",
-      "update",
-    ]);
+    expect(lockStrengths).toEqual(["share", "share", "update"]);
     expect(tables).toEqual([
-      householdMembers,
-      householdModuleSettings,
-      recipeImages,
-      recipes,
       householdMembers,
       householdModuleSettings,
       recipeImages,
@@ -164,98 +110,32 @@ describe("delete recipe image service", () => {
   });
 
   it.each([
-    [{ users: [false] }, "unauthorized"],
-    [{ memberships: [false] }, "forbidden"],
-    [{ modules: [false] }, "forbidden"],
-  ] as const)(
-    "does not delete when initial access is rejected",
-    async (options, kind) => {
-      const { db, deleteRow, transaction } = createFakeDatabase(options);
-      const deleteObject = vi.fn(async () => undefined);
-
-      await expect(
-        createDeleteRecipeImageService({ db, deleteObject })(input),
-      ).resolves.toEqual({ kind });
-      expect(transaction).toHaveBeenCalledOnce();
-      expect(deleteObject).not.toHaveBeenCalled();
-      expect(deleteRow).not.toHaveBeenCalled();
-    },
-  );
-
-  it("treats missing metadata as an idempotent success", async () => {
-    const { db, transaction } = createFakeDatabase({ images: [null] });
-    const deleteObject = vi.fn(async () => undefined);
+    [{ user: false }, "unauthorized"],
+    [{ membership: false }, "forbidden"],
+    [{ module: false }, "forbidden"],
+  ] as const)("rejects missing access", async (options, kind) => {
+    const { db, update } = createFakeDatabase(options);
 
     await expect(
-      createDeleteRecipeImageService({ db, deleteObject })(input),
+      createDeleteRecipeImageService({ db })(input),
+    ).resolves.toEqual({ kind });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("treats missing or already-deleted metadata as an idempotent success", async () => {
+    const { db, update } = createFakeDatabase({ image: false });
+
+    await expect(
+      createDeleteRecipeImageService({ db })(input),
     ).resolves.toEqual({ kind: "success" });
-    expect(transaction).toHaveBeenCalledOnce();
-    expect(deleteObject).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
   });
 
-  it("leaves metadata untouched when R2 deletion fails", async () => {
-    const { db, deleteRow, transaction } = createFakeDatabase();
-    const error = new Error("R2 unavailable");
+  it("throws if locked metadata unexpectedly cannot be updated", async () => {
+    const { db } = createFakeDatabase({ updateReturnsRow: false });
 
-    await expect(
-      createDeleteRecipeImageService({
-        db,
-        deleteObject: async () => {
-          throw error;
-        },
-      })(input),
-    ).rejects.toBe(error);
-    expect(transaction).toHaveBeenCalledOnce();
-    expect(deleteRow).not.toHaveBeenCalled();
-  });
-
-  it("accepts concurrent metadata deletion idempotently", async () => {
-    const { db, deleteRow, transaction } = createFakeDatabase({
-      images: [objectKey, null],
-    });
-    const deleteObject = vi.fn(async () => undefined);
-
-    await expect(
-      createDeleteRecipeImageService({ db, deleteObject })(input),
-    ).resolves.toEqual({ kind: "success" });
-    expect(transaction).toHaveBeenCalledTimes(2);
-    expect(deleteObject).toHaveBeenCalledOnce();
-    expect(deleteRow).not.toHaveBeenCalled();
-  });
-
-  it("rechecks authorization after deleting from R2", async () => {
-    const { db, deleteRow } = createFakeDatabase({ users: [true, false] });
-    const deleteObject = vi.fn(async () => undefined);
-
-    await expect(
-      createDeleteRecipeImageService({ db, deleteObject })(input),
-    ).resolves.toEqual({ kind: "unauthorized" });
-    expect(deleteObject).toHaveBeenCalledOnce();
-    expect(deleteRow).not.toHaveBeenCalled();
-  });
-
-  it("throws when locked metadata changed before deletion", async () => {
-    const { db, deleteRow } = createFakeDatabase({
-      images: [objectKey, `${objectKey}-changed`],
-    });
-
-    await expect(
-      createDeleteRecipeImageService({
-        db,
-        deleteObject: async () => undefined,
-      })(input),
-    ).rejects.toThrow("Recipe image changed during deletion");
-    expect(deleteRow).not.toHaveBeenCalled();
-  });
-
-  it("throws if locked metadata unexpectedly cannot be deleted", async () => {
-    const { db } = createFakeDatabase({ deleteReturnsRow: false });
-
-    await expect(
-      createDeleteRecipeImageService({
-        db,
-        deleteObject: async () => undefined,
-      })(input),
-    ).rejects.toThrow("Recipe image deletion returned no row");
+    await expect(createDeleteRecipeImageService({ db })(input)).rejects.toThrow(
+      "Recipe image deletion returned no row",
+    );
   });
 });

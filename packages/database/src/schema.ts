@@ -289,6 +289,7 @@ export const recipeIngredients = pgTable(
     amount: text("amount"),
     note: text("note"),
     sortKey: integer("sort_key").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -302,11 +303,9 @@ export const recipeIngredients = pgTable(
       foreignColumns: [recipes.householdId, recipes.id],
       name: "recipe_ingredients_household_recipe_fk",
     }),
-    index("recipe_ingredients_recipe_id_sort_key_id_idx").on(
-      table.recipeId,
-      table.sortKey,
-      table.id,
-    ),
+    index("recipe_ingredients_recipe_id_sort_key_id_idx")
+      .on(table.recipeId, table.sortKey, table.id)
+      .where(sql`${table.deletedAt} is null`),
   ],
 );
 
@@ -318,6 +317,7 @@ export const recipeCookLogs = pgTable(
     recipeId: uuid("recipe_id").notNull(),
     cookedAt: timestamp("cooked_at", { withTimezone: true }).notNull(),
     comment: text("comment"),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -336,11 +336,9 @@ export const recipeCookLogs = pgTable(
       table.recipeId,
       table.id,
     ),
-    index("recipe_cook_logs_recipe_id_cooked_at_id_idx").on(
-      table.recipeId,
-      table.cookedAt,
-      table.id,
-    ),
+    index("recipe_cook_logs_recipe_id_cooked_at_id_idx")
+      .on(table.recipeId, table.cookedAt, table.id)
+      .where(sql`${table.deletedAt} is null`),
   ],
 );
 
@@ -428,6 +426,7 @@ export const recipeImages = pgTable(
     byteSize: integer("byte_size").notNull(),
     sortKey: integer("sort_key").notNull(),
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     width: integer("width").notNull(),
     height: integer("height").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -464,16 +463,12 @@ export const recipeImages = pgTable(
       "recipe_images_dimensions_range",
       sql`${table.width} > 0 AND ${table.width} <= 16384 AND ${table.height} > 0 AND ${table.height} <= 16384`,
     ),
-    index("recipe_images_recipe_id_sort_key_id_idx").on(
-      table.recipeId,
-      table.sortKey,
-      table.id,
-    ),
-    index("recipe_images_cook_log_id_sort_key_id_idx").on(
-      table.cookLogId,
-      table.sortKey,
-      table.id,
-    ),
+    index("recipe_images_recipe_id_sort_key_id_idx")
+      .on(table.recipeId, table.sortKey, table.id)
+      .where(sql`${table.deletedAt} is null`),
+    index("recipe_images_cook_log_id_sort_key_id_idx")
+      .on(table.cookLogId, table.sortKey, table.id)
+      .where(sql`${table.deletedAt} is null`),
   ],
 );
 
