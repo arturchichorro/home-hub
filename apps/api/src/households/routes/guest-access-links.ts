@@ -45,7 +45,9 @@ function parseIds(c: Context<AuthEnv>, includeLinkId: boolean) {
 
 function failureResponse(
   c: Context<AuthEnv>,
-  result: { kind: "unauthorized" | "forbidden" | "not_found" },
+  result: {
+    kind: "unauthorized" | "forbidden" | "not_found" | "invalid_expiration";
+  },
 ) {
   if (result.kind === "unauthorized") {
     c.header("WWW-Authenticate", "Bearer");
@@ -53,6 +55,9 @@ function failureResponse(
   }
   if (result.kind === "forbidden") {
     return c.json({ error: "Forbidden" }, 403);
+  }
+  if (result.kind === "invalid_expiration") {
+    return c.json({ error: "Invalid request" }, 400);
   }
   return c.json({ error: "Not found" }, 404);
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "household_guest_access_links" ADD COLUMN "expires_at" timestamp with time zone DEFAULT now() + interval '90 days' NOT NULL;

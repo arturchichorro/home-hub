@@ -45,11 +45,16 @@ export async function listGuestAccessLinks(input: Input) {
 }
 
 export async function createGuestAccessLink(
-  input: Input & { name: string; access: GuestAccessLevel },
+  input: Input & {
+    name: string;
+    access: GuestAccessLevel;
+    expiresAt?: string;
+  },
 ) {
   const request = createGuestAccessLinkRequestSchema.parse({
     name: input.name,
     access: input.access,
+    ...(input.expiresAt === undefined ? {} : { expiresAt: input.expiresAt }),
   });
   const response = await fetch(endpoint(input.householdId), {
     method: "POST",
@@ -69,12 +74,14 @@ export async function updateGuestAccessLink(
     linkId: string;
     name?: string;
     access?: GuestAccessLevel;
+    expiresAt?: string;
     enabled?: boolean;
   },
 ) {
   const request = updateGuestAccessLinkRequestSchema.parse({
     ...(input.name === undefined ? {} : { name: input.name }),
     ...(input.access === undefined ? {} : { access: input.access }),
+    ...(input.expiresAt === undefined ? {} : { expiresAt: input.expiresAt }),
     ...(input.enabled === undefined ? {} : { enabled: input.enabled }),
   });
   const response = await fetch(endpoint(input.householdId, input.linkId), {

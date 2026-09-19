@@ -414,11 +414,16 @@ verify each step before starting the next.
 
 - Add required `expires_at` to Guest access links and backfill existing rows
   with migration time plus 90 days.
-- Remove the Guest-session table and its relations.
-- Remove Guest-session response contracts and add expiration to link summaries,
-  create/update requests, and Guest context responses.
+- Add expiration to link summaries, create/update requests, and the new direct
+  Guest-context response.
 - Define the server-side 90-day default and future-timestamp validation.
 - Update database, contract, migration, and serialization tests.
+
+The existing Guest-session table and contracts remain temporarily during this
+step because the current authentication, Zero, and web code still consume
+them. They are deleted atomically with those consumers in Step 4; keeping that
+removal at the integration boundary ensures every intermediate commit builds
+and avoids introducing a compatibility layer solely for the migration.
 
 ### Step 2: Simplify link management
 
@@ -445,6 +450,8 @@ verify each step before starting the next.
 ### Step 4: Remove the device-session system
 
 - Delete Guest redeem, refresh, and logout endpoints and services.
+- Delete the Guest-session table, relations, and response contracts together
+  with their final consumers.
 - Delete Guest cookies, Guest JWT issuance, Guest JWT subject handling, session
   token hashing, and session bootstrap code.
 - Remove the process-local rate limiter introduced for redemption and uploads.

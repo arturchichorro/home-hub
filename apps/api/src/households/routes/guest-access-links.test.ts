@@ -7,11 +7,13 @@ const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const linkId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const now = new Date("2026-09-18T12:00:00.000Z");
+const expiresAt = new Date("2026-12-17T12:00:00.000Z");
 const link = {
   id: linkId,
   householdId,
   name: "Kitchen QR",
   access: "write" as const,
+  expiresAt,
   disabledAt: null,
   createdAt: now,
   updatedAt: now,
@@ -103,7 +105,12 @@ describe("Guest access link routes", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       links: [
-        { ...link, createdAt: now.toISOString(), updatedAt: now.toISOString() },
+        {
+          ...link,
+          expiresAt: expiresAt.toISOString(),
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        },
       ],
     });
   });
@@ -130,6 +137,47 @@ describe("Guest access link routes", () => {
       access: "read",
       enabled: false,
     });
+  });
+
+  it("passes expiration updates to the server-authorized service", async () => {
+    const updateGuestAccessLink = vi.fn(async () => ({
+      kind: "success" as const,
+      link: { ...link, expiresAt: new Date("2027-01-01T00:00:00.000Z") },
+    }));
+    const app = createTestRoutes({ updateGuestAccessLink });
+    const path = `/${householdId}/guest-access-links/${linkId}`;
+
+    const futureResponse = await app.request(
+      path,
+      request(path, "PATCH", {
+        expiresAt: "2027-01-01T00:00:00.000Z",
+      }).init,
+    );
+    expect(futureResponse.status).toBe(200);
+    expect(updateGuestAccessLink).toHaveBeenCalledWith({
+      userId,
+      householdId,
+      guestAccessLinkId: linkId,
+      expiresAt: "2027-01-01T00:00:00.000Z",
+    });
+  });
+
+  it("maps server-side expiration validation failures to a bad request", async () => {
+    const updateGuestAccessLink = vi.fn(async () => ({
+      kind: "invalid_expiration" as const,
+    }));
+    const app = createTestRoutes({ updateGuestAccessLink });
+    const path = `/${householdId}/guest-access-links/${linkId}`;
+
+    const response = await app.request(
+      path,
+      request(path, "PATCH", {
+        expiresAt: "2026-09-18T12:00:00.000Z",
+      }).init,
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid request" });
   });
 
   it("regenerates a link and returns only the replacement raw token", async () => {

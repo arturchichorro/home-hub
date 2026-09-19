@@ -175,6 +175,9 @@ export const householdGuestAccessLinks = pgTable(
     name: text("name").notNull(),
     access: householdGuestAccessLevelEnum().notNull(),
     tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now() + interval '90 days'`),
     disabledAt: timestamp("disabled_at", { withTimezone: true }),
     createdByUserId: uuid("created_by_user_id")
       .notNull()

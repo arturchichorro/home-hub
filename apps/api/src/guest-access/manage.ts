@@ -12,6 +12,7 @@ import type {
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { findActiveUser } from "../authorization/active-user";
 import { findHouseholdOwnerForShare } from "../authorization/household-access";
+import { resolveGuestAccessExpiration } from "./expiration";
 import { generateGuestAccessToken, hashGuestLinkToken } from "./token";
 
 export type GuestAccessLinkRecord = {
@@ -19,6 +20,7 @@ export type GuestAccessLinkRecord = {
   householdId: string;
   name: string;
   access: GuestAccessLevel;
+  expiresAt: Date;
   disabledAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -26,12 +28,14 @@ export type GuestAccessLinkRecord = {
 
 type ManagementFailure = { kind: "unauthorized" } | { kind: "forbidden" };
 type LinkManagementFailure = ManagementFailure | { kind: "not_found" };
+type ExpirationFailure = { kind: "invalid_expiration" };
 
 const linkSelection = {
   id: householdGuestAccessLinks.id,
   householdId: householdGuestAccessLinks.householdId,
   name: householdGuestAccessLinks.name,
   access: householdGuestAccessLinks.access,
+  expiresAt: householdGuestAccessLinks.expiresAt,
   disabledAt: householdGuestAccessLinks.disabledAt,
   createdAt: householdGuestAccessLinks.createdAt,
   updatedAt: householdGuestAccessLinks.updatedAt,
@@ -48,7 +52,13 @@ async function requireOwner(
   if (!owner) return { kind: "forbidden" };
 }
 
-export function createGuestAccessLinkService({ db }: { db: Database }) {
+export function createGuestAccessLinkService({
+  db,
+  now = () => new Date(),
+}: {
+  db: Database;
+  now?: () => Date;
+}) {
   return async function createGuestAccessLink(
     input: CreateGuestAccessLinkRequest & {
       userId: string;
@@ -56,6 +66,7 @@ export function createGuestAccessLinkService({ db }: { db: Database }) {
     },
   ): Promise<
     | ManagementFailure
+    | ExpirationFailure
     | { kind: "success"; link: GuestAccessLinkRecord; token: string }
   > {
     return db.transaction(async (tx) => {
@@ -63,7 +74,12 @@ export function createGuestAccessLinkService({ db }: { db: Database }) {
       if (failure) return failure;
 
       const token = generateGuestAccessToken();
-      const now = new Date();
+      const createdAt = now();
+      const expiresAt = resolveGuestAccessExpiration(
+        input.expiresAt,
+        createdAt,
+      );
+      if (!expiresAt) return { kind: "invalid_expiration" };
       const [link] = await tx
         .insert(householdGuestAccessLinks)
         .values({
@@ -72,9 +88,10 @@ export function createGuestAccessLinkService({ db }: { db: Database }) {
           name: input.name,
           access: input.access,
           tokenHash: hashGuestLinkToken(token),
+          expiresAt,
           createdByUserId: input.userId,
-          createdAt: now,
-          updatedAt: now,
+          createdAt,
+          updatedAt: createdAt,
         })
         .returning(linkSelection);
       if (!link) throw new Error("Guest access link insert returned no row");
@@ -109,7 +126,13 @@ export function createListGuestAccessLinksService({ db }: { db: Database }) {
   };
 }
 
-export function createUpdateGuestAccessLinkService({ db }: { db: Database }) {
+export function createUpdateGuestAccessLinkService({
+  db,
+  now = () => new Date(),
+}: {
+  db: Database;
+  now?: () => Date;
+}) {
   return async function updateGuestAccessLink(
     input: UpdateGuestAccessLinkRequest & {
       userId: string;
@@ -117,7 +140,9 @@ export function createUpdateGuestAccessLinkService({ db }: { db: Database }) {
       guestAccessLinkId: string;
     },
   ): Promise<
-    LinkManagementFailure | { kind: "success"; link: GuestAccessLinkRecord }
+    | LinkManagementFailure
+    | ExpirationFailure
+    | { kind: "success"; link: GuestAccessLinkRecord }
   > {
     return db.transaction(async (tx) => {
       const failure = await requireOwner(tx, input);
@@ -136,16 +161,24 @@ export function createUpdateGuestAccessLinkService({ db }: { db: Database }) {
         .for("update");
       if (!existing) return { kind: "not_found" };
 
-      const now = new Date();
+      const updatedAt = now();
+      const expiresAt =
+        input.expiresAt === undefined
+          ? undefined
+          : resolveGuestAccessExpiration(input.expiresAt, updatedAt);
+      if (input.expiresAt !== undefined && !expiresAt) {
+        return { kind: "invalid_expiration" };
+      }
       const [link] = await tx
         .update(householdGuestAccessLinks)
         .set({
           ...(input.name === undefined ? {} : { name: input.name }),
           ...(input.access === undefined ? {} : { access: input.access }),
+          ...(expiresAt === undefined ? {} : { expiresAt }),
           ...(input.enabled === undefined
             ? {}
-            : { disabledAt: input.enabled ? null : now }),
-          updatedAt: now,
+            : { disabledAt: input.enabled ? null : updatedAt }),
+          updatedAt,
         })
         .where(eq(householdGuestAccessLinks.id, existing.id))
         .returning(linkSelection);
@@ -154,7 +187,7 @@ export function createUpdateGuestAccessLinkService({ db }: { db: Database }) {
       if (input.enabled === false) {
         await tx
           .update(householdGuestSessions)
-          .set({ revokedAt: now, updatedAt: now })
+          .set({ revokedAt: updatedAt, updatedAt })
           .where(
             and(
               eq(householdGuestSessions.guestAccessLinkId, existing.id),

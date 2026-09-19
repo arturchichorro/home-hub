@@ -13,6 +13,7 @@ const link = {
   householdId,
   name: "Kitchen QR",
   access: "write" as const,
+  expiresAt: "2026-12-17T12:00:00.000Z",
   disabledAt: null,
   createdAt: "2026-09-18T12:00:00.000Z",
   updatedAt: "2026-09-18T12:00:00.000Z",
@@ -65,6 +66,25 @@ describe("Guest access link API", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       `/api/households/${householdId}/guest-access-links/${linkId}`,
       expect.objectContaining({ body: JSON.stringify({ access: "read" }) }),
+    );
+  });
+
+  it("sends an explicit expiration when requested", async () => {
+    const expiresAt = "2027-01-01T00:00:00.000Z";
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ link: { ...link, expiresAt } }),
+    );
+
+    await updateGuestAccessLink({
+      accessToken: "account-token",
+      householdId,
+      linkId,
+      expiresAt,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/households/${householdId}/guest-access-links/${linkId}`,
+      expect.objectContaining({ body: JSON.stringify({ expiresAt }) }),
     );
   });
 
