@@ -1,15 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { Database, DatabaseTransaction } from "@home-hub/database";
-import {
-  householdGuestAccessLinks,
-  householdGuestSessions,
-} from "@home-hub/database/schema";
+import { householdGuestAccessLinks } from "@home-hub/database/schema";
 import type {
   CreateGuestAccessLinkRequest,
   GuestAccessLevel,
   UpdateGuestAccessLinkRequest,
 } from "@home-hub/shared/guest-access";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { findActiveUser } from "../authorization/active-user";
 import { findHouseholdOwnerForShare } from "../authorization/household-access";
 import { resolveGuestAccessExpiration } from "./expiration";
@@ -184,18 +181,6 @@ export function createUpdateGuestAccessLinkService({
         .returning(linkSelection);
       if (!link) throw new Error("Guest access link update returned no row");
 
-      if (input.enabled === false) {
-        await tx
-          .update(householdGuestSessions)
-          .set({ revokedAt: updatedAt, updatedAt })
-          .where(
-            and(
-              eq(householdGuestSessions.guestAccessLinkId, existing.id),
-              isNull(householdGuestSessions.revokedAt),
-            ),
-          );
-      }
-
       return { kind: "success", link };
     });
   };
@@ -240,16 +225,6 @@ export function createRegenerateGuestAccessLinkService({
         .returning(linkSelection);
       if (!link)
         throw new Error("Guest access link regeneration returned no row");
-
-      await tx
-        .update(householdGuestSessions)
-        .set({ revokedAt: now, updatedAt: now })
-        .where(
-          and(
-            eq(householdGuestSessions.guestAccessLinkId, existing.id),
-            isNull(householdGuestSessions.revokedAt),
-          ),
-        );
 
       return { kind: "success", link, token };
     });
