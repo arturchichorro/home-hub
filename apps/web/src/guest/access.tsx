@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { getGuestAccessContext, guestAuthorization } from "./api";
+import { getGuestAccessContext, zeroGuestAuthorization } from "./api";
 import { guestCredentialFromHash } from "./credential";
 
 type GuestAccessState = {
@@ -50,7 +50,7 @@ export function GuestAccessProvider({ children }: { children: ReactNode }) {
       setContext(result.context);
       return {
         kind: "success" as const,
-        accessToken: guestAuthorization(credential),
+        accessToken: zeroGuestAuthorization(credential),
       };
     }
     clear();
@@ -79,13 +79,22 @@ export function GuestAccessProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!context) return;
-    const delay = Date.parse(context.expiresAt) - Date.now();
-    if (delay <= 0) {
-      clear();
-      return;
-    }
-    const timer = window.setTimeout(clear, Math.min(delay, 2_147_483_647));
-    return () => window.clearTimeout(timer);
+    let timer: number | undefined;
+    const scheduleExpiration = () => {
+      const delay = Date.parse(context.expiresAt) - Date.now();
+      if (delay <= 0) {
+        clear();
+        return;
+      }
+      timer = window.setTimeout(
+        scheduleExpiration,
+        Math.min(delay, 2_147_483_647),
+      );
+    };
+    scheduleExpiration();
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
   }, [clear, context]);
 
   return (

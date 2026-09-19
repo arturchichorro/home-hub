@@ -11,6 +11,10 @@ export function guestAuthorization(credential: string) {
   return `Guest ${credential}`;
 }
 
+export function zeroGuestAuthorization(credential: string) {
+  return `guest-v1.${credential}`;
+}
+
 export async function getGuestAccessContext(
   credential: string,
 ): Promise<GuestAccessContextResult> {

@@ -45,7 +45,9 @@ application uses `https://home.achichorro.com` for accounts and
 `https://guest.achichorro.com` for Guest access. Caddy serves the same SPA at
 both origins, proxies `/api/*` to Hono, and proxies `/zero/*` HTTP and WebSocket
 traffic to `zero-cache`. `VITE_ZERO_CACHE_URL=/zero` keeps Zero on the current
-origin. Production configuration must keep the
+origin. Guest secrets remain in URL fragments and therefore never reach Caddy;
+authorization headers must not be enabled in proxy access logs. Production
+configuration must keep the
 `/api/auth` refresh-cookie path, Zero callback URLs, and
 `VITE_ZERO_CACHE_URL` aligned with this routing. The browser uses the same
 origin for the SPA and API, so production does not require cross-origin API

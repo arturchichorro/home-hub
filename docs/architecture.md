@@ -156,10 +156,12 @@ module route redirects only when its completed settings query says that module
 is disabled. The shell does not perform global fallback redirects.
 
 The same compiled SPA is served from `guest.achichorro.com`. A reduced Guest
-shell restores a host-only Guest session and composes the same Recipes
+shell reads an expiring Guest access-link secret from the URL fragment,
+validates it online, and composes the same Recipes
 components used by the authenticated shell. An actor-neutral access context
-supplies the household, bearer token, Zero cache identity, and write
+supplies the household, authorization value, Zero cache identity, and write
 capability; feature components do not maintain separate guest versions.
+The raw Guest secret remains only in the visible fragment and in memory.
 
 ### Progressive web application
 
@@ -201,9 +203,8 @@ The API owns:
 - transformation of named Zero queries using trusted user context;
 - transactional execution and authorization of Zero mutations;
 - R2 presigned original-upload URLs and signed derivative-delivery capabilities;
-- Guest link management, QR redemption, Guest-session refresh/logout, and
-  resolution of account or guest tokens into a discriminated request actor and
-  household access scope;
+- expiring Guest-link management and resolution of `Guest` credentials into a
+  discriminated request actor and household access scope;
 - the health endpoint.
 
 The API remains stateless apart from PostgreSQL and R2. Feature dependencies

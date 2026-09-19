@@ -162,7 +162,7 @@ export function RecipeDetail({ recipeId }: RecipeDetailProps) {
       if (mode === "guest") {
         await navigate({
           to: "/recipes",
-          hash: navigationHash,
+          ...(navigationHash ? { hash: navigationHash } : {}),
           replace: true,
         });
       } else {

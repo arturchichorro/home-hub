@@ -26,7 +26,6 @@ erDiagram
   households ||--o{ household_invites : issues
   households ||--o{ household_module_settings : configures
   households ||--o{ household_guest_access_links : shares
-  household_guest_access_links ||--o{ household_guest_sessions : creates
   households ||--o{ shopping_items : owns
   households ||--o{ recipes : owns
   recipes ||--o{ recipe_ingredients : contains
@@ -135,23 +134,16 @@ disabled.
 - `id`, `household_id`, `created_by_user_id`
 - `name`, `access`: `read | write`
 - `token_hash`, unique
+- `expires_at`
 - `disabled_at`, nullable
 - `created_at`, `updated_at`
 
 Only a current owner manages these rows. The raw 32-byte QR secret is returned
 only at creation or regeneration; PostgreSQL retains its SHA-256 hash.
-Disabling or regenerating a link revokes all active sessions in the same
-transaction.
-
-### `household_guest_sessions`
-
-- `id`, `guest_access_link_id`
-- `token_hash`, unique
-- `revoked_at`, nullable
-- `created_at`, `updated_at`
-
-Each redemption creates a separate device session. The opaque cookie secret is
-stored only as a hash. A session is not a user or household membership.
+Every link expires. Creation defaults to exactly 90 days, while owners may set
+or extend any future expiration. Disabling rejects the existing credential;
+regeneration replaces its hash and permanently invalidates every prior QR.
+There is no Guest-session or synthetic-user row.
 
 ### Lists module tables
 

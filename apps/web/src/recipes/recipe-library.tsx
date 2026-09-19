@@ -40,7 +40,7 @@ type RecipeModuleProps = {
 
 type RecipeLibraryProps = RecipeModuleProps & {
   mode: "account" | "guest";
-  navigationHash?: string;
+  navigationHash: string | undefined;
 };
 
 type RecipeCardImageProps = RecipeModuleProps & {
@@ -163,7 +163,7 @@ function RecipeCardLink({
   handleRef: ReturnType<typeof useSortable>["handleRef"];
   householdId: string;
   mode: "account" | "guest";
-  navigationHash?: string;
+  navigationHash: string | undefined;
   recipeId: string;
 }) {
   const common = {
@@ -178,7 +178,7 @@ function RecipeCardLink({
       {...common}
       to="/recipes/$recipeId"
       params={{ recipeId }}
-      hash={navigationHash}
+      {...(navigationHash ? { hash: navigationHash } : {})}
     >
       {children}
     </Link>
@@ -429,7 +429,7 @@ export function RecipeLibrary() {
             void navigate({
               to: "/recipes/$recipeId",
               params: { recipeId },
-              hash: navigationHash,
+              ...(navigationHash ? { hash: navigationHash } : {}),
             });
           } else {
             void navigate({

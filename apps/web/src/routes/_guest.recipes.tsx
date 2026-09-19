@@ -2,7 +2,7 @@ import { Button } from "@home-hub/ui-web";
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { ApplicationState } from "../application-state";
 import { useGuestAccess } from "../guest/access";
-import { guestAuthorization } from "../guest/api";
+import { guestAuthorization, zeroGuestAuthorization } from "../guest/api";
 import { GuestApp } from "../guest/guest-app";
 import { clearRecipeImageUrlCache } from "../recipes/recipe-image-url-cache";
 import { RecipeModuleProvider } from "../recipes/recipe-module";
@@ -69,7 +69,7 @@ function GuestRecipesLayout() {
           permission: context.access,
         },
       }}
-      accessToken={guestAuthorization(credential)}
+      accessToken={zeroGuestAuthorization(credential)}
       refreshAccessToken={refreshAuthorization}
       onAccessTokenRefreshed={() => undefined}
       onSessionExpired={closeAccess}

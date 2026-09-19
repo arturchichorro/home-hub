@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getGuestAccessContext } from "./api";
+import { getGuestAccessContext, zeroGuestAuthorization } from "./api";
 
 const credential = "a".repeat(43);
 const context = {
@@ -40,5 +40,9 @@ describe("Guest access API", () => {
     await expect(getGuestAccessContext(credential)).resolves.toEqual({
       kind: "unavailable",
     });
+  });
+
+  it("uses an unambiguous envelope for Zero's Bearer-only transport", () => {
+    expect(zeroGuestAuthorization(credential)).toBe(`guest-v1.${credential}`);
   });
 });

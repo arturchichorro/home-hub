@@ -47,26 +47,26 @@ Login performs one Argon2id verification even when the email is unknown, using a
 ## Guest actors
 
 A Guest access link is an intentionally shareable bearer credential scoped to
-one household. QR secrets and device-session cookie secrets are 32 random bytes
-encoded as base64url; only SHA-256 hashes are stored. The QR secret is carried
-in a URL fragment, exchanged once in a request body, removed from browser
-history immediately, and never used as ongoing request authentication.
+one household. QR secrets are 32 random bytes encoded as base64url; only a
+domain-separated SHA-256 hash is stored. The secret stays in the URL fragment
+and browser memory and is presented directly as `Authorization: Guest
+<secret>`. It is never copied into browser storage, logs, query strings, paths,
+or cache identities. There is no Guest cookie, JWT, redemption, refresh flow,
+session row, or synthetic user.
 
-Each redemption creates a `household_guest_sessions` row and a host-only
-`Secure`, `HttpOnly`, `SameSite=Lax`, `Path=/api/guest` cookie. The cookie only
-refreshes an in-memory, short-lived Guest JWT. Guest JWTs are marked distinctly
-and account middleware rejects them.
-
-Protected module routes resolve an account or guest actor. Guest resolution
-reloads the session, link, household, current read/write level, and revocation
-state from PostgreSQL on every request. Guest operations must target the
-guest access scope's household and an explicitly guest-capable, enabled module. Writes
-also require the link's current `write` level. Guest actors are never
+Shared module routes accept either `Bearer <account-jwt>` or `Guest <secret>`;
+account-only routes accept only `Bearer`. Guest resolution reloads the link,
+expiration, disablement, household, and current read/write level from
+PostgreSQL on every request. Guest operations must target the guest access
+scope's household and an explicitly guest-capable, enabled module. Writes also
+require the link's current `write` level. Guest actors are never
 accepted by household administration routes.
 
-Disabling or regenerating a link transactionally revokes its active sessions.
-Anyone who sees or receives a QR code can use it from anywhere until then;
-there is no proximity or personal identity claim.
+Expiration, disabling, and regeneration reject the credential on the next
+request. Authoritative writes hold shared locks on current link and module
+state, serializing against owner changes. Anyone who receives a QR can use it
+from anywhere until it expires or is disabled or regenerated; there is no
+proximity or personal identity claim.
 
 ## Refresh tokens
 
@@ -89,9 +89,18 @@ A future mobile client stores its refresh token using platform secure storage an
 
 ## Zero authentication
 
-Pass the current access JWT to Zero's `auth` option. Zero forwards it to the query and mutate endpoints as a bearer token. Those endpoints verify the same signature, issuer, audience, and expiry used by ordinary API middleware. When Zero enters `needs-auth`, make one deduplicated refresh request, replace the in-memory access token, and let the existing Zero provider reconnect without changing the authenticated user or recreating its client. A refresh `401` ends the session; temporary failures retain the session and retry with bounded exponential backoff. Deduplication is required because refresh tokens rotate and concurrent refresh requests could otherwise look like token reuse.
+Pass the current authorization value to Zero's `auth` option: the account JWT
+for an account actor or the internal `guest-v1.<secret>` envelope for a Guest
+actor. Zero Cache forwards both using its required `Bearer` transport. Only the
+Zero application boundary recognizes and unwraps the Guest envelope; ordinary
+shared APIs require `Guest <secret>`, and account-only routes accept neither
+Guest form. Account clients refresh their JWT when Zero enters `needs-auth`; Guest
+clients revalidate the direct link and retry with the same credential. A `401`
+ends access, while temporary failures retry with bounded exponential backoff.
 
-The API derives the user from the verified JWT and never from query or mutation arguments.
+The API derives the account or Guest access scope from the verified credential,
+never from query or mutation arguments. Account cache identity remains the user
+ID; Guest cache identity is the non-secret `guest-link:<link-id>` namespace.
 
 ## Household invitations
 
@@ -232,13 +241,14 @@ logs.
 
 Define named Zero queries in shared TypeScript. At the API query endpoint:
 
-1. Verify the forwarded access JWT.
+1. Verify the forwarded account JWT or direct Guest credential.
 2. construct a trusted context containing the account identity or validated
-   Guest session, household, and current access level;
+   Guest access-link identity, household, and current access level;
 3. find the requested named query;
 4. transform it with relationship filters requiring household membership and,
    for module-owned data, an enabled module setting;
-5. pass the verified user ID to Zero’s current request handler API.
+5. pass the verified account ID or namespaced Guest-link cache identity to
+   Zero’s current request handler API.
 
 The named-query function produces a ZQL abstract syntax tree (AST): a
 structured, serializable representation of the requested table, filters,

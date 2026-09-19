@@ -1,6 +1,6 @@
 # Guest access
 
-**Status:** approved revision; implementation pending
+**Status:** implemented
 
 This document specifies accountless access to Home Hub for people who possess
 a household's Guest access link. It replaces the earlier device-session design:
@@ -290,9 +290,11 @@ implementations must not be duplicated.
 
 ## Zero synchronization
 
-Guest module screens continue to use Zero. The Zero auth value carries the
-`Guest <secret>` credential, and the API resolves it through the same
-application-boundary authentication used by other shared module routes.
+Guest module screens continue to use Zero. Because Zero Cache forwards auth
+using `Bearer`, the client gives Zero an internal `guest-v1.<secret>` envelope.
+Only the Zero application boundary unwraps that envelope into the same direct
+Guest credential resolution used by shared module routes; it is never accepted
+by account-only routes.
 
 After validation, the server uses a stable namespaced identity such as
 `guest-link:<link-id>` for Zero and browser-cache partitioning. The client must
@@ -418,12 +420,6 @@ verify each step before starting the next.
   Guest-context response.
 - Define the server-side 90-day default and future-timestamp validation.
 - Update database, contract, migration, and serialization tests.
-
-The existing Guest-session table and contracts remain temporarily during this
-step because the current authentication, Zero, and web code still consume
-them. They are deleted atomically with those consumers in Step 4; keeping that
-removal at the integration boundary ensures every intermediate commit builds
-and avoids introducing a compatibility layer solely for the migration.
 
 ### Step 2: Simplify link management
 

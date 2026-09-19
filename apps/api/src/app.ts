@@ -58,6 +58,11 @@ export function createApp(input: CreateAppInput) {
     db: database,
     jwtSecret,
   });
+  const authenticateZeroRequest = createRequestAccessAuth({
+    db: database,
+    jwtSecret,
+    acceptZeroGuestEnvelope: true,
+  });
 
   app.get("/api/health", (c) => c.json({ ok: true }));
   app.get("/api/ready", async (c) => {
@@ -83,7 +88,7 @@ export function createApp(input: CreateAppInput) {
     "/api/households/:householdId/recipes",
     createRecipeRoutes(input.recipeImages),
   );
-  app.use("/api/zero/*", authenticateRequest);
+  app.use("/api/zero/*", authenticateZeroRequest);
   app.route(
     "/api/zero",
     createZeroRoutes({

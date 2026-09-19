@@ -21,8 +21,10 @@ module restores access for every current household member.
 Recipes supports Guest actors. Read guests use the same library, detail
 views, cooking history, and image gallery without mutation controls. Write
 guests receive the ordinary Recipes interface. Server-side Zero and image
-authorization independently enforce the current capability and household
-boundary.
+authorization independently re-check the current link, expiration,
+read/write permission, enabled module, and household boundary. Account and
+Guest route adapters provide different shell and navigation inputs to the same
+feature components.
 
 Recipe ingredients and list items are separate domain records. A future
 operation may copy ingredient names into a chosen list and insert or reactivate

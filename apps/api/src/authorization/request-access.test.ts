@@ -36,9 +36,12 @@ function createDatabase(guest: boolean) {
   };
 }
 
-function createApp(db: Database) {
+function createApp(db: Database, acceptZeroGuestEnvelope = false) {
   const app = new Hono<RequestAccessEnv>();
-  app.use("/*", createRequestAccessAuth({ db, jwtSecret }));
+  app.use(
+    "/*",
+    createRequestAccessAuth({ db, jwtSecret, acceptZeroGuestEnvelope }),
+  );
   app.get("/scope", (c) => c.json(c.get("requestAccess")));
   return app;
 }
@@ -89,6 +92,24 @@ describe("request access authentication", () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
+  });
+
+  it("accepts the Bearer-wrapped Guest envelope only for Zero transport", async () => {
+    const authorization = `Bearer guest-v1.${"g".repeat(43)}`;
+    const rejected = await createApp(createDatabase(true).db).request(
+      "/scope",
+      { headers: { Authorization: authorization } },
+    );
+    const accepted = await createApp(createDatabase(true).db, true).request(
+      "/scope",
+      { headers: { Authorization: authorization } },
+    );
+
+    expect(rejected.status).toBe(401);
+    expect(accepted.status).toBe(200);
+    expect(await accepted.json()).toMatchObject({
+      actor: { kind: "guest", guestAccessLinkId },
+    });
   });
 
   it.each(["", "Basic token", "Guest unknown"])(

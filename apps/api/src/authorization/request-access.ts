@@ -57,6 +57,7 @@ export function createRequestAccessAuth(input: {
   db: Database;
   jwtSecret: string;
   now?: () => Date;
+  acceptZeroGuestEnvelope?: boolean;
 }) {
   return createMiddleware<RequestAccessEnv>(async (c, next) => {
     const authorization = c.req.header("Authorization");
@@ -70,14 +71,25 @@ export function createRequestAccessAuth(input: {
       const scheme = parts[0]?.toLowerCase();
       let requestAccess: RequestAccess | undefined;
       if (scheme === "bearer") {
-        const claims = verifyAccessToken({
-          token: parts[1],
-          secret: input.jwtSecret,
-        });
-        if (claims.subjectType !== "account") {
-          throw new Error("Invalid account token");
+        const zeroGuestPrefix = "guest-v1.";
+        if (
+          input.acceptZeroGuestEnvelope &&
+          parts[1].startsWith(zeroGuestPrefix)
+        ) {
+          requestAccess = await loadGuestRequestAccess(
+            input.db,
+            parts[1].slice(zeroGuestPrefix.length),
+            input.now?.() ?? new Date(),
+          );
+        } else {
+          const claims = verifyAccessToken({
+            token: parts[1],
+            secret: input.jwtSecret,
+          });
+          requestAccess = {
+            actor: { kind: "account", accountId: claims.sub },
+          };
         }
-        requestAccess = { actor: { kind: "account", accountId: claims.sub } };
       } else if (scheme === "guest") {
         requestAccess = await loadGuestRequestAccess(
           input.db,

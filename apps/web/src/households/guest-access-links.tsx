@@ -73,6 +73,11 @@ export function GuestAccessLinks({
   async function create(event: FormEvent) {
     event.preventDefault();
     if (busy) return;
+    const expiration = localDateTimeInputToIso(expiresAt);
+    if (!expiration) {
+      setError("Choose a valid expiration date and time.");
+      return;
+    }
     setBusy(true);
     setError(undefined);
     try {
@@ -81,7 +86,7 @@ export function GuestAccessLinks({
         householdId,
         name,
         access,
-        expiresAt: localDateTimeInputToIso(expiresAt),
+        expiresAt: expiration,
       });
       if (result.kind !== "success") return handleFailure(result.kind);
       setLinks((current) => [...current, result.link]);
