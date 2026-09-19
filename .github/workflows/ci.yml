@@ -109,6 +109,9 @@ jobs:
                   ('lists', 'deleted_at'),
                   ('recipes', 'deleted_at'),
                   ('recipes', 'sort_key'),
+                  ('recipe_cook_logs', 'deleted_at'),
+                  ('recipe_images', 'deleted_at'),
+                  ('recipe_ingredients', 'deleted_at'),
                   ('household_members', 'sort_key')
               ) AS expected(table_name, column_name)
               LEFT JOIN pg_publication_tables AS published
