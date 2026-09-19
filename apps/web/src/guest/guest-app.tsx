@@ -6,11 +6,13 @@ import { AppHeaderRightComponentContext } from "../app-header-right-component";
 export function GuestApp({
   access,
   children,
+  expiresAt,
   householdName,
   onLeave,
 }: {
   access: "read" | "write";
   children: ReactNode;
+  expiresAt: string;
   householdName: string;
   onLeave: () => void;
 }) {
@@ -23,6 +25,10 @@ export function GuestApp({
             <p className="truncate text-sm font-semibold">{householdName}</p>
             <p className="text-xs text-muted">
               Recipes · {access === "write" ? "Can edit" : "View only"}
+              {" · Expires "}
+              {new Intl.DateTimeFormat(undefined, {
+                dateStyle: "medium",
+              }).format(new Date(expiresAt))}
             </p>
           </div>
           {rightComponent}

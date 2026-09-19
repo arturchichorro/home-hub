@@ -18,6 +18,13 @@ import {
   regenerateGuestAccessLink,
   updateGuestAccessLink,
 } from "./guest-access-api";
+import {
+  defaultGuestAccessExpiration,
+  formatGuestAccessExpiration,
+  guestAccessLinkStatus,
+  localDateTimeInputToIso,
+  localDateTimeInputValue,
+} from "./guest-access-expiration";
 
 type IssuedLink = GuestAccessLinkSummary & { token: string };
 
@@ -34,6 +41,9 @@ export function GuestAccessLinks({
   const [issued, setIssued] = useState<IssuedLink>();
   const [name, setName] = useState("Kitchen QR");
   const [access, setAccess] = useState<GuestAccessLevel>("write");
+  const [expiresAt, setExpiresAt] = useState(() =>
+    localDateTimeInputValue(defaultGuestAccessExpiration()),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -71,6 +81,7 @@ export function GuestAccessLinks({
         householdId,
         name,
         access,
+        expiresAt: localDateTimeInputToIso(expiresAt),
       });
       if (result.kind !== "success") return handleFailure(result.kind);
       setLinks((current) => [...current, result.link]);
@@ -84,7 +95,12 @@ export function GuestAccessLinks({
 
   async function update(
     link: GuestAccessLinkSummary,
-    change: { name?: string; access?: GuestAccessLevel; enabled?: boolean },
+    change: {
+      name?: string;
+      access?: GuestAccessLevel;
+      expiresAt?: string;
+      enabled?: boolean;
+    },
   ) {
     setBusy(true);
     setError(undefined);
@@ -147,7 +163,7 @@ export function GuestAccessLinks({
         </InlineAlert>
       ) : null}
       <form
-        className="grid gap-3 rounded-lg border border-border p-4 sm:grid-cols-[1fr_auto_auto]"
+        className="grid gap-3 rounded-lg border border-border p-4 sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto_auto]"
         onSubmit={(event) => void create(event)}
       >
         <Input
@@ -167,6 +183,13 @@ export function GuestAccessLinks({
           <option value="write">Can edit</option>
           <option value="read">View only</option>
         </select>
+        <Input
+          aria-label="Guest access expiration"
+          type="datetime-local"
+          value={expiresAt}
+          onChange={(event) => setExpiresAt(event.currentTarget.value)}
+          required
+        />
         <Button type="submit" disabled={busy || !name.trim()}>
           Create QR code
         </Button>
@@ -195,7 +218,9 @@ export function GuestAccessLinks({
                 }}
               />
               <p className="text-xs text-muted">
-                {link.access === "write" ? "Can edit" : "View only"}
+                {link.access === "write" ? "Can edit" : "View only"} ·{" "}
+                {guestAccessLinkStatus(link)} · Expires{" "}
+                {formatGuestAccessExpiration(link.expiresAt)}
               </p>
             </div>
             <select
@@ -212,14 +237,33 @@ export function GuestAccessLinks({
               <option value="write">Can edit</option>
               <option value="read">View only</option>
             </select>
+            <Input
+              aria-label={`Expiration for ${link.name}`}
+              type="datetime-local"
+              className="w-auto"
+              defaultValue={localDateTimeInputValue(new Date(link.expiresAt))}
+              disabled={busy}
+              onBlur={(event) => {
+                const nextExpiration = localDateTimeInputToIso(
+                  event.currentTarget.value,
+                );
+                if (nextExpiration && nextExpiration !== link.expiresAt) {
+                  void update(link, { expiresAt: nextExpiration });
+                } else {
+                  event.currentTarget.value = localDateTimeInputValue(
+                    new Date(link.expiresAt),
+                  );
+                }
+              }}
+            />
             <Switch
-              label={link.disabledAt ? "Disabled" : "Active"}
+              label={guestAccessLinkStatus(link)}
               checked={link.disabledAt === null}
               disabled={busy}
               onCheckedChange={(enabled) => void update(link, { enabled })}
             />
             <ConfirmationPopover
-              message="This invalidates the printed QR code and every current guest session. Continue?"
+              message="This invalidates every existing copy of this QR code. Its expiration date will stay the same. Continue?"
               trigger={
                 <Button variant="secondary" disabled={busy}>
                   Regenerate
@@ -259,6 +303,9 @@ function IssuedQr({
         />
       ) : null}
       <p className="font-semibold">{link.name}</p>
+      <p className="text-sm text-muted">
+        Expires {formatGuestAccessExpiration(link.expiresAt)}
+      </p>
       <div className="guest-qr-print-actions flex flex-wrap justify-center gap-2">
         <Button
           variant="secondary"

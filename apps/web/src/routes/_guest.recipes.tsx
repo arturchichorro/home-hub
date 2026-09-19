@@ -77,6 +77,7 @@ function GuestRecipesLayout() {
     >
       <GuestApp
         access={context.access}
+        expiresAt={context.expiresAt}
         householdName={context.household.name}
         onLeave={closeAccess}
       >
