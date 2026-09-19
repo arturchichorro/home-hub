@@ -1,52 +1,50 @@
 # Guest access
 
-**Status:** implemented
+**Status:** approved revision; implementation pending
 
-This document specifies accountless access to Home Hub for people who have a
-household's QR code. It owns the product behavior, terminology, interface
-composition, session model, authorization rules, data changes, and delivery
-requirements for Guest access.
+This document specifies accountless access to Home Hub for people who possess
+a household's Guest access link. It replaces the earlier device-session design:
+Guest access links are used directly as scoped bearer credentials. There are no
+Guest-session rows, Guest cookies, Guest JWTs, redemption flow, refresh flow, or
+server-side Guest logout in this version.
 
 The current runtime boundaries remain in [Architecture](../architecture.md),
-the current authentication and authorization invariants remain in
+the current authorization invariants remain in
 [Security and synchronization](../security-and-sync.md), and module-specific
 behavior remains in the corresponding module documentation. Those canonical
-documents must be updated when this specification is implemented.
+documents must be reconciled when this revision is implemented.
 
 ## Purpose
 
 People in a shared home should be able to scan a printed QR code and use the
-household's shared tools without creating individual Home Hub accounts. The
-initial motivation is a QR code displayed in a coliving kitchen that provides
-access to Recipes, including recipe creation, editing, reordering, cooking
-history, and pictures.
+household's shared tools without creating individual accounts. The initial use
+case is a QR code displayed in a coliving kitchen that provides access to
+Recipes, including recipe creation, editing, reordering, cooking history, and
+pictures.
 
-Guest access is scoped to a household rather than to one recipe collection or
-one module. A household owner may create multiple Guest access links for the
-same household. Each link has one household-wide access level: read or write.
+Guest access is scoped to one household rather than to one recipe collection
+or module. A household owner may create multiple Guest access links. Each link
+has one household-wide access level, an expiration date, and its own revocable
+secret.
 
 ## Terminology
 
-Use the following terms in product copy and documentation:
-
-- A **Guest access link** is an owner-managed permission to enter one
-  household without an account. It has a name, read or write access, and an
-  active or disabled state.
+- A **Guest access link** is an owner-managed, expiring permission to enter one
+  household without an account. It has a name, read or write access, an
+  expiration instant, and an active or disabled state.
 - A **QR code** is a visual encoding of a Guest access link. Multiple printed
-  copies of one QR code remain one Guest access link; they are not independent
-  permissions.
-- A **Guest session** represents one browser or device that redeemed a Guest
-  access link. Sessions are distinct even when they came from the same QR
-  code.
-- A **guest actor** is the trusted server-side identity derived from an active
-  Guest session. An **account actor** is the existing identity derived from a
-  signed-in user. The actor answers “who is making this request?”; a separate
-  household access scope answers “which household and permission apply?”.
+  copies of one QR remain one permission and share one credential.
+- A **guest actor** is the anonymous requester authenticated by a valid Guest
+  access link. It is not a user, household member, or browser session.
+- An **account actor** is an authenticated Home Hub account.
+- An **access scope** is the server-derived household and read/write permission
+  attached to the current request.
 
-`Grant` or `capability` may be used as implementation and security terminology,
-but neither should be the primary user-facing name.
+There is no Guest-session concept in this version. `Grant`, `capability`, and
+`bearer credential` may be used as implementation or security terminology, but
+the product calls the owner-managed object a Guest access link.
 
-## Product scope
+## Product model
 
 ### Guest access link
 
@@ -54,217 +52,173 @@ A Guest access link belongs to exactly one household and contains:
 
 - an owner-defined internal name, such as `Kitchen QR`;
 - a household-wide access level of `read` or `write`;
-- an active or disabled state;
-- one current, unguessable redemption secret;
-- creation and update timestamps.
+- one cryptographically random secret;
+- a required expiration timestamp;
+- an optional disabled timestamp;
+- creator, creation, and update metadata.
 
-The internal link name helps the owner distinguish multiple QR codes. The
-guest interface displays the household name and does not require a separate
-public-facing name.
+An owner may create multiple links for one household. Separate `Kitchen QR`
+and `Family QR` links can therefore be disabled, regenerated, or extended
+independently.
 
-An owner may create multiple active links for one household. For example, a
-household may have separate `Kitchen QR` and `Family QR` links even when both
-currently provide write access to the same data. Keeping them separate allows
-one group to be revoked without affecting the other and preserves a path to
-future activity attribution.
+Guest access does not create a household member, synthetic user, special
+household type, or device record. Everyone using copies of one QR shares the
+same credential and anonymous authority. Individual attribution and
+device-specific revocation are intentionally absent.
 
-Guest access does not create a household member, a synthetic user account, or
-a special household type.
+### Expiration
+
+Every Guest access link has `expiresAt`; expiration is not optional.
+
+- Creating a link without an explicit expiration uses a server-side default
+  of exactly 90 days from creation. Product copy may describe this as “about
+  three months”.
+- The owner may choose another future date and time during creation or edit it
+  later. Version one has no configurable maximum lifetime.
+- The API accepts only a timestamp strictly in the future when creating or
+  updating a link.
+- The server stores and compares timestamps in UTC. The interface displays
+  them in the viewer's local time zone.
+- A link expires at the exact instant `expiresAt <= serverNow`. There is no
+  grace period.
+- Expiration, manual disabling, household deletion, and module disabling are
+  independent checks. A link is usable only when all relevant checks pass.
+- Disabling and re-enabling a link does not change its expiration.
+- Regenerating the secret does not change its expiration.
+- An owner may extend an expired link by setting a future expiration. If the
+  link is not disabled, the same printed QR becomes valid again. Regeneration
+  remains available when the owner wants existing copies to remain invalid.
+
+The management interface distinguishes `Active`, `Expires soon`, `Expired`,
+and `Disabled`. `Expires soon` is presentation only and means the expiration is
+within 14 days; it does not alter authorization.
+
+### Disabling and regeneration
+
+Disabling a link rejects its credential immediately. Re-enabling it restores
+the same QR only if it has not expired.
+
+Regenerating replaces the stored token hash. The old QR becomes invalid
+immediately and permanently. Because there are no device sessions, no session
+records need to be revoked. Every device using the old credential fails on its
+next server interaction.
 
 ### Household and module scope
 
 A Guest access link represents access to the household's shared feature
-modules, not to household administration. The household's existing module
-settings remain authoritative and are the only per-household module
-configuration:
+modules, not household administration. Existing household module settings are
+the only module configuration:
 
 - disabling a module blocks it for account and guest actors;
-- enabling a module does not bypass the requirement for its code to support
-guest actors;
-- there is no second set of guest-specific module toggles;
-- a Guest access link cannot override a disabled module.
+- enabling a module does not make it Guest-capable automatically;
+- each module must explicitly implement Guest query, mutation, route, media,
+  and navigation authorization;
+- there are no Guest-specific module toggles in version one;
+- a link cannot override a disabled module.
 
-Guest support for another module is a deliberate code change to that module's
-queries, mutations, routes, and navigation. Once a module becomes
-guest-capable, every active Guest access link can reach it when it is enabled
-for that household. This expansion must be called out during rollout because
-existing QR codes will gain access without being reprinted or reconfigured.
+Recipes is the only Guest-capable module initially. Adding another
+Guest-capable module expands every valid link for households where that module
+is enabled, so such a change requires an explicit product and security review.
 
-Core household administration is never a shared feature module. A guest
-actor cannot manage household names, members, invitations, ownership,
-module settings, or Guest access links, regardless of whether its link has
-write access.
+A guest actor can never manage the household name, members, invitations,
+ownership, module settings, or Guest access links.
 
 ### Read and write access
 
-The access level applies across every guest-capable, enabled module:
+The link's access level applies to every enabled, Guest-capable module:
 
-- `read` permits synchronized queries and authorized media reads but rejects
+- `read` permits authorized synchronized queries and media reads, but rejects
   every mutation, upload, deletion, and administrative command;
-- `write` permits the same ordinary module operations available to a
-  household member, including creation, editing, reordering, uploads, and
-  deletion;
+- `write` permits ordinary module operations available to a household member,
+  including creation, editing, reordering, uploads, and recoverable deletion;
 - neither level permits household administration.
 
-The interface hides or disables mutation controls for read access, but the API
-and Zero mutation handlers enforce the access level independently. Changing a
-link from write to read must prevent new writes immediately; authorization
-must not rely only on claims captured in an older access token.
+The interface reflects read-only access, but API routes and authoritative Zero
+mutators enforce it independently. Changes from write to read take effect on
+the next server request because permission is loaded from PostgreSQL each time.
 
-### Lifetime, disabling, and regeneration
+## Credential and URL behavior
 
-The printed QR code has no application-level expiry. A Guest session remains
-usable until one of the following happens:
+### QR URL
 
-- the owner disables its Guest access link;
-- the owner regenerates the link's QR code;
-- the owner changes or deletes the household in a way that removes access;
-- the browser clears or evicts its local cookie;
-- the session is explicitly revoked in a future management interface.
-
-Browser limits may eventually evict a persistent cookie; scanning the still
-active QR code again restores access.
-
-Disabling a link blocks redemption and revokes all of its current Guest
-sessions. Re-enabling it may allow the same printed QR code to create new
-sessions, but previously revoked sessions do not become valid again.
-
-Regenerating a link replaces its redemption secret and revokes every current
-Guest session transactionally. The previous QR code remains permanently
-invalid.
-
-## User experience
-
-### Owner management
-
-Household settings contains an owner-only **Guest access** section. It allows
-the owner to:
-
-- list the household's Guest access links;
-- create a link with an internal name and read or write access;
-- display, copy, download, or print its QR code when the secret is issued;
-- rename a link;
-- change its read or write access;
-- disable or re-enable it;
-- regenerate its QR code after an explicit confirmation.
-
-Raw redemption secrets are not stored in plaintext. Creation and regeneration
-are therefore the only times the API returns the complete link. The interface
-must tell the owner to print, download, or copy it then. If the owner later
-loses it, regeneration produces a new QR code and invalidates the old one.
-
-Guest access management remains available only to the current household
-owner. It is an online-only operation.
-
-### QR redemption
-
-The public entry point is `https://guest.achichorro.com`. A QR code contains a
-static link with a cryptographically random secret of at least 32 bytes. The
-secret must be encoded without ambiguous characters and must be impractical to
-enumerate or guess.
-
-Prefer placing the secret in the URL fragment, for example:
+The public entry point is `https://guest.achichorro.com`. A QR contains at
+least 32 cryptographically random bytes encoded as base64url:
 
 ```text
 https://guest.achichorro.com/join#<secret>
 ```
 
-Fragments are not sent in the initial HTTP request or in the `Referer` header.
-The client reads the fragment, exchanges the secret through a request body,
-and immediately removes it from the visible URL and browser history with
-`history.replaceState`. Redemption secrets must never be placed in analytics,
-application logs, error reports, or persisted browser storage.
+The secret remains in the URL fragment. It must never be put in a query
+parameter or path segment. A fragment is visible to the browser and browser
+JavaScript but is not sent in the initial HTTP request, ordinary proxy access
+logs, or the `Referer` header.
 
-Successful redemption:
-
-1. validates the hashed secret and the active link;
-2. creates a distinct Guest session for that browser;
-3. sets a host-only `Secure`, `HttpOnly`, `SameSite=Lax` session cookie on
-   `guest.achichorro.com`;
-4. issues the short-lived bearer token required by the web client and Zero;
-5. redirects to the clean guest application URL.
-
-An invalid, disabled, or regenerated link shows a generic unavailable-link
-screen. It must not reveal whether the household exists or which validation
-failed.
-
-### Guest shell and shared module interfaces
-
-Guest access does not introduce separate guest versions of Recipes or other
-modules. The web application has two shells which compose the same module
-interfaces:
+The Guest application reads the fragment and explicitly presents it to Home
+Hub APIs. Guest navigation preserves the fragment, for example:
 
 ```text
-Authenticated shell --+
-                      +-- Shared module interfaces
-Guest shell ----------+      |-- Recipes
-                             `-- future guest-capable modules
+https://guest.achichorro.com/recipes#<secret>
+https://guest.achichorro.com/recipes/<recipe-id>#<secret>
 ```
 
-The authenticated shell continues to own account controls, household
-switching, household settings, membership management, and Guest access
-management.
+This provides reload, bookmark, and deliberate link-sharing behavior without
+cookies or browser storage. The raw secret must not be copied into
+`localStorage`, `sessionStorage`, IndexedDB, analytics, application logs, error
+reports, or generated cache identifiers.
 
-The guest shell contains only:
+The URL fragment is intentionally shareable. Anyone who sees the QR, receives
+the URL, inspects the address bar, or obtains it through a compromised browser
+can exercise the link until it expires, is disabled, or is regenerated. This
+is the explicit capability-link product model, not a claim of personal
+identity or physical proximity.
 
-- the household name;
-- navigation for enabled, guest-capable modules;
-- the shared module content;
-- an action to leave or clear Guest access.
+### Authentication header
 
-Feature components consume a normalized access context instead of branching
-on `isGuest` throughout the component tree. At minimum that context supplies:
+Account and Guest credentials use unambiguous schemes:
 
-```ts
-type ModuleAccessContext = {
-  householdId: string;
-  accessToken: string;
-  cacheIdentity: string;
-  canWrite: boolean;
-  onSessionExpired: () => void;
-};
+```http
+Authorization: Bearer <account-jwt>
+Authorization: Guest <guest-link-secret>
 ```
 
-The exact type may evolve during implementation, but module components should
-normally depend on capabilities such as `canWrite`, not on the actor kind.
-Authentication-specific behavior belongs in the application shells and
-session providers.
+Account-only middleware accepts only `Bearer`. Shared-module and Zero
+middleware accepts `Bearer` or `Guest` and resolves both to a trusted
+`RequestAccess`. A Guest credential must never be accepted by account,
+household-administration, membership, invitation, module-settings, or
+Guest-link-management endpoints.
 
-Read-only behavior combines with the existing connectivity policy. A control
-may mutate only when both the current access context permits writes and Zero's
-connection state permits writes.
+The raw Guest secret is hashed with a Guest-link-specific domain before
+lookup. Only the hash is stored. Authorization reloads the link, household,
+expiration, disabled state, current permission, and requested module setting
+from PostgreSQL for every server request.
 
-Thin authenticated and guest route files may render the same feature
-components. This small routing duplication is acceptable; feature interface
-implementations, editors, galleries, and lists must not be copied.
+Invalid, unknown, disabled, expired, regenerated, and deleted-household links
+return the same generic `401 Unauthorized` response. Responses must not reveal
+which validation failed.
 
-### Multiple links and devices
+### Application-boundary authentication
 
-Every redemption creates a separate Guest session even when two devices scan
-the same QR code. The first version does not show guest identities or an
-activity log, but session separation must leave room for future session
-listing, selective revocation, device labels, and optional authorship.
+Authentication is mounted by the API application before feature routers:
 
-The first version may keep one current Guest session per browser profile.
-Scanning a different household's QR code may replace the active Guest session;
-remembering and switching among multiple guest households is deferred.
+```text
+API application
+  |-- account-only routes -> account authentication
+  |-- shared module routes -> account-or-Guest authentication -> feature router
+  `-- Zero routes          -> account-or-Guest authentication
+```
 
-## Authentication and authorization
+Feature routers such as Recipes do not construct authentication and do not
+receive a database, JWT secret, or authentication middleware. Their handlers
+consume the already established request-access context and pass it to domain
+services.
 
-### Actor and access model
-
-Trusted server context separates the authenticated actor from any household
-scope rather than overloading an unconditional `userId`:
+Conceptually:
 
 ```ts
 type RequestAccess =
   | { actor: { kind: "account"; accountId: string } }
   | {
-      actor: {
-        kind: "guest";
-        guestSessionId: string;
-        guestAccessLinkId: string;
-      };
+      actor: { kind: "guest"; guestAccessLinkId: string };
       householdScope: {
         householdId: string;
         permission: "read" | "write";
@@ -272,96 +226,117 @@ type RequestAccess =
     };
 ```
 
-The structure shown is conceptual. Mutable fields such as household, access
-level, active state, and enabled modules must be re-established from
-PostgreSQL at authorization time rather than trusted indefinitely from a JWT.
+The household scope belongs to the request's trusted authorization context,
+not to the guest actor's identity. Client-supplied actor kinds, link IDs,
+household IDs, and permissions are untrusted.
 
-Existing account access continues to require current household membership.
-Guest access requires all of the following:
+### Leaving Guest access
 
-- the Guest session exists and is not revoked;
-- its Guest access link exists and is active;
-- the link belongs to the household addressed by the operation;
-- the requested module is enabled for the household;
-- the module operation explicitly supports guest actors;
-- a mutation additionally requires the link's current access level to be
-  `write`;
-- every referenced entity belongs to that same household and remains active.
+There is no Guest logout API. “Leave Guest access” removes the fragment from
+the address bar, clears in-memory Guest state and signed-image URL metadata,
+and navigates to the Guest entry screen. It cannot invalidate other copies of
+the same QR; only owner disablement, expiration, or regeneration can do that.
 
-Foreign household and entity identifiers remain indistinguishable from
-missing identifiers. Client-supplied household IDs, access modes, actor kinds,
-link IDs, and session IDs are untrusted.
+## User experience
 
-### Guest sessions and bearer tokens
+### Owner management
 
-The raw QR secret is used only to create a Guest session. Subsequent requests
-use that session; they do not repeatedly transmit the QR secret.
+Household settings contains an owner-only **Guest access** section that lets
+the owner:
 
-Store only cryptographic hashes of QR and Guest-session secrets. Use separate
-domain separation or signing configuration from recipe-image capabilities and
-account passwords. Guest session cookies are inaccessible to browser
-JavaScript. The browser keeps short-lived access JWTs in memory and refreshes
-them through the guest cookie, following the same broad separation used by
-account sessions.
+- list Guest access links with access level, expiration, and status;
+- create a link with a name, read/write access, and expiration defaulting to
+  90 days;
+- display, copy, download, or print the QR when its secret is issued;
+- show the expiration date on the printable QR card;
+- rename a link;
+- change read/write access;
+- extend or shorten its expiration;
+- disable or re-enable it;
+- regenerate its QR after explicit confirmation.
 
-Guest access JWTs must be unambiguously distinguishable from account JWTs and
-must not be accepted as account identities. They contain only stable identity
-claims needed to locate and validate the Guest session. They do not contain a
-trusted household access level or enabled-module list.
+Raw secrets are not stored in plaintext. Creation and regeneration are the
+only times the API returns the complete link. If the owner loses the QR,
+regeneration creates a new one. Extending expiration does not require
+reprinting because it preserves the credential.
 
-Guest-session refresh must preserve immediate revocation. A disabled or
-regenerated link, revoked session, deleted household, or otherwise invalid
-session receives a generic `401`, clears the cookie, and closes the guest
-client.
+Guest access management is online-only and restricted to the current
+household owner.
 
-CSRF protection relies on the narrow guest-cookie path, host-only cookie,
-`SameSite=Lax`, and the rule that the cookie only obtains an in-memory bearer
-token. State-changing module operations require that bearer token and do not
-authenticate directly from the cookie.
+### Guest entry and shell
 
-### Zero synchronization
+Opening a Guest URL validates the credential online and loads a small Guest
+context containing the link's non-secret ID, household ID and name, current
+permission, expiration, and enabled Guest-capable modules. This is an ordinary
+authenticated read, not redemption; it creates no session or cookie.
 
-Guest module screens continue to use Zero rather than introducing a parallel
-REST data layer. Each Guest session supplies a stable, namespaced Zero
-`userID` and browser cache identity that cannot collide with account user IDs.
+The guest shell shows:
 
-Named queries and custom mutators accept a trusted access context. Account
-actors retain the current membership checks. Guest actors use the
-Guest-session and Guest-access-link checks above. The client-side Guest
-context contains no synthetic account ID. Recipe query shapes and optimistic
-mutations remain shared after authorization is established.
+- the household name;
+- the expiration date;
+- navigation for enabled, Guest-capable modules;
+- shared module content;
+- a local “Leave Guest access” action.
 
-The client must not send an account `userId` as the authority for guest
-operations. Existing web properties named `userId` but used only as local
-cache namespaces, including recipe-image URL caches, should be generalized to
-`cacheIdentity` or another actor-neutral name.
+An unavailable or expired link shows one generic unavailable-link screen.
+When the client reaches its known expiration time, it stops presenting the
+shared interface locally; the server remains authoritative.
 
-Changing a link's access level, disabling a module, disabling or regenerating
-the link, and revoking the session must take effect without clearing a Zero
-cache manually. Cached rows may remain visible under the established offline
-read policy, but server queries, mutations, uploads, and newly signed media
-reads fail closed. A server `401` terminates the session and clears its local
-bootstrap data.
+Guest access does not create separate Guest versions of Recipes. Thin account
+and Guest route adapters render the same `RecipeLibrary`, `RecipeDetail`,
+editors, galleries, and dialogs with explicit access and navigation inputs.
+Small route-level composition differences are acceptable; feature interface
+implementations must not be duplicated.
 
-### Recipe images
+## Zero synchronization
 
-The existing direct-to-R2 upload and signed derivative-read design remains in
-place. Image routes authorize an account or guest actor through the same
-recipe and household boundary. Guest reads require read access; uploads and
-deletions require write access.
+Guest module screens continue to use Zero. The Zero auth value carries the
+`Guest <secret>` credential, and the API resolves it through the same
+application-boundary authentication used by other shared module routes.
 
-The R2 upload CORS allowlist must include
-`https://guest.achichorro.com`. No R2 credentials, object keys, originals, or
-arbitrary transformations become public through Guest access.
+After validation, the server uses a stable namespaced identity such as
+`guest-link:<link-id>` for Zero and browser-cache partitioning. The client must
+never use the raw secret as a cache identifier. Account actors retain current
+membership checks; guest actors use the link and household scope described
+above. There is no synthetic Guest `userId`.
 
-Signed derivative capabilities remain short-lived. A link or session revoked
-after a URL was issued cannot retract bytes already delivered and may leave
-the issued derivative URL usable until its existing expiry, currently at most
-one hour. This bounded window is accepted consistently with account access.
+Changing access, expiration, disabled state, module settings, household state,
+or token hash takes effect on the next query or mutation. Authoritative
+mutations re-check current state inside their transaction. A validly issued
+signed image URL may remain usable until its own short expiry.
+
+If connectivity is lost while an already validated Guest application is open,
+Zero-cached rows may remain visible and mutation controls become read-only.
+An offline hard reload does not reopen Guest access in version one because the
+application cannot validate the link or recover its non-secret cache identity
+without contacting the API. The raw credential is never persisted merely to
+support offline startup.
+
+## Recipe authorization and recoverable deletion
+
+Recipes queries, mutators, image authorization, and entity lookups must all
+require:
+
+- a current account membership or valid Guest link;
+- the operation's household to match the resolved household scope;
+- Recipes to be enabled and explicitly Guest-capable;
+- write permission for mutations, uploads, reorder operations, and deletions;
+- every referenced recipe, ingredient, cooking log, and image to be active and
+  scoped to the same household.
+
+Foreign identifiers are indistinguishable from missing identifiers. The R2
+upload CORS allowlist includes `https://guest.achichorro.com`. No R2
+credentials, object keys, originals, or arbitrary transformations become
+public.
+
+Write-capable guests receive ordinary recoverable deletion. `recipes`,
+`recipe_ingredients`, `recipe_cook_logs`, and confirmed `recipe_images` use
+soft deletion. Active queries, reorder calculations, mutation checks, upload
+authorization, and image reads consistently ignore deleted rows. Confirmed
+objects remain private in R2 for manual recovery until a separate retention
+policy is implemented.
 
 ## Persisted data
-
-Names are illustrative and should be finalized with the migration.
 
 ### `household_guest_access_links`
 
@@ -369,184 +344,199 @@ Names are illustrative and should be finalized with the migration.
 - `household_id`
 - `name`
 - `access`: `read` or `write`
-- `token_hash`
+- `token_hash`, unique
+- `expires_at`, non-null
 - `disabled_at`, nullable
 - `created_by_user_id`
 - `created_at`, `updated_at`
 
-Requirements:
+There is no `household_guest_sessions` table in this design.
 
-- token hashes are unique;
-- names need not be unique within a household;
-- the creator is historical metadata and does not replace the owner check;
-- only the current household owner may create or manage a link;
-- regeneration replaces `token_hash` and revokes sessions in one transaction;
-- disabling revokes sessions in one transaction;
-- changing `access` is serialized with authorization-sensitive management
-  changes.
+The creator is historical metadata and does not replace the current-owner
+check. Names need not be unique within a household. Access, expiration,
+disablement, and regeneration updates are serialized with authorization so a
+concurrent request cannot commit using stale authority after the management
+change commits.
 
-### `household_guest_sessions`
+## Routing and deployment
 
-- `id`
-- `guest_access_link_id`
-- `token_hash`
-- `revoked_at`, nullable
-- `created_at`, `updated_at`
+`guest.achichorro.com` serves the same compiled React application as the
+account hostname. Application mode is selected from trusted deployment
+configuration or hostname, not inferred from arbitrary URL paths.
 
-Token hashes are unique. Session identity is stable for Zero and future audit
-work even if the opaque cookie token rotates. There is no user identity,
-display name, device fingerprint, or authorship field in the first version.
+Caddy must serve the SPA, proxy API and Zero traffic, retain static-asset
+caching, and ensure authorization headers are redacted from logs. The fragment
+never reaches Caddy. No cross-origin Guest cookie rules are required because
+there is no Guest cookie.
 
-The first version does not need an owner-facing session list or selective
-session revocation.
-
-## Recoverable Recipes deletion
-
-Write-capable guests receive the full ordinary Recipes interface, including
-destructive actions. To keep account and guest behavior identical and make
-mistakes recoverable, every confirmed Recipes entity becomes soft-deletable.
-
-The existing `recipes.deleted_at` behavior remains. Add `deleted_at` to:
-
-- `recipe_ingredients`;
-- `recipe_cook_logs`;
-- `recipe_images`.
-
-All active queries, mutations, reorder calculations, image upload checks,
-image read authorization, and uniqueness assumptions must consistently ignore
-soft-deleted rows where appropriate. Deleted child identifiers cannot be
-mutated or used to authorize new uploads.
-
-Deleting a confirmed image marks its row deleted and retains the original and
-stored derivatives in private R2. Deleting a cooking entry retains its image
-relationships so manually restoring the entry restores its context; its
-images remain available in the recipe's general gallery while the cooking
-entry is deleted. Abandoned, never-confirmed uploads may still be removed by a
-separate cleanup policy because they are not established user content.
-
-There is no recycle-bin or restoration interface in the first version.
-Recovery is a deliberate manual PostgreSQL operation performed by the owner.
-Deleted data and confirmed image objects are retained indefinitely until a
-separate retention and purge feature is designed.
-
-## Web routing and deployment
-
-`guest.achichorro.com` serves the same compiled React application as
-`home.achichorro.com`. A distinct workspace application or shared feature
-package is not introduced merely for Guest access.
-
-Caddy must:
-
-- obtain and renew TLS for the guest hostname;
-- serve the existing SPA and navigation fallback;
-- proxy guest API requests and Zero HTTP/WebSocket traffic on the guest
-  origin;
-- prevent redemption secrets from appearing in access logs;
-- retain the current static-asset caching behavior.
-
-Using the same origin for the guest SPA, guest-session endpoints, and Zero
-proxy avoids broad cross-origin credential rules. Guest cookies remain
-host-only and are never sent to `home.achichorro.com`.
-
-The web application selects the appropriate root shell from the trusted
-deployment hostname. Host selection controls presentation and session
-bootstrap only; the API actor resolution and authorization checks remain the security
-boundary.
-
-Production DNS, Caddy configuration, environment examples, health checks, and
-deployment verification must include the guest hostname before release.
+The direct-to-R2 upload CORS policy includes the Guest origin. Production DNS,
+TLS, health checks, deployment verification, and environment examples include
+the Guest hostname.
 
 ## Security and abuse boundaries
 
-A Guest access link is a bearer credential. Anyone who can see, photograph,
-or receive the QR code may redeem it from anywhere on the internet. This is
-intentional for the coliving use case.
+The credential is intentionally usable by anyone who possesses it, from any
+location, until it expires, is disabled, or is regenerated. A write link can be
+scripted to perform the same ordinary module writes allowed through the UI;
+this is inherent to granting write access and is not prevented by wrapping the
+link in a device session.
 
-The design mitigates accidental exposure without pretending to identify the
-guest:
+The design mitigates accidental exposure by:
 
-- use an unguessable secret rather than a human-sized code;
-- store only token hashes;
-- keep the secret out of request URLs, logs, referrers, and browser storage;
-- exchange it for a device-specific session;
-- allow immediate household-owner disablement and regeneration;
-- authorize every read and write at the household and entity boundary;
-- enforce read-only access on the server;
-- rate-limit redemption attempts and image-upload authorization;
-- retain existing image type and size limits;
-- never expose household administration through a guest actor.
+- using a 256-bit unguessable secret;
+- storing only a domain-separated hash;
+- carrying the secret in a fragment rather than a query or path;
+- never persisting the raw secret outside the visible Guest URL;
+- separating `Bearer` account credentials from `Guest` credentials;
+- allowing immediate disablement and regeneration;
+- expiring links by default after 90 days;
+- authorizing every operation against current database state;
+- enforcing household, module, entity, and read/write boundaries server-side;
+- retaining image type and size limits;
+- never accepting Guest credentials for administration.
 
-The first version accepts that a person may intentionally share the QR code,
-that guests are anonymous, and that all devices using one link share its
-read/write level. It does not attempt proximity checks, home-Wi-Fi checks,
-device fingerprinting, per-person attribution, moderation, or approval queues.
+The version-one API does not implement a process-local Guest redemption or
+upload rate limiter. High-entropy credentials are not practically protected by
+such a limiter, and generic flooding belongs at Cloudflare or Caddy. A future
+product-level write or storage quota should be designed from explicit abuse
+requirements rather than treated as authentication.
 
-## Delivery outline
+The first version does not attempt personal identity, attribution, proximity,
+home-Wi-Fi enforcement, device fingerprinting, per-device revocation,
+moderation, or approval queues.
 
-Implementation should proceed in reviewable phases:
+## Implementation plan
 
-1. Add soft deletion to confirmed Recipe child entities and update all Recipe
-   queries, mutators, image services, and tests.
-2. Add Guest access link and Guest session tables, contracts, owner-only
-   management services, and transactional disable/regeneration behavior.
-3. Introduce the discriminated server access context and adapt Recipes queries,
-   mutations, and image authorization without weakening account membership
-   checks.
-4. Add redemption, guest-cookie refresh, logout, and guest bearer-token
-   handling.
-5. Generalize the web access context and Zero cache identity, then compose the
-   existing Recipes components under the guest shell.
-6. Add Household settings management, QR rendering, copying, download, and
-   printing.
-7. Add the guest hostname, same-origin API and Zero proxying, R2 CORS entry,
-   production configuration, and release verification.
-8. Update the canonical architecture, security, data-model, deployment,
-   product, and Recipes documents to describe the implemented system.
+Implement this revision in the following reviewable commits. Complete and
+verify each step before starting the next.
+
+### Step 1: Align persistence and shared contracts
+
+- Add required `expires_at` to Guest access links and backfill existing rows
+  with migration time plus 90 days.
+- Remove the Guest-session table and its relations.
+- Remove Guest-session response contracts and add expiration to link summaries,
+  create/update requests, and Guest context responses.
+- Define the server-side 90-day default and future-timestamp validation.
+- Update database, contract, migration, and serialization tests.
+
+### Step 2: Simplify link management
+
+- Update owner services and routes to create, list, edit, disable, extend, and
+  regenerate expiring links.
+- Preserve expiration during disablement and regeneration.
+- Remove transactional session revocation because sessions no longer exist.
+- Test default expiration, custom expiration, expiry edits, disable/re-enable,
+  regeneration, ownership, and generic failures.
+
+### Step 3: Establish application-boundary Guest authentication
+
+- Add strict parsing for `Bearer <account-jwt>` and `Guest <link-secret>`.
+- Resolve Guest credentials by hash and load current link, expiration,
+  household, permission, and household state.
+- Mount account-or-Guest authentication before Recipe and Zero routers in the
+  application composition layer.
+- Keep account-only middleware on all administrative routes.
+- Remove authentication construction and middleware injection from feature
+  route factories and their unit tests.
+- Test credential-scheme separation and prove Guest credentials fail on every
+  administrative surface.
+
+### Step 4: Remove the device-session system
+
+- Delete Guest redeem, refresh, and logout endpoints and services.
+- Delete Guest cookies, Guest JWT issuance, Guest JWT subject handling, session
+  token hashing, and session bootstrap code.
+- Remove the process-local rate limiter introduced for redemption and uploads.
+- Add one authenticated Guest-context read that returns only non-secret shell
+  metadata after validating the current link.
+- Confirm no removed credential can still authenticate through compatibility
+  fallbacks.
+
+### Step 5: Adapt Zero and transactional authorization
+
+- Pass the direct Guest credential as Zero auth.
+- Use `guest-link:<link-id>` as the stable server and browser cache identity.
+- Keep Guest context free of synthetic account IDs.
+- Re-check expiration, disablement, current permission, module enablement, and
+  entity scope for authoritative mutations and image operations.
+- Add concurrency tests for expiration/disablement or permission changes racing
+  writes.
+
+### Step 6: Implement fragment-preserving Guest routing
+
+- Read the credential from `window.location.hash` without persisting it.
+- Preserve the fragment across Guest library/detail navigation and reloads.
+- Validate online before entering the Guest shell.
+- Implement local Leave by removing the fragment and clearing in-memory and
+  signed-image cache state.
+- Remove Guest offline bootstrap; retain read-only behavior only when an
+  already open client becomes disconnected.
+- Test joining, deep links, refreshes, deliberate URL sharing, invalid links,
+  expiration while open, and Leave.
+
+### Step 7: Keep one Recipes interface
+
+- Keep account and Guest shells separate but compose the same Recipes feature
+  components through thin, explicit route adapters.
+- Pass normalized household, credential, cache identity, permission, and
+  navigation inputs without a parallel Guest implementation.
+- Keep Recipe feature routers and components unaware of credential parsing.
+- Verify read-only presentation and server enforcement independently.
+
+### Step 8: Add expiration management and QR presentation
+
+- Default creation controls to 90 days and allow a future custom expiration.
+- Show local-time expiration and Active/Expires soon/Expired/Disabled status.
+- Allow owners to edit expiration independently of disablement and
+  regeneration.
+- Include the expiration date on the printable QR card.
+- Ensure regenerated QR output uses the configured Guest application origin.
+
+### Step 9: Remove obsolete architecture and verify release boundaries
+
+- Delete dead session schema, services, routes, tests, configuration, and
+  terminology.
+- Update architecture, security, data-model, deployment, product, and Recipes
+  documentation to match this specification.
+- Verify migration generation, formatting, every workspace typecheck and test,
+  the production web build, account behavior, Guest hostname routing, Zero,
+  R2 CORS, and production health checks.
 
 ## Acceptance criteria
 
-The feature is complete when all of the following hold:
-
-- an owner can create multiple read or write Guest access links for a
-  household;
-- the creation and regeneration result can be copied, downloaded, and printed
-  as a working QR code;
-- two devices scanning one QR code receive distinct Guest sessions;
-- reloading the guest site restores its session without an account login;
-- a guest sees the household name and the same Recipes interfaces used by an
-  account member, inside the reduced guest shell;
-- a write guest can perform every ordinary Recipes operation, including image
-  upload and recoverable deletion;
-- a read guest cannot mutate through either the interface or crafted API and
-  Zero requests;
-- a guest cannot read or mutate another household by changing route, query,
-  mutation, recipe, image, link, or session identifiers;
-- a guest cannot access household settings, membership, invitations,
-  ownership, module configuration, or Guest access management;
-- disabling Recipes blocks its guest queries, mutations, uploads, and newly
-  signed image reads;
-- disabling or regenerating a Guest access link revokes every existing Guest
-  session, and the previous QR fails after regeneration;
-- changing a link from write to read blocks subsequent writes without waiting
-  for a long-lived token to expire;
-- raw QR and Guest-session secrets are absent from PostgreSQL, application and
-  proxy logs, browser storage, and error reports;
-- deleting established Recipe content removes it from active views without
-  physically deleting its database record or confirmed image objects;
-- authenticated account behavior and household membership isolation continue
-  to pass their existing tests;
-- the same production web build works at both the account and guest hostnames.
+- An owner can create multiple read or write Guest access links per household.
+- A new link defaults to expiring exactly 90 days after server-side creation.
+- Owners can choose or edit a future expiration and see it on the QR printout.
+- Expired links fail every Guest-context, Zero, Recipe, image-read, and image-
+  write request with the generic unauthorized response.
+- Extending an otherwise active expired link makes the same QR usable again;
+  regenerating makes every previous copy permanently invalid.
+- Reloading or bookmarking a Guest URL works while its fragment credential is
+  valid, without a cookie, stored token, account, or Guest session.
+- The raw secret is absent from PostgreSQL, query strings, HTTP paths, proxy
+  logs, application logs, browser storage, cache identifiers, and error reports.
+- Account-only endpoints reject Guest credentials regardless of link access.
+- A Guest is confined to its resolved household, enabled Guest-capable modules,
+  current read/write permission, and active entity boundaries.
+- Read links cannot mutate through crafted API or Zero requests.
+- Write links can use the ordinary Recipes interface, including images and
+  recoverable deletion.
+- Account and Guest routes render the same Recipes feature implementation.
+- Disconnection makes an open Guest client read-only; an offline hard reload
+  does not reopen Guest access.
+- The same production web build works at account and Guest hostnames.
 
 ## Deferred work
 
-- named guest identities and authorship;
-- owner-visible activity history;
-- listing and selectively revoking Guest sessions;
-- remembering and switching between multiple guest households in one browser;
+- named Guest identities and authorship;
+- activity history and attribution;
+- per-device sessions, device labels, and selective device revocation;
 - per-link module selection or per-module access levels;
-- expiry dates and scheduled access windows;
+- scheduled start times or recurring access windows;
 - one-time or limited-use links;
-- guest-specific moderation or approval workflows;
-- recycle-bin and restoration interfaces;
+- storage or write quotas based on explicit abuse requirements;
+- Guest-specific moderation or approval workflows;
+- recycle-bin and self-service restoration;
 - automated retention and permanent purge;
 - local-network or physical-proximity restrictions.
