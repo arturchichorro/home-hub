@@ -13,6 +13,11 @@ const silentLogger: StructuredLogger = {
 };
 
 const defaultInput: CreateAppInput = {
+  guestLinks: {
+    create: async () => ({ kind: "forbidden" }),
+    list: async () => ({ kind: "forbidden" }),
+    disable: async () => ({ kind: "forbidden" }),
+  },
   auth: {
     signup: async () => ({ kind: "forbidden" }),
     login: async () => ({ kind: "invalid_credentials" }),
@@ -57,6 +62,7 @@ type CreateTestAppOverrides = {
 
 function createTestApp(overrides: CreateTestAppOverrides = {}) {
   return createApp({
+    guestLinks: { ...defaultInput.guestLinks, ...overrides.guestLinks },
     auth: { ...defaultInput.auth, ...overrides.auth },
     households: { ...defaultInput.households, ...overrides.households },
     recipeImages: { ...defaultInput.recipeImages, ...overrides.recipeImages },
