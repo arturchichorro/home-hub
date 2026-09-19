@@ -85,6 +85,7 @@ function GuestRecipesLayout() {
           cacheIdentity={context.cacheIdentity}
           householdId={context.household.id}
           mode="guest"
+          navigationHash={credential}
           onSessionExpired={closeAccess}
         >
           <Outlet />

@@ -17,12 +17,6 @@ type RecipeImageCommandInput = {
   imageId: string;
 };
 
-function authorizationHeader(accessToken: string) {
-  return accessToken.startsWith("Guest ")
-    ? accessToken
-    : `Bearer ${accessToken}`;
-}
-
 export type RequestRecipeImageUploadInput = Omit<
   RecipeImageCommandInput,
   "imageId"
@@ -88,7 +82,7 @@ export async function requestRecipeImageUpload({
     {
       method: "POST",
       headers: {
-        Authorization: authorizationHeader(accessToken),
+        Authorization: accessToken,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(request),
@@ -134,7 +128,7 @@ export async function confirmRecipeImageUpload({
     `${imageUrl({ householdId, recipeId, imageId })}/confirm`,
     {
       method: "POST",
-      headers: { Authorization: authorizationHeader(accessToken) },
+      headers: { Authorization: accessToken },
     },
   );
 
@@ -163,7 +157,7 @@ export async function createRecipeImageReadUrl({
     {
       method: "POST",
       headers: {
-        Authorization: authorizationHeader(accessToken),
+        Authorization: accessToken,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ variant }),
@@ -192,7 +186,7 @@ export async function createRecipeImageReadUrls({
     {
       method: "POST",
       headers: {
-        Authorization: authorizationHeader(accessToken),
+        Authorization: accessToken,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ requests }),
@@ -217,7 +211,7 @@ export async function deleteRecipeImage({
 }: RecipeImageCommandInput): Promise<DeleteRecipeImageResult> {
   const response = await fetch(imageUrl({ householdId, recipeId, imageId }), {
     method: "DELETE",
-    headers: { Authorization: authorizationHeader(accessToken) },
+    headers: { Authorization: accessToken },
   });
 
   if (response.status === 401) return { kind: "unauthorized" };

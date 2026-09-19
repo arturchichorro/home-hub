@@ -7,6 +7,7 @@ type RecipeModuleContextValue = {
   cacheIdentity: string;
   householdId: string;
   mode: RecipeModuleMode;
+  navigationHash?: string;
   onSessionExpired: () => void;
 };
 

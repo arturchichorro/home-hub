@@ -36,8 +36,14 @@ type RecipeDetailProps = {
 };
 
 export function RecipeDetail({ recipeId }: RecipeDetailProps) {
-  const { accessToken, cacheIdentity, householdId, mode, onSessionExpired } =
-    useRecipeModule();
+  const {
+    accessToken,
+    cacheIdentity,
+    householdId,
+    mode,
+    navigationHash,
+    onSessionExpired,
+  } = useRecipeModule();
   const zero = useZero();
   const navigate = useNavigate();
   const mutationEnabled = useZeroMutationEnabled();
@@ -156,7 +162,7 @@ export function RecipeDetail({ recipeId }: RecipeDetailProps) {
       if (mode === "guest") {
         await navigate({
           to: "/recipes",
-          hash: window.location.hash.slice(1),
+          hash: navigationHash,
           replace: true,
         });
       } else {

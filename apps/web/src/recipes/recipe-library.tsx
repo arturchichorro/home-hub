@@ -40,6 +40,7 @@ type RecipeModuleProps = {
 
 type RecipeLibraryProps = RecipeModuleProps & {
   mode: "account" | "guest";
+  navigationHash?: string;
 };
 
 type RecipeCardImageProps = RecipeModuleProps & {
@@ -155,12 +156,14 @@ function RecipeCardLink({
   handleRef,
   householdId,
   mode,
+  navigationHash,
   recipeId,
 }: {
   children: ReactNode;
   handleRef: ReturnType<typeof useSortable>["handleRef"];
   householdId: string;
   mode: "account" | "guest";
+  navigationHash?: string;
   recipeId: string;
 }) {
   const common = {
@@ -175,7 +178,7 @@ function RecipeCardLink({
       {...common}
       to="/recipes/$recipeId"
       params={{ recipeId }}
-      hash={window.location.hash.slice(1)}
+      hash={navigationHash}
     >
       {children}
     </Link>
@@ -198,6 +201,7 @@ function RecipeCard({
   onSessionExpired,
   recipe,
   mode,
+  navigationHash,
   cacheIdentity,
 }: RecipeLibraryProps & {
   disabled: boolean;
@@ -221,6 +225,7 @@ function RecipeCard({
         handleRef={sortable.handleRef}
         householdId={householdId}
         mode={mode}
+        navigationHash={navigationHash}
         recipeId={recipe.id}
       >
         <div className="w-full">
@@ -267,6 +272,7 @@ function RecipeCardGrid({
   recipes,
   cacheIdentity,
   mode,
+  navigationHash,
 }: RecipeLibraryProps & {
   disabled: boolean;
   onMove: (from: number, to: number) => void;
@@ -298,6 +304,7 @@ function RecipeCardGrid({
             onSessionExpired={onSessionExpired}
             recipe={recipe}
             mode={mode}
+            navigationHash={navigationHash}
             cacheIdentity={cacheIdentity}
           />
         ))}
@@ -307,8 +314,14 @@ function RecipeCardGrid({
 }
 
 export function RecipeLibrary() {
-  const { accessToken, cacheIdentity, householdId, mode, onSessionExpired } =
-    useRecipeModule();
+  const {
+    accessToken,
+    cacheIdentity,
+    householdId,
+    mode,
+    navigationHash,
+    onSessionExpired,
+  } = useRecipeModule();
   const zero = useZero();
   const navigate = useNavigate();
   const enabled = useZeroMutationEnabled();
@@ -404,6 +417,7 @@ export function RecipeLibrary() {
         recipes={recipes}
         cacheIdentity={cacheIdentity}
         mode={mode}
+        navigationHash={navigationHash}
       />
 
       <CreateRecipeDialog
@@ -415,7 +429,7 @@ export function RecipeLibrary() {
             void navigate({
               to: "/recipes/$recipeId",
               params: { recipeId },
-              hash: window.location.hash.slice(1),
+              hash: navigationHash,
             });
           } else {
             void navigate({

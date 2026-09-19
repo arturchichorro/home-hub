@@ -15,7 +15,7 @@ function RecipesLayout() {
   return (
     <HouseholdModuleGate householdId={householdId} moduleKey="recipes">
       <RecipeModuleProvider
-        accessToken={session.accessToken}
+        accessToken={`Bearer ${session.accessToken}`}
         cacheIdentity={session.user.id}
         householdId={householdId}
         mode="account"
