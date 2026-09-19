@@ -27,7 +27,7 @@ export function createZeroMutateRoute({
         authorizationDatabase.transaction(async (tx) => {
           const current = await lockCurrentGuestAccess(tx, guestAccess);
           if (!current) {
-            c.header("WWW-Authenticate", "Bearer");
+            c.header("WWW-Authenticate", "Guest");
             return c.json({ error: "Unauthorized" }, 401);
           }
           requestAccess = current;

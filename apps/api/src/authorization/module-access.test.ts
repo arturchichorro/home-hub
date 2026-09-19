@@ -45,7 +45,7 @@ function createTransaction(access: "read" | "write" | undefined) {
 }
 
 describe("guest module authorization", () => {
-  it("locks current session and link state while authorizing a write", async () => {
+  it("holds shared locks on current link and module state for the write", async () => {
     const { locks, tx } = createTransaction("write");
     await expect(
       authorizeHouseholdModule(tx, {
@@ -61,7 +61,7 @@ describe("guest module authorization", () => {
     expect(locks).toEqual(["share", "share"]);
   });
 
-  it("uses the current database access level instead of the JWT request state", async () => {
+  it("uses the current database access level instead of stale request state", async () => {
     const { tx } = createTransaction("read");
     await expect(
       authorizeHouseholdModule(tx, {
@@ -76,7 +76,7 @@ describe("guest module authorization", () => {
     ).resolves.toBe("forbidden");
   });
 
-  it("rejects a revoked or disabled guest state", async () => {
+  it("rejects an expired, disabled, or otherwise unavailable link", async () => {
     const { tx } = createTransaction(undefined);
     await expect(
       authorizeHouseholdModule(tx, {

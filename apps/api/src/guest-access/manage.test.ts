@@ -20,6 +20,7 @@ function createDatabase(
   input: { user?: boolean; owner?: boolean; link?: boolean } = {},
 ) {
   const insertedValues: Record<string, unknown>[] = [];
+  const locks: unknown[] = [];
   const updatedValues: Record<string, unknown>[] = [];
   let selectedTable: unknown;
   const existingLink = {
@@ -43,7 +44,8 @@ function createDatabase(
     limit() {
       return selectBuilder;
     },
-    async for() {
+    async for(strength: unknown) {
+      locks.push(strength);
       if (selectedTable === householdMembers) {
         return input.owner === false ? [] : [{ id: "owner-membership" }];
       }
@@ -86,6 +88,7 @@ function createDatabase(
       transaction: vi.fn(async (operation) => operation(tx)),
     } as unknown as Database,
     insertedValues,
+    locks,
     updatedValues,
   };
 }
@@ -152,6 +155,7 @@ describe("Guest access link management", () => {
       link: { expiresAt, disabledAt: now },
     });
     expect(fixture.updatedValues[0]).not.toHaveProperty("expiresAt");
+    expect(fixture.locks).toEqual(["share", "update"]);
   });
 
   it("updates expiration independently", async () => {
@@ -183,6 +187,7 @@ describe("Guest access link management", () => {
       tokenHash: expect.any(String),
       updatedAt: expect.any(Date),
     });
+    expect(fixture.locks).toEqual(["share", "update"]);
   });
 
   it("requires an active owner before writing", async () => {
