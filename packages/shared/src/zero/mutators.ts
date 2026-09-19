@@ -179,6 +179,7 @@ const addRecipeIngredient = defineHomeHubMutator(
       zql.recipeIngredients
         .where("householdId", args.householdId)
         .where("recipeId", args.recipeId)
+        .where("deletedAt", "IS", null)
         .orderBy("sortKey", "asc")
         .orderBy("id", "asc")
         .one(),
@@ -192,6 +193,7 @@ const addRecipeIngredient = defineHomeHubMutator(
       amount: null,
       note: null,
       sortKey: appendSortKey(bottom?.sortKey),
+      deletedAt: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -213,6 +215,7 @@ const updateRecipeIngredient = defineHomeHubMutator(
         .where("id", args.ingredientId)
         .where("householdId", args.householdId)
         .where("recipeId", args.recipeId)
+        .where("deletedAt", "IS", null)
         .whereExists("recipe", (recipe) =>
           recipe.where("deletedAt", "IS", null),
         )
@@ -252,6 +255,7 @@ const renameRecipeIngredient = defineHomeHubMutator(
         .where("id", args.ingredientId)
         .where("householdId", args.householdId)
         .where("recipeId", args.recipeId)
+        .where("deletedAt", "IS", null)
         .whereExists("recipe", (recipe) =>
           recipe.where("deletedAt", "IS", null),
         )
@@ -299,6 +303,7 @@ const addRecipeCookLog = defineHomeHubMutator(
       recipeId: args.recipeId,
       comment: args.comment,
       cookedAt: args.cookedAt,
+      deletedAt: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -320,6 +325,7 @@ const updateRecipeCookLog = defineHomeHubMutator(
         .where("id", args.cookLogId)
         .where("householdId", args.householdId)
         .where("recipeId", args.recipeId)
+        .where("deletedAt", "IS", null)
         .whereExists("recipe", (recipe) =>
           recipe.where("deletedAt", "IS", null),
         )
@@ -351,6 +357,7 @@ const deleteRecipeIngredient = defineHomeHubMutator(
         .where("id", args.ingredientId)
         .where("householdId", args.householdId)
         .where("recipeId", args.recipeId)
+        .where("deletedAt", "IS", null)
         .whereExists("recipe", (recipe) =>
           recipe.where("deletedAt", "IS", null),
         )
@@ -358,7 +365,12 @@ const deleteRecipeIngredient = defineHomeHubMutator(
     );
     if (!ingredient) throw new Error("Recipe ingredient deletion not allowed");
 
-    await tx.mutate.recipeIngredients.delete({ id: args.ingredientId });
+    const deletedAt = Date.now();
+    await tx.mutate.recipeIngredients.update({
+      id: args.ingredientId,
+      deletedAt,
+      updatedAt: deletedAt,
+    });
   },
 );
 
@@ -376,6 +388,7 @@ const reorderRecipeIngredients = defineHomeHubMutator(
       zql.recipeIngredients
         .where("householdId", args.householdId)
         .where("recipeId", args.recipeId)
+        .where("deletedAt", "IS", null)
         .whereExists("recipe", (recipe) =>
           recipe.where("deletedAt", "IS", null),
         ),
@@ -410,6 +423,7 @@ const deleteRecipeCookLog = defineHomeHubMutator(
         .where("id", args.cookLogId)
         .where("householdId", args.householdId)
         .where("recipeId", args.recipeId)
+        .where("deletedAt", "IS", null)
         .whereExists("recipe", (recipe) =>
           recipe.where("deletedAt", "IS", null),
         )
@@ -417,16 +431,12 @@ const deleteRecipeCookLog = defineHomeHubMutator(
     );
     if (!cookLog) throw new Error("Recipe cooking log deletion not allowed");
 
-    const images = await tx.run(
-      zql.recipeImages
-        .where("householdId", args.householdId)
-        .where("recipeId", args.recipeId)
-        .where("cookLogId", args.cookLogId),
-    );
-    for (const image of images) {
-      await tx.mutate.recipeImages.update({ id: image.id, cookLogId: null });
-    }
-    await tx.mutate.recipeCookLogs.delete({ id: args.cookLogId });
+    const deletedAt = Date.now();
+    await tx.mutate.recipeCookLogs.update({
+      id: args.cookLogId,
+      deletedAt,
+      updatedAt: deletedAt,
+    });
   },
 );
 
@@ -444,6 +454,7 @@ const reorderRecipeImages = defineHomeHubMutator(
       zql.recipeImages
         .where("householdId", args.householdId)
         .where("recipeId", args.recipeId)
+        .where("deletedAt", "IS", null)
         .whereExists("recipe", (recipe) =>
           recipe.where("deletedAt", "IS", null),
         ),

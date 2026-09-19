@@ -29,7 +29,6 @@ import { createRecipeImageReadUrlService } from "./recipes/images/create-read-ur
 import { createRecipeImageReadUrlsService } from "./recipes/images/create-read-urls";
 import { createRecipeImageUploadService } from "./recipes/images/create-upload";
 import { createDeleteRecipeImageService } from "./recipes/images/delete";
-import { deleteR2Objects } from "./recipes/images/delete-object";
 import { inspectR2Object } from "./recipes/images/inspect-object";
 import { processRecipeImageDerivatives } from "./recipes/images/process-derivatives";
 import { createR2Client } from "./recipes/images/r2-client";
@@ -152,12 +151,6 @@ const recipeImages = {
   }),
   deleteRecipeImage: createDeleteRecipeImageService({
     db: infrastructure.db,
-    deleteObjects: ({ objectKeys }) =>
-      deleteR2Objects({
-        client: infrastructure.r2Client,
-        bucket: infrastructure.config.R2_BUCKET,
-        objectKeys,
-      }),
   }),
 };
 
