@@ -211,6 +211,13 @@
       "when": 1789777241333,
       "tag": "0029_fantastic_demogoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1789819409776,
+      "tag": "0030_aspiring_doctor_faustus",
+      "breakpoints": true
     }
   ]
 }

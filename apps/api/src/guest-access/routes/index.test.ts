@@ -1,125 +1,60 @@
+import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
+import type { RequestAccessEnv } from "../../authorization/request-access";
 import { createGuestAccessRoutes } from ".";
 
-const sessionToken = "s".repeat(43);
-const session = {
-  accessToken: "guest.jwt.token",
-  access: "write" as const,
-  cacheIdentity: "guest-session:8d46a4c4-4845-4a6d-a937-139633ae1bb9",
-  enabledModules: ["recipes" as const],
-  household: {
-    id: "d92e5c4e-1c68-4942-9cc9-710207661bca",
-    name: "Coliving",
-  },
-  sessionToken,
-};
+const linkId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+const expiresAt = new Date("2026-12-18T12:00:00.000Z");
 
-function createRoutes(overrides: Record<string, unknown> = {}) {
-  return createGuestAccessRoutes({
-    isProduction: true,
-    redeemGuestAccess: async () => ({ kind: "invalid_token" }),
-    refreshGuestAccess: async () => ({ kind: "invalid_token" }),
-    logoutGuestAccess: async () => undefined,
-    ...overrides,
+function createApp(
+  getGuestAccessContext: Parameters<
+    typeof createGuestAccessRoutes
+  >[0]["getGuestAccessContext"],
+) {
+  const app = new Hono<RequestAccessEnv>();
+  app.use("/*", async (c, next) => {
+    c.set("requestAccess", {
+      actor: { kind: "guest", guestAccessLinkId: linkId },
+      householdScope: { householdId, permission: "write" },
+    });
+    await next();
   });
+  app.route("/", createGuestAccessRoutes({ getGuestAccessContext }));
+  return app;
 }
 
-describe("Guest access session routes", () => {
-  it("redeems a QR token into a host-scoped HTTP-only session", async () => {
-    const redeemGuestAccess = vi.fn(async () => ({
+describe("Guest access context route", () => {
+  it("returns only non-secret shell metadata", async () => {
+    const getGuestAccessContext = vi.fn(async () => ({
       kind: "success" as const,
-      session,
+      context: {
+        guestAccessLinkId: linkId,
+        access: "write" as const,
+        cacheIdentity: `guest-link:${linkId}`,
+        expiresAt,
+        enabledModules: ["recipes" as const],
+        household: { id: householdId, name: "Coliving" },
+      },
     }));
-    const app = createRoutes({ redeemGuestAccess });
-
-    const response = await app.request("/redeem", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: "q".repeat(43) }),
-    });
+    const response = await createApp(getGuestAccessContext).request("/context");
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({
-      accessToken: session.accessToken,
+    expect(await response.json()).toEqual({
+      guestAccessLinkId: linkId,
       access: "write",
-      cacheIdentity: session.cacheIdentity,
-      enabledModules: session.enabledModules,
-      household: session.household,
+      cacheIdentity: `guest-link:${linkId}`,
+      expiresAt: expiresAt.toISOString(),
+      enabledModules: ["recipes"],
+      household: { id: householdId, name: "Coliving" },
     });
-    expect(response.headers.get("set-cookie")).toContain(
-      `home_hub_guest=${sessionToken}`,
-    );
-    expect(response.headers.get("set-cookie")).toContain("HttpOnly");
-    expect(response.headers.get("set-cookie")).toContain("Secure");
-    expect(response.headers.get("set-cookie")).toContain("SameSite=Lax");
   });
 
-  it("refreshes from the inaccessible cookie instead of the QR secret", async () => {
-    const refreshGuestAccess = vi.fn(async () => ({
-      kind: "success" as const,
-      session,
-    }));
-    const app = createRoutes({ refreshGuestAccess });
-
-    const response = await app.request("/refresh", {
-      method: "POST",
-      headers: { Cookie: `home_hub_guest=${sessionToken}` },
-    });
-
-    expect(response.status).toBe(200);
-    expect(refreshGuestAccess).toHaveBeenCalledWith(sessionToken);
-  });
-
-  it("clears invalid sessions without disclosing why access failed", async () => {
-    const app = createRoutes();
-
-    const response = await app.request("/refresh", {
-      method: "POST",
-      headers: { Cookie: `home_hub_guest=${sessionToken}` },
-    });
-
+  it("uses a generic unavailable response", async () => {
+    const response = await createApp(async () => ({
+      kind: "unavailable",
+    })).request("/context");
     expect(response.status).toBe(401);
-    await expect(response.json()).resolves.toEqual({
-      error: "Guest access is unavailable",
-    });
-    expect(response.headers.get("set-cookie")).toContain("home_hub_guest=;");
-  });
-
-  it("revokes and clears the current device session on logout", async () => {
-    const logoutGuestAccess = vi.fn(async () => undefined);
-    const app = createRoutes({ logoutGuestAccess });
-
-    const response = await app.request("/logout", {
-      method: "POST",
-      headers: { Cookie: `home_hub_guest=${sessionToken}` },
-    });
-
-    expect(response.status).toBe(204);
-    expect(logoutGuestAccess).toHaveBeenCalledWith(sessionToken);
-    expect(response.headers.get("set-cookie")).toContain("home_hub_guest=;");
-  });
-
-  it("rate-limits repeated redemption attempts without disclosing token state", async () => {
-    const redeemGuestAccess = vi.fn(async () => ({
-      kind: "invalid_token" as const,
-    }));
-    const app = createRoutes({ redeemGuestAccess });
-    let response: Response | undefined;
-    for (let attempt = 0; attempt < 21; attempt += 1) {
-      response = await app.request("/redeem", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Forwarded-For": "192.0.2.42",
-        },
-        body: JSON.stringify({ token: "q".repeat(43) }),
-      });
-    }
-
-    expect(response?.status).toBe(429);
-    await expect(response?.json()).resolves.toEqual({
-      error: "Guest access is unavailable",
-    });
-    expect(redeemGuestAccess).toHaveBeenCalledTimes(20);
+    expect(await response.json()).toEqual({ error: "Unauthorized" });
   });
 });

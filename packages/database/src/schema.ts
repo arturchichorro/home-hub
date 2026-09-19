@@ -198,32 +198,9 @@ export const householdGuestAccessLinks = pgTable(
   ],
 );
 
-export const householdGuestSessions = pgTable(
-  "household_guest_sessions",
-  {
-    id: uuid("id").primaryKey(),
-    guestAccessLinkId: uuid("guest_access_link_id")
-      .notNull()
-      .references(() => householdGuestAccessLinks.id),
-    tokenHash: text("token_hash").notNull().unique(),
-    revokedAt: timestamp("revoked_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    index("household_guest_sessions_guest_access_link_id_idx").on(
-      table.guestAccessLinkId,
-    ),
-  ],
-);
-
 export const householdGuestAccessLinksRelations = relations(
   householdGuestAccessLinks,
-  ({ many, one }) => ({
+  ({ one }) => ({
     household: one(households, {
       fields: [householdGuestAccessLinks.householdId],
       references: [households.id],
@@ -231,17 +208,6 @@ export const householdGuestAccessLinksRelations = relations(
     creator: one(users, {
       fields: [householdGuestAccessLinks.createdByUserId],
       references: [users.id],
-    }),
-    sessions: many(householdGuestSessions),
-  }),
-);
-
-export const householdGuestSessionsRelations = relations(
-  householdGuestSessions,
-  ({ one }) => ({
-    accessLink: one(householdGuestAccessLinks, {
-      fields: [householdGuestSessions.guestAccessLinkId],
-      references: [householdGuestAccessLinks.id],
     }),
   }),
 );

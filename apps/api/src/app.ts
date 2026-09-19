@@ -29,7 +29,7 @@ type RecipeImageServices = CreateRecipeRoutesInput;
 
 export type CreateAppInput = {
   auth: AuthServices;
-  guestAccess: Omit<CreateGuestAccessRoutesInput, "isProduction">;
+  guestAccess: CreateGuestAccessRoutesInput;
   households: HouseholdServices;
   recipeImages: RecipeImageServices;
   infrastructure: {
@@ -72,10 +72,8 @@ export function createApp(input: CreateAppInput) {
     "/api/auth",
     createAuthRoutes({ ...input.auth, isProduction, jwtSecret }),
   );
-  app.route(
-    "/api/guest",
-    createGuestAccessRoutes({ ...input.guestAccess, isProduction }),
-  );
+  app.use("/api/guest/*", authenticateRequest);
+  app.route("/api/guest", createGuestAccessRoutes(input.guestAccess));
   app.route(
     "/api/households",
     createHouseholdRoutes({ ...input.households, jwtSecret }),

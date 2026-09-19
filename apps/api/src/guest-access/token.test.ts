@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  generateGuestAccessToken,
-  hashGuestLinkToken,
-  hashGuestSessionToken,
-} from "./token";
+import { generateGuestAccessToken, hashGuestLinkToken } from "./token";
 
 describe("Guest access tokens", () => {
   it("generates independent 32-byte base64url credentials", () => {
@@ -22,6 +18,5 @@ describe("Guest access tokens", () => {
     expect(hash).toMatch(/^[a-f0-9]{64}$/);
     expect(hash).not.toContain(token);
     expect(hashGuestLinkToken(token)).toBe(hash);
-    expect(hashGuestSessionToken(token)).not.toBe(hash);
   });
 });

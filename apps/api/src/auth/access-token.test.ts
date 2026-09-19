@@ -1,11 +1,7 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
-import {
-  signAccessToken,
-  signGuestAccessToken,
-  verifyAccessToken,
-} from "./access-token";
+import { signAccessToken, verifyAccessToken } from "./access-token";
 
 const secret = "super-secret";
 const now = new Date("2026-01-01T00:00:00Z");
@@ -38,6 +34,7 @@ function validPayload(overrides: Record<string, unknown> = {}) {
     iat: issuedAt,
     exp: issuedAt + 600,
     jti: "jwt-123",
+    subjectType: "account",
     ...overrides,
   };
 }
@@ -88,22 +85,6 @@ describe("signAccessToken", () => {
     });
 
     expect(claims.exp - claims.iat).toBe(120);
-  });
-});
-
-describe("signGuestAccessToken", () => {
-  it("marks the token subject as a guest session", () => {
-    const token = signGuestAccessToken({
-      guestSessionId: "guest-session-123",
-      jwtId: "jwt-123",
-      secret,
-      now,
-    });
-
-    expect(verifyAccessToken({ token, secret, now })).toMatchObject({
-      sub: "guest-session-123",
-      subjectType: "guest-session",
-    });
   });
 });
 
@@ -208,6 +189,16 @@ describe("verifyAccessToken", () => {
     const token = signJwtParts({
       header: { typ: "JWT", alg: "HS256" },
       payload: validPayload({ sub: undefined }),
+      secret,
+    });
+
+    expect(() => verifyAccessToken({ token, secret, now })).toThrow();
+  });
+
+  it("rejects the retired Guest-session subject type", () => {
+    const token = signJwtParts({
+      header: { typ: "JWT", alg: "HS256" },
+      payload: validPayload({ subjectType: "guest-session" }),
       secret,
     });
 

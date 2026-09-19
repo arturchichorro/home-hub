@@ -22,9 +22,7 @@ const defaultInput: CreateAppInput = {
     getMe: async () => ({ kind: "not_found" }),
   },
   guestAccess: {
-    logoutGuestAccess: async () => undefined,
-    redeemGuestAccess: async () => ({ kind: "invalid_token" }),
-    refreshGuestAccess: async () => ({ kind: "invalid_token" }),
+    getGuestAccessContext: async () => ({ kind: "unavailable" }),
   },
   households: {
     acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),

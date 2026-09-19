@@ -1,7 +1,7 @@
 import type { Database } from "@home-hub/database";
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
-import { signAccessToken, signGuestAccessToken } from "../auth/access-token";
+import { signAccessToken } from "../auth/access-token";
 import {
   createRequestAccessAuth,
   type RequestAccessEnv,
@@ -76,15 +76,15 @@ describe("request access authentication", () => {
     });
   });
 
-  it("does not accept legacy Guest JWTs as Bearer credentials", async () => {
-    const token = signGuestAccessToken({
-      guestSessionId: guestAccessLinkId,
+  it("does not accept an account JWT under the Guest scheme", async () => {
+    const token = signAccessToken({
+      userId: accountId,
       jwtId: "49ef297e-ed36-44b0-913f-0ef66e81887d",
       secret: jwtSecret,
     });
     const response = await createApp(createDatabase(false).db).request(
       "/scope",
-      { headers: { Authorization: `Bearer ${token}` } },
+      { headers: { Authorization: `Guest ${token}` } },
     );
 
     expect(response.status).toBe(401);

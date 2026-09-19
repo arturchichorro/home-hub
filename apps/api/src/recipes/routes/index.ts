@@ -1,8 +1,6 @@
 import { Hono } from "hono";
-import { createMiddleware } from "hono/factory";
 
 import type { RequestAccessEnv } from "../../authorization/request-access";
-import { FixedWindowRateLimiter } from "../../rate-limit";
 import {
   type ConfirmRecipeImageUploadRouteInput,
   confirmRecipeImageUploadRoute,
@@ -32,23 +30,8 @@ export type CreateRecipeRoutesInput = ConfirmRecipeImageUploadRouteInput &
 
 export function createRecipeRoutes(input: CreateRecipeRoutesInput) {
   const recipeRoutes = new Hono<RequestAccessEnv>();
-  const uploadLimiter = new FixedWindowRateLimiter(60, 60_000);
-  const limitUploads = createMiddleware<RequestAccessEnv>(async (c, next) => {
-    const requestAccess = c.get("requestAccess");
-    const key =
-      requestAccess.actor.kind === "account"
-        ? `account:${requestAccess.actor.accountId}`
-        : `guest:${requestAccess.actor.guestAccessLinkId}`;
-    if (!uploadLimiter.allow(key)) {
-      c.header("Retry-After", "60");
-      return c.json({ error: "Too many requests" }, 429);
-    }
-    await next();
-  });
-
   recipeRoutes.post(
     "/:recipeId/images/uploads",
-    limitUploads,
     createRecipeImageUploadRoute(input),
   );
 

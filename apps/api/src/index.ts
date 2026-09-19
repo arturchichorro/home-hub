@@ -9,17 +9,13 @@ import { createMeService } from "./auth/me";
 import { createRefreshService } from "./auth/refresh";
 import { createSignupService } from "./auth/signup";
 import { config } from "./config";
+import { createGuestAccessContextService } from "./guest-access/context";
 import {
   createGuestAccessLinkService,
   createListGuestAccessLinksService,
   createRegenerateGuestAccessLinkService,
   createUpdateGuestAccessLinkService,
 } from "./guest-access/manage";
-import {
-  createLogoutGuestAccessService,
-  createRedeemGuestAccessService,
-  createRefreshGuestAccessService,
-} from "./guest-access/session";
 import { createAcceptHouseholdInviteService } from "./households/accept-invite";
 import { createHouseholdService } from "./households/create";
 import { createHouseholdInviteService } from "./households/create-invite";
@@ -121,14 +117,8 @@ const households = {
 };
 
 const guestAccess = {
-  logoutGuestAccess: createLogoutGuestAccessService({ db: infrastructure.db }),
-  redeemGuestAccess: createRedeemGuestAccessService({
+  getGuestAccessContext: createGuestAccessContextService({
     db: infrastructure.db,
-    jwtSecret: infrastructure.config.API_JWT_SECRET,
-  }),
-  refreshGuestAccess: createRefreshGuestAccessService({
-    db: infrastructure.db,
-    jwtSecret: infrastructure.config.API_JWT_SECRET,
   }),
 };
 

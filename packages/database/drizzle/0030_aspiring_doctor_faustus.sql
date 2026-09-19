@@ -1,0 +1,1 @@
+DROP TABLE "household_guest_sessions" CASCADE;
