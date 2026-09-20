@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { signAccessToken } from "../../auth/access-token";
 import type { RenameHouseholdInput, RenameHouseholdResult } from "../rename";
-import { createHouseholdRoutes } from "./index";
+import { createHouseholdRoutes } from "./test-app";
 
 const jwtSecret = "test-jwt-secret";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";

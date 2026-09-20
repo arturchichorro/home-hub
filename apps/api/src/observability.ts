@@ -21,11 +21,7 @@ export const consoleStructuredLogger: StructuredLogger = {
   },
 };
 
-export type ObservabilityEnv = {
-  Variables: {
-    requestStartedAt: number;
-  };
-};
+export type ObservabilityEnv = import("./auth/bearer-auth").AuthEnv;
 
 function loggedRoute(c: Parameters<typeof routePath>[0]): string {
   const path = routePath(c, -1);

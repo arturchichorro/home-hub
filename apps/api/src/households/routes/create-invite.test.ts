@@ -5,7 +5,7 @@ import type {
   CreateHouseholdInviteInput,
   CreateHouseholdInviteResult,
 } from "../create-invite";
-import { createHouseholdRoutes } from "./index";
+import { createHouseholdRoutes } from "./test-app";
 
 const jwtSecret = "test-jwt-secret";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";

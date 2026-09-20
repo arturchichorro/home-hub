@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import * as z from "zod";
-import { type AuthEnv, createBearerAuth } from "../auth/bearer-auth";
+import { type AuthEnv, requireAccount } from "../auth/bearer-auth";
 import type { GuestLinkService } from "./service";
 
 const creation = z.strictObject({
@@ -13,13 +13,11 @@ const creation = z.strictObject({
 });
 export function createGuestLinkRoutes({
   service,
-  jwtSecret,
 }: {
   service: GuestLinkService;
-  jwtSecret: string;
 }) {
   const routes = new Hono<AuthEnv>();
-  routes.use("*", createBearerAuth(jwtSecret));
+  routes.use("*", requireAccount);
   routes.use("*", async (c, next) => {
     c.header("Cache-Control", "no-store");
     if (!z.uuid().safeParse(c.req.param("householdId")).success)

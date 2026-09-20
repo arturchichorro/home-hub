@@ -29,6 +29,7 @@ function createTestApp(createRecipeImageUpload: CreateUpload) {
   const app = new Hono<AuthEnv>();
   app.use("*", async (c, next) => {
     c.set("userId", userId);
+    c.set("principal", { userId });
     await next();
   });
   app.post(
@@ -100,7 +101,7 @@ describe("create recipe image upload route", () => {
       },
     });
     expect(createRecipeImageUpload).toHaveBeenCalledWith({
-      userId,
+      principal: { userId },
       householdId,
       recipeId,
       ...body,

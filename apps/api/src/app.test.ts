@@ -41,6 +41,7 @@ const defaultInput: CreateAppInput = {
     removeHouseholdMember: async () => ({ kind: "forbidden" }),
   },
   recipeImages: {
+    uploadRecipeImageContent: async () => ({ kind: "forbidden" }),
     confirmRecipeImageUpload: async () => ({ kind: "forbidden" }),
     createRecipeImageReadUrl: async () => ({ kind: "forbidden" }),
     createRecipeImageReadUrls: async () => ({ kind: "forbidden" }),
@@ -50,6 +51,7 @@ const defaultInput: CreateAppInput = {
   infrastructure: {
     zeroDbProvider: dbProvider,
     jwtSecret,
+    validateGuest: async () => undefined,
     isProduction: false,
     logger: silentLogger,
     readinessCheck: async () => undefined,
@@ -270,4 +272,108 @@ describe("app", () => {
 
     expect(response.status).toBe(404);
   });
+});
+
+describe("unified Guest Bearer boundary", () => {
+  const credential = `hhg_v1_${"A".repeat(43)}`;
+  const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+  const guest = {
+    id: "671874b1-df9d-4a91-8f3c-8055473e8aa2",
+    householdId,
+    access: "read" as const,
+    expiresAt: new Date(Date.now() + 10000),
+  };
+  it("uses the exact same credential for ordinary APIs and Zero", async () => {
+    const validateGuest = vi.fn(async (_credential: string) => guest);
+    const app = createTestApp({ infrastructure: { validateGuest } });
+    const headers = {
+      Authorization: `Bearer ${credential}`,
+      "Content-Type": "application/json",
+    };
+    const response = await app.request("/api/access", { headers });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toEqual({
+      guest: { ...guest, expiresAt: guest.expiresAt.getTime() },
+    });
+    const zero = await app.request("/api/zero/query", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(["transform", []]),
+    });
+    expect(zero.status).toBe(200);
+    expect(await zero.json()).toMatchObject({
+      userID: `guest-link:${guest.id}`,
+    });
+    expect(validateGuest.mock.calls).toEqual([[credential], [credential]]);
+  });
+  it.each([
+    "/api/auth/me",
+    "/api/households",
+    `/api/households/${householdId}/members`,
+    `/api/households/${householdId}/guest-access-links`,
+  ])("rejects Guest administration at %s", async (path) => {
+    const app = createTestApp({
+      infrastructure: { validateGuest: async () => guest },
+    });
+    expect(
+      (
+        await app.request(path, {
+          headers: { Authorization: `Bearer ${credential}` },
+        })
+      ).status,
+    ).toBe(403);
+  });
+  it("returns the same generic unauthorized response when a link stops validating", async () => {
+    const app = createTestApp();
+    for (const path of ["/api/access", "/api/zero/query"]) {
+      const response = await app.request(path, {
+        method: path.includes("zero") ? "POST" : "GET",
+        headers: { Authorization: `Bearer ${credential}` },
+      });
+      expect(response.status).toBe(401);
+      expect(await response.json()).toEqual({ error: "Unauthorized" });
+    }
+  });
+});
+
+it("returns an authenticated content endpoint rather than a reusable Guest image capability", async () => {
+  const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+  const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+  const recipeId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+  const app = createTestApp({
+    infrastructure: {
+      validateGuest: async () => ({
+        id: imageId,
+        householdId,
+        access: "read",
+        expiresAt: new Date(Date.now() + 10000),
+      }),
+    },
+    recipeImages: {
+      createRecipeImageReadUrl: async () => ({
+        kind: "success",
+        url: "https://images.example/secret-capability",
+        expiresInSeconds: 300,
+      }),
+    },
+  });
+  const response = await app.request(
+    `/api/households/${householdId}/recipes/${recipeId}/images/${imageId}/read-url`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer hhg_v1_${"A".repeat(43)}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ variant: "thumbnail" }),
+    },
+  );
+  expect(response.status).toBe(200);
+  const body = (await response.json()) as { read: { url: string } };
+  expect(body.read.url).toContain(
+    `/images/${imageId}/content?variant=thumbnail`,
+  );
+  expect(body.read.url).not.toContain("secret-capability");
+  expect((await app.request(body.read.url)).status).toBe(401);
 });

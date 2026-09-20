@@ -1,12 +1,13 @@
 import type { LoginRequest, SignupRequest } from "@home-hub/shared/auth";
+import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
-
 import { signAccessToken } from "../access-token";
+import { type AuthEnv, createBearerAuth } from "../bearer-auth";
 import type { LoginResult } from "../login";
 import type { MeResult } from "../me";
 import type { RefreshResult } from "../refresh";
 import type { SignupResult } from "../signup";
-import { createAuthRoutes } from "./index";
+import { createAuthRoutes as createFeatureRoutes } from "./index";
 
 const validSignupRequest = {
   username: "  Artur   Chichorro  ",
@@ -430,3 +431,11 @@ describe("auth routes", () => {
     expect(response.headers.get("www-authenticate")).toBe("Bearer");
   });
 });
+
+function createAuthRoutes(
+  input: Parameters<typeof createFeatureRoutes>[0] & { jwtSecret: string },
+) {
+  const app = new Hono<AuthEnv>();
+  app.use("/me", createBearerAuth(input.jwtSecret));
+  return app.route("/", createFeatureRoutes(input));
+}

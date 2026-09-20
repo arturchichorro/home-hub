@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 import { signAccessToken } from "../auth/access-token";
-import { createGuestLinkRoutes } from "./routes";
+import { type AuthEnv, createBearerAuth } from "../auth/bearer-auth";
+import { createGuestLinkRoutes as createFeatureRoutes } from "./routes";
 import type { GuestLinkService } from "./service";
 
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
@@ -90,3 +91,11 @@ describe("owner Guest link API", () => {
     ).toBe(404);
   });
 });
+
+function createGuestLinkRoutes(
+  input: Parameters<typeof createFeatureRoutes>[0] & { jwtSecret: string },
+) {
+  const app = new Hono<AuthEnv>();
+  app.use("*", createBearerAuth(input.jwtSecret));
+  return app.route("/", createFeatureRoutes(input));
+}

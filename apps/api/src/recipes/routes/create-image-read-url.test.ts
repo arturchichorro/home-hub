@@ -21,6 +21,7 @@ function createTestApp(createRecipeImageReadUrl: CreateReadUrl) {
   const app = new Hono<AuthEnv>();
   app.use("*", async (c, next) => {
     c.set("userId", userId);
+    c.set("principal", { userId });
     await next();
   });
   app.post(
@@ -84,7 +85,7 @@ describe("create recipe image read URL route", () => {
       read: { url: "https://signed-read.example", expiresInSeconds: 300 },
     });
     expect(createRecipeImageReadUrl).toHaveBeenCalledWith({
-      userId,
+      principal: { userId },
       householdId,
       recipeId,
       imageId,

@@ -2,6 +2,7 @@ import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
+  households,
   recipeImages,
   recipes,
 } from "@home-hub/database/schema";
@@ -29,7 +30,7 @@ const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 const objectKey = `households/${householdId}/recipes/${recipeId}/${imageId}`;
 
-const input = { userId, householdId, recipeId, imageId };
+const input = { principal: { userId }, householdId, recipeId, imageId };
 
 const pendingImage = {
   id: imageId,
@@ -63,6 +64,7 @@ function createFakeDatabase({
   ) {
     selectResults.push(
       memberships[index] ? { id: "membership-id" } : undefined,
+      { id: householdId },
       modules[index] ? { householdId } : undefined,
       images[index] ?? undefined,
     );
@@ -158,14 +160,18 @@ describe("confirm recipe image upload service", () => {
       "share",
       "share",
       "share",
+      "share",
+      "share",
       "update",
     ]);
     expect(tables).toEqual([
       householdMembers,
+      households,
       householdModuleSettings,
       recipeImages,
       recipes,
       householdMembers,
+      households,
       householdModuleSettings,
       recipeImages,
       recipes,

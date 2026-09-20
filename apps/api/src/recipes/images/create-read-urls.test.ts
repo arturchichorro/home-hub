@@ -11,6 +11,7 @@ const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 function createFakeDatabase({ user = true }: { user?: boolean } = {}) {
   const results = [
     [{ id: "membership-id" }],
+    [{ id: householdId }],
     [{ householdId }],
     [{ id: imageId, recipeId }],
   ];
@@ -50,7 +51,7 @@ describe("create recipe image read URLs service", () => {
 
     await expect(
       createRecipeImageReadUrlsService({ db, signRead })({
-        userId,
+        principal: { userId },
         householdId,
         requests: [
           { imageId, recipeId, variant: "thumbnail" },
@@ -80,7 +81,7 @@ describe("create recipe image read URLs service", () => {
 
     await expect(
       createRecipeImageReadUrlsService({ db, signRead })({
-        userId,
+        principal: { userId },
         householdId,
         requests: [{ imageId, recipeId, variant: "thumbnail" }],
       }),

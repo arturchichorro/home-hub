@@ -2,6 +2,7 @@ import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
+  households,
   recipeCookLogs,
   recipeImages,
   recipes,
@@ -18,7 +19,7 @@ const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const cookLogId = "5944cb0d-931a-4723-b981-77eacb122314";
 
 const input = {
-  userId,
+  principal: { userId },
   householdId,
   recipeId,
   cookLogId: null,
@@ -71,17 +72,19 @@ function createFakeDatabase({
             ? membershipExists
               ? { id: "membership-id" }
               : undefined
-            : selectedTable === householdModuleSettings
-              ? moduleEnabled
-                ? { householdId }
-                : undefined
-              : selectedTable === recipes
-                ? recipeExists
-                  ? { id: recipeId }
+            : selectedTable === households
+              ? { id: householdId }
+              : selectedTable === householdModuleSettings
+                ? moduleEnabled
+                  ? { householdId }
                   : undefined
-                : selectedTable === recipeCookLogs && cookLogExists
-                  ? { id: cookLogId }
-                  : undefined;
+                : selectedTable === recipes
+                  ? recipeExists
+                    ? { id: recipeId }
+                    : undefined
+                  : selectedTable === recipeCookLogs && cookLogExists
+                    ? { id: cookLogId }
+                    : undefined;
         return result ? [result] : [];
       },
     };
@@ -147,12 +150,13 @@ describe("create recipe image upload service", () => {
 
     expect(tables).toEqual([
       householdMembers,
+      households,
       householdModuleSettings,
       recipes,
       recipeImages,
       recipeImages,
     ]);
-    expect(lockStrengths).toEqual(["share", "share", "share"]);
+    expect(lockStrengths).toEqual(["share", "share", "share", "share"]);
     expect(insertedValues).toEqual([
       {
         id: result.imageId,
@@ -186,13 +190,20 @@ describe("create recipe image upload service", () => {
 
     expect(tables).toEqual([
       householdMembers,
+      households,
       householdModuleSettings,
       recipes,
       recipeCookLogs,
       recipeImages,
       recipeImages,
     ]);
-    expect(lockStrengths).toEqual(["share", "share", "share", "share"]);
+    expect(lockStrengths).toEqual([
+      "share",
+      "share",
+      "share",
+      "share",
+      "share",
+    ]);
   });
 
   it("appends a pending image after the current bottom image", async () => {

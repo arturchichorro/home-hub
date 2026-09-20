@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
-
 import { signAccessToken } from "../../auth/access-token";
+import { type AuthEnv, createBearerAuth } from "../../auth/bearer-auth";
 import type {
   ConfirmRecipeImageUploadInput,
   ConfirmRecipeImageUploadResult,
@@ -22,7 +22,7 @@ import type {
   DeleteRecipeImageInput,
   DeleteRecipeImageResult,
 } from "../images/delete";
-import { createRecipeRoutes } from "./index";
+import { createRecipeRoutes as createFeatureRoutes } from "./index";
 
 const jwtSecret = "test-jwt-secret";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
@@ -133,7 +133,7 @@ describe("recipe routes", () => {
 
     expect(response.status).toBe(201);
     expect(createRecipeImageUpload).toHaveBeenCalledWith({
-      userId,
+      principal: { userId },
       householdId,
       recipeId,
       ...body,
@@ -164,7 +164,7 @@ describe("recipe routes", () => {
 
     expect(response.status).toBe(200);
     expect(confirmRecipeImageUpload).toHaveBeenCalledWith({
-      userId,
+      principal: { userId },
       householdId,
       recipeId,
       imageId,
@@ -200,7 +200,7 @@ describe("recipe routes", () => {
 
     expect(response.status).toBe(200);
     expect(createRecipeImageReadUrl).toHaveBeenCalledWith({
-      userId,
+      principal: { userId },
       householdId,
       recipeId,
       imageId,
@@ -248,7 +248,7 @@ describe("recipe routes", () => {
 
     expect(response.status).toBe(200);
     expect(createRecipeImageReadUrls).toHaveBeenCalledWith({
-      userId,
+      principal: { userId },
       householdId,
       requests: [{ imageId, recipeId, variant: "thumbnail" }],
     });
@@ -276,10 +276,27 @@ describe("recipe routes", () => {
 
     expect(response.status).toBe(204);
     expect(deleteRecipeImage).toHaveBeenCalledWith({
-      userId,
+      principal: { userId },
       householdId,
       recipeId,
       imageId,
     });
   });
 });
+
+function createRecipeRoutes(
+  input: Omit<
+    Parameters<typeof createFeatureRoutes>[0],
+    "uploadRecipeImageContent"
+  > & { jwtSecret: string },
+) {
+  const app = new Hono<AuthEnv>();
+  app.use("*", createBearerAuth(input.jwtSecret));
+  return app.route(
+    "/",
+    createFeatureRoutes({
+      uploadRecipeImageContent: async () => ({ kind: "forbidden" }),
+      ...input,
+    }),
+  );
+}

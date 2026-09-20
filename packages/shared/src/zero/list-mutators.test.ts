@@ -106,6 +106,7 @@ function setup(location: "server" | "client" = "server") {
     },
   });
   const tx = {
+    dbTransaction: { query: async () => [{ id: "authorized" }] },
     location,
     mutate: { lists: crud("lists"), listItems: crud("listItems") },
     run: async (query: unknown) => {
