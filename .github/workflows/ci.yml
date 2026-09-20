@@ -141,6 +141,12 @@ jobs:
           VITE_ZERO_CACHE_URL: https://home.achichorro.com/zero
         run: pnpm --filter @home-hub/web build
 
+      - name: Validate both application hostnames in Caddy
+        run: >-
+          docker run --rm
+          -v "$PWD/apps/web/Caddyfile:/etc/caddy/Caddyfile:ro"
+          caddy:2.11.4-alpine caddy validate --config /etc/caddy/Caddyfile
+
       - name: Verify production image Worker bundle
         run: >-
           pnpm --filter @home-hub/image-delivery exec wrangler deploy

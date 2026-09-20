@@ -59,17 +59,19 @@ different household. Deleting a list cascades to its items.
 
 ## Synchronization and authorization
 
+Guests use these same routes and components. There is no separate Guest Lists
+interface; the shared mutation-control gate disables editing for read links.
+
 Named Zero queries `lists.byHousehold` and `lists.detail` check current household
-membership and enabled Lists settings. The detail query joins items using both
+membership or the server-validated Guest household, plus enabled Lists settings. The detail query joins items using both
 household ID and list ID. Publishing a table does not bypass these checks.
 
 The live `lists` mutators are create, rename, delete, reorder, addItem, renameItem,
-setItemStatus, and reorderItems. Each server execution checks membership and
-enabled-module access. Parent and child lookups are scoped to the requested
+setItemStatus, and reorderItems. Each server execution checks membership or an active write Guest link and
+enabled-module access in its transaction. Read-only Guests cannot mutate. Parent and child lookups are scoped to the requested
 household/list, and item reordering is scoped to status. PostgreSQL uniqueness
 and foreign keys remain the final constraints. Client changes are optimistic;
-the server supplies authoritative timestamps. List deletion explicitly deletes
-cached children as well as relying on the database cascade.
+the server supplies authoritative timestamps. List deletion is recoverable; deleted lists are filtered from normal queries.
 
 The application schema and Zero publication contain only the current domain
 tables. Migration `0017` removes the retired module's source tables, settings,
