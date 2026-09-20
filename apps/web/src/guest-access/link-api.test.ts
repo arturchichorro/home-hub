@@ -78,7 +78,7 @@ describe("owner Guest links", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     const credential = `hhg_v1_${"A".repeat(43)}`;
-    const url = guestLinkUrl(credential);
+    const url = guestLinkUrl(credential, "https://guest.achichorro.com");
     expect(new URL(url).hash).toBe(`#${credential}`);
     expect(new URL(url).pathname).toBe("/join");
     const dataUrl = await QRCode.toDataURL(url, {
@@ -89,4 +89,11 @@ describe("owner Guest links", () => {
     expect(dataUrl).toMatch(/^data:image\/png;base64,/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+});
+
+it("creates development links at the current origin", () => {
+  vi.stubGlobal("window", { location: { origin: "http://localhost:5173" } });
+  expect(guestLinkUrl("hhg_v1_example")).toBe(
+    "http://localhost:5173/join#hhg_v1_example",
+  );
 });

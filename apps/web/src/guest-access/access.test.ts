@@ -45,6 +45,8 @@ describe("Guest entry", () => {
   it.each([
     { guest: { ...guest, expiresAt: 0 } },
     { guest: { ...guest, access: "owner" } },
+    { guest: { ...guest, id: "------------------------------------" } },
+    { guest: { ...guest, householdId: 42 } },
     { userId: "account" },
     {},
   ])("does not open Guest mode for an invalid response", async (body) => {
@@ -67,4 +69,11 @@ describe("Guest entry", () => {
     vi.stubGlobal("fetch", async () => new Response(null, { status: 401 }));
     expect(await validateGuestCredential(credential)).toBeNull();
   });
+});
+
+it("preserves the link for retry when validation is temporarily unavailable", async () => {
+  vi.stubGlobal("fetch", async () => new Response(null, { status: 503 }));
+  await expect(validateGuestCredential(credential)).rejects.toThrow(
+    "Guest access is unavailable",
+  );
 });

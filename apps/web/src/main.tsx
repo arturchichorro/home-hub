@@ -61,6 +61,8 @@ async function start() {
     return;
   }
 
+  // Validate before opening Zero's persistent cache. Guest entry never restores
+  // an account session, even when this browser has a member's refresh cookie.
   if (
     window.location.hash.startsWith("#hhg_") ||
     window.location.pathname === "/join" ||

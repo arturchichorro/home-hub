@@ -14,6 +14,11 @@ export function CreatedLink({
   const [message, setMessage] = useState("");
   const url = guestLinkUrl(created.credential);
   useEffect(() => {
+    // Hide the surrounding application when printing; the card restores visibility.
+    document.body.classList.add("print:invisible");
+    return () => document.body.classList.remove("print:invisible");
+  }, []);
+  useEffect(() => {
     let active = true;
     setQr(undefined);
     void QRCode.toDataURL(url, {
@@ -48,10 +53,7 @@ export function CreatedLink({
         Save this link now. It cannot be displayed again after you leave this
         screen.
       </InlineAlert>
-      <div
-        id="guest-link-print"
-        className="grid justify-items-center gap-3 text-center"
-      >
+      <div className="grid justify-items-center gap-3 text-center print:visible print:absolute print:inset-0 print:bg-white print:p-8 print:text-black">
         <h4 className="text-lg font-semibold">{created.link.name}</h4>
         <p>
           {created.link.access === "read" ? "Read-only" : "Read and write"}{" "}
@@ -69,7 +71,7 @@ export function CreatedLink({
         ) : (
           <p>Preparing QR code…</p>
         )}
-        <p className="max-w-full select-all break-all text-sm text-muted">
+        <p className="max-w-full select-all break-all text-sm text-muted print:text-black">
           {url}
         </p>
       </div>

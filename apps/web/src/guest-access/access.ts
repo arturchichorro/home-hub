@@ -1,4 +1,7 @@
-import type { GuestAccess } from "@home-hub/shared/zero/context";
+import {
+  type GuestAccess,
+  guestAccessResponseSchema,
+} from "@home-hub/shared/zero/context";
 
 export type GuestEntry = { credential: string; guest: GuestAccess };
 export function credentialFromFragment(fragment: string) {
@@ -15,37 +18,11 @@ export async function validateGuestCredential(
     credentials: "omit",
     cache: "no-store",
   });
-  if (!response.ok) return null;
-  const result: unknown = await response.json();
-  if (!result || typeof result !== "object" || !("guest" in result))
-    return null;
-  const guest = result.guest;
-  if (
-    !guest ||
-    typeof guest !== "object" ||
-    !("id" in guest) ||
-    !("householdId" in guest) ||
-    !("access" in guest) ||
-    !("expiresAt" in guest) ||
-    typeof guest.id !== "string" ||
-    typeof guest.householdId !== "string" ||
-    !/^[a-f0-9-]{36}$/i.test(guest.id) ||
-    !/^[a-f0-9-]{36}$/i.test(guest.householdId) ||
-    (guest.access !== "read" && guest.access !== "write") ||
-    typeof guest.expiresAt !== "number" ||
-    !Number.isFinite(guest.expiresAt) ||
-    guest.expiresAt <= Date.now()
-  )
-    return null;
-  return {
-    credential,
-    guest: {
-      id: guest.id,
-      householdId: guest.householdId,
-      access: guest.access,
-      expiresAt: guest.expiresAt,
-    },
-  };
+  if (response.status === 401 || response.status === 403) return null;
+  if (!response.ok) throw new Error("Guest access is unavailable");
+  const result = guestAccessResponseSchema.safeParse(await response.json());
+  if (!result.success || result.data.guest.expiresAt <= Date.now()) return null;
+  return { credential, guest: result.data.guest };
 }
 export function guestFragmentUrl(
   pathname: string,

@@ -63,3 +63,56 @@ describe("recipe image read URL batcher", () => {
     );
   });
 });
+
+it("loads Guest images concurrently and isolates individual failures", async () => {
+  vi.stubGlobal("fetch", fetchMock);
+  const credential = `hhg_v1_${"A".repeat(43)}`;
+  const path = (imageId: string) =>
+    `/api/households/${householdId}/recipes/${recipeId}/images/${imageId}/content?variant=thumbnail`;
+  let rejectFirst!: (error: Error) => void;
+  fetchMock.mockImplementation(async (url) => {
+    if (String(url).endsWith("/read-urls"))
+      return Response.json({
+        reads: [firstImageId, secondImageId].map((imageId) => ({
+          imageId,
+          recipeId,
+          variant: "thumbnail",
+          expiresInSeconds: 300,
+          url: `http://localhost:5173${path(imageId)}`,
+        })),
+      });
+    if (url === path(firstImageId))
+      return new Promise((_resolve, reject) => {
+        rejectFirst = reject;
+      });
+    return new Response(null, { status: 403 });
+  });
+  const identity = {
+    accessToken: credential,
+    userId: "guest-link:link",
+    householdId,
+    recipeId,
+    variant: "thumbnail" as const,
+  };
+  const first = createBatchedRecipeImageReadUrl({
+    ...identity,
+    imageId: firstImageId,
+  });
+  const firstRejected = expect(first).rejects.toThrow(
+    "Image connection failed",
+  );
+  const second = createBatchedRecipeImageReadUrl({
+    ...identity,
+    imageId: secondImageId,
+  });
+  // The second request must finish while the first is still pending.
+  await expect(second).resolves.toEqual({ kind: "forbidden" });
+  rejectFirst(new Error("Image connection failed"));
+  await firstRejected;
+  expect(fetchMock).toHaveBeenCalledWith(
+    path(secondImageId),
+    expect.objectContaining({
+      headers: { Authorization: `Bearer ${credential}` },
+    }),
+  );
+});
