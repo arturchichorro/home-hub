@@ -40,7 +40,16 @@ export function installImageContentRoutes(
             ? 403
             : 404,
       );
-    const response = await fetch(result.url);
+    let response: Response;
+    try {
+      response = await fetch(result.url, {
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch {
+      // A stopped/unreachable delivery Worker is an upstream failure, not an
+      // authentication failure. Never expose its signed URL in errors or logs.
+      return c.json({ error: "Image unavailable" }, 502);
+    }
     if (!response.ok) return c.json({ error: "Image unavailable" }, 502);
     return new Response(response.body, {
       headers: {

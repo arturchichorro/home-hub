@@ -24,10 +24,3 @@ export async function validateGuestCredential(
   if (!result.success || result.data.guest.expiresAt <= Date.now()) return null;
   return { credential, guest: result.data.guest };
 }
-export function guestFragmentUrl(
-  pathname: string,
-  search: string,
-  credential: string,
-) {
-  return `${pathname}${search}#${credential}`;
-}

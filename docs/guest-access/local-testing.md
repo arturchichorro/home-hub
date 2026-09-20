@@ -101,3 +101,18 @@ console commands, browser storage, or screenshots intended for sharing.
 A phone cannot reach the computer through a `127.0.0.1` QR. The steps above test
 in desktop browsers. Phone testing additionally needs reachable web/API/Zero
 addresses and corresponding development network configuration.
+
+## Image delivery troubleshooting
+
+A connection error at `image-content.ts` means the API could not fetch the
+configured delivery Worker. With the example configuration, it must be
+listening on `127.0.0.1:8787`. Start the image-delivery development server and
+check its reported port: if Wrangler selects another port because 8787 is
+occupied, use the intended existing instance or update the local API URL and
+restart the API. A request to the Worker's bare `/` may return 400; images use
+signed, scoped endpoints.
+
+An unavailable or timed-out Worker produces an API 502 and an image error
+state. It does not invalidate Guest access or navigate away from a recipe.
+The router retains the credential through its URL rewrite before committing
+navigation, so it does not need a second history update after the page loads.
