@@ -6,7 +6,7 @@ import {
   clearSessionBootstrap,
   saveSessionBootstrap,
 } from "./auth/session-bootstrap";
-import { type GuestEntry, guestFragmentUrl } from "./guest-access/access";
+import type { GuestEntry } from "./guest-access/access";
 import { GuestAccessContext } from "./guest-access/context";
 import { clearRecipeImageUrlCache } from "./recipes/recipe-image-url-cache";
 import { createAppRouter } from "./router";
@@ -91,22 +91,6 @@ export function Root({ initialSession, initialGuest = null }: RootProps) {
     previousContext.current = { session, zero };
     void router.invalidate();
   }, [router, session, zero]);
-
-  useEffect(() => {
-    if (!guestAccess) return;
-    const preserve = () =>
-      window.history.replaceState(
-        window.history.state,
-        "",
-        guestFragmentUrl(
-          window.location.pathname,
-          window.location.search,
-          guestAccess.credential,
-        ),
-      );
-    preserve();
-    return router.subscribe("onResolved", preserve);
-  }, [guestAccess, router]);
 
   return (
     <GuestAccessContext.Provider value={guestAccess}>

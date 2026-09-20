@@ -7,6 +7,9 @@ The first version deliberately uses one small model: an expiring Guest access
 link is the credential, and Guest mode is the existing household application
 without household administration.
 
+See [local testing](./local-testing.md) for setup, hostname behavior, and the
+read/write/revocation checklist.
+
 ## Product behavior
 
 A household owner can create multiple Guest access links. Each link:

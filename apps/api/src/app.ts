@@ -21,8 +21,8 @@ import {
 import { type CreateZeroRoutesInput, createZeroRoutes } from "./zero/routes";
 
 type AuthServices = Omit<CreateAuthRoutesInput, "isProduction" | "jwtSecret">;
-type HouseholdServices = Omit<CreateHouseholdRoutesInput, "jwtSecret">;
-type RecipeImageServices = Omit<CreateRecipeRoutesInput, "jwtSecret">;
+type HouseholdServices = CreateHouseholdRoutesInput;
+type RecipeImageServices = CreateRecipeRoutesInput;
 
 export type CreateAppInput = {
   guestLinks: GuestLinkService;
