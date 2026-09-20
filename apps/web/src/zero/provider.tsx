@@ -4,6 +4,8 @@ import { schema } from "@home-hub/shared/zero/schema";
 import type { Zero } from "@rocicorp/zero";
 import { ZeroProvider } from "@rocicorp/zero/react";
 import { type ReactNode, useMemo } from "react";
+import type { GuestEntry } from "../guest-access/access";
+import { GuestZeroAuth } from "../guest-access/zero-auth";
 import { ZeroAuthRefresh } from "./zero-auth-refresh";
 
 const cacheURL = import.meta.env.VITE_ZERO_CACHE_URL;
@@ -14,6 +16,7 @@ if (!cacheURL) {
 
 type HomeHubZeroProviderProps = {
   userId: string;
+  guestAccess: GuestEntry | null;
   accessToken: string;
   onAccessTokenRefreshed: (accessToken: string) => void;
   onSessionExpired: () => void;
@@ -23,13 +26,17 @@ type HomeHubZeroProviderProps = {
 
 export function HomeHubZeroProvider({
   userId,
+  guestAccess,
   accessToken,
   onAccessTokenRefreshed,
   onSessionExpired,
   onReady,
   children,
 }: HomeHubZeroProviderProps) {
-  const context = useMemo<ZeroAuthContext>(() => ({ userId }), [userId]);
+  const context = useMemo<ZeroAuthContext>(
+    () => (guestAccess ? { guest: guestAccess.guest } : { userId }),
+    [userId, guestAccess],
+  );
 
   return (
     <ZeroProvider
@@ -41,10 +48,14 @@ export function HomeHubZeroProvider({
       mutators={mutators}
       init={onReady}
     >
-      <ZeroAuthRefresh
-        onAccessTokenRefreshed={onAccessTokenRefreshed}
-        onSessionExpired={onSessionExpired}
-      />
+      {guestAccess ? (
+        <GuestZeroAuth entry={guestAccess} leave={onSessionExpired} />
+      ) : (
+        <ZeroAuthRefresh
+          onAccessTokenRefreshed={onAccessTokenRefreshed}
+          onSessionExpired={onSessionExpired}
+        />
+      )}
       {children}
     </ZeroProvider>
   );

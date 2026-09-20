@@ -23,9 +23,14 @@ import {
   X,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import {
+  useNavigate,
+  useRouteContext,
+  useRouterState,
+} from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import { AccountMenu } from "./auth/account-menu";
+import { useGuestAccess } from "./guest-access/context";
 import { CreateHouseholdDialog } from "./households/create-household-dialog";
 import { JoinHouseholdDialog } from "./households/join-household-dialog";
 import { ZeroConnectionStatus } from "./zero/connection-status";
@@ -150,6 +155,7 @@ function HouseholdNavigationGroup({
   index,
   onNavigate,
 }: HouseholdNavigationGroupProps) {
+  const guest = useGuestAccess();
   const navigate = useNavigate();
   const [open, setOpen] = useState(true);
   const pathname = useRouterState({
@@ -170,12 +176,13 @@ function HouseholdNavigationGroup({
       .filter((setting) => setting.enabled)
       .map((setting) => setting.moduleKey),
   );
-  const modules =
+  const modules = (
     result.type === "unknown"
       ? moduleDefinitions
       : moduleDefinitions.filter(
           ({ key }) => key === "settings" || enabledModuleKeys.has(key),
-        );
+        )
+  ).filter(({ key }) => !guest || key !== "settings");
   const householdPath = `/households/${householdId}`;
   const householdSelected =
     pathname === householdPath || pathname.startsWith(`${householdPath}/`);
@@ -237,13 +244,22 @@ function SidebarNavigation({
   onNavigate,
   username,
 }: SidebarNavigationProps) {
+  const guest = useGuestAccess();
+  const { leaveGuest } = useRouteContext({ from: "__root__" });
+  const [households] = useQuery(queries.households.mine({}));
   const zero = useZero();
   const navigate = useNavigate();
   const mutationEnabled = useZeroMutationEnabled();
   const [memberships, result] = useQuery(queries.householdMemberships.mine({}));
 
   function moveHousehold(from: number, to: number) {
-    if (!mutationEnabled || from === to || to < 0 || to >= memberships.length)
+    if (
+      guest ||
+      !mutationEnabled ||
+      from === to ||
+      to < 0 ||
+      to >= memberships.length
+    )
       return;
     const reordered = [...memberships];
     const [moved] = reordered.splice(from, 1);
@@ -293,7 +309,7 @@ function SidebarNavigation({
             Unable to load households.
           </InlineAlert>
         ) : null}
-        {memberships.length === 0 && result.type === "complete" ? (
+        {!guest && memberships.length === 0 && result.type === "complete" ? (
           <p className="px-2 py-3 text-sm text-muted">No households yet</p>
         ) : null}
         <DragDropProvider
@@ -310,49 +326,80 @@ function SidebarNavigation({
           }}
         >
           <div className="grid gap-1">
-            {memberships.map((membership, index) =>
-              membership.household ? (
-                <HouseholdNavigationGroup
-                  key={membership.id}
-                  disabled={!mutationEnabled}
-                  householdId={membership.household.id}
-                  householdName={membership.household.name}
-                  index={index}
-                  onNavigate={onNavigate}
-                />
-              ) : null,
-            )}
+            {guest ? (
+              <HouseholdNavigationGroup
+                disabled
+                householdId={guest.guest.householdId}
+                householdName={
+                  households.find(
+                    (household) => household.id === guest.guest.householdId,
+                  )?.name ?? "Household"
+                }
+                index={0}
+                onNavigate={onNavigate}
+              />
+            ) : null}
+            {!guest &&
+              memberships.map((membership, index) =>
+                membership.household ? (
+                  <HouseholdNavigationGroup
+                    key={membership.id}
+                    disabled={!mutationEnabled}
+                    householdId={membership.household.id}
+                    householdName={membership.household.name}
+                    index={index}
+                    onNavigate={onNavigate}
+                  />
+                ) : null,
+              )}
           </div>
         </DragDropProvider>
       </nav>
 
-      <div className="grid gap-1 border-t border-border py-2">
-        <Button
-          variant="ghost"
-          disabled={!mutationEnabled}
-          className="h-9! w-full justify-start! px-2! font-normal"
-          onClick={onJoinHousehold}
-        >
-          <UserPlus aria-hidden="true" className="size-4" />
-          Join household
-        </Button>
-        <Button
-          variant="ghost"
-          disabled={!mutationEnabled}
-          className="h-9! w-full justify-start! px-2! font-normal"
-          onClick={onCreateHousehold}
-        >
-          <HousePlus aria-hidden="true" className="size-4" />
-          Create household
-        </Button>
-      </div>
+      {!guest && (
+        <div className="grid gap-1 border-t border-border py-2">
+          <Button
+            variant="ghost"
+            disabled={!mutationEnabled}
+            className="h-9! w-full justify-start! px-2! font-normal"
+            onClick={onJoinHousehold}
+          >
+            <UserPlus aria-hidden="true" className="size-4" />
+            Join household
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={!mutationEnabled}
+            className="h-9! w-full justify-start! px-2! font-normal"
+            onClick={onCreateHousehold}
+          >
+            <HousePlus aria-hidden="true" className="size-4" />
+            Create household
+          </Button>
+        </div>
+      )}
 
       <div className="border-t border-border pt-2">
-        <AccountMenu
-          username={username}
-          onLoggedOut={onLoggedOut}
-          triggerClassName="w-full min-w-0 justify-between! px-3!"
-        />
+        {guest ? (
+          <div className="grid gap-2 px-2 text-sm">
+            <p>
+              Guest · {guest.guest.access === "read" ? "Read only" : "Can edit"}
+            </p>
+            <p className="text-xs text-muted">
+              Temporary access until{" "}
+              {new Date(guest.guest.expiresAt).toLocaleDateString()}
+            </p>
+            <Button variant="secondary" onClick={leaveGuest}>
+              Leave
+            </Button>
+          </div>
+        ) : (
+          <AccountMenu
+            username={username}
+            onLoggedOut={onLoggedOut}
+            triggerClassName="w-full min-w-0 justify-between! px-3!"
+          />
+        )}
       </div>
     </div>
   );
