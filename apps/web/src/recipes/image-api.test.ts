@@ -4,6 +4,7 @@ import {
   createRecipeImageReadUrl,
   createRecipeImageReadUrls,
   deleteRecipeImage,
+  loadGuestImage,
   requestRecipeImageUpload,
   uploadRecipeImageObject,
 } from "./image-api";
@@ -107,6 +108,7 @@ describe("recipe image API", () => {
     ).resolves.toBeUndefined();
     expect(fetchMock).toHaveBeenCalledWith("https://upload.example/image", {
       method: "PUT",
+      credentials: "omit",
       headers: { "Content-Type": "image/webp" },
       body: file,
     });
@@ -226,5 +228,18 @@ describe("recipe image API", () => {
         headers: { Authorization: `Bearer ${accessToken}` },
       },
     );
+  });
+});
+
+it("authenticates Guest image reads without embedding credentials in media URLs", async () => {
+  fetchMock.mockResolvedValueOnce(new Response(null, { status: 401 }));
+  const path = `/api/households/${householdId}/recipes/${recipeId}/images/${imageId}/content?variant=thumbnail`;
+  expect(
+    await loadGuestImage(`https://home.example${path}`, "hhg_v1_secret"),
+  ).toEqual({ kind: "unauthorized" });
+  expect(fetchMock).toHaveBeenCalledWith(path, {
+    headers: { Authorization: "Bearer hhg_v1_secret" },
+    credentials: "omit",
+    cache: "no-store",
   });
 });

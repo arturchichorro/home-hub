@@ -6,14 +6,24 @@ import {
   clearSessionBootstrap,
   saveSessionBootstrap,
 } from "./auth/session-bootstrap";
+import { type GuestEntry, guestFragmentUrl } from "./guest-access/access";
+import { GuestAccessContext } from "./guest-access/context";
 import { clearRecipeImageUrlCache } from "./recipes/recipe-image-url-cache";
 import { createAppRouter } from "./router";
 
 type RootProps = {
   initialSession: Session | null;
+  initialGuest?: GuestEntry | null;
 };
 
-export function Root({ initialSession }: RootProps) {
+export function Root({ initialSession, initialGuest = null }: RootProps) {
+  const [guestAccess, setGuestAccess] = useState(initialGuest);
+  const leaveGuest = useCallback(() => {
+    setGuestAccess(null);
+    clearRecipeImageUrlCache();
+    window.history.replaceState(null, "", "/join");
+    window.location.replace("/join");
+  }, []);
   const [session, setSession] = useState(initialSession);
   const [zero, setZero] = useState<Zero>();
   const onAuthenticated = useCallback((nextSession: Session) => {
@@ -58,6 +68,8 @@ export function Root({ initialSession }: RootProps) {
   const [router] = useState(() =>
     createAppRouter({
       session: initialSession,
+      guestAccess: initialGuest,
+      leaveGuest,
       zero: undefined,
       onAuthenticated,
       onAccessTokenRefreshed,
@@ -80,18 +92,38 @@ export function Root({ initialSession }: RootProps) {
     void router.invalidate();
   }, [router, session, zero]);
 
+  useEffect(() => {
+    if (!guestAccess) return;
+    const preserve = () =>
+      window.history.replaceState(
+        window.history.state,
+        "",
+        guestFragmentUrl(
+          window.location.pathname,
+          window.location.search,
+          guestAccess.credential,
+        ),
+      );
+    preserve();
+    return router.subscribe("onResolved", preserve);
+  }, [guestAccess, router]);
+
   return (
-    <RouterProvider
-      router={router}
-      context={{
-        session,
-        zero,
-        onAuthenticated,
-        onAccessTokenRefreshed,
-        onLoggedOut,
-        onSessionExpired,
-        onZeroReady: setZero,
-      }}
-    />
+    <GuestAccessContext.Provider value={guestAccess}>
+      <RouterProvider
+        router={router}
+        context={{
+          session,
+          guestAccess,
+          leaveGuest,
+          zero,
+          onAuthenticated,
+          onAccessTokenRefreshed,
+          onLoggedOut,
+          onSessionExpired,
+          onZeroReady: setZero,
+        }}
+      />
+    </GuestAccessContext.Provider>
   );
 }

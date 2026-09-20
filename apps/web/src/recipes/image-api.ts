@@ -103,15 +103,24 @@ export async function requestRecipeImageUpload({
 export async function uploadRecipeImageObject({
   file,
   upload,
+  accessToken,
 }: {
+  accessToken?: string;
   file: File;
   upload: CreateRecipeImageUploadResponse["upload"];
 }): Promise<void> {
-  const response = await fetch(upload.url, {
-    method: "PUT",
-    headers: upload.requiredHeaders,
-    body: file,
-  });
+  const guest = accessToken?.startsWith("hhg_v1_");
+  const response = await fetch(
+    guest ? guestImageContentPath(upload.url) : upload.url,
+    {
+      method: "PUT",
+      credentials: "omit",
+      headers: guest
+        ? { ...upload.requiredHeaders, Authorization: `Bearer ${accessToken}` }
+        : upload.requiredHeaders,
+      body: file,
+    },
+  );
 
   if (!response.ok) {
     throw new Error("Failed to upload recipe image to R2");
@@ -219,4 +228,34 @@ export async function deleteRecipeImage({
   if (!response.ok) throw new Error("Failed to delete recipe image");
 
   return { kind: "success" };
+}
+
+export function guestImageContentPath(url: string) {
+  const parsed = new URL(url);
+  if (
+    !/^\/api\/households\/[a-f0-9-]+\/recipes\/[a-f0-9-]+\/images\/[a-f0-9-]+\/content$/.test(
+      parsed.pathname,
+    )
+  )
+    throw new Error("Invalid image endpoint");
+  return parsed.pathname + parsed.search;
+}
+
+export async function loadGuestImage(
+  url: string,
+  credential: string,
+): Promise<CreateRecipeImageReadUrlResult> {
+  const response = await fetch(guestImageContentPath(url), {
+    headers: { Authorization: `Bearer ${credential}` },
+    credentials: "omit",
+    cache: "no-store",
+  });
+  if (response.status === 401) return { kind: "unauthorized" };
+  if (response.status === 403) return { kind: "forbidden" };
+  if (!response.ok) return { kind: "not_found" };
+  return {
+    kind: "success",
+    url: URL.createObjectURL(await response.blob()),
+    expiresInSeconds: 300,
+  };
 }

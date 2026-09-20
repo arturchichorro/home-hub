@@ -2,6 +2,7 @@ import { queries } from "@home-hub/shared/zero/queries";
 import { InlineAlert } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { useGuestAccess } from "../guest-access/context";
 import { getDefaultHouseholdModuleRoute } from "../households/household-module-gate";
 
 export const Route = createFileRoute(
@@ -17,6 +18,7 @@ export const Route = createFileRoute(
 
 function HouseholdIndexRoute() {
   const { householdId } = Route.useParams();
+  const guest = useGuestAccess();
   const [settings, result] = useQuery(
     queries.modules.byHousehold({ householdId }),
   );
@@ -32,6 +34,9 @@ function HouseholdIndexRoute() {
   if (result.type !== "complete") {
     return null;
   }
+
+  if (guest && !settings.some((setting) => setting.enabled))
+    return <p>No modules are enabled for this household.</p>;
 
   return (
     <Navigate

@@ -18,15 +18,16 @@ export const Route = createFileRoute(
 
 function RecipeDetailRoute() {
   const { householdId, recipeId } = Route.useParams();
-  const { onSessionExpired, session } = Route.useRouteContext();
+  const { onSessionExpired, accessToken, cacheIdentity } =
+    Route.useRouteContext();
 
   return (
     <RecipeDetail
-      accessToken={session.accessToken}
+      accessToken={accessToken}
       householdId={householdId}
       recipeId={recipeId}
       onSessionExpired={onSessionExpired}
-      userId={session.user.id}
+      userId={cacheIdentity}
     />
   );
 }

@@ -3,6 +3,7 @@ import { InlineAlert } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { Navigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { useGuestAccess } from "../guest-access/context";
 
 type HouseholdModuleKey = "lists" | "recipes";
 
@@ -47,6 +48,7 @@ export function HouseholdModuleGate({
   householdId,
   moduleKey,
 }: HouseholdModuleGateProps) {
+  const guest = useGuestAccess();
   const [settings, result] = useQuery(
     queries.modules.byHousehold({ householdId }),
   );
@@ -63,6 +65,8 @@ export function HouseholdModuleGate({
     (setting) => setting.moduleKey === moduleKey && setting.enabled,
   );
 
+  if (guest && result.type === "complete" && !moduleEnabled)
+    return <p>This module is unavailable.</p>;
   if (result.type === "complete" && !moduleEnabled) {
     return (
       <Navigate

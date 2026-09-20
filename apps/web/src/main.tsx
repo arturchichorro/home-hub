@@ -1,6 +1,11 @@
 import { Button } from "@home-hub/ui-web";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import {
+  credentialFromFragment,
+  type GuestEntry,
+  validateGuestCredential,
+} from "./guest-access/access";
 import "./index.css";
 import { ApplicationState } from "./application-state.tsx";
 import {
@@ -20,10 +25,11 @@ const root = createRoot(rootElement);
 
 function renderApplication(
   initialSession: Parameters<typeof Root>[0]["initialSession"],
+  initialGuest: GuestEntry | null = null,
 ) {
   root.render(
     <StrictMode>
-      <Root initialSession={initialSession} />
+      <Root initialSession={initialSession} initialGuest={initialGuest} />
     </StrictMode>,
   );
 }
@@ -55,6 +61,26 @@ async function start() {
     return;
   }
 
+  if (
+    window.location.hash.startsWith("#hhg_") ||
+    window.location.pathname === "/join" ||
+    window.location.hostname === "guest.achichorro.com"
+  ) {
+    const credential = credentialFromFragment(window.location.hash);
+    let entry: GuestEntry | null = null;
+    try {
+      entry = credential ? await validateGuestCredential(credential) : null;
+    } catch {
+      renderUnavailable(
+        "Guest access is unavailable",
+        "Connect to the internet and try again to validate this link.",
+      );
+      return;
+    }
+    if (!entry) window.history.replaceState(null, "", "/join");
+    renderApplication(null, entry);
+    return;
+  }
   const result = await restoreStartupSession();
 
   if (result.kind === "online") {
