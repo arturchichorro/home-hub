@@ -24,6 +24,7 @@ erDiagram
   users ||--o{ household_members : joins
   households ||--o{ household_members : contains
   households ||--o{ household_invites : issues
+  households ||--o{ household_guest_access_links : grants
   households ||--o{ household_module_settings : configures
   households ||--o{ shopping_items : owns
   households ||--o{ recipes : owns
@@ -156,3 +157,23 @@ metadata lifecycle are documented in the
 The transactions that preserve these invariants, including their explicit
 locking requirements, are documented in
 [Security and synchronization](./security-and-sync.md).
+
+### `household_guest_access_links`
+
+Migration `0029_milky_anita_blake` creates the final server-only table:
+
+- `id`: UUID primary key;
+- `household_id`: required household foreign key;
+- `name`: required, trimmed display name of 1–100 characters;
+- `access`: constrained to `read` or `write`;
+- `token_hash`: unique SHA-256 hash, never the raw credential;
+- `expires_at`: required UTC expiration, defaulted by the creation service to 90 days;
+- `disabled_at`: nullable timestamp set once by permanent disabling;
+- `created_by_user_id`: account foreign key recording who created the link;
+- `created_at`: required timestamp.
+
+Configuration is immutable through the API, with no `updated_at`, edit,
+regeneration, re-enable, or session table. The household index supports owner
+listing and the hash uniqueness constraint supports credential lookup. The table
+is not replicated to Zero. Creation provenance does not assign Guest authorship
+to module changes. Migrations 0027 and 0028 remain prerequisites and unchanged.

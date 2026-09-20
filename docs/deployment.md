@@ -41,13 +41,13 @@ Caddy is the only public entry point to services running on the VPS. It:
 - proxies Zero HTTP and WebSocket traffic to `zero-cache`.
 
 PostgreSQL and direct container ports are not published to the internet. The
-application uses one public origin, `https://home.achichorro.com`. Caddy serves
-the SPA at that origin, proxies `/api/*` to Hono, and proxies `/zero/*` HTTP and
+application serves the same build at `https://home.achichorro.com` and
+`https://guest.achichorro.com`. Caddy serves the SPA at both origins, proxies `/api/*` to Hono, and proxies `/zero/*` HTTP and
 WebSocket traffic to `zero-cache`. Production configuration must keep the
 `/api/auth` refresh-cookie path, Zero callback URLs, and
 `VITE_ZERO_CACHE_URL` aligned with this routing. The browser uses the same
-origin for the SPA and API, so production does not require cross-origin API
-access. Direct recipe-image uploads use the separate R2 origin. Display reads
+origin for the SPA, API, and Zero on each hostname, so production does not require cross-origin API
+access. Guest media also stays on that origin through authenticated API proxies. Direct recipe-image uploads use the separate R2 origin. Display reads
 use the authorization Worker at `https://images.home.achichorro.com`; the
 module-specific R2 CORS policy is documented in
 [Recipes image storage and security](./recipes/#image-storage-and-security).
@@ -358,3 +358,31 @@ operational compatibility check:
 The Zero replica does not need to be copied for correctness, although preserving
 or backing it up may reduce migration downtime. PostgreSQL and R2 remain the
 durable data sources.
+
+## Guest hostname rollout
+
+The open Guest-access PR stack adds `guest.achichorro.com` to the existing Caddy
+site and serves the identical SPA, `/api/*`, and `/zero/*` handlers. There is no
+second application or Guest service. The browser selects same-origin `/zero`
+on the Guest hostname and keeps the configured Zero URL for other environments.
+
+After review and merge, provision DNS for `guest.achichorro.com` to the same VPS
+as `home.achichorro.com`, ensuring ports 80/443 reach Caddy for automatic TLS.
+Review migration 0029 in the normal deployment workflow before enabling Guest
+link creation. Migrations 0027/0028 are existing prerequisites and must not be
+replaced or manually reapplied. Development of this stack generated migration
+0029 without applying it to the local or production database. CI exercises the
+migration history only in its disposable PostgreSQL service.
+
+Keep Zero 1.8.0 aligned with the client. Both Compose configurations set
+`ZERO_AUTH_REVALIDATE_INTERVAL_SECONDS=1` and
+`ZERO_AUTH_RETRANSFORM_INTERVAL_SECONDS=1` for active-link revalidation; the
+Guest credential is opaque and must not be wrapped in a JWT. These checks add
+one periodic validation/retransform cycle per active connection/group.
+
+Verify the deployed change by opening a fresh read link at `/join`, reloading a
+shared household route, viewing Lists/Recipes/images, and confirming write and
+administration requests are denied. Repeat with a write link, then disable it
+and confirm new requests fail and Zero disconnects on its next revalidation.
+Verify the other hostname, account login/refresh, and existing media flow too.
+No live DNS changes or production deployment are performed by the PR stack.
