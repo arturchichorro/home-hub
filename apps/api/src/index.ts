@@ -1,4 +1,5 @@
 import type { Server } from "node:http";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { createDbClient } from "@home-hub/database/client";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app";
@@ -8,6 +9,7 @@ import { createMeService } from "./auth/me";
 import { createRefreshService } from "./auth/refresh";
 import { createSignupService } from "./auth/signup";
 import { config } from "./config";
+import { createValidateGuestCredential } from "./guest-access/credential";
 import { createGuestLinkService } from "./guest-access/service";
 import { createAcceptHouseholdInviteService } from "./households/accept-invite";
 import { createHouseholdService } from "./households/create";
@@ -34,6 +36,7 @@ import { processRecipeImageDerivatives } from "./recipes/images/process-derivati
 import { createR2Client } from "./recipes/images/r2-client";
 import { signRecipeImageRead } from "./recipes/images/sign-read";
 import { signRecipeImageUpload } from "./recipes/images/sign-upload";
+import { createUploadRecipeImageContent } from "./recipes/images/upload-content";
 import { closeHttpServer, createGracefulShutdown } from "./server-lifecycle";
 import { createZeroDbProvider } from "./zero/db-provider";
 
@@ -98,6 +101,19 @@ const households = {
 };
 
 const recipeImages = {
+  uploadRecipeImageContent: createUploadRecipeImageContent({
+    db,
+    put: async ({ objectKey, contentType, body }) => {
+      await r2Client.send(
+        new PutObjectCommand({
+          Bucket: config.R2_BUCKET,
+          Key: objectKey,
+          ContentType: contentType,
+          Body: body,
+        }),
+      );
+    },
+  }),
   createRecipeImageUpload: createRecipeImageUploadService({
     db: infrastructure.db,
     signUpload: ({ objectKey, contentType }) =>
@@ -161,6 +177,7 @@ const app = createApp({
   recipeImages,
   infrastructure: {
     zeroDbProvider: infrastructure.dbProvider,
+    validateGuest: createValidateGuestCredential({ db }),
     jwtSecret: infrastructure.config.API_JWT_SECRET,
     isProduction: infrastructure.config.NODE_ENV === "production",
     logger: consoleStructuredLogger,

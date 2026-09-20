@@ -1,9 +1,10 @@
 import type { TransactionProviderHooks } from "@rocicorp/zero/server";
+import { Hono } from "hono";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
 import { signAccessToken } from "../../auth/access-token";
+import { type AuthEnv, createBearerAuth } from "../../auth/bearer-auth";
 import type { ZeroDbProvider } from "../db-provider";
-import { createZeroRoutes } from "./index";
+import { createZeroRoutes as createFeatureRoutes } from "./index";
 
 const jwtSecret = "test-jwt-secret";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
@@ -36,6 +37,7 @@ function createMutationTestProvider({
   const run = vi.fn(async () => results.shift());
   const update = vi.fn(async () => undefined);
   const serverTransaction = {
+    dbTransaction: { query: async () => [{ id: "authorized" }] },
     clientID: "test-client",
     location: "server",
     mutate: {
@@ -345,3 +347,11 @@ describe("Zero routes", () => {
     expect(update).not.toHaveBeenCalled();
   });
 });
+
+function createZeroRoutes(
+  input: Parameters<typeof createFeatureRoutes>[0] & { jwtSecret: string },
+) {
+  const app = new Hono<AuthEnv>();
+  app.use("*", createBearerAuth(input.jwtSecret));
+  return app.route("/", createFeatureRoutes(input));
+}

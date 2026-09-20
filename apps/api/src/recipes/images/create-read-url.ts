@@ -1,10 +1,7 @@
 import type { Database } from "@home-hub/database";
 import type { RecipeImageVariant } from "@home-hub/shared/recipe-image-delivery";
-import { findActiveUser } from "../../authorization/active-user";
-import {
-  findEnabledHouseholdModuleForShare,
-  findHouseholdMembershipForShare,
-} from "../../authorization/household-access";
+import type { ZeroAuthContext } from "@home-hub/shared/zero/context";
+import { authorizeModule } from "../../authorization/module-access";
 import { findConfirmedRecipeImageForShare } from "./scoped-entities";
 import { recipeImageReadUrlLifetimeSeconds } from "./sign-read";
 
@@ -16,7 +13,7 @@ export type SignRead = (input: {
 }) => Promise<string>;
 
 export type CreateRecipeImageReadUrlInput = {
-  userId: string;
+  principal: ZeroAuthContext;
   householdId: string;
   recipeId: string;
   imageId: string;
@@ -41,27 +38,20 @@ export function createRecipeImageReadUrlService({
   signRead: SignRead;
 }) {
   return async function createRecipeImageReadUrl({
-    userId,
+    principal,
     householdId,
     recipeId,
     imageId,
     variant,
   }: CreateRecipeImageReadUrlInput): Promise<CreateRecipeImageReadUrlResult> {
     const authorizedImage = await db.transaction(async (tx) => {
-      const user = await findActiveUser(tx, userId);
-      if (!user) return { kind: "unauthorized" as const };
-
-      const membership = await findHouseholdMembershipForShare(tx, {
-        householdId,
-        userId,
-      });
-      if (!membership) return { kind: "forbidden" as const };
-
-      const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
+      const denied = await authorizeModule(tx, {
+        principal,
         householdId,
         moduleKey: "recipes",
+        write: false,
       });
-      if (!moduleSetting) return { kind: "forbidden" as const };
+      if (denied) return { kind: denied };
 
       const image = await findConfirmedRecipeImageForShare(tx, {
         householdId,

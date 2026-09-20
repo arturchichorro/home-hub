@@ -7,12 +7,9 @@ import type {
   CreateRecipeImageUploadRequest,
   RecipeImageContentType,
 } from "@home-hub/shared/recipe-images";
+import type { ZeroAuthContext } from "@home-hub/shared/zero/context";
 import { and, asc, eq, isNull } from "drizzle-orm";
-import { findActiveUser } from "../../authorization/active-user";
-import {
-  findEnabledHouseholdModuleForShare,
-  findHouseholdMembershipForShare,
-} from "../../authorization/household-access";
+import { authorizeModule } from "../../authorization/module-access";
 import {
   findRecipeCookLogForShare,
   findRecipeForShare,
@@ -25,7 +22,7 @@ type SignUpload = (input: {
 }) => Promise<string>;
 
 export type CreateRecipeImageUploadInput = CreateRecipeImageUploadRequest & {
-  userId: string;
+  principal: ZeroAuthContext;
   householdId: string;
   recipeId: string;
 };
@@ -51,7 +48,7 @@ export function createRecipeImageUploadService({
   signUpload: SignUpload;
 }) {
   return async function createRecipeImageUpload({
-    userId,
+    principal,
     householdId,
     recipeId,
     cookLogId,
@@ -61,20 +58,13 @@ export function createRecipeImageUploadService({
     height,
   }: CreateRecipeImageUploadInput): Promise<CreateRecipeImageUploadResult> {
     return db.transaction(async (tx) => {
-      const user = await findActiveUser(tx, userId);
-      if (!user) return { kind: "unauthorized" };
-
-      const membership = await findHouseholdMembershipForShare(tx, {
-        householdId,
-        userId,
-      });
-      if (!membership) return { kind: "forbidden" };
-
-      const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
+      const denied = await authorizeModule(tx, {
+        principal,
         householdId,
         moduleKey: "recipes",
+        write: true,
       });
-      if (!moduleSetting) return { kind: "forbidden" };
+      if (denied) return { kind: denied };
 
       const recipe = await findRecipeForShare(tx, { householdId, recipeId });
       if (!recipe) return { kind: "not_found" };

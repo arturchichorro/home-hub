@@ -1,9 +1,10 @@
 import type { CreateHouseholdRequest } from "@home-hub/shared/households";
+import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
-
 import { signAccessToken } from "../../auth/access-token";
+import { type AuthEnv, createBearerAuth } from "../../auth/bearer-auth";
 import type { CreateHouseholdInput, CreateHouseholdResult } from "../create";
-import { createHouseholdRoutes } from "./index";
+import { createHouseholdRoutes as createFeatureRoutes } from "./test-app";
 
 const jwtSecret = "test-jwt-secret";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
@@ -160,3 +161,11 @@ describe("household routes", () => {
     });
   });
 });
+
+function createHouseholdRoutes(
+  input: Parameters<typeof createFeatureRoutes>[0] & { jwtSecret: string },
+) {
+  const app = new Hono<AuthEnv>();
+  app.use("*", createBearerAuth(input.jwtSecret));
+  return app.route("/", createFeatureRoutes(input));
+}
