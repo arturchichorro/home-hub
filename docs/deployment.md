@@ -60,6 +60,55 @@ new application shell without retaining stale entry points. The generated
 service worker precaches the complete static build and does not runtime-cache
 API, Zero, or recipe-image traffic.
 
+## Personal blog routing
+
+The existing Caddy also serves the independent bolota/achichorro static site at
+`https://achichorro.com`. This repository owns only its shared ingress rule and
+read-only bind mount; blog builds, assets, releases, and newsletter code remain
+in the blog repository.
+
+Before deploying this configuration, create `/srv/achichorro.com/releases` on the
+VPS, upload the blog's prerendered `dist/` into a release directory, and create
+`/srv/achichorro.com/current` as a **relative** symlink, for example
+`releases/920a930`. Directories must be traversable and public files readable by
+Caddy. Compose deliberately refuses to create a missing mount source.
+
+The parent directory is mounted read-only at `/sites/achichorro-blog`. Mounting
+the parent, rather than the current release, allows an atomic symlink switch
+without recreating the container:
+
+```bash
+# After uploading and checking the new release; replace NEW_RELEASE.
+sudo ln -sT releases/NEW_RELEASE /srv/achichorro.com/current.next
+sudo mv -Tf /srv/achichorro.com/current.next /srv/achichorro.com/current
+```
+
+Use the same sequence with the previous release for rollback. Do not remove
+the active or rollback release during cleanup. Uploading or switching blog
+releases does not rebuild home-hub or change its application/database.
+
+The blog uses directory indexes from its static build and **no SPA fallback**:
+unknown paths return 404 rather than the blog homepage. Hashed `/assets/*`
+files are immutable for one year; HTML, RSS, the newsletter script, and other
+entry points use revalidation. The existing home-hub host block is unchanged.
+
+After this ingress configuration reaches production, add a proxied Cloudflare
+A record for `@` pointing to the VPS and use Full (strict) origin TLS. Confirm
+Caddy obtains a valid certificate and both home-hub and the blog remain
+reachable. If the zone already has other root-domain A/AAAA records, inspect
+them before adding or changing records. Leave home-hub's DNS record unchanged.
+
+Cloudflare intercepts the exact `/api/subscribe` route on `achichorro.com` for
+the independently deployed newsletter Worker. There is no newsletter API
+secret or subscriber processing on the VPS. The blog's Worker handles origin
+checks, validation, and inline feedback; direct-origin requests to that path
+are not a local newsletter endpoint.
+
+Production CI still deploys only `main`. Merging ingress changes into
+`develop` alone does not release them. Promote only the reviewed ingress
+configuration to `main` if other development work is not ready; do not deploy
+an unfinished feature branch to enable this host.
+
 ## Cloudflare image delivery Worker
 
 `apps/image-delivery` owns the independently deployed Worker that generates

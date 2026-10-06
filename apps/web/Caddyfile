@@ -22,3 +22,16 @@ home.achichorro.com {
 		file_server
 	}
 }
+
+achichorro.com {
+	encode zstd gzip
+	root * /sites/achichorro-blog/current
+
+	@hashed_assets path /assets/*
+	header @hashed_assets Cache-Control "public, max-age=31536000, immutable"
+
+	@entry_points not path /assets/*
+	header @entry_points Cache-Control "no-cache"
+
+	file_server
+}
