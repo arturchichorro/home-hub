@@ -1,6 +1,7 @@
 import type { Server } from "node:http";
 import { createDbClient } from "@home-hub/database/client";
 import { serve } from "@hono/node-server";
+
 import { createApp } from "./app";
 import { createLoginService } from "./auth/login";
 import { createLogoutService } from "./auth/logout";
@@ -8,7 +9,6 @@ import { createMeService } from "./auth/me";
 import { createRefreshService } from "./auth/refresh";
 import { createSignupService } from "./auth/signup";
 import { config } from "./config";
-import { createGuestLinkService } from "./guest-access/service";
 import { createAcceptHouseholdInviteService } from "./households/accept-invite";
 import { createHouseholdService } from "./households/create";
 import { createHouseholdInviteService } from "./households/create-invite";
@@ -155,7 +155,6 @@ const recipeImages = {
 };
 
 const app = createApp({
-  guestLinks: createGuestLinkService({ db }),
   auth,
   households,
   recipeImages,

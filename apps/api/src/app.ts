@@ -1,7 +1,6 @@
 import { Hono } from "hono";
+
 import { type CreateAuthRoutesInput, createAuthRoutes } from "./auth/routes";
-import { createGuestLinkRoutes } from "./guest-access/routes";
-import type { GuestLinkService } from "./guest-access/service";
 import {
   type CreateHouseholdRoutesInput,
   createHouseholdRoutes,
@@ -23,7 +22,6 @@ type HouseholdServices = Omit<CreateHouseholdRoutesInput, "jwtSecret">;
 type RecipeImageServices = Omit<CreateRecipeRoutesInput, "jwtSecret">;
 
 export type CreateAppInput = {
-  guestLinks: GuestLinkService;
   auth: AuthServices;
   households: HouseholdServices;
   recipeImages: RecipeImageServices;
@@ -67,11 +65,6 @@ export function createApp(input: CreateAppInput) {
   app.route(
     "/api/zero",
     createZeroRoutes({ dbProvider: zeroDbProvider, jwtSecret }),
-  );
-
-  app.route(
-    "/api/households/:householdId/guest-access-links",
-    createGuestLinkRoutes({ service: input.guestLinks, jwtSecret }),
   );
 
   return app;
