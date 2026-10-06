@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 
-import { type AuthEnv, createBearerAuth } from "../bearer-auth";
+import { type AuthEnv, requireAccount } from "../bearer-auth";
 import { type CreateLoginRouteInput, createLoginRoute } from "./login";
 import { type CreateLogoutRouteInput, createLogoutRoute } from "./logout";
 import { type CreateMeRouteInput, createMeRoute } from "./me";
@@ -11,9 +11,7 @@ export type CreateAuthRoutesInput = CreateSignupRouteInput &
   CreateLoginRouteInput &
   CreateRefreshRouteInput &
   CreateLogoutRouteInput &
-  CreateMeRouteInput & {
-    jwtSecret: string;
-  };
+  CreateMeRouteInput;
 
 export function createAuthRoutes(input: CreateAuthRoutesInput) {
   const authRoutes = new Hono<AuthEnv>();
@@ -22,11 +20,7 @@ export function createAuthRoutes(input: CreateAuthRoutesInput) {
   authRoutes.post("/login", createLoginRoute(input));
   authRoutes.post("/refresh", createRefreshRoute(input));
   authRoutes.post("/logout", createLogoutRoute(input));
-  authRoutes.get(
-    "/me",
-    createBearerAuth(input.jwtSecret),
-    createMeRoute(input),
-  );
+  authRoutes.get("/me", requireAccount, createMeRoute(input));
 
   return authRoutes;
 }

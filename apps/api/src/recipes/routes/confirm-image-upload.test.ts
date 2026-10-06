@@ -21,6 +21,7 @@ function createTestApp(confirmRecipeImageUpload: ConfirmUpload) {
   const app = new Hono<AuthEnv>();
   app.use("*", async (c, next) => {
     c.set("userId", userId);
+    c.set("principal", { userId });
     await next();
   });
   app.post(
@@ -82,7 +83,7 @@ describe("confirm recipe image upload route", () => {
       image: { id: imageId, confirmedAt: confirmedAt.toISOString() },
     });
     expect(confirmRecipeImageUpload).toHaveBeenCalledWith({
-      userId,
+      principal: { userId },
       householdId,
       recipeId,
       imageId,

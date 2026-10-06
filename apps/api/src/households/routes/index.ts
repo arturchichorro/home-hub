@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 
-import { type AuthEnv, createBearerAuth } from "../../auth/bearer-auth";
+import { type AuthEnv, requireAccount } from "../../auth/bearer-auth";
 import {
   type AcceptHouseholdInviteRouteInput,
   createAcceptHouseholdInviteRoute,
@@ -63,76 +63,66 @@ export type CreateHouseholdRoutesInput = AcceptHouseholdInviteRouteInput &
   RevokeHouseholdInviteRouteInput &
   TransferHouseholdOwnershipRouteInput &
   SetHouseholdModuleEnabledRouteInput &
-  RemoveHouseholdMemberRouteInput & {
-    jwtSecret: string;
-  };
+  RemoveHouseholdMemberRouteInput;
 
 export function createHouseholdRoutes(input: CreateHouseholdRoutesInput) {
   const householdRoutes = new Hono<AuthEnv>();
 
-  householdRoutes.post(
-    "/",
-    createBearerAuth(input.jwtSecret),
-    createHouseholdRoute(input),
-  );
+  householdRoutes.post("/", requireAccount, createHouseholdRoute(input));
   householdRoutes.delete(
     "/:householdId",
-    createBearerAuth(input.jwtSecret),
+    requireAccount,
     createDeleteHouseholdRoute(input),
   );
   householdRoutes.delete(
     "/:householdId/invites/:inviteId",
-    createBearerAuth(input.jwtSecret),
+    requireAccount,
     createRevokeHouseholdInviteRoute(input),
   );
-  householdRoutes.get(
-    "/",
-    createBearerAuth(input.jwtSecret),
-    createListHouseholdsRoute(input),
-  );
+  householdRoutes.get("/", requireAccount, createListHouseholdsRoute(input));
   householdRoutes.delete(
     "/:householdId/membership",
-    createBearerAuth(input.jwtSecret),
+    requireAccount,
     createLeaveHouseholdRoute(input),
   );
   householdRoutes.get(
     "/:householdId/members",
-    createBearerAuth(input.jwtSecret),
+    requireAccount,
     createListHouseholdMembersRoute(input),
   );
   householdRoutes.get(
     "/:householdId/invites",
-    createBearerAuth(input.jwtSecret),
+    requireAccount,
     createListHouseholdInvitesRoute(input),
   );
   householdRoutes.post(
     "/:householdId/invites",
-    createBearerAuth(input.jwtSecret),
+    requireAccount,
     createHouseholdInviteRoute(input),
   );
   householdRoutes.post(
     "/invites/accept",
-    createBearerAuth(input.jwtSecret),
+    requireAccount,
     createAcceptHouseholdInviteRoute(input),
   );
   householdRoutes.patch(
     "/:householdId",
-    createBearerAuth(input.jwtSecret),
+    requireAccount,
     createRenameHouseholdRoute(input),
   );
   householdRoutes.patch(
     "/:householdId/ownership",
-    createBearerAuth(input.jwtSecret),
+    requireAccount,
     createTransferHouseholdOwnershipRoute(input),
   );
   householdRoutes.patch(
     "/:householdId/modules/:moduleKey",
-    createBearerAuth(input.jwtSecret),
+    requireAccount,
     createSetHouseholdModuleEnabledRoute(input),
   );
   householdRoutes.delete(
     "/:householdId/members/:membershipId",
-    createBearerAuth(input.jwtSecret),
+    requireAccount,
     createRemoveHouseholdMemberRoute(input),
   );
 

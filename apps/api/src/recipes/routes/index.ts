@@ -1,6 +1,5 @@
 import { Hono } from "hono";
-
-import { type AuthEnv, createBearerAuth } from "../../auth/bearer-auth";
+import type { AuthEnv } from "../../auth/bearer-auth";
 import {
   type ConfirmRecipeImageUploadRouteInput,
   confirmRecipeImageUploadRoute,
@@ -21,47 +20,51 @@ import {
   type DeleteRecipeImageRouteInput,
   deleteRecipeImageRoute,
 } from "./delete-image";
+import {
+  type ImageContentServices,
+  installImageContentRoutes,
+} from "./image-content";
 
-export type CreateRecipeRoutesInput = ConfirmRecipeImageUploadRouteInput &
+export type CreateRecipeRoutesInput = ImageContentServices &
+  ConfirmRecipeImageUploadRouteInput &
   CreateRecipeImageReadUrlRouteInput &
   CreateRecipeImageReadUrlsRouteInput &
   CreateRecipeImageUploadRouteInput &
-  DeleteRecipeImageRouteInput & {
-    jwtSecret: string;
-  };
+  DeleteRecipeImageRouteInput;
 
 export function createRecipeRoutes(input: CreateRecipeRoutesInput) {
   const recipeRoutes = new Hono<AuthEnv>();
 
   recipeRoutes.post(
     "/:recipeId/images/uploads",
-    createBearerAuth(input.jwtSecret),
+
     createRecipeImageUploadRoute(input),
   );
 
   recipeRoutes.delete(
     "/:recipeId/images/:imageId",
-    createBearerAuth(input.jwtSecret),
+
     deleteRecipeImageRoute(input),
   );
 
   recipeRoutes.post(
     "/:recipeId/images/:imageId/confirm",
-    createBearerAuth(input.jwtSecret),
+
     confirmRecipeImageUploadRoute(input),
   );
 
   recipeRoutes.post(
     "/images/read-urls",
-    createBearerAuth(input.jwtSecret),
+
     createRecipeImageReadUrlsRoute(input),
   );
 
   recipeRoutes.post(
     "/:recipeId/images/:imageId/read-url",
-    createBearerAuth(input.jwtSecret),
+
     createRecipeImageReadUrlRoute(input),
   );
 
+  installImageContentRoutes(recipeRoutes, input);
   return recipeRoutes;
 }

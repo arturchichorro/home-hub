@@ -21,6 +21,7 @@ function createTestApp(deleteRecipeImage: DeleteImage) {
   const app = new Hono<AuthEnv>();
   app.use("*", async (c, next) => {
     c.set("userId", userId);
+    c.set("principal", { userId });
     await next();
   });
   app.delete(
@@ -73,7 +74,7 @@ describe("delete recipe image route", () => {
     expect(response.status).toBe(204);
     expect(await response.text()).toBe("");
     expect(deleteRecipeImage).toHaveBeenCalledWith({
-      userId,
+      principal: { userId },
       householdId,
       recipeId,
       imageId,

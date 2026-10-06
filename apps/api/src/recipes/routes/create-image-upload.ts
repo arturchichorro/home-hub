@@ -4,12 +4,12 @@ import {
 } from "@home-hub/shared/recipe-images";
 import type { Context } from "hono";
 import * as z from "zod";
-
 import type { AuthEnv } from "../../auth/bearer-auth";
 import type {
   CreateRecipeImageUploadInput,
   CreateRecipeImageUploadResult,
 } from "../images/create-upload";
+import { imageContentUrl } from "./image-content";
 
 export type CreateRecipeImageUploadRouteInput = {
   createRecipeImageUpload: (
@@ -36,7 +36,7 @@ export function createRecipeImageUploadRoute({
 
     const request: CreateRecipeImageUploadRequest = parsedRequest.data;
     const result = await createRecipeImageUpload({
-      userId: c.get("userId"),
+      principal: c.get("principal"),
       householdId: parsedHouseholdId.data,
       recipeId: parsedRecipeId.data,
       ...request,
@@ -59,7 +59,14 @@ export function createRecipeImageUploadRoute({
       {
         imageId: result.imageId,
         upload: {
-          url: result.uploadUrl,
+          url: c.get("principal").guest
+            ? imageContentUrl(
+                c.req.url,
+                parsedHouseholdId.data,
+                parsedRecipeId.data,
+                result.imageId,
+              )
+            : result.uploadUrl,
           expiresInSeconds: result.uploadUrlExpiresInSeconds,
           requiredHeaders: {
             "Content-Type": request.contentType,

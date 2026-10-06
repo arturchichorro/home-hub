@@ -1,12 +1,12 @@
 import { createRecipeImageReadUrlRequestSchema } from "@home-hub/shared/recipe-images";
 import type { Context } from "hono";
 import * as z from "zod";
-
 import type { AuthEnv } from "../../auth/bearer-auth";
 import type {
   CreateRecipeImageReadUrlInput,
   CreateRecipeImageReadUrlResult,
 } from "../images/create-read-url";
+import { imageContentUrl } from "./image-content";
 
 export type CreateRecipeImageReadUrlRouteInput = {
   createRecipeImageReadUrl: (
@@ -34,7 +34,7 @@ export function createRecipeImageReadUrlRoute({
     }
 
     const result = await createRecipeImageReadUrl({
-      userId: c.get("userId"),
+      principal: c.get("principal"),
       householdId: parsedHouseholdId.data,
       recipeId: parsedRecipeId.data,
       imageId: parsedImageId.data,
@@ -57,7 +57,15 @@ export function createRecipeImageReadUrlRoute({
     return c.json(
       {
         read: {
-          url: result.url,
+          url: c.get("principal").guest
+            ? imageContentUrl(
+                c.req.url,
+                parsedHouseholdId.data,
+                parsedRecipeId.data,
+                parsedImageId.data,
+                parsedRequest.data.variant,
+              )
+            : result.url,
           expiresInSeconds: result.expiresInSeconds,
         },
       },

@@ -2,6 +2,7 @@ import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
+  households,
   recipeImages,
   recipes,
 } from "@home-hub/database/schema";
@@ -15,7 +16,7 @@ const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 const objectKey = `households/${householdId}/recipes/${recipeId}/${imageId}`;
 const input = {
-  userId,
+  principal: { userId },
   householdId,
   recipeId,
   imageId,
@@ -37,6 +38,7 @@ function createFakeDatabase({
 } = {}) {
   const results = [
     membership ? { id: "membership-id" } : undefined,
+    { id: householdId },
     moduleEnabled ? { householdId } : undefined,
     image ? { objectKey } : undefined,
   ];
@@ -111,9 +113,10 @@ describe("create recipe image read URL service", () => {
       variant: "card",
     });
     expect(events).toEqual(["transaction:start", "transaction:end", "sign"]);
-    expect(lockStrengths).toEqual(["share", "share", "share"]);
+    expect(lockStrengths).toEqual(["share", "share", "share", "share"]);
     expect(tables).toEqual([
       householdMembers,
+      households,
       householdModuleSettings,
       recipeImages,
       recipes,

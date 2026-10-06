@@ -69,6 +69,41 @@ export const households = pgTable("households", {
     .defaultNow(),
 });
 
+// Server-only credentials: deliberately excluded from the Zero schema/publication.
+export const householdGuestAccessLinks = pgTable(
+  "household_guest_access_links",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    name: text("name").notNull(),
+    access: text("access", { enum: ["read", "write"] }).notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    disabledAt: timestamp("disabled_at", { withTimezone: true }),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("household_guest_access_links_household_id_idx").on(
+      table.householdId,
+    ),
+    check(
+      "household_guest_access_links_access_check",
+      sql`${table.access} IN ('read', 'write')`,
+    ),
+    check(
+      "household_guest_access_links_name_check",
+      sql`length(btrim(${table.name})) BETWEEN 1 AND 100`,
+    ),
+  ],
+);
+
 export const householdMembers = pgTable(
   "household_members",
   {

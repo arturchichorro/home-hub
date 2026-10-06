@@ -103,6 +103,13 @@ jobs:
               RAISE EXCEPTION 'Retired Shopping database objects must be removed';
             END IF;
             IF EXISTS (
+              SELECT FROM pg_publication_tables
+              WHERE pubname = 'home_hub_zero'
+                AND tablename = 'household_guest_access_links'
+            ) THEN
+              RAISE EXCEPTION 'Guest credential hashes must never be replicated';
+            END IF;
+            IF EXISTS (
               SELECT 1
               FROM (
                 VALUES

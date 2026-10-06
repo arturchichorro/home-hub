@@ -2,6 +2,7 @@ import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
+  households,
   recipeImages,
   recipes,
 } from "@home-hub/database/schema";
@@ -13,7 +14,7 @@ const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 const objectKey = `households/${householdId}/recipes/${recipeId}/${imageId}`;
-const input = { userId, householdId, recipeId, imageId };
+const input = { principal: { userId }, householdId, recipeId, imageId };
 
 function createFakeDatabase({
   user = true,
@@ -30,6 +31,7 @@ function createFakeDatabase({
 } = {}) {
   const results = [
     membership ? { id: "membership-id" } : undefined,
+    { id: householdId },
     module ? { householdId } : undefined,
     image ? { objectKey } : undefined,
   ];
@@ -99,9 +101,10 @@ describe("delete recipe image service", () => {
       deletedAt: expect.any(Date),
       updatedAt: expect.any(Date),
     });
-    expect(lockStrengths).toEqual(["share", "share", "update"]);
+    expect(lockStrengths).toEqual(["share", "share", "share", "update"]);
     expect(tables).toEqual([
       householdMembers,
+      households,
       householdModuleSettings,
       recipeImages,
       recipes,

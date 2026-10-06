@@ -30,7 +30,7 @@ export function deleteRecipeImageRoute({
     }
 
     const result = await deleteRecipeImage({
-      userId: c.get("userId"),
+      principal: c.get("principal"),
       householdId: parsedHouseholdId.data,
       recipeId: parsedRecipeId.data,
       imageId: parsedImageId.data,

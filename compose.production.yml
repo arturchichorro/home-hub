@@ -84,6 +84,8 @@ services:
       ZERO_APP_PUBLICATIONS: home_hub_zero
       ZERO_QUERY_URL: http://api:3000/api/zero/query
       ZERO_MUTATE_URL: http://api:3000/api/zero/mutate
+      ZERO_AUTH_REVALIDATE_INTERVAL_SECONDS: "1"
+      ZERO_AUTH_RETRANSFORM_INTERVAL_SECONDS: "1"
       ZERO_ENABLE_CRUD_MUTATIONS: "false"
       ZERO_NUM_SYNC_WORKERS: "1"
     depends_on:

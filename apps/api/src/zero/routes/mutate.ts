@@ -1,3 +1,4 @@
+import { zeroCacheIdentity } from "@home-hub/shared/zero/context";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { mustGetMutator } from "@rocicorp/zero";
 import { handleMutateRequest } from "@rocicorp/zero/server";
@@ -13,7 +14,8 @@ export function createZeroMutateRoute({
   dbProvider,
 }: CreateZeroMutateRouteInput) {
   return async (c: Context<AuthEnv>) => {
-    const userId = c.get("userId");
+    const principal = c.get("principal");
+    const userId = zeroCacheIdentity(principal);
 
     const response = await handleMutateRequest({
       dbProvider,
@@ -26,7 +28,7 @@ export function createZeroMutateRoute({
           return mutator.fn({
             tx,
             args,
-            ctx: { userId },
+            ctx: principal,
           });
         }),
     });

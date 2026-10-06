@@ -30,7 +30,7 @@ export function confirmRecipeImageUploadRoute({
     }
 
     const result = await confirmRecipeImageUpload({
-      userId: c.get("userId"),
+      principal: c.get("principal"),
       householdId: parsedHouseholdId.data,
       recipeId: parsedRecipeId.data,
       imageId: parsedImageId.data,

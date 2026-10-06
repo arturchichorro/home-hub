@@ -109,6 +109,7 @@ function createFakeTransaction({
   const householdMemberUpdate = vi.fn(async () => undefined);
 
   const transaction = {
+    dbTransaction: { query: async () => [{ id: "authorized" }] },
     clientID: "client-id",
     location,
     mutate: {
