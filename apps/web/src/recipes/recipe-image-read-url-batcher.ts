@@ -1,6 +1,7 @@
 import {
   type CreateRecipeImageReadUrlResult,
   createRecipeImageReadUrls,
+  loadGuestImage,
 } from "./image-api";
 import type { RecipeImageUrlIdentity } from "./recipe-image-url-cache";
 
@@ -14,7 +15,7 @@ const pendingGroups = new Map<string, PendingRead[]>();
 let flushScheduled = false;
 
 function groupKey(identity: RecipeImageUrlIdentity) {
-  return JSON.stringify([identity.accessToken, identity.householdId]);
+  return JSON.stringify([identity.userId, identity.householdId]);
 }
 
 async function flushGroup(reads: PendingRead[]) {
@@ -47,6 +48,12 @@ async function flushGroup(reads: PendingRead[]) {
       const resultForRead = resultsByKey.get(
         `${read.identity.recipeId}:${read.identity.imageId}:${read.identity.variant}`,
       );
+      if (resultForRead && read.identity.accessToken.startsWith("hhg_v1_")) {
+        read.resolve(
+          await loadGuestImage(resultForRead.url, read.identity.accessToken),
+        );
+        continue;
+      }
       read.resolve(
         resultForRead
           ? {

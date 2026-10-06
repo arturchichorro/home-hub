@@ -79,7 +79,11 @@ export function RecipeImageUploadForm({
       }
       if (pending.kind !== "success") return;
 
-      await uploadRecipeImageObject({ file, upload: pending.upload });
+      await uploadRecipeImageObject({
+        file,
+        upload: pending.upload,
+        accessToken,
+      });
       const confirmation = await confirmRecipeImageUpload({
         accessToken,
         householdId,

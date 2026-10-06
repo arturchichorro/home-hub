@@ -1,8 +1,15 @@
 import { queries } from "@home-hub/shared/zero/queries";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import App from "../App";
 
 export const Route = createFileRoute("/_authenticated/")({
+  beforeLoad: ({ context }) => {
+    if (context.guestAccess)
+      throw redirect({
+        to: "/households/$householdId",
+        params: { householdId: context.guestAccess.guest.householdId },
+      });
+  },
   loader: ({ context }) => {
     void context.zero?.run(queries.households.mine({}));
     void context.zero?.run(queries.householdMemberships.mine({}));
@@ -11,12 +18,13 @@ export const Route = createFileRoute("/_authenticated/")({
 });
 
 function HomeRoute() {
-  const { onLoggedOut, onSessionExpired, session } = Route.useRouteContext();
+  const { onLoggedOut, onSessionExpired, accessToken, username } =
+    Route.useRouteContext();
 
   return (
     <App
-      accessToken={session.accessToken}
-      username={session.user.username}
+      accessToken={accessToken}
+      username={username}
       onLoggedOut={onLoggedOut}
       onSessionExpired={onSessionExpired}
     />

@@ -169,3 +169,27 @@ describe("recipe image URL cache", () => {
     reloadedCache.clearRecipeImageUrlCache();
   });
 });
+
+it("keeps Guest media in memory and releases blobs on Leave", async () => {
+  const storage = createMemoryStorage();
+  vi.stubGlobal("localStorage", storage);
+  const revoke = vi
+    .spyOn(URL, "revokeObjectURL")
+    .mockImplementation(() => undefined);
+  const guestIdentity = {
+    ...identity,
+    userId: "guest-link:example",
+    accessToken: `hhg_v1_${"A".repeat(43)}`,
+  };
+  await getOrCreateRecipeImageUrl(guestIdentity, async () => ({
+    kind: "success",
+    url: "blob:guest-image",
+    expiresInSeconds: 300,
+  }));
+  await Promise.resolve();
+  expect(storage.length).toBe(0);
+  expect(readCachedRecipeImageUrl(guestIdentity)?.url).toBe("blob:guest-image");
+  clearRecipeImageUrlCache();
+  expect(revoke).toHaveBeenCalledWith("blob:guest-image");
+  vi.unstubAllGlobals();
+});

@@ -1,10 +1,14 @@
 import { queries } from "@home-hub/shared/zero/queries";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { HouseholdSettings } from "../households/household-settings";
 
 export const Route = createFileRoute(
   "/_authenticated/households/$householdId/settings",
 )({
+  beforeLoad: ({ context, params }) => {
+    if (context.guestAccess)
+      throw redirect({ to: "/households/$householdId", params });
+  },
   loader: ({ context, params }) => {
     void context.zero?.run(queries.households.mine({}));
     void context.zero?.run(
@@ -22,12 +26,12 @@ export const Route = createFileRoute(
 function HouseholdSettingsRoute() {
   const navigate = useNavigate();
   const { householdId } = Route.useParams();
-  const { session, onSessionExpired } = Route.useRouteContext();
+  const { accessToken, onSessionExpired } = Route.useRouteContext();
 
   return (
     <section aria-label="Household management" className="grid gap-6">
       <HouseholdSettings
-        accessToken={session.accessToken}
+        accessToken={accessToken}
         householdId={householdId}
         onLeftHousehold={() => void navigate({ to: "/" })}
         onSessionExpired={onSessionExpired}

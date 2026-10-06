@@ -61,6 +61,7 @@ export function recipeImageUrlCacheKey(identity: RecipeImageUrlIdentity) {
 }
 
 function persistUserUrls(userId: string, now = Date.now()) {
+  if (userId.startsWith("guest-link:")) return;
   const storage = browserStorage();
   if (!storage) return;
   const entries = Array.from(cachedUrls.entries()).filter(
@@ -87,6 +88,7 @@ function schedulePersistUserUrls(userId: string) {
 }
 
 function hydrateUserUrls(userId: string, now = Date.now()) {
+  if (userId.startsWith("guest-link:")) return;
   if (hydratedUsers.has(userId)) return;
   hydratedUsers.add(userId);
   const storage = browserStorage();
@@ -134,6 +136,7 @@ export function readCachedRecipeImageUrl(
   const cached = cachedUrls.get(key);
   if (!cached) return undefined;
   if (cached.refreshAt <= now) {
+    if (cached.url.startsWith("blob:")) URL.revokeObjectURL(cached.url);
     cachedUrls.delete(key);
     schedulePersistUserUrls(identity.userId);
     return undefined;
@@ -200,6 +203,7 @@ export function invalidateRecipeImageUrl(
       cached.userId === identity.userId &&
       cached.resourceKey === imageResourceKey
     ) {
+      if (cached.url.startsWith("blob:")) URL.revokeObjectURL(cached.url);
       cachedUrls.delete(key);
     }
   }
@@ -212,10 +216,15 @@ export function invalidateRecipeImageUrl(
 export function clearRecipeImageUrlCache(userId?: string) {
   if (userId) {
     for (const [key, cached] of cachedUrls) {
-      if (cached.userId === userId) cachedUrls.delete(key);
+      if (cached.userId === userId) {
+        if (cached.url.startsWith("blob:")) URL.revokeObjectURL(cached.url);
+        cachedUrls.delete(key);
+      }
     }
     hydratedUsers.delete(userId);
   } else {
+    for (const cached of cachedUrls.values())
+      if (cached.url.startsWith("blob:")) URL.revokeObjectURL(cached.url);
     cachedUrls.clear();
     hydratedUsers.clear();
   }

@@ -3,6 +3,7 @@ import { ChevronRight, IconButton, PanelLeft } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { useGuestAccess } from "./guest-access/context";
 
 type AppBreadcrumbHeaderProps = {
   onOpenSidebar: () => void;
@@ -91,6 +92,7 @@ export function AppBreadcrumbHeader({
   onOpenSidebar,
   rightComponent,
 }: AppBreadcrumbHeaderProps) {
+  const guest = useGuestAccess();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -121,7 +123,7 @@ export function AppBreadcrumbHeader({
         <ol className="flex min-w-max items-center gap-1.5 text-sm font-medium">
           {location.householdId ? (
             <BreadcrumbItem>
-              {location.module === "settings" ? (
+              {location.module === "settings" || guest ? (
                 <span className="text-muted">
                   {household?.name ?? "Household"}
                 </span>

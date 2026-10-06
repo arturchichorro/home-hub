@@ -9,9 +9,12 @@ import {
 } from "@tanstack/react-router";
 import { ApplicationState } from "../application-state";
 import type { Session } from "../auth/api";
+import type { GuestEntry } from "../guest-access/access";
 
 export type RouterContext = {
   session: Session | null;
+  guestAccess: GuestEntry | null;
+  leaveGuest: () => void;
   zero: Zero | undefined;
   onAuthenticated: (session: Session) => void;
   onAccessTokenRefreshed: (accessToken: string) => void;
