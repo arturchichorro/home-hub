@@ -15,10 +15,11 @@ Production is introduced in two deliberate stages:
    rollback path.
 
 The first production deployment is an OVHcloud VPS-1 in Gravelines, France,
-running Ubuntu Server 26.04 LTS on AMD64. It runs a single Docker Compose
-project containing:
+running Ubuntu Server 26.04 LTS on AMD64. Shared public ingress and HTTPS are
+owned by the separate private `arturchichorro/vps-infra` repository. The
+home-hub Docker Compose project contains:
 
-- Caddy;
+- an internal HTTP Caddy web server;
 - the compiled React/Vite application;
 - the Hono Node API;
 - one self-hosted `zero-cache`;
@@ -32,13 +33,22 @@ neither replaces the off-provider PostgreSQL backups required below.
 
 ## Public routing
 
-Caddy is the only public entry point to services running on the VPS. It:
+The separate vps-infra Caddy is the only public entry point on ports 80/443
+and owns certificate issuance/renewal. It proxies `home.achichorro.com` to
+`home-hub-web:80` on the external `vps-edge` Docker network.
 
-- listens on ports 80 and 443;
-- obtains and renews HTTPS certificates;
-- serves the compiled SPA and falls back to `index.html` for client routes;
-- proxies public API traffic to Hono;
-- proxies Zero HTTP and WebSocket traffic to `zero-cache`.
+The home-hub `web` service publishes **no host ports**. It joins both that edge
+network (with alias `home-hub-web`) and the private application network. It
+serves the SPA with its `index.html` fallback, proxies `/api/*` to Hono, and
+proxies `/zero/*` HTTP/WebSocket traffic to `zero-cache`. Its Caddy trusts
+forwarded headers from private Docker peers so the original HTTPS scheme and
+client information survive the second proxy hop. Do not publish this backend
+directly or accept forwarded headers from arbitrary public callers.
+
+Only `web` joins the edge network; PostgreSQL, Hono and Zero remain on the
+private application network. The shared ingress has no direct path to those
+backend services. Home-hub no longer mounts or owns the public Caddy certificate
+volumes; vps-infra adopts the existing volumes as external resources.
 
 PostgreSQL and direct container ports are not published to the internet. The
 application uses one public origin, `https://home.achichorro.com`. Caddy serves
@@ -59,6 +69,25 @@ and SPA navigation fallbacks with revalidation so a deployment can install a
 new application shell without retaining stale entry points. The generated
 service worker precaches the complete static build and does not runtime-cache
 API, Zero, or recipe-image traffic.
+
+## Shared ingress migration and operations
+
+The initial networking handover must follow `vps-infra/docs/MIGRATION.md`:
+prepare `vps-edge`, preserve the existing Caddy volumes and old web image,
+validate shared ingress, then coordinate replacing the old public web service
+with this internal-only backend. Expect a brief maintenance interruption; do
+not remove the old port bindings until shared ingress and rollback are ready.
+
+The shared Caddy configuration, public ports, TLS volumes and independent
+blog's routing live only in vps-infra. Blog builds, release files and newsletter
+code stay in the bolota repository. Neither is built or deployed by home-hub.
+
+Routine home-hub deployments retain the external edge network alias. Production
+CI still deploys only `main`: merging configuration into `develop` does not
+release it. If Guest development is unfinished, promote only these reviewed
+networking changes to `main` rather than deploying the whole development branch.
+The first promotion must be coordinated with the vps-infra handoff watcher;
+subsequent application releases need no shared-ingress rebuild.
 
 ## Cloudflare image delivery Worker
 

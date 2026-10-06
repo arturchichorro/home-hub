@@ -107,16 +107,23 @@ services:
       args:
         VITE_ZERO_CACHE_URL: https://home.achichorro.com/zero
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - caddy_data:/data
-      - caddy_config:/config
+    networks:
+      default:
+      edge:
+        aliases:
+          - home-hub-web
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
 
 volumes:
   postgres_data:
   zero_data:
-  caddy_data:
-  caddy_config:
+
+networks:
+  edge:
+    external: true
+    name: vps-edge
