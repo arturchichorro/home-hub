@@ -164,8 +164,12 @@ required transaction and lock scope visible:
 Entity lookups always include the household ID alongside the entity ID so a
 foreign row is indistinguishable from a missing row. Multi-row operations lock
 in a stable order—for example, the current owner before a transfer target—to
-reduce deadlock risk. External R2 requests never run while database locks are
-held.
+reduce deadlock risk. Image inspection and derivative processing run outside
+database transactions, followed by reauthorization before confirming metadata.
+The Guest content upload is the exception: it holds authorization and pending
+image locks through the R2 PUT so a concurrent disable cannot authorize a late
+upload. The request body is size-limited and fully received before acquiring
+these locks. An already-authorized upload may finish before disabling commits.
 
 For self-hosting, Rocicorp does not issue an API key. In production, configure a strong `ZERO_ADMIN_PASSWORD`. Optional `ZERO_QUERY_API_KEY` and `ZERO_MUTATE_API_KEY` values can authenticate calls from `zero-cache` to the API, but they complement rather than replace user authentication.
 

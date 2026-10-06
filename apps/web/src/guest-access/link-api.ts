@@ -69,6 +69,11 @@ export function guestLinkStatus(
       ? "Expired"
       : "Active";
 }
-export function guestLinkUrl(credential: string) {
-  return `https://guest.achichorro.com/join#${credential}`;
+export function guestLinkUrl(
+  credential: string,
+  origin = import.meta.env.DEV
+    ? window.location.origin
+    : "https://guest.achichorro.com",
+) {
+  return `${origin}/join#${credential}`;
 }

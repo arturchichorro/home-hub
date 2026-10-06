@@ -44,26 +44,30 @@ async function flushGroup(reads: PendingRead[]) {
         read,
       ]),
     );
-    for (const read of reads) {
-      const resultForRead = resultsByKey.get(
-        `${read.identity.recipeId}:${read.identity.imageId}:${read.identity.variant}`,
-      );
-      if (resultForRead && read.identity.accessToken.startsWith("hhg_v1_")) {
-        read.resolve(
-          await loadGuestImage(resultForRead.url, read.identity.accessToken),
-        );
-        continue;
-      }
-      read.resolve(
-        resultForRead
-          ? {
-              kind: "success",
-              url: resultForRead.url,
-              expiresInSeconds: resultForRead.expiresInSeconds,
-            }
-          : { kind: "not_found" },
-      );
-    }
+    await Promise.all(
+      reads.map(async (read) => {
+        try {
+          const resultForRead = resultsByKey.get(
+            `${read.identity.recipeId}:${read.identity.imageId}:${read.identity.variant}`,
+          );
+          if (!resultForRead) {
+            read.resolve({ kind: "not_found" });
+          } else if (read.identity.accessToken.startsWith("hhg_v1_")) {
+            // Each image can load independently; a slow image must not delay the next.
+            read.resolve(
+              await loadGuestImage(
+                resultForRead.url,
+                read.identity.accessToken,
+              ),
+            );
+          } else {
+            read.resolve({ kind: "success", ...resultForRead });
+          }
+        } catch (error) {
+          read.reject(error);
+        }
+      }),
+    );
   } catch (error) {
     for (const read of reads) read.reject(error);
   }

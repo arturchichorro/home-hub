@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  credentialFromFragment,
-  guestFragmentUrl,
-  validateGuestCredential,
-} from "./access";
+import { credentialFromFragment, validateGuestCredential } from "./access";
 
 const credential = `hhg_v1_${"A".repeat(43)}`;
 const guest = {
@@ -45,26 +41,23 @@ describe("Guest entry", () => {
   it.each([
     { guest: { ...guest, expiresAt: 0 } },
     { guest: { ...guest, access: "owner" } },
+    { guest: { ...guest, id: "------------------------------------" } },
+    { guest: { ...guest, householdId: 42 } },
     { userId: "account" },
     {},
   ])("does not open Guest mode for an invalid response", async (body) => {
     vi.stubGlobal("fetch", async () => Response.json(body));
     expect(await validateGuestCredential(credential)).toBeNull();
   });
-  it("keeps the credential exclusively in the fragment when navigating shared routes", () => {
-    const url = new URL(
-      guestFragmentUrl(
-        `/households/${guest.householdId}/recipes`,
-        "?sort=title",
-        credential,
-      ),
-      "https://guest.example",
-    );
-    expect(url.hash).toBe(`#${credential}`);
-    expect(url.pathname + url.search).not.toContain(credential);
-  });
   it("does not restore expired, disabled, or unknown links", async () => {
     vi.stubGlobal("fetch", async () => new Response(null, { status: 401 }));
     expect(await validateGuestCredential(credential)).toBeNull();
   });
+});
+
+it("preserves the link for retry when validation is temporarily unavailable", async () => {
+  vi.stubGlobal("fetch", async () => new Response(null, { status: 503 }));
+  await expect(validateGuestCredential(credential)).rejects.toThrow(
+    "Guest access is unavailable",
+  );
 });

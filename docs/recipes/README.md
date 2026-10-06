@@ -252,7 +252,7 @@ WebP quality 82. A one-hour server-authorized delivery capability preserves
 household and Recipes-module access. Clients cannot supply arbitrary
 transformation parameters or obtain the private source object URL.
 
-The upload flow is:
+The account upload flow is:
 
 1. The authenticated browser requests permission for a specific recipe, image
    ID, optional cooking log, content type, and size.
@@ -278,14 +278,26 @@ JPEG, PNG, and WebP initially, with a 10 MiB maximum. Treat presigned URLs as
 bearer credentials, never log them, and never expose R2 credentials through a
 `VITE_` environment variable.
 
-The web client caches signed derivative read URLs and in-flight requests by
+For Guests, step 4 returns an API content endpoint and step 5 sends the same
+Bearer credential used by Zero to that endpoint. The API rechecks write access,
+locks the pending image, checks content type and byte length, and sends the
+bytes to R2 while holding authorization locks. No separate Guest image pass
+or signed storage URL is delivered to the browser.
+
+The account web client caches signed derivative read URLs and in-flight requests by
 user, household, recipe, image, and display variant. Unexpired URL metadata is
 persisted in browser storage so reloads reuse the exact URL and browser HTTP
 cache; entries refresh shortly before expiry, are cleared on logout, and are
 invalidated when an image is deleted. Simultaneous misses are authorized in
 household-wide batches of at most 100 requests.
 
-The derivative read flow is:
+Guest image URLs and in-flight reads are partitioned by the non-secret link ID.
+Blobs remain only in memory, are released on Leave, and never enter the persistent
+URL cache. After batch authorization, individual image fetches run concurrently;
+each carries the original Bearer credential and rechecks access at the API.
+A slow or failed image does not hold up the rest of the batch.
+
+The account derivative read flow is:
 
 1. The authenticated browser requests one or more fixed display variants from
    the API, omitting URLs that remain valid in its persistent cache.
@@ -308,16 +320,13 @@ returns `404`; a transformation or storage failure returns a generic `500` and
 never falls back to exposing the original. Existing confirmed images require
 no eager data migration because missing derivatives are repaired lazily.
 
-Image deletion is idempotent. A short transaction authorizes and reads
-metadata, the original and both derivatives are deleted from R2 without
-database locks held, and a second
-transaction reauthorizes and locks the row before hard-deleting its metadata.
-If R2 deletion fails, metadata remains. If the database step fails after R2
-deletion, retrying can finish cleanup. A transactional outbox may replace this
-recovery policy if background jobs are introduced.
-
+Image deletion is idempotent and recoverable. One transaction authorizes the
+caller, locks the recipe-scoped image, and sets `deleted_at` and `updated_at`.
+The original and derivatives remain in R2; ordinary deletion does not remove
+objects or hard-delete metadata. This follows migration 0027's recoverable
+Recipe-child deletion model.
 Deleting an image does not synchronously purge its content-addressed edge-cache
-entry. The API stops issuing capabilities as soon as metadata is deleted, an
+entry. The API stops issuing capabilities as soon as metadata is soft-deleted, an
 already-issued URL stops working after at most one hour because the Worker
 authorizes before reading cache, and image UUIDs are never reused. The orphaned
 cache entry then expires or is evicted without making the deleted image

@@ -241,6 +241,8 @@ export function guestImageContentPath(url: string) {
   return parsed.pathname + parsed.search;
 }
 
+// <img> cannot send a Bearer header. Fetch with the same credential used by
+// Zero, then display an in-memory blob URL; no additional Guest pass is issued.
 export async function loadGuestImage(
   url: string,
   credential: string,

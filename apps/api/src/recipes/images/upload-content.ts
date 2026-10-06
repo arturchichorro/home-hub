@@ -5,6 +5,9 @@ import { and, eq, isNull } from "drizzle-orm";
 import { authorizeModule } from "../../authorization/module-access";
 import { findRecipeForShare } from "./scoped-entities";
 
+// Guest uploads carry the original Bearer credential to the API instead of
+// receiving an independently usable R2 signed URL. Authorization stays locked
+// through the upload so disabling a link cannot race a new write.
 export function createUploadRecipeImageContent({
   db,
   put,

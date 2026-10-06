@@ -317,3 +317,16 @@ creating an account-shaped Guest session. Guest media uses Bearer-authenticated
 API content endpoints, with ephemeral blob URLs for display. Account media keeps
 its existing direct signed-URL flow. QR encoding runs entirely in the owner's
 browser. No external QR service receives the link.
+
+
+Guest entry makes one `/api/access` request before opening the persistent Zero
+cache. Household route guards then compare the validated scope in memory;
+they do not fetch or revalidate on every navigation. Existing Zero query
+prefetches remain asynchronous. Returning to a visible tab revalidates the
+link; transient network/server failures retain it for retry.
+
+The shared request principal is `{ userId }` for an account or `{ guest }` for
+a link-derived scope. Image authorization, Zero queries, and Zero mutations
+consume it. `ZeroAuthContext` names this shared transport shape; it does not
+create a Guest account or session. Its Guest response contract uses Zod,
+with the TypeScript type inferred from the same schema.
