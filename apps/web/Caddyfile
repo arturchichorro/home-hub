@@ -1,4 +1,11 @@
-home.achichorro.com {
+{
+	servers {
+		trusted_proxies static private_ranges
+		trusted_proxies_strict
+	}
+}
+
+:80 {
 	encode zstd gzip
 
 	handle /api/* {

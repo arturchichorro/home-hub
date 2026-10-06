@@ -258,14 +258,16 @@ Typical values are:
 The initial production target is an OVHcloud VPS-1 in Gravelines running
 Ubuntu Server 26.04 LTS on AMD64, with Caddy, the Hono API, `zero-cache`, and
 PostgreSQL deployed through Docker Compose. See [Deployment](./deployment.md).
-The application is exposed at `https://home.achichorro.com`; Caddy serves the
-SPA at the origin and routes `/api/*` and `/zero/*` to their private services.
+The application is exposed at `https://home.achichorro.com`; shared ingress
+owned by vps-infra proxies to home-hub's internal HTTP web server, which serves
+the SPA and routes `/api/*` and `/zero/*` to their private services.
 
 ## Production topology
 
 ```mermaid
 flowchart LR
-  Client["Browser on phone or laptop"] -->|"HTTPS"| Caddy
+  Client["Browser on phone or laptop"] -->|"HTTPS"| Ingress["Shared Caddy (vps-infra)"]
+  Ingress -->|"HTTP on vps-edge"| Caddy["Internal home-hub web server"]
   Caddy -->|"static SPA files"| Web["React/Vite build"]
   Caddy -->|"HTTP API"| API["Hono API"]
   Caddy -->|"Zero WebSocket and HTTP"| Zero["zero-cache"]
@@ -278,12 +280,13 @@ flowchart LR
   Edge -->|"WebP transform"| Images["Cloudflare Images"]
 ```
 
-Caddy is the only public entry point to services on the VPS. It terminates
-HTTPS, serves the compiled SPA with an `index.html` fallback, and
-reverse-proxies API and Zero traffic. The independently deployed Cloudflare
-Worker is the only other public application endpoint and serves signed image
-derivatives. PostgreSQL and the containers' direct API and Zero ports remain
-private to the Compose network.
+The shared vps-infra Caddy is the only public VPS entry point and terminates
+HTTPS. Home-hub's internal-only HTTP Caddy serves the SPA with an `index.html`
+fallback and reverse-proxies API and Zero traffic. Only the web service joins
+the external `vps-edge` network; no home-hub web ports are published. Original
+HTTPS/client forwarding survives both proxy hops. The independently deployed
+Cloudflare Worker serves signed image derivatives. PostgreSQL and the
+containers' direct API and Zero ports remain private to the application network.
 
 The public API uses the `/api` prefix, keeping API requests distinct from SPA
 routes such as `/households/:householdId/shopping`. Production routing must

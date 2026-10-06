@@ -37,4 +37,4 @@ FROM caddy:2.11.4-alpine AS runtime
 COPY apps/web/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/apps/web/dist /srv
 
-EXPOSE 80 443
+EXPOSE 80
