@@ -27,7 +27,6 @@ together before implementation begins.
 
 ## Future modules and capabilities
 
-- [ ] Documentos (para guardar cópias de documentos importantes, categorizado)
 - [ ] French Vocabulary - Flashcards instead
 - [ ] Goals / sport logs / logs in general (log things by category I guess)
 - [ ] Household finance
