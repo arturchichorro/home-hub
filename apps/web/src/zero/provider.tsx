@@ -40,7 +40,11 @@ export function HomeHubZeroProvider({
 
   return (
     <ZeroProvider
-      cacheURL={cacheURL}
+      cacheURL={
+        window.location.hostname === "guest.achichorro.com"
+          ? `${window.location.origin}/zero`
+          : cacheURL
+      }
       schema={schema}
       userID={userId}
       auth={accessToken}

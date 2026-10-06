@@ -204,7 +204,11 @@ are untrusted layout metadata constrained to
 
 ## Synchronization and authorization
 
-Named Recipes queries constrain results through current household membership,
+Guests reuse the existing Recipes routes, library, detail, ingredients, cooking
+history, and media components. Read links disable mutation controls; write
+links allow ordinary module changes including recoverable deletion.
+
+Named Recipes queries constrain results through current household membership or the validated Guest household,
 an enabled Recipes module setting, and `deleted_at IS NULL`. The Zero publication is only a coarse
 allowlist: it omits recipe-image object keys, and query authorization still
 determines which rows a client may synchronize.
@@ -212,7 +216,7 @@ determines which rows a client may synchronize.
 Recipe, ingredient, cooking-log, and confirmed-image metadata changes use
 validated custom Zero mutators where implemented. Their optimistic client run
 provides immediate feedback; their authoritative server run verifies the
-authenticated user, current household membership, the enabled Recipes setting,
+account membership or active write Guest link, the enabled Recipes setting,
 and every referenced active recipe-scoped row inside the transaction. Deleted
 recipes cannot receive metadata or image mutations. Foreign IDs are
 indistinguishable from missing IDs. Scalar conflicts use the last write
@@ -225,8 +229,11 @@ disabled and no custom long-term offline queue is introduced.
 
 ## Image storage and security
 
-Recipe image bytes travel directly between the browser and Cloudflare R2 using
-short-lived presigned URLs. PostgreSQL stores metadata; the API never writes
+For accounts, recipe image bytes travel directly between the browser and Cloudflare R2 using
+short-lived presigned URLs. Guests use authenticated API content endpoints for
+reads and uploads, keeping signed delivery/storage capabilities server-side.
+Every Guest content request rechecks the link and Recipes authorization;
+displayed images use memory-only blob URLs. PostgreSQL stores metadata; the API never writes
 uploaded image bytes to its filesystem.
 
 Every confirmed upload remains in private R2 in its original content type and

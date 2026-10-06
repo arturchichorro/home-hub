@@ -1,4 +1,4 @@
-home.achichorro.com {
+home.achichorro.com, guest.achichorro.com {
 	encode zstd gzip
 
 	handle /api/* {

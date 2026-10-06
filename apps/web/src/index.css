@@ -14,3 +14,23 @@ body {
   min-height: 100svh;
   background: var(--color-canvas);
 }
+
+@media print {
+  :where(body:has(#guest-link-print)) * {
+    visibility: hidden;
+  }
+  #guest-link-print,
+  #guest-link-print * {
+    visibility: visible;
+  }
+  #guest-link-print {
+    position: absolute;
+    inset: 0;
+    padding: 2rem;
+    color: black;
+    background: white;
+  }
+  #guest-link-print p {
+    color: black;
+  }
+}

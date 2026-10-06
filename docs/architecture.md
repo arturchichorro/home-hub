@@ -110,7 +110,7 @@ VoiceOver and TalkBack.
 
 The household is the tenancy, collaboration, and authorization boundary. A
 user may belong to multiple households, and every household-owned row is
-authorized through current membership in PostgreSQL.
+authorized through current account membership or an active Guest link in PostgreSQL.
 
 Lists and Recipes are the built-in feature modules. French
 Vocabulary and possible future features such as household finance use the same
@@ -258,7 +258,8 @@ Typical values are:
 The initial production target is an OVHcloud VPS-1 in Gravelines running
 Ubuntu Server 26.04 LTS on AMD64, with Caddy, the Hono API, `zero-cache`, and
 PostgreSQL deployed through Docker Compose. See [Deployment](./deployment.md).
-The application is exposed at `https://home.achichorro.com`; Caddy serves the
+The same application is exposed at `https://home.achichorro.com` and
+`https://guest.achichorro.com`; Caddy serves the
 SPA at the origin and routes `/api/*` and `/zero/*` to their private services.
 
 ## Production topology
@@ -294,3 +295,25 @@ origin, so the application API does not require CORS. Direct browser-to-R2
 uploads are cross-origin and require the restricted R2 bucket CORS policy
 described above. Derivative reads use the Worker and never expose an R2 read
 URL.
+
+## Guest access implementation
+
+The API application boundary resolves `Authorization: Bearer <credential>` once.
+Account JWTs and `hhg_v1_` Guest credentials share that boundary; feature routers
+receive a trusted principal. Guest validation hashes the credential and reads
+its household, permission, expiration, and disabled state from PostgreSQL.
+The Guest table is server-only and excluded from Zero replication.
+
+`/api/access` validates Guest entry before the browser opens its normal Zero
+cache under `guest-link:<link-id>`. Zero receives the identical raw credential
+used by ordinary APIs. Its server query/mutation handlers derive trusted context
+and cache identity independently of client input. Live connections revalidate
+and retransform once per second. Guest mutation authorization uses the underlying
+PostgreSQL transaction and locks the link, household, and enabled module.
+
+The web entry/provider keeps the credential in the fragment and memory. Existing
+household routes, shell, Lists, and Recipes consume access metadata without
+creating an account-shaped Guest session. Guest media uses Bearer-authenticated
+API content endpoints, with ephemeral blob URLs for display. Account media keeps
+its existing direct signed-URL flow. QR encoding runs entirely in the owner's
+browser. No external QR service receives the link.

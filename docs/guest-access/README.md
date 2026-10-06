@@ -1,6 +1,6 @@
 # Guest access
 
-**Status:** planned; not yet implemented
+**Status:** implemented in the Guest-access PR stack; production rollout follows review and merge.
 
 This document specifies accountless access to a household through a QR code.
 The first version deliberately uses one small model: an expiring Guest access
@@ -197,8 +197,9 @@ add-expiration, or drop-session migrations from earlier prototypes.
 
 ## Delivery plan
 
-Implementation should be delivered as a small stack of reviewable pull
-requests, each based on the previous one:
+Implementation is delivered as a small stack of reviewable pull requests,
+each based on the previous one. Foundation PR #34 is merged; the remaining
+PRs stay open for review:
 
 1. **Guest-link foundation**
    - Add the final table and one migration.
@@ -249,3 +250,21 @@ implementation.
 - Guest-specific module selection;
 - remote deletion of cached browser data; and
 - native Guest access.
+
+## Implementation and verification notes
+
+The final table is migration `0029_milky_anita_blake`; no migration was applied
+to the local or production database during implementation. It stays outside
+Zero's schema/publication, with an explicit CI exclusion assertion.
+
+Owner APIs are `POST`/`GET /api/households/:householdId/guest-access-links` and
+`DELETE /api/households/:householdId/guest-access-links/:linkId`. The creation
+response alone includes the credential. `/api/access` validates entry and
+returns database-derived link scope; it does not exchange credentials.
+
+Guest image URLs resolve to authenticated API content endpoints. Zero uses
+the raw same credential and `guest-link:<id>` as its non-secret cache identity.
+Active Zero streams revalidate every second; new API and mutation requests
+check current authorization immediately. Existing downloaded/offline data is
+not remotely erased. QR encoding, display, copy, download, and printing happen
+in the owner's browser, without an external QR service.

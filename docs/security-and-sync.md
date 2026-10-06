@@ -3,7 +3,7 @@
 This is the canonical source for cross-cutting authentication, authorization,
 tenant isolation, transaction-locking requirements, and synchronization
 behavior. Module-specific rules live in the [Recipes](./recipes/) and
-[Shopping](./shopping/) documentation. Runtime structure belongs in
+[Lists](./lists/) documentation. Runtime structure belongs in
 [Architecture](./architecture.md), and shared table structure belongs in
 [Data model](./data-model.md).
 
@@ -32,7 +32,7 @@ JWTs are signed and verified by the API using Node's standard `crypto` APIs, not
 
 Do not place passwords, household membership, roles, or other mutable authorization state in the JWT. Membership is checked against PostgreSQL so changes take effect without waiting for a token to expire.
 
-Protected routes read the access JWT from `Authorization: Bearer <token>`, verify it, and place its `sub` claim into a typed request context. Database-backed endpoints still load mutable user state from PostgreSQL. A validly signed token whose user no longer exists receives the same generic `401 Unauthorized` response as other authentication failures.
+The application boundary reads `Authorization: Bearer <credential>` and resolves an account JWT or a prefixed Guest link into a typed principal. For accounts it verifies the JWT and derives the user from `sub`. Feature routers do not construct authentication middleware. Database-backed endpoints still load mutable user state from PostgreSQL. A validly signed token whose user no longer exists receives the same generic `401 Unauthorized` response as other authentication failures.
 
 ## Signup gate
 
@@ -65,9 +65,9 @@ A future mobile client stores its refresh token using platform secure storage an
 
 ## Zero authentication
 
-Pass the current access JWT to Zero's `auth` option. Zero forwards it to the query and mutate endpoints as a bearer token. Those endpoints verify the same signature, issuer, audience, and expiry used by ordinary API middleware. When Zero enters `needs-auth`, make one deduplicated refresh request, replace the in-memory access token, and let the existing Zero provider reconnect without changing the authenticated user or recreating its client. A refresh `401` ends the session; temporary failures retain the session and retry with bounded exponential backoff. Deduplication is required because refresh tokens rotate and concurrent refresh requests could otherwise look like token reuse.
+Pass the current account JWT or raw `hhg_v1_` Guest credential to Zero's `auth` option. Zero forwards it to the query and mutate endpoints as a bearer token. Both endpoints use the same application authentication boundary as ordinary APIs. For accounts, when Zero enters `needs-auth`, make one deduplicated refresh request, replace the in-memory access token, and let the existing Zero provider reconnect without changing the authenticated user or recreating its client. A refresh `401` ends the session; temporary failures retain the session and retry with bounded exponential backoff. Deduplication is required because refresh tokens rotate and concurrent refresh requests could otherwise look like token reuse.
 
-The API derives the user from the verified JWT and never from query or mutation arguments.
+The API derives the account user from the JWT, or the Guest link and household from PostgreSQL, never from query or mutation arguments. Guests do not enter the account refresh flow; invalid access returns to `/join`.
 
 ## Household invitations
 
@@ -140,16 +140,16 @@ endpoint to owner-only management data. The API cannot reconstruct or
 redisplay a raw invitation token because only its hash was persisted.
 
 Module availability is mutable authorization state and does not belong in the
-JWT. A module-owned server operation must verify both current membership and an
-enabled `household_module_settings` row. Missing settings fail closed. These
+JWT. A module-owned server operation must verify current membership or an active
+Guest link, its read/write permission, and an enabled `household_module_settings` row. Missing settings fail closed. These
 checks apply to ordinary API routes, named Zero queries, custom mutators, R2
 authorization, and cross-module operations. Hiding navigation is user
 experience, not enforcement.
 
 ### Access checks and lock modes
 
-Keep the required consistency visible at each call site rather than routing all
-authorization through one configurable helper:
+Shared module authorization centralizes the account/Guest decision. Keep the
+required transaction and lock scope visible:
 
 - Use an ordinary read when the operation only needs a current snapshot and
   does not rely on that row remaining unchanged for a later write.
@@ -208,12 +208,12 @@ logs.
 
 Define named Zero queries in shared TypeScript. At the API query endpoint:
 
-1. Verify the forwarded access JWT.
-2. construct a trusted context containing the user ID;
+1. Resolve the forwarded Bearer credential at the application boundary.
+2. construct a trusted account or database-derived Guest context;
 3. find the requested named query;
-4. transform it with relationship filters requiring household membership and,
+4. transform it with filters requiring membership or the validated Guest household and,
    for module-owned data, an enabled module setting;
-5. pass the verified user ID to Zero’s current request handler API.
+5. pass the account ID or non-secret `guest-link:<id>` cache identity to Zero’s request handler.
 
 The named-query function produces a ZQL abstract syntax tree (AST): a
 structured, serializable representation of the requested table, filters,
@@ -221,21 +221,22 @@ relationships, and ordering. It is data describing a query rather than SQL
 text. The API builds this transformation with the trusted user ID, and
 `zero-cache` uses it to determine which rows that client may synchronize.
 
-Every query returning household-owned data must constrain results through
-`household_members`. Module-owned queries must also require the corresponding
+Every household query must constrain results through current account membership
+or the server-validated Guest household. Guests cannot query other households. Module-owned queries must also require the corresponding
 enabled setting. Do not accept a household ID and merely assume it is
 authorized.
 
 Zero uses a custom PostgreSQL publication named `home_hub_zero` as a coarse
 replication allowlist. It publishes the columns required from `households`,
 `household_members`, `household_module_settings`, `lists`, `list_items`, `recipes`,
-`recipe_ingredients`, `recipe_cook_logs`, and `recipe_images`. It excludes
-`users`, `refresh_tokens`, and `household_invites`, so password hashes, email
-addresses, refresh-token hashes, and invite-token hashes do not enter the Zero
-replica. The recipe-image publication also omits object keys. Publishing a
-table does not authorize client access; named queries must still apply
-authenticated, household-scoped row authorization. The retired `shopping_items`
-table remains in the publication until cleanup, but has no live named query.
+`recipe_ingredients`, `recipe_cook_logs`, and `recipe_images`. It publishes only safe user profile columns (`id`, `username`), never password
+hashes or email addresses. `refresh_tokens`, `household_invites`, and
+`household_guest_access_links` stay outside the publication. Recipe-image
+object keys are also excluded. Publishing a table does not authorize client
+access. Migration 0028 publishes the recoverable-deletion columns introduced
+by 0027; both remain unchanged. CI asserts required columns and the exclusion
+of Guest credential hashes. Any replicated schema change must update the
+publication in the same migration.
 
 ## Mutation authorization
 
@@ -243,11 +244,12 @@ Use current custom Zero mutators, not legacy CRUD mutators. Disable legacy CRUD 
 
 Shared mutators provide the optimistic client behavior. Server execution adds authority:
 
-1. Verify the forwarded access JWT.
-2. Pass the verified user ID to Zero’s mutation request handler.
+1. Resolve the forwarded Bearer credential at the application boundary.
+2. Pass the trusted account ID or link-derived cache identity to Zero’s mutation request handler.
 3. Validate mutation arguments at runtime.
-4. Check membership and the relevant enabled module setting for the supplied
-   household inside the mutation transaction.
+4. Check current membership or a live write Guest link, and the enabled module
+   setting for the supplied household inside the same mutation transaction.
+   Lock authorization evidence with `FOR SHARE` against concurrent disabling.
 5. Verify lists and list items belong to the requested household and list, and
    recipe, ingredient, cooking-log, and image rows to the requested household and recipe.
 6. Execute the operation idempotently.
@@ -299,3 +301,33 @@ The Recipes module owns the complete presigned original-upload, signed
 derivative-read, deletion, cache-partitioning, file-type, variant, and size
 rules. Original objects remain private and have no user-facing read path. See
 [Recipes image storage and security](./recipes/#image-storage-and-security).
+
+## Guest credential and media boundary
+
+Guest credentials are `hhg_v1_` plus 32 cryptographically random bytes encoded
+as canonical base64url. Store only the SHA-256 hash of the complete credential.
+Unknown, malformed, expired, and disabled credentials receive generic 401s.
+The API loads mutable authorization from PostgreSQL on each request; client
+household IDs and access values never grant permission. Household deletion and
+module disabling also deny access. Household management stays account-only.
+
+Owner create/list/disable operations check current ownership inside their
+transaction. Disabling takes a link update lock and never changes its original
+configuration or reenables it. Guest Zero and image writes lock the active
+link, household, and module in their own write transaction. Existing Zero
+connections revalidate/retransform every second, so live-stream revocation is
+bounded by that interval and in-flight work; new requests check immediately.
+
+The browser validates a link before reopening its Zero cache and stores no raw
+Guest secret outside the fragment and memory. Never put it in cookies, browser
+storage, logs, telemetry, error reports, or cache identifiers. API responses
+containing credentials use `Cache-Control: no-store`. The stable cache identity
+is the non-secret link ID. Downloaded module data may remain in normal Zero
+storage; Leave and disabling do not claim secure remote cache erasure.
+
+Guest media requests carry the same Bearer credential through authenticated API
+content endpoints. Signed R2 and delivery-Worker URLs stay on the server for
+Guests. Each new image read/upload checks current permissions; upload bytes
+are size-limited and checked against pending metadata. Image content responses
+use `no-store`; browser blob URLs are memory-only and released on Leave. The
+existing account signed-media flow remains unchanged.

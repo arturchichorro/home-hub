@@ -23,11 +23,11 @@ Connected changes should appear immediately and converge across clients. Previou
 - [Lists](./lists/) owns list behavior, interface composition, data,
   and synchronization.
 
-## Planned feature specifications
+## Household access
 
-- [Guest access](./guest-access/) specifies accountless, household-scoped
-  access through revocable QR codes while reusing the existing module
-  interfaces.
+- [Guest access](./guest-access/) provides accountless access to every enabled household
+  module through immutable, expiring read/write links and QR codes. Owners
+  manage links in household settings; Guests use the same module interfaces.
 
 ## Useful commands
 

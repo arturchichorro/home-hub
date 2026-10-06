@@ -39,9 +39,9 @@ accessibility behavior is identical, owning module behavior, or becoming a
 generic domain abstraction.
 
 Each household owner chooses which implemented modules are enabled for that
-household. The setting applies equally to every member; there are no per-module
+household. The setting applies equally to members and Guests; there are no per-module
 roles or per-member module permissions. Core household selection and management
-are always available and are not configurable modules.
+are account-only and always available to authorized accounts and are not configurable modules.
 
 Disabling a module hides its navigation and blocks its server-side queries,
 mutations, uploads, and integrations. It does not delete the module's data.
@@ -86,3 +86,21 @@ these operations are defined in
 - a generic schema for arbitrary household data;
 - artificial limits on the number of household members;
 - long-term offline writes.
+
+## Guest access
+
+Owners can create multiple named read-only or read/write links for a household.
+Each link covers every enabled module and defaults to exactly 90 days of access.
+Its name, permission, expiration, and secret are fixed at creation. A link can
+only be permanently disabled; replacement means creating a new link.
+
+Household settings shows metadata/status and allows creation and disabling.
+The creation screen displays the complete URL and a locally generated QR code,
+with copy, download, and print controls. The secret is shown once; owners must
+save it before dismissing the screen. Lists and Recipes reuse their account
+interfaces with disabled mutation controls for read-only Guests.
+
+`/join` is the only Guest-specific route. The shell shows temporary access and
+Leave, fixes navigation to the link's household, and hides administration.
+Guest access creates no user, membership, session, cookie, JWT, identity, or
+authorship. See [Guest access](./guest-access/) for the complete behavior.
