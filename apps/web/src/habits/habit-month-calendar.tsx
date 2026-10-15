@@ -1,4 +1,5 @@
 import { Button, Tooltip } from "@home-hub/ui-web";
+import { HabitMemberMark, habitMemberColors } from "./habit-member-mark";
 
 const weekdays = [
   "Monday",
@@ -9,16 +10,6 @@ const weekdays = [
   "Saturday",
   "Sunday",
 ] as const;
-
-// Stable per account, independent of roster ordering, habit and displayed month.
-export function habitMemberColor(userId: string): string {
-  let hash = 2166136261;
-  for (const character of userId) {
-    hash = Math.imul(hash ^ character.charCodeAt(0), 16777619) >>> 0;
-  }
-  const hue = (hash / 2 ** 32) * 360;
-  return `oklch(var(--member-marker-lightness) var(--member-marker-chroma) ${hue})`;
-}
 
 export function monthCalendarWeeks(
   dates: readonly string[],
@@ -68,6 +59,7 @@ export function HabitMonthCalendar({
   onSetCompleted,
 }: Props) {
   const weeks = monthCalendarWeeks(dates);
+  const colors = habitMemberColors(members.map((member) => member.userId));
   const participants = members.filter(
     (member) =>
       member.userId === currentUserId ||
@@ -148,15 +140,13 @@ export function HabitMonthCalendar({
                             <p className="font-medium">{date}</p>
                             <ul>
                               {completedMembers.map((member) => (
-                                <li key={member.userId}>
-                                  <span
-                                    aria-hidden="true"
-                                    style={{
-                                      color: habitMemberColor(member.userId),
-                                    }}
-                                  >
-                                    X{" "}
-                                  </span>
+                                <li
+                                  key={member.userId}
+                                  className="flex items-center gap-1.5"
+                                >
+                                  <HabitMemberMark
+                                    color={colors.get(member.userId)}
+                                  />
                                   {member.user?.username ?? "Member"}
                                 </li>
                               ))}
@@ -189,14 +179,10 @@ export function HabitMonthCalendar({
                                 className="flex flex-wrap gap-x-1 gap-y-0.5 text-sm font-semibold"
                               >
                                 {completedMembers.map((member) => (
-                                  <span
+                                  <HabitMemberMark
                                     key={member.userId}
-                                    style={{
-                                      color: habitMemberColor(member.userId),
-                                    }}
-                                  >
-                                    X
-                                  </span>
+                                    color={colors.get(member.userId)}
+                                  />
                                 ))}
                               </span>
                             </span>
@@ -224,13 +210,7 @@ export function HabitMonthCalendar({
               key={member.userId}
               className="inline-flex items-center gap-1.5"
             >
-              <span
-                aria-hidden="true"
-                className="font-semibold"
-                style={{ color: habitMemberColor(member.userId) }}
-              >
-                X
-              </span>
+              <HabitMemberMark color={colors.get(member.userId)} />
               <span>
                 {member.user?.username ?? "Member"}
                 {member.userId === currentUserId ? " (you)" : ""}: {count}{" "}

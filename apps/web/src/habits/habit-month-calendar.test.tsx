@@ -2,11 +2,8 @@ import { habitPeriod } from "@home-hub/shared/habits";
 import type { TooltipProps } from "@home-hub/ui-web";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  HabitMonthCalendar,
-  habitMemberColor,
-  monthCalendarWeeks,
-} from "./habit-month-calendar";
+import { habitMemberColor, habitMemberColors } from "./habit-member-mark";
+import { HabitMonthCalendar, monthCalendarWeeks } from "./habit-month-calendar";
 
 const { tooltipProps } = vi.hoisted(() => ({
   tooltipProps: vi.fn<(props: TooltipProps) => void>(),
@@ -85,9 +82,16 @@ describe("month calendar layout", () => {
   it("assigns repeatable account colors independently of calendar or roster order", () => {
     expect(habitMemberColor("alice")).toBe(habitMemberColor("alice"));
     expect(habitMemberColor("alice")).not.toBe(habitMemberColor("bob"));
-    expect(habitMemberColor("alice")).toContain(
-      "var(--member-marker-lightness)",
-    );
+    expect(habitMemberColor("alice")).toContain("var(--color-member-");
+  });
+});
+
+describe("member palette", () => {
+  it("resolves color collisions and does not depend on roster order", () => {
+    const ids = Array.from({ length: 12 }, (_, index) => `member-${index}`);
+    const colors = habitMemberColors(ids);
+    expect(new Set(colors.values()).size).toBe(ids.length);
+    expect(habitMemberColors([...ids].reverse())).toEqual(colors);
   });
 });
 
@@ -128,6 +132,8 @@ describe("shared habit month", () => {
     );
     expect(html).toContain(habitMemberColor("alice"));
     expect(html).toContain(habitMemberColor("bob"));
+    expect(html).toContain("lucide-x");
+    expect(html).not.toMatch(/>X\s*</);
     expect(html).not.toContain('scope="row"');
     expect(html).not.toContain("2026-09-");
     expect(html).not.toContain("2026-11-");
