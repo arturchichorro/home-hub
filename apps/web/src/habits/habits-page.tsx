@@ -9,6 +9,7 @@ import { queries } from "@home-hub/shared/zero/queries";
 import {
   Archive,
   Button,
+  Calendar,
   ChevronLeft,
   ChevronRight,
   ConfirmationPopover,
@@ -128,9 +129,12 @@ export function HabitsPage({ householdId }: { householdId: string }) {
         >
           <ChevronRight aria-hidden="true" className="size-4" />
         </IconButton>
-        <Button variant="ghost" onClick={() => setAnchor(undefined)}>
-          Today
-        </Button>
+        <IconButton
+          aria-label="Current month"
+          onClick={() => setAnchor(undefined)}
+        >
+          <Calendar aria-hidden="true" className="size-4" />
+        </IconButton>
       </div>
       {error ? (
         <InlineAlert role="alert" variant="danger">

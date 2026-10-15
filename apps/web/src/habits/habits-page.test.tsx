@@ -63,6 +63,9 @@ describe("Habits page", () => {
     expect(html).toContain("Bob");
     expect(html).not.toContain("Charlie");
     expect(html).toContain("October 2026");
+    expect(html).toContain('aria-label="Current month"');
+    expect(html).toContain("lucide-calendar");
+    expect(html).not.toContain(">Today<");
     expect(html).toContain(
       'aria-label="Read, 2026-10-14. Completed by: Alice. Your completion: recorded." aria-pressed="true"',
     );
