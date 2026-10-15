@@ -10,6 +10,9 @@ vi.mock("@rocicorp/zero/react", () => ({
   useZero: () => ({ userID: "me", mutate: vi.fn() }),
   useQuery,
 }));
+vi.mock("../app-header-right-component", () => ({
+  useAppHeaderRightComponent: vi.fn(),
+}));
 vi.mock("../zero/use-zero-mutation-enabled", () => ({
   useZeroMutationEnabled,
 }));

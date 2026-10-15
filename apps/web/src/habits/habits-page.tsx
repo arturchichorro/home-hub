@@ -8,18 +8,18 @@ import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import {
   Archive,
-  Button,
   Calendar,
   ChevronLeft,
   ChevronRight,
   ConfirmationPopover,
   IconButton,
   InlineAlert,
-  Plus,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import { HabitActions } from "./habit-actions";
 import { HabitGrid } from "./habit-grid";
 import { HabitMonthCalendar } from "./habit-month-calendar";
 import { HabitNameDialog } from "./habit-name-dialog";
@@ -34,6 +34,18 @@ export function HabitsPage({ householdId }: { householdId: string }) {
   const [anchor, setAnchor] = useState<string>();
   const [archived, setArchived] = useState(false);
   const [creating, setCreating] = useState(false);
+  const headerActions = useMemo(
+    () => (
+      <HabitActions
+        archived={archived}
+        disabled={!enabled}
+        onToggleArchive={() => setArchived((value) => !value)}
+        onCreate={() => setCreating(true)}
+      />
+    ),
+    [archived, enabled],
+  );
+  useAppHeaderRightComponent(headerActions);
   const [error, setError] = useState<string>();
   const pendingRef = useRef(new Set<string>());
   const [pending, setPending] = useState(new Set<string>());
@@ -91,22 +103,9 @@ export function HabitsPage({ householdId }: { householdId: string }) {
     result.type !== "complete" || memberResult.type !== "complete";
   return (
     <div className="grid min-w-0 gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">
-          {archived ? "Archived habits" : "Habits"}
-        </h1>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="ghost" onClick={() => setArchived(!archived)}>
-            {archived ? "Active habits" : "Archive"}
-          </Button>
-          {!archived ? (
-            <Button disabled={!enabled} onClick={() => setCreating(true)}>
-              <Plus aria-hidden="true" className="size-4" />
-              Add habit
-            </Button>
-          ) : null}
-        </div>
-      </div>
+      {archived ? (
+        <h1 className="text-sm font-medium text-muted">Archived habits</h1>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <IconButton
           aria-label="Previous month"
