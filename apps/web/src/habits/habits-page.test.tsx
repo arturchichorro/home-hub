@@ -76,6 +76,7 @@ describe("Habits page", () => {
     expect(html).not.toContain(">Week<");
     expect(html).toContain('aria-label="Habit name"');
     expect(html).not.toContain(">Rename<");
+    expect(html).not.toContain("Its history will be kept");
   });
   it("disables dates before creation and in the future", () => {
     setup();
@@ -128,7 +129,7 @@ describe("Habits page", () => {
           ? "Loading habits"
           : type === "error"
             ? "Unable to load"
-            : "No habits yet",
+            : "No habits.",
       );
     },
   );

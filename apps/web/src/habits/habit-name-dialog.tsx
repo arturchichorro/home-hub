@@ -7,7 +7,6 @@ import {
   DialogRoot,
   Field,
   FieldControl,
-  InlineAlert,
 } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { type SubmitEvent, useId, useState } from "react";
@@ -102,11 +101,6 @@ export function HabitNameDialog({
               }}
             />
           </Field>
-          {error ? (
-            <InlineAlert role="alert" variant="danger" className="mt-3">
-              {error}
-            </InlineAlert>
-          ) : null}
         </form>
       </DialogPopup>
     </DialogRoot>

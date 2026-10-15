@@ -72,10 +72,9 @@ export function HabitsPage({ householdId }: { householdId: string }) {
       const mutation = zero.mutate(request);
       const client = await mutation.client;
       const outcome = client.type === "error" ? client : await mutation.server;
-      if (outcome.type === "error")
-        setError("The change could not be saved. Please try again.");
+      if (outcome.type === "error") setError("Unable to save.");
     } catch {
-      setError("The change could not be saved. Please try again.");
+      setError("Unable to save.");
     } finally {
       pendingRef.current.delete(key);
       setPending(new Set(pendingRef.current));
@@ -178,7 +177,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
               )}
               {!archived ? (
                 <ConfirmationPopover
-                  message={`Archive “${habit.name}” for everyone? Its history will be kept, but tracking will stop.`}
+                  message={`Archive “${habit.name}”?`}
                   trigger={
                     <IconButton
                       aria-label={`Archive ${habit.name}`}
@@ -233,7 +232,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
             ? "Loading habits…"
             : archived
               ? "No archived habits."
-              : "No habits yet. Add one to start tracking together."}
+              : "No habits."}
         </p>
       ) : null}
       {creating ? (

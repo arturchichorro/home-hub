@@ -127,6 +127,7 @@ describe("shared habit month", () => {
     expect(content).toContain("Alice");
     expect(content).toContain("Bob");
     expect(content).not.toContain("No completions");
+    expect(content).not.toContain("2026-10-14");
   });
   it("never enables a tooltip for a completely empty month", () => {
     renderToStaticMarkup(

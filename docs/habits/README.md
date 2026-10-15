@@ -6,6 +6,9 @@ every current member can see progress. No joining, targets or streaks are requir
 
 ## Interface and calendar
 
+Keep visible copy minimal. Do not add explanatory prompts or duplicate connection
+status unless explicitly requested. Keep labels, concise states and actual errors.
+
 - Quick add asks only for a name (Unicode NFKC, folded whitespace, 1–100 characters).
   Active names are seamless inline inputs using the existing shared editor:
   debounced saves, blur/Enter canonicalization, Escape reversion and anchored

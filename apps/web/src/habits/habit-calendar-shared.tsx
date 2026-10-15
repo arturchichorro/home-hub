@@ -64,7 +64,6 @@ export function HabitDay({
       delay={200}
       content={
         <div className="grid gap-1">
-          <p className="font-medium">{date}</p>
           <ul>
             {completedMembers.map((member) => (
               <li key={member.userId} className="flex items-center gap-1.5">
