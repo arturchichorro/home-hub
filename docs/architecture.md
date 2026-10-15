@@ -112,7 +112,7 @@ The household is the tenancy, collaboration, and authorization boundary. A
 user may belong to multiple households, and every household-owned row is
 authorized through current membership in PostgreSQL.
 
-Lists and Recipes are the built-in feature modules. French
+Lists, Recipes and opt-in [Habits](./habits/) are the built-in feature modules. French
 Vocabulary and possible future features such as household finance use the same
 module boundary when implemented. Modules are not dynamically installed
 plugins: application code owns a small catalogue of stable module keys.

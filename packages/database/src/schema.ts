@@ -132,6 +132,7 @@ export const householdInvites = pgTable(
 );
 
 export const householdsRelations = relations(households, ({ many }) => ({
+  habits: many(habits),
   images: many(recipeImages),
   listItems: many(listItems),
   lists: many(lists),
@@ -142,11 +143,12 @@ export const householdsRelations = relations(households, ({ many }) => ({
 
 export const householdMembersRelations = relations(
   householdMembers,
-  ({ one }) => ({
+  ({ one, many }) => ({
     household: one(households, {
       fields: [householdMembers.householdId],
       references: [households.id],
     }),
+    completions: many(habitCompletions),
     user: one(users, {
       fields: [householdMembers.userId],
       references: [users.id],
@@ -157,6 +159,98 @@ export const householdMembersRelations = relations(
 export const usersRelations = relations(users, ({ many }) => ({
   householdMemberships: many(householdMembers),
 }));
+
+export const habits = pgTable(
+  "habits",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    name: text("name").notNull(),
+    // Calendar dates stay strings throughout Zero; never convert them to UTC instants.
+    createdOn: text("created_on").notNull(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("habits_household_id_id_unique").on(table.householdId, table.id),
+    check(
+      "habits_name_length",
+      sql`length(trim(${table.name})) between 1 and 100`,
+    ),
+    check(
+      "habits_created_on_date",
+      sql`${table.createdOn} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND ${table.createdOn}::date::text = ${table.createdOn}`,
+    ),
+    index("habits_household_id_archived_at_idx").on(
+      table.householdId,
+      table.archivedAt,
+    ),
+  ],
+);
+
+export const habitCompletions = pgTable(
+  "habit_completions",
+  {
+    householdId: uuid("household_id").notNull(),
+    habitId: uuid("habit_id").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    completedOn: text("completed_on").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // The natural key makes repeated/concurrent set-completed operations idempotent.
+    primaryKey({ columns: [table.habitId, table.userId, table.completedOn] }),
+    foreignKey({
+      columns: [table.householdId, table.habitId],
+      foreignColumns: [habits.householdId, habits.id],
+      name: "habit_completions_household_habit_fk",
+    }),
+    check(
+      "habit_completions_completed_on_date",
+      sql`${table.completedOn} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND ${table.completedOn}::date::text = ${table.completedOn}`,
+    ),
+    index("habit_completions_household_id_date_idx").on(
+      table.householdId,
+      table.completedOn,
+    ),
+  ],
+);
+
+export const habitsRelations = relations(habits, ({ one, many }) => ({
+  household: one(households, {
+    fields: [habits.householdId],
+    references: [households.id],
+  }),
+  completions: many(habitCompletions),
+}));
+
+export const habitCompletionsRelations = relations(
+  habitCompletions,
+  ({ one }) => ({
+    habit: one(habits, {
+      fields: [habitCompletions.householdId, habitCompletions.habitId],
+      references: [habits.householdId, habits.id],
+    }),
+    membership: one(householdMembers, {
+      fields: [habitCompletions.householdId, habitCompletions.userId],
+      references: [householdMembers.householdId, householdMembers.userId],
+    }),
+  }),
+);
 
 export const listItemStatusEnum = pgEnum("list_item_status", [
   "active",

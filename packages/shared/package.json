@@ -4,6 +4,7 @@
   "type": "module",
   "exports": {
     "./auth": "./src/auth.ts",
+    "./habits": "./src/habits.ts",
     "./households": "./src/households.ts",
     "./modules": "./src/modules.ts",
     "./lists": "./src/lists.ts",

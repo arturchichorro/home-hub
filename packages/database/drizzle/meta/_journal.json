@@ -204,6 +204,13 @@
       "when": 1789855711795,
       "tag": "0028_publish-recipe-soft-delete-columns",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792095795836,
+      "tag": "0029_charming_red_wolf",
+      "breakpoints": true
     }
   ]
 }
