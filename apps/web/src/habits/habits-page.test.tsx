@@ -46,7 +46,7 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("Habits page", () => {
-  it("shows personal Xs, period counts, and only other members with entries", () => {
+  it("shows seven shared days, member totals and no person table", () => {
     setup();
     const html = renderToStaticMarkup(<HabitsPage householdId={householdId} />);
     expect(html).toContain("Alice");
@@ -54,10 +54,14 @@ describe("Habits page", () => {
     expect(html).not.toContain("Charlie");
     expect(html).toContain("2026-10-12 – 2026-10-18");
     expect(html).toContain(
-      'aria-label="Read, Alice, 2026-10-14" aria-pressed="true"',
+      'aria-label="Read, 2026-10-14. Completed by: Alice. Your completion: recorded." aria-pressed="true"',
     );
-    expect(html).toContain('aria-label="Read, Bob, 2026-10-13: completed"');
-    expect(html).not.toMatch(/<button[^>]*aria-label="Read, Bob/);
+    expect(html).toContain("Read, 2026-10-13. Completed by: Bob.");
+    expect(html).toContain("grid-cols-7");
+    expect(html).not.toContain("<table");
+    expect(
+      html.match(/<button[^>]*aria-label="Read, 2026-[^>]*>/g),
+    ).toHaveLength(7);
     expect(html).toContain("1 day");
     expect(html).toContain('aria-label="Calendar view"');
     expect(html).toContain("Month");
@@ -74,13 +78,13 @@ describe("Habits page", () => {
       "2026-10-18",
     ]) {
       const button = html.match(
-        new RegExp(`<button[^>]*aria-label="Read, Alice, ${date}"[^>]*>`),
+        new RegExp(`<button[^>]*aria-label="Read, ${date}[^>]*>`),
       )?.[0];
       expect(button).toBeDefined();
       expect(button).toContain("disabled");
     }
   });
-  it("keeps own empty row so tracking needs no joining", () => {
+  it("keeps empty shared days and own totals without requiring joining", () => {
     const habit = habits[0];
     if (!habit) throw new Error("Missing habit fixture");
     setup([{ ...habit, completions: [] }]);
@@ -96,7 +100,7 @@ describe("Habits page", () => {
     const html = renderToStaticMarkup(<HabitsPage householdId={householdId} />);
     expect(html).toContain("Read-only");
     expect(html).toContain("Alice");
-    const buttons = html.match(/<button[^>]*aria-label="Read, Alice,[^>]*>/g);
+    const buttons = html.match(/<button[^>]*aria-label="Read, 2026-[^>]*>/g);
     expect(buttons).toHaveLength(7);
     expect(buttons?.every((button) => button.includes("disabled"))).toBe(true);
   });

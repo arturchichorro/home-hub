@@ -11,10 +11,10 @@ every current member can see progress. No joining, targets or streaks are requir
   debounced saves, blur/Enter canonicalization, Escape reversion and anchored
   error feedback on rejection. Archived names stay read-only text.
 - Default to the current Monday–Sunday week; switch to month, navigate periods,
-  or return to today. Each habit groups person rows, dated squares containing X
-  for completion, and the displayed period's completion count.
-- Week view shows your editable row and read-only rows for other current members
-  with completions. Month view is a shared seven-column Monday–Sunday calendar
+  or return to today. Both views share one day box for all household members,
+  with colored vector completion marks and per-person period totals.
+- Week view is a compact seven-day strip, not a table or separate person rows.
+  Month view is a shared seven-column Monday–Sunday calendar
   per habit, arranged in a responsive grid. Calendars stay capped at 24rem wide
   with compact 3.5rem day cells, centered top-line dates and blank padding
   outside the selected month. Each day's cell
@@ -22,7 +22,7 @@ every current member can see progress. No joining, targets or streaks are requir
   consistently across habits and periods (palette collisions are resolved per roster).
   Hover or focus a completed day to see the names (200 ms hover delay); empty
   days have no tooltip. Selecting a day toggles only your completion.
-  Monthly totals form a colored member legend. Read-only days remain focusable
+  Weekly/monthly totals form a colored member legend. Read-only days remain focusable
   so their completion details are available to keyboard users.
 - A square sets or clears your completion. Any past date since habit creation
   can be corrected. Future dates and archived habits are not editable.
