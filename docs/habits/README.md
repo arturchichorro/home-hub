@@ -15,9 +15,11 @@ every current member can see progress. No joining, targets or streaks are requir
   for completion, and the displayed period's completion count.
 - Week view shows your editable row and read-only rows for other current members
   with completions. Month view is a shared seven-column Monday–Sunday calendar
-  per habit, capped at 24rem wide with compact 3.5rem day cells and blank padding
+  per habit, arranged in a responsive grid. Calendars stay capped at 24rem wide
+  with compact 3.5rem day cells, centered top-line dates and blank padding
   outside the selected month. Each day's cell
-  contains an X in each completing member's stable account-derived color.
+  contains a crisp vector X for each completing member, using a muted palette
+  consistently across habits and periods (palette collisions are resolved per roster).
   Hover or focus a completed day to see the names (200 ms hover delay); empty
   days have no tooltip. Selecting a day toggles only your completion.
   Monthly totals form a colored member legend. Read-only days remain focusable

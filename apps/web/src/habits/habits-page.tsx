@@ -164,7 +164,10 @@ export function HabitsPage({ householdId }: { householdId: string }) {
           Read-only while synchronization is unavailable.
         </p>
       ) : null}
-      <div className="grid min-w-0 gap-6" aria-busy={loading}>
+      <div
+        className={`grid min-w-0 gap-6 ${view === "month" ? "grid-cols-[repeat(auto-fill,minmax(min(100%,24rem),24rem))] items-start" : ""}`}
+        aria-busy={loading}
+      >
         {habits.map((habit) => {
           const visibleMembers = members.filter(
             (member) =>
