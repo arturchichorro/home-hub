@@ -1,11 +1,27 @@
 import { habitPeriod } from "@home-hub/shared/habits";
+import type { TooltipProps } from "@home-hub/ui-web";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   HabitMonthCalendar,
   habitMemberColor,
   monthCalendarWeeks,
 } from "./habit-month-calendar";
+
+const { tooltipProps } = vi.hoisted(() => ({
+  tooltipProps: vi.fn<(props: TooltipProps) => void>(),
+}));
+vi.mock("@home-hub/ui-web", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@home-hub/ui-web")>();
+  return {
+    ...actual,
+    Tooltip: (props: TooltipProps) => {
+      tooltipProps(props);
+      return props.trigger;
+    },
+  };
+});
+beforeEach(() => vi.clearAllMocks());
 
 const habit = {
   id: "habit-1",
@@ -76,6 +92,27 @@ describe("month calendar layout", () => {
 });
 
 describe("shared habit month", () => {
+  it("only enables tooltips for completed days and opens them after 200ms", () => {
+    renderToStaticMarkup(<HabitMonthCalendar {...props} />);
+    const tooltips = tooltipProps.mock.calls.map(([tooltip]) => tooltip);
+    expect(tooltips).toHaveLength(31);
+    const active = tooltips.filter((tooltip) => !tooltip.disabled);
+    expect(active).toHaveLength(1);
+    expect(active[0]?.delay).toBe(200);
+    const content = renderToStaticMarkup(<>{active[0]?.content}</>);
+    expect(content).toContain("Alice");
+    expect(content).toContain("Bob");
+    expect(content).not.toContain("No completions");
+  });
+  it("never enables a tooltip for a completely empty month", () => {
+    renderToStaticMarkup(
+      <HabitMonthCalendar {...props} habit={{ ...habit, completions: [] }} />,
+    );
+    expect(tooltipProps.mock.calls).toHaveLength(31);
+    expect(tooltipProps.mock.calls.every(([tooltip]) => tooltip.disabled)).toBe(
+      true,
+    );
+  });
   it("renders one day cell for both members' Xs, not person rows", () => {
     const html = renderToStaticMarkup(<HabitMonthCalendar {...props} />);
     expect(html.match(/aria-pressed=/g)).toHaveLength(31);

@@ -17,7 +17,8 @@ every current member can see progress. No joining, targets or streaks are requir
   with completions. Month view is a shared seven-column Monday–Sunday calendar
   per habit, with blank padding outside the selected month. Each day's cell
   contains an X in each completing member's stable account-derived color.
-  Hover or focus a day to see the names; selecting it toggles only your completion.
+  Hover or focus a completed day to see the names (200 ms hover delay); empty
+  days have no tooltip. Selecting a day toggles only your completion.
   Monthly totals form a colored member legend. Read-only days remain focusable
   so their completion details are available to keyboard users.
 - A square sets or clears your completion. Any past date since habit creation

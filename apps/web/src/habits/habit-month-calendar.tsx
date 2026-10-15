@@ -141,28 +141,26 @@ export function HabitMonthCalendar({
                       className="h-24 border border-border p-0 align-top sm:h-32"
                     >
                       <Tooltip
+                        disabled={completedMembers.length === 0}
+                        delay={200}
                         content={
                           <div className="grid gap-1">
                             <p className="font-medium">{date}</p>
-                            {completedMembers.length ? (
-                              <ul>
-                                {completedMembers.map((member) => (
-                                  <li key={member.userId}>
-                                    <span
-                                      aria-hidden="true"
-                                      style={{
-                                        color: habitMemberColor(member.userId),
-                                      }}
-                                    >
-                                      X{" "}
-                                    </span>
-                                    {member.user?.username ?? "Member"}
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <p>No completions yet.</p>
-                            )}
+                            <ul>
+                              {completedMembers.map((member) => (
+                                <li key={member.userId}>
+                                  <span
+                                    aria-hidden="true"
+                                    style={{
+                                      color: habitMemberColor(member.userId),
+                                    }}
+                                  >
+                                    X{" "}
+                                  </span>
+                                  {member.user?.username ?? "Member"}
+                                </li>
+                              ))}
+                            </ul>
                           </div>
                         }
                         trigger={
