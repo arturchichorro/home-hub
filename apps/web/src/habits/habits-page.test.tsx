@@ -61,6 +61,8 @@ describe("Habits page", () => {
     expect(html).toContain("1 day");
     expect(html).toContain('aria-label="Calendar view"');
     expect(html).toContain("Month");
+    expect(html).toContain('aria-label="Habit name"');
+    expect(html).not.toContain(">Rename<");
   });
   it("disables dates before creation and in the future", () => {
     setup();

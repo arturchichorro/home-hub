@@ -21,6 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { HabitMonthCalendar } from "./habit-month-calendar";
 import { HabitNameDialog } from "./habit-name-dialog";
+import { HabitNameInput } from "./habit-name-input";
 
 export function HabitsPage({ householdId }: { householdId: string }) {
   const zero = useZero();
@@ -31,7 +32,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
   const [anchor, setAnchor] = useState<string>();
   const [view, setView] = useState<HabitView>("week");
   const [archived, setArchived] = useState(false);
-  const [dialog, setDialog] = useState<{ id: string; name: string } | "new">();
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string>();
   const pendingRef = useRef(new Set<string>());
   const [pending, setPending] = useState(new Set<string>());
@@ -101,7 +102,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
             {archived ? "Active habits" : "Archive"}
           </Button>
           {!archived ? (
-            <Button disabled={!enabled} onClick={() => setDialog("new")}>
+            <Button disabled={!enabled} onClick={() => setCreating(true)}>
               <Plus aria-hidden="true" className="size-4" />
               Add habit
             </Button>
@@ -184,43 +185,40 @@ export function HabitsPage({ householdId }: { householdId: string }) {
               aria-label={habit.name}
             >
               <div className="flex items-center gap-2">
-                <h2 className="min-w-0 flex-1 break-words text-lg font-medium text-primary">
-                  {habit.name}
-                </h2>
+                {archived ? (
+                  <h2 className="min-w-0 flex-1 break-words text-lg font-medium text-primary">
+                    {habit.name}
+                  </h2>
+                ) : (
+                  <HabitNameInput
+                    currentName={habit.name}
+                    householdId={householdId}
+                    habitId={habit.id}
+                    disabled={pending.has(habit.id)}
+                  />
+                )}
                 {!archived ? (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="compact"
-                      disabled={!enabled || pending.has(habit.id)}
-                      onClick={() =>
-                        setDialog({ id: habit.id, name: habit.name })
-                      }
-                    >
-                      Rename
-                    </Button>
-                    <ConfirmationPopover
-                      message={`Archive “${habit.name}” for everyone? Its history will be kept, but tracking will stop.`}
-                      trigger={
-                        <IconButton
-                          aria-label={`Archive ${habit.name}`}
-                          disabled={!enabled || pending.has(habit.id)}
-                        >
-                          <Archive aria-hidden="true" className="size-4" />
-                        </IconButton>
-                      }
-                      onConfirm={() =>
-                        void change(
-                          habit.id,
-                          mutators.habits.archive({
-                            householdId,
-                            habitId: habit.id,
-                            optimisticTimestamp: Date.now(),
-                          }),
-                        )
-                      }
-                    />
-                  </>
+                  <ConfirmationPopover
+                    message={`Archive “${habit.name}” for everyone? Its history will be kept, but tracking will stop.`}
+                    trigger={
+                      <IconButton
+                        aria-label={`Archive ${habit.name}`}
+                        disabled={!enabled || pending.has(habit.id)}
+                      >
+                        <Archive aria-hidden="true" className="size-4" />
+                      </IconButton>
+                    }
+                    onConfirm={() =>
+                      void change(
+                        habit.id,
+                        mutators.habits.archive({
+                          householdId,
+                          habitId: habit.id,
+                          optimisticTimestamp: Date.now(),
+                        }),
+                      )
+                    }
+                  />
                 ) : null}
               </div>
               {view === "month" ? (
@@ -388,16 +386,10 @@ export function HabitsPage({ householdId }: { householdId: string }) {
           </p>
         ) : null}
       </div>
-      {dialog === "new" ? (
+      {creating ? (
         <HabitNameDialog
           householdId={householdId}
-          onClose={() => setDialog(undefined)}
-        />
-      ) : dialog ? (
-        <HabitNameDialog
-          householdId={householdId}
-          habit={dialog}
-          onClose={() => setDialog(undefined)}
+          onClose={() => setCreating(false)}
         />
       ) : null}
     </div>

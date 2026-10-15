@@ -7,6 +7,9 @@ every current member can see progress. No joining, targets or streaks are requir
 ## Interface and calendar
 
 - Quick add asks only for a name (Unicode NFKC, folded whitespace, 1–100 characters).
+  Active names are seamless inline inputs using the existing shared editor:
+  debounced saves, blur/Enter canonicalization, Escape reversion and anchored
+  error feedback on rejection. Archived names stay read-only text.
 - Default to the current Monday–Sunday week; switch to month, navigate periods,
   or return to today. Each habit groups person rows, dated squares containing X
   for completion, and the displayed period's completion count.

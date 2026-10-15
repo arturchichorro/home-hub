@@ -1,9 +1,12 @@
 import * as z from "zod";
 
 export const calendarDateSchema = z.iso.date();
+export function cleanHabitName(value: string): string {
+  return value.normalize("NFKC").replace(/\s+/gu, " ").trim();
+}
 export const habitNameSchema = z
   .string()
-  .transform((value) => value.normalize("NFKC").replace(/\s+/gu, " ").trim())
+  .transform(cleanHabitName)
   .pipe(z.string().min(1).max(100));
 
 export const timeZoneSchema = z

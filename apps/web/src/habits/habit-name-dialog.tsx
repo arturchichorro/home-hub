@@ -15,17 +15,15 @@ import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 export function HabitNameDialog({
   householdId,
-  habit,
   onClose,
 }: {
   householdId: string;
-  habit?: { id: string; name: string };
   onClose: () => void;
 }) {
   const zero = useZero();
   const enabled = useZeroMutationEnabled();
   const formId = useId();
-  const [name, setName] = useState(habit?.name ?? "");
+  const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -42,18 +40,16 @@ export function HabitNameDialog({
     try {
       const scope = {
         householdId,
-        habitId: habit?.id ?? crypto.randomUUID(),
+        habitId: crypto.randomUUID(),
         name: parsed.data,
         optimisticTimestamp: Date.now(),
       };
-      const mutation = habit
-        ? zero.mutate(mutators.habits.rename(scope))
-        : zero.mutate(
-            mutators.habits.create({
-              ...scope,
-              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            }),
-          );
+      const mutation = zero.mutate(
+        mutators.habits.create({
+          ...scope,
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        }),
+      );
       const client = await mutation.client;
       const result = client.type === "error" ? client : await mutation.server;
       if (result.type === "error") {
@@ -77,7 +73,7 @@ export function HabitNameDialog({
       disablePointerDismissal={saving}
     >
       <DialogPopup
-        title={habit ? "Rename habit" : "New habit"}
+        title="New habit"
         actions={
           <>
             <DialogClose disabled={saving}>Cancel</DialogClose>
@@ -87,7 +83,7 @@ export function HabitNameDialog({
               busy={saving}
               disabled={!enabled}
             >
-              {habit ? "Save" : "Add habit"}
+              Add habit
             </Button>
           </>
         }
