@@ -19,7 +19,10 @@ describe("habit header actions", () => {
       expect(html).toContain(archived ? "Active habits" : "Archive");
       expect(html).toContain(archived ? "lucide-arrow-left" : "lucide-archive");
       if (archived) expect(html).not.toContain("Add habit");
-      else expect(html).toContain("Add habit");
+      else {
+        expect(html).toContain("Add habit");
+        expect(html.indexOf("Add habit")).toBeLessThan(html.indexOf("Archive"));
+      }
     },
   );
 });

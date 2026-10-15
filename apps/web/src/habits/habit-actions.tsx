@@ -13,6 +13,17 @@ export function HabitActions({
 }) {
   return (
     <div className="flex items-center gap-2">
+      {!archived ? (
+        <Button
+          variant="ghost"
+          className="h-7! px-1.5! font-normal text-muted"
+          disabled={disabled}
+          onClick={onCreate}
+        >
+          <Plus aria-hidden="true" className="size-4" />
+          Add habit
+        </Button>
+      ) : null}
       <Button
         variant="ghost"
         className="h-7! px-1.5! font-normal text-muted"
@@ -25,17 +36,6 @@ export function HabitActions({
         )}
         {archived ? "Active habits" : "Archive"}
       </Button>
-      {!archived ? (
-        <Button
-          variant="ghost"
-          className="h-7! px-1.5! font-normal text-muted"
-          disabled={disabled}
-          onClick={onCreate}
-        >
-          <Plus aria-hidden="true" className="size-4" />
-          Add habit
-        </Button>
-      ) : null}
     </div>
   );
 }
