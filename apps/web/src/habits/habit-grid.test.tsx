@@ -61,6 +61,12 @@ function drag(canceled = false, from = 0, to = 2) {
 beforeEach(() => vi.clearAllMocks());
 
 describe("habit reordering", () => {
+  it("fits more columns and lets calendars fill the available track width", () => {
+    const html = render();
+    expect(html).toContain("repeat(auto-fill,minmax(min(100%,20rem),1fr))");
+    expect(html).not.toContain("24rem");
+    expect(html).not.toContain("max-w-sm");
+  });
   it("moves a habit without dropping or duplicating any IDs", () => {
     expect(reorderedHabitIds(habits, 0, 2)).toEqual({
       habitId: "a",

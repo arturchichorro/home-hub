@@ -7,7 +7,8 @@ every current member can see progress. No joining, targets or streaks are requir
 ## Interface and calendar
 
 Keep visible copy minimal. Do not add explanatory prompts or duplicate connection
-status unless explicitly requested. Keep labels, concise states and actual errors.
+status unless explicitly requested. Keep labels, concise states and actual errors. Add/archive navigation uses the
+same compact ghost actions in the application header as Lists and Recipes.
 
 - Quick add asks only for a name (Unicode NFKC, folded whitespace, 1–100 characters).
   Active names are seamless inline inputs using the existing shared editor:
@@ -18,8 +19,9 @@ status unless explicitly requested. Keep labels, concise states and actual error
   after clock/timezone changes. Each day box is shared by all household members, with colored vector
   completion marks and per-person monthly totals.
 - The shared seven-column Monday–Sunday calendar
-  per habit, arranged in a responsive grid. Calendars stay capped at 24rem wide
-  with compact 3.5rem day cells, centered top-line dates and blank padding
+  per habit, arranged in a responsive grid with flexible columns (20rem minimum
+  where space permits). Calendars fill their column width while retaining compact
+  3.5rem day heights, centered top-line dates and blank padding
   outside the selected month. Each day's cell
   contains a crisp vector X for each completing member, using a muted palette
   consistently across habits and periods (palette collisions are resolved per roster).

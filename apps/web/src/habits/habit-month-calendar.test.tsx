@@ -109,9 +109,10 @@ describe("shared habit month", () => {
     expect(html).toContain("[&amp;&gt;span]:items-start");
     expect(html).toContain("flex w-full flex-wrap justify-center");
   });
-  it("keeps the calendar compact instead of stretching across the page", () => {
+  it("fills its grid column while keeping compact day heights", () => {
     const html = renderToStaticMarkup(<HabitMonthCalendar {...props} />);
-    expect(html).toContain("max-w-sm");
+    expect(html).toContain("grid w-full min-w-0 gap-2");
+    expect(html).not.toContain("max-w-sm");
     expect(html.match(/class="h-14 border/g)).toHaveLength(31);
     expect(html).not.toContain("sm:h-32");
     expect(html).not.toContain("h-24");

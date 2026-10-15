@@ -36,7 +36,7 @@ export function HabitMonthCalendar(props: HabitCalendarProps) {
   const weeks = monthCalendarWeeks(dates);
   const colors = habitMemberColors(members.map((member) => member.userId));
   return (
-    <div className="grid w-full min-w-0 max-w-sm gap-2">
+    <div className="grid w-full min-w-0 gap-2">
       <div className="overflow-hidden rounded-md border border-border">
         <table className="w-full table-fixed border-collapse text-sm">
           <caption className="sr-only">

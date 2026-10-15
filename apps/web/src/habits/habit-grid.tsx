@@ -49,7 +49,7 @@ function SortableHabit({
     <section
       ref={sortable.ref}
       aria-label={habit.name}
-      className={`grid w-full min-w-0 max-w-sm gap-3 ${sortable.isDragging ? "opacity-60" : ""}`}
+      className={`grid w-full min-w-0 gap-3 ${sortable.isDragging ? "opacity-60" : ""}`}
     >
       {children(
         showHandle ? (
@@ -96,7 +96,7 @@ export function HabitGrid({
       }}
     >
       <div
-        className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,24rem),24rem))] items-start gap-6"
+        className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] items-start gap-6"
         aria-busy={loading}
       >
         {habits.map((habit, index) => (
