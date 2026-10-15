@@ -1,4 +1,4 @@
-import { habitPeriod } from "@home-hub/shared/habits";
+import { habitMonth } from "@home-hub/shared/habits";
 import type { TooltipProps } from "@home-hub/ui-web";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -37,7 +37,7 @@ const props = {
     { userId: "charlie", user: { username: "Charlie" } },
   ],
   currentUserId: "alice",
-  dates: habitPeriod("2026-10-15", "month").dates,
+  dates: habitMonth("2026-10-15").dates,
   today: "2026-10-15",
   label: "October 2026",
   archived: false,
@@ -73,7 +73,7 @@ describe("month calendar layout", () => {
   it.each(["2026-03-15", "2024-02-15", "2021-02-15"])(
     "handles six-row, leap and four-row months (%s)",
     (date) => {
-      const dates = habitPeriod(date, "month").dates;
+      const dates = habitMonth(date).dates;
       const weeks = monthCalendarWeeks(dates);
       expect(weeks.every((week) => week.length === 7)).toBe(true);
       expect(weeks.flat().filter(Boolean)).toEqual(dates);

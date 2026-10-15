@@ -117,9 +117,7 @@ export function HabitCompletionTotals({
   members,
   currentUserId,
   colors,
-  period,
-}: Pick<HabitCalendarProps, "habit" | "members" | "currentUserId"> &
-  Colors & { period: "Weekly" | "Monthly" }) {
+}: Pick<HabitCalendarProps, "habit" | "members" | "currentUserId"> & Colors) {
   const participants = members.filter(
     (member) =>
       member.userId === currentUserId ||
@@ -129,7 +127,7 @@ export function HabitCompletionTotals({
   );
   return (
     <ul
-      aria-label={`${period} completion totals`}
+      aria-label="Monthly completion totals"
       className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted"
     >
       {participants.map((member) => {

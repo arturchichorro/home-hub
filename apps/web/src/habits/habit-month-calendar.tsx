@@ -83,7 +83,7 @@ export function HabitMonthCalendar(props: HabitCalendarProps) {
           </tbody>
         </table>
       </div>
-      <HabitCompletionTotals {...props} colors={colors} period="Monthly" />
+      <HabitCompletionTotals {...props} colors={colors} />
     </div>
   );
 }

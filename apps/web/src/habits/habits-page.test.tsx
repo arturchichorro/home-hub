@@ -46,25 +46,24 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("Habits page", () => {
-  it("shows seven shared days, member totals and no person table", () => {
+  it("shows the current shared month without week-view controls", () => {
     setup();
     const html = renderToStaticMarkup(<HabitsPage householdId={householdId} />);
     expect(html).toContain("Alice");
     expect(html).toContain("Bob");
     expect(html).not.toContain("Charlie");
-    expect(html).toContain("2026-10-12 – 2026-10-18");
+    expect(html).toContain("October 2026");
     expect(html).toContain(
       'aria-label="Read, 2026-10-14. Completed by: Alice. Your completion: recorded." aria-pressed="true"',
     );
     expect(html).toContain("Read, 2026-10-13. Completed by: Bob.");
-    expect(html).toContain("grid-cols-7");
-    expect(html).not.toContain("<table");
+    expect(html).toContain("Shared monthly calendar");
     expect(
       html.match(/<button[^>]*aria-label="Read, 2026-[^>]*>/g),
-    ).toHaveLength(7);
+    ).toHaveLength(31);
     expect(html).toContain("1 day");
-    expect(html).toContain('aria-label="Calendar view"');
-    expect(html).toContain("Month");
+    expect(html).not.toContain('aria-label="Calendar view"');
+    expect(html).not.toContain(">Week<");
     expect(html).toContain('aria-label="Habit name"');
     expect(html).not.toContain(">Rename<");
   });
@@ -101,7 +100,7 @@ describe("Habits page", () => {
     expect(html).toContain("Read-only");
     expect(html).toContain("Alice");
     const buttons = html.match(/<button[^>]*aria-label="Read, 2026-[^>]*>/g);
-    expect(buttons).toHaveLength(7);
+    expect(buttons).toHaveLength(31);
     expect(buttons?.every((button) => button.includes("disabled"))).toBe(true);
   });
   it.each(["unknown", "error", "complete"])(

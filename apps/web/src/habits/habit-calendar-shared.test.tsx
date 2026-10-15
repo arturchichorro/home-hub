@@ -1,11 +1,9 @@
-import { habitPeriod } from "@home-hub/shared/habits";
+import { habitMonth } from "@home-hub/shared/habits";
 import type { TooltipProps } from "@home-hub/ui-web";
 import type { ReactElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HabitDay } from "./habit-calendar-shared";
 import { habitMemberColors } from "./habit-member-mark";
-import { HabitWeekCalendar } from "./habit-week-calendar";
 
 const props = {
   habit: {
@@ -22,8 +20,8 @@ const props = {
     { userId: "bob", user: { username: "Bob" } },
   ],
   currentUserId: "alice",
-  dates: habitPeriod("2026-10-15", "week").dates,
-  label: "2026-10-12 – 2026-10-18",
+  dates: habitMonth("2026-10-15").dates,
+  label: "October 2026",
   today: "2026-10-15",
   archived: false,
   enabled: true,
@@ -48,19 +46,7 @@ function day(overrides: Partial<Parameters<typeof HabitDay>[0]> = {}) {
 }
 beforeEach(() => vi.clearAllMocks());
 
-describe("shared weekly strip", () => {
-  it("renders seven shared boxes instead of a table with member rows", () => {
-    const html = renderToStaticMarkup(<HabitWeekCalendar {...props} />);
-    expect(html).not.toContain("<table");
-    expect(html).toContain("grid-cols-7");
-    expect(html.match(/<button[^>]*aria-pressed=/g)).toHaveLength(7);
-    expect(html).toContain("Read, 2026-10-14. Completed by: Alice, Bob.");
-    expect(html).toContain("Weekly completion totals");
-    expect(html).toContain("Alice (you): 1 day");
-    expect(html).toContain("Bob: 1 day");
-    expect(html).toContain(colors.get("alice"));
-    expect(html).toContain(colors.get("bob"));
-  });
+describe("shared calendar day", () => {
   it("clicking a shared day toggles only the viewer's completion", () => {
     const { button } = day();
     expect(button.props["aria-pressed"]).toBe(true);

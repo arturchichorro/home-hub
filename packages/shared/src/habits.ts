@@ -40,29 +40,19 @@ export function shiftCalendarDate(value: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-export type HabitView = "week" | "month";
-export function habitPeriod(anchor: string, view: HabitView) {
+export function habitMonth(anchor: string) {
   const date = new Date(`${anchor}T12:00:00Z`);
-  const startOn =
-    view === "month"
-      ? `${anchor.slice(0, 7)}-01`
-      : shiftCalendarDate(anchor, -((date.getUTCDay() + 6) % 7));
-  const daysInMonth = new Date(
+  const startOn = `${anchor.slice(0, 7)}-01`;
+  const length = new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0),
   ).getUTCDate();
-  const length = view === "week" ? 7 : daysInMonth;
   const dates = Array.from({ length }, (_, index) =>
     shiftCalendarDate(startOn, index),
   );
   return { startOn, endOn: shiftCalendarDate(startOn, length - 1), dates };
 }
 
-export function adjacentHabitPeriod(
-  anchor: string,
-  view: HabitView,
-  direction: -1 | 1,
-): string {
-  if (view === "week") return shiftCalendarDate(anchor, direction * 7);
+export function adjacentHabitMonth(anchor: string, direction: -1 | 1): string {
   const date = new Date(`${anchor.slice(0, 7)}-01T12:00:00Z`);
   date.setUTCMonth(date.getUTCMonth() + direction);
   return date.toISOString().slice(0, 10);

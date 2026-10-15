@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  adjacentHabitPeriod,
+  adjacentHabitMonth,
   calendarDate,
   calendarDateSchema,
   createHabitMutationSchema,
+  habitMonth,
   habitNameSchema,
-  habitPeriod,
   habitsQuerySchema,
   setHabitCompletedMutationSchema,
   timeZoneSchema,
@@ -20,35 +20,20 @@ describe("habit calendar", () => {
     expect(calendarDate(now, "America/New_York")).toBe("2026-10-18");
     expect(calendarDate(now, "Europe/Paris")).toBe("2026-10-19");
   });
-  it.each(["2026-10-12", "2026-10-18"])("uses Monday–Sunday for %s", (date) => {
-    expect(habitPeriod(date, "week")).toMatchObject({
-      startOn: "2026-10-12",
-      endOn: "2026-10-18",
-    });
-    expect(habitPeriod(date, "week").dates).toHaveLength(7);
-  });
-  it("crosses year and DST boundaries with calendar arithmetic", () => {
-    expect(habitPeriod("2027-01-01", "week")).toMatchObject({
-      startOn: "2026-12-28",
-      endOn: "2027-01-03",
-    });
-    expect(habitPeriod("2026-03-29", "week").dates).toHaveLength(7);
-  });
   it.each([
     ["2024-02-12", 29],
     ["2026-02-12", 28],
     ["2026-10-12", 31],
     ["2026-04-12", 30],
   ] as const)("shows every day of %s", (date, days) => {
-    const period = habitPeriod(date, "month");
+    const period = habitMonth(date);
     expect(period.dates).toHaveLength(days);
     expect(period.startOn).toBe(`${date.slice(0, 7)}-01`);
     expect(new Set(period.dates).size).toBe(days);
   });
   it("navigates months without end-of-month overflow", () => {
-    expect(adjacentHabitPeriod("2026-01-31", "month", 1)).toBe("2026-02-01");
-    expect(adjacentHabitPeriod("2026-01-31", "month", -1)).toBe("2025-12-01");
-    expect(adjacentHabitPeriod("2026-01-01", "week", -1)).toBe("2025-12-25");
+    expect(adjacentHabitMonth("2026-01-31", 1)).toBe("2026-02-01");
+    expect(adjacentHabitMonth("2026-01-31", -1)).toBe("2025-12-01");
   });
 });
 

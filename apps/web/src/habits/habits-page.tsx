@@ -1,8 +1,7 @@
 import {
-  adjacentHabitPeriod,
+  adjacentHabitMonth,
   calendarDate,
-  type HabitView,
-  habitPeriod,
+  habitMonth,
 } from "@home-hub/shared/habits";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
@@ -22,7 +21,6 @@ import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { HabitMonthCalendar } from "./habit-month-calendar";
 import { HabitNameDialog } from "./habit-name-dialog";
 import { HabitNameInput } from "./habit-name-input";
-import { HabitWeekCalendar } from "./habit-week-calendar";
 
 export function HabitsPage({ householdId }: { householdId: string }) {
   const zero = useZero();
@@ -31,13 +29,12 @@ export function HabitsPage({ householdId }: { householdId: string }) {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const today = calendarDate(now, timeZone);
   const [anchor, setAnchor] = useState<string>();
-  const [view, setView] = useState<HabitView>("week");
   const [archived, setArchived] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string>();
   const pendingRef = useRef(new Set<string>());
   const [pending, setPending] = useState(new Set<string>());
-  const period = habitPeriod(anchor ?? today, view);
+  const period = habitMonth(anchor ?? today);
   const [habits, result] = useQuery(
     queries.habits.byHousehold({
       householdId,
@@ -82,14 +79,11 @@ export function HabitsPage({ householdId }: { householdId: string }) {
     }
   }
 
-  const label =
-    view === "month"
-      ? new Intl.DateTimeFormat(undefined, {
-          month: "long",
-          year: "numeric",
-          timeZone: "UTC",
-        }).format(new Date(`${period.startOn}T12:00:00Z`))
-      : `${period.startOn} – ${period.endOn}`;
+  const label = new Intl.DateTimeFormat(undefined, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${period.startOn}T12:00:00Z`));
   const loading =
     result.type !== "complete" || memberResult.type !== "complete";
   return (
@@ -111,27 +105,9 @@ export function HabitsPage({ householdId }: { householdId: string }) {
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <fieldset className="flex gap-1" aria-label="Calendar view">
-          <Button
-            variant={view === "week" ? "secondary" : "ghost"}
-            aria-pressed={view === "week"}
-            onClick={() => setView("week")}
-          >
-            Week
-          </Button>
-          <Button
-            variant={view === "month" ? "secondary" : "ghost"}
-            aria-pressed={view === "month"}
-            onClick={() => setView("month")}
-          >
-            Month
-          </Button>
-        </fieldset>
         <IconButton
-          aria-label={`Previous ${view}`}
-          onClick={() =>
-            setAnchor(adjacentHabitPeriod(anchor ?? today, view, -1))
-          }
+          aria-label="Previous month"
+          onClick={() => setAnchor(adjacentHabitMonth(anchor ?? today, -1))}
         >
           <ChevronLeft aria-hidden="true" className="size-4" />
         </IconButton>
@@ -139,10 +115,8 @@ export function HabitsPage({ householdId }: { householdId: string }) {
           {label}
         </span>
         <IconButton
-          aria-label={`Next ${view}`}
-          onClick={() =>
-            setAnchor(adjacentHabitPeriod(anchor ?? today, view, 1))
-          }
+          aria-label="Next month"
+          onClick={() => setAnchor(adjacentHabitMonth(anchor ?? today, 1))}
         >
           <ChevronRight aria-hidden="true" className="size-4" />
         </IconButton>
@@ -166,12 +140,10 @@ export function HabitsPage({ householdId }: { householdId: string }) {
         </p>
       ) : null}
       <div
-        className={`grid min-w-0 gap-6 ${view === "month" ? "grid-cols-[repeat(auto-fill,minmax(min(100%,24rem),24rem))] items-start" : ""}`}
+        className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,24rem),24rem))] items-start gap-6"
         aria-busy={loading}
       >
         {habits.map((habit) => {
-          const Calendar =
-            view === "month" ? HabitMonthCalendar : HabitWeekCalendar;
           return (
             <section
               key={habit.id}
@@ -215,7 +187,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
                   />
                 ) : null}
               </div>
-              <Calendar
+              <HabitMonthCalendar
                 habit={habit}
                 members={members}
                 currentUserId={zero.userID}

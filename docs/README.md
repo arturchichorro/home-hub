@@ -6,7 +6,7 @@ household enables the built-in modules it wants to use. Initial modules include:
 - named, orderable shared lists;
 - recipes and ordered recipe ingredients;
 - recipe images stored outside the application server;
-- opt-in [Habits](./habits/) with personal daily checkmarks and week/month views.
+- opt-in [Habits](./habits/) with personal daily checkmarks and a shared monthly calendar.
 
 Connected changes should appear immediately and converge across clients. Previously synchronized data should remain readable without connectivity. Long-term offline writes are deliberately out of scope: editing becomes unavailable when the synchronization client determines that it is disconnected.
 

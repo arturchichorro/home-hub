@@ -23,7 +23,7 @@ Home Hub is organized into small built-in modules:
 - [Recipes](./recipes/) provides shared recipes, their ingredients, cooking
   history, and images.
 - [Habits](./habits/) provides shared habits with personal daily checkmarks and
-  weekly/monthly calendar views; goals and streaks are deferred.
+  monthly calendar views; goals and streaks are deferred.
 - French Vocabulary is a deferred module for learning words and expressions.
 - Further built-in modules, such as household finance, may be added when their
   product boundaries are understood.

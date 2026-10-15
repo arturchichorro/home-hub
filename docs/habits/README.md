@@ -10,11 +10,10 @@ every current member can see progress. No joining, targets or streaks are requir
   Active names are seamless inline inputs using the existing shared editor:
   debounced saves, blur/Enter canonicalization, Escape reversion and anchored
   error feedback on rejection. Archived names stay read-only text.
-- Default to the current Monday–Sunday week; switch to month, navigate periods,
-  or return to today. Both views share one day box for all household members,
-  with colored vector completion marks and per-person period totals.
-- Week view is a compact seven-day strip, not a table or separate person rows.
-  Month view is a shared seven-column Monday–Sunday calendar
+- Show the current month, navigate months or return to today. Week view has been
+  removed. Each day box is shared by all household members, with colored vector
+  completion marks and per-person monthly totals.
+- The shared seven-column Monday–Sunday calendar
   per habit, arranged in a responsive grid. Calendars stay capped at 24rem wide
   with compact 3.5rem day cells, centered top-line dates and blank padding
   outside the selected month. Each day's cell
@@ -22,7 +21,7 @@ every current member can see progress. No joining, targets or streaks are requir
   consistently across habits and periods (palette collisions are resolved per roster).
   Hover or focus a completed day to see the names (200 ms hover delay); empty
   days have no tooltip. Selecting a day toggles only your completion.
-  Weekly/monthly totals form a colored member legend. Read-only days remain focusable
+  Monthly totals form a colored member legend. Read-only days remain focusable
   so their completion details are available to keyboard users.
 - A square sets or clears your completion. Any past date since habit creation
   can be corrected. Future dates and archived habits are not editable.
@@ -53,7 +52,7 @@ household, so records are retained without preventing membership removal.
 
 `habits.byHousehold` checks current household membership, a non-deleted household,
 and enabled Habits settings. It separates active/archived habits and loads only
-completions in the requested week/month, restricted to current members. Profile
+completions in the requested month, restricted to current members. Profile
 names come from the existing safe member query.
 
 Custom mutators are `habits.create`, `rename`, `archive` and `setCompleted`.
