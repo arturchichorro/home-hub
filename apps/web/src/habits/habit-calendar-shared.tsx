@@ -90,7 +90,7 @@ export function HabitDay({
           <span className="flex w-full flex-col items-center gap-1">
             <span
               aria-current={date === today ? "date" : undefined}
-              className={`inline-flex size-5 items-center justify-center rounded-full text-xs ${date === today ? "bg-primary text-on-primary" : "text-muted"}`}
+              className={`inline-flex size-5 items-center justify-center text-xs ${date === today ? "font-bold text-foreground" : "text-muted"}`}
             >
               {Number(date.slice(8))}
             </span>

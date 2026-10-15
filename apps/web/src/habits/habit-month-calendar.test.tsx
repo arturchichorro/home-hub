@@ -96,6 +96,13 @@ describe("member palette", () => {
 });
 
 describe("shared habit month", () => {
+  it("marks today with bold white text, not an orange circle", () => {
+    const html = renderToStaticMarkup(<HabitMonthCalendar {...props} />);
+    const today = html.match(/<span aria-current="date"[^>]*>/)?.[0];
+    expect(today).toContain("font-bold text-foreground");
+    expect(today).not.toContain("bg-primary");
+    expect(today).not.toContain("rounded-full");
+  });
   it("centers day numbers on the top line, with completion marks below", () => {
     const html = renderToStaticMarkup(<HabitMonthCalendar {...props} />);
     expect(html).toContain("flex w-full flex-col items-center gap-1");
