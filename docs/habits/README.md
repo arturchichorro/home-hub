@@ -24,6 +24,11 @@ every current member can see progress. No joining, targets or streaks are requir
   days have no tooltip. Selecting a day toggles only your completion.
   Monthly totals form a colored member legend. Read-only days remain focusable
   so their completion details are available to keyboard users.
+- Drag a habit using its dedicated grip to reorder it; keyboard dragging is also
+  supported. The order is shared across household members and persists across
+  month navigation. Archived habits retain their order but cannot be reordered.
+  New habits appear first. Reordering is unavailable offline or during pending writes.
+- Today uses bold foreground text, without a colored circle.
 - A square sets or clears your completion. Any past date since habit creation
   can be corrected. Future dates and archived habits are not editable.
 - Use the current device timezone with no setup or stored timezone. Completion
@@ -39,7 +44,7 @@ every current member can see progress. No joining, targets or streaks are requir
 
 Two tables, both household-scoped:
 
-- `habits`: UUID `id`, `household_id`, `name`, `created_on`, nullable `archived_at`,
+- `habits`: UUID `id`, `household_id`, `name`, `sort_key`, `created_on`, nullable `archived_at`,
   and creation/update timestamps.
 - `habit_completions`: `household_id`, `habit_id`, `user_id`, `completed_on`, and
   timestamps. Primary key `(habit_id, user_id, completed_on)` makes repeated
@@ -56,7 +61,10 @@ and enabled Habits settings. It separates active/archived habits and loads only
 completions in the requested month, restricted to current members. Profile
 names come from the existing safe member query.
 
-Custom mutators are `habits.create`, `rename`, `archive` and `setCompleted`.
+Custom mutators are `habits.create`, `rename`, `archive`, `reorder` and `setCompleted`.
+Reordering uses the existing sparse integer sort keys and full-scope rebalance
+helper, scoped to active habits in the household. Foreign and archived order IDs
+are rejected. Stale orders may omit concurrently created habits without deleting them.
 Server execution checks household/module access and scopes habit lookups by
 household. Completion ownership is derived solely from authenticated context,
 never a client-supplied user ID. Archive is idempotent; setting completion uses
@@ -71,6 +79,10 @@ calendar, not a tamper-proof activity record. Counts are derived from completion
 Migration `0029` creates both tables, backfills disabled Habits settings for
 existing households, and adds explicit column lists to `home_hub_zero`.
 New households receive the disabled setting through the shared module catalogue.
+Migration `0030` adds shared habit ordering, preserves the old newest-first order
+(including deterministic ID tie-breaking), and republishes the new sort key.
+Apply it locally before testing reordering; it was verified on both fresh and
+populated disposable databases, without migrating the normal local database.
 
 This is additive; the old application remains compatible with the new tables.
 Apply the migration before running the new app, then enable Habits in household

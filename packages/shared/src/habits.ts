@@ -73,6 +73,25 @@ export const createHabitMutationSchema = z
     optimisticTimestamp: timestamp,
   })
   .strict();
+export const reorderHabitsMutationSchema = z
+  .object({
+    ...scope,
+    orderedHabitIds: z
+      .array(z.uuid())
+      .min(1)
+      .max(500)
+      .refine(
+        (ids) => new Set(ids).size === ids.length,
+        "Ordered IDs must be unique",
+      ),
+    optimisticTimestamp: timestamp,
+  })
+  .strict()
+  .refine(
+    (args) => args.orderedHabitIds.includes(args.habitId),
+    "Order must contain the moved habit",
+  );
+
 export const renameHabitMutationSchema = z
   .object({
     ...scope,

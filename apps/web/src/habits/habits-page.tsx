@@ -19,6 +19,7 @@ import {
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useEffect, useRef, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import { HabitGrid } from "./habit-grid";
 import { HabitMonthCalendar } from "./habit-month-calendar";
 import { HabitNameDialog } from "./habit-name-dialog";
 import { HabitNameInput } from "./habit-name-input";
@@ -147,91 +148,99 @@ export function HabitsPage({ householdId }: { householdId: string }) {
           Read-only while synchronization is unavailable.
         </p>
       ) : null}
-      <div
-        className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,24rem),24rem))] items-start gap-6"
-        aria-busy={loading}
+      <HabitGrid
+        habits={habits}
+        disabled={!enabled || archived || pending.size > 0}
+        archived={archived}
+        loading={loading}
+        onMove={(habitId, orderedHabitIds) =>
+          void change(
+            "habit-order",
+            mutators.habits.reorder({
+              householdId,
+              habitId,
+              orderedHabitIds,
+              optimisticTimestamp: Date.now(),
+            }),
+          )
+        }
       >
-        {habits.map((habit) => {
-          return (
-            <section
-              key={habit.id}
-              className="grid w-full min-w-0 max-w-sm gap-3"
-              aria-label={habit.name}
-            >
-              <div className="flex items-center gap-2">
-                {archived ? (
-                  <h2 className="min-w-0 flex-1 break-words text-lg font-medium text-primary">
-                    {habit.name}
-                  </h2>
-                ) : (
-                  <HabitNameInput
-                    currentName={habit.name}
-                    householdId={householdId}
-                    habitId={habit.id}
-                    disabled={pending.has(habit.id)}
-                  />
-                )}
-                {!archived ? (
-                  <ConfirmationPopover
-                    message={`Archive “${habit.name}” for everyone? Its history will be kept, but tracking will stop.`}
-                    trigger={
-                      <IconButton
-                        aria-label={`Archive ${habit.name}`}
-                        disabled={!enabled || pending.has(habit.id)}
-                      >
-                        <Archive aria-hidden="true" className="size-4" />
-                      </IconButton>
-                    }
-                    onConfirm={() =>
-                      void change(
-                        habit.id,
-                        mutators.habits.archive({
-                          householdId,
-                          habitId: habit.id,
-                          optimisticTimestamp: Date.now(),
-                        }),
-                      )
-                    }
-                  />
-                ) : null}
-              </div>
-              <HabitMonthCalendar
-                habit={habit}
-                members={members}
-                currentUserId={zero.userID}
-                dates={period.dates}
-                today={today}
-                label={label}
-                archived={archived}
-                enabled={enabled}
-                pending={pending}
-                onSetCompleted={(date, completed) =>
-                  void change(
-                    `${habit.id}:${date}`,
-                    mutators.habits.setCompleted({
-                      householdId,
-                      habitId: habit.id,
-                      completedOn: date,
-                      completed,
-                      timeZone,
-                      optimisticTimestamp: Date.now(),
-                    }),
-                  )
-                }
-              />
-            </section>
-          );
-        })}
-        {habits.length === 0 && result.type !== "error" ? (
-          <p className="text-muted">
-            {loading
-              ? "Loading habits…"
-              : archived
-                ? "No archived habits."
-                : "No habits yet. Add one to start tracking together."}
-          </p>
-        ) : null}
-      </div>
+        {(habit, handle) => (
+          <>
+            <div className="flex items-center gap-2">
+              {handle}
+              {archived ? (
+                <h2 className="min-w-0 flex-1 break-words text-lg font-medium text-primary">
+                  {habit.name}
+                </h2>
+              ) : (
+                <HabitNameInput
+                  currentName={habit.name}
+                  householdId={householdId}
+                  habitId={habit.id}
+                  disabled={pending.has(habit.id)}
+                />
+              )}
+              {!archived ? (
+                <ConfirmationPopover
+                  message={`Archive “${habit.name}” for everyone? Its history will be kept, but tracking will stop.`}
+                  trigger={
+                    <IconButton
+                      aria-label={`Archive ${habit.name}`}
+                      disabled={!enabled || pending.has(habit.id)}
+                    >
+                      <Archive aria-hidden="true" className="size-4" />
+                    </IconButton>
+                  }
+                  onConfirm={() =>
+                    void change(
+                      habit.id,
+                      mutators.habits.archive({
+                        householdId,
+                        habitId: habit.id,
+                        optimisticTimestamp: Date.now(),
+                      }),
+                    )
+                  }
+                />
+              ) : null}
+            </div>
+            <HabitMonthCalendar
+              habit={habit}
+              members={members}
+              currentUserId={zero.userID}
+              dates={period.dates}
+              today={today}
+              label={label}
+              archived={archived}
+              enabled={enabled}
+              pending={pending}
+              onSetCompleted={(date, completed) =>
+                void change(
+                  `${habit.id}:${date}`,
+                  mutators.habits.setCompleted({
+                    householdId,
+                    habitId: habit.id,
+                    completedOn: date,
+                    completed,
+                    timeZone,
+                    optimisticTimestamp: Date.now(),
+                  }),
+                )
+              }
+            />
+          </>
+        )}
+      </HabitGrid>
+      {habits.length === 0 && result.type !== "error" ? (
+        <p className="text-muted">
+          {loading
+            ? "Loading habits…"
+            : archived
+              ? "No archived habits."
+              : "No habits yet. Add one to start tracking together."}
+        </p>
+      ) : null}
       {creating ? (
         <HabitNameDialog
           householdId={householdId}

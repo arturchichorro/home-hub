@@ -209,7 +209,7 @@ const habitsByHousehold = defineHomeHubQuery(
           .orderBy("completedOn", "asc")
           .orderBy("userId", "asc"),
       )
-      .orderBy("createdAt", "desc")
+      .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
 );
 

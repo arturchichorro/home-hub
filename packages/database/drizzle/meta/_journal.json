@@ -211,6 +211,13 @@
       "when": 1792095795836,
       "tag": "0029_charming_red_wolf",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792098650562,
+      "tag": "0030_low_sentinel",
+      "breakpoints": true
     }
   ]
 }

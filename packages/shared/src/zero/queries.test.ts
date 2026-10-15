@@ -123,6 +123,10 @@ describe("Habits queries", () => {
       );
       expect(ast).toMatchObject({
         table: "habits",
+        orderBy: [
+          ["sortKey", "desc"],
+          ["id", "asc"],
+        ],
         where: {
           type: "and",
           conditions: [

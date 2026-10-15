@@ -17,7 +17,7 @@ BEGIN
     RAISE EXCEPTION 'Application tables must remain in public';
   END IF;
   IF EXISTS (
-    SELECT FROM (VALUES ('habits', 'created_on'), ('habits', 'archived_at'),
+    SELECT FROM (VALUES ('habits', 'created_on'), ('habits', 'archived_at'), ('habits', 'sort_key'),
       ('habit_completions', 'completed_on'), ('habit_completions', 'user_id')) AS expected(table_name, column_name)
     LEFT JOIN pg_publication_tables published ON published.pubname = 'home_hub_zero'
       AND published.schemaname = 'public' AND published.tablename = expected.table_name

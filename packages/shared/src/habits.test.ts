@@ -8,6 +8,7 @@ import {
   habitMonth,
   habitNameSchema,
   habitsQuerySchema,
+  reorderHabitsMutationSchema,
   setHabitCompletedMutationSchema,
   timeZoneSchema,
 } from "./habits";
@@ -47,6 +48,27 @@ describe("habit calendar", () => {
 });
 
 describe("habit contracts", () => {
+  it("rejects duplicate order IDs and an order missing the moved habit", () => {
+    const args = {
+      householdId,
+      habitId,
+      orderedHabitIds: [habitId],
+      optimisticTimestamp: 0,
+    };
+    expect(reorderHabitsMutationSchema.safeParse(args).success).toBe(true);
+    expect(
+      reorderHabitsMutationSchema.safeParse({
+        ...args,
+        orderedHabitIds: [habitId, habitId],
+      }).success,
+    ).toBe(false);
+    expect(
+      reorderHabitsMutationSchema.safeParse({
+        ...args,
+        orderedHabitIds: [householdId],
+      }).success,
+    ).toBe(false);
+  });
   it("normalizes names and rejects empty/overlong labels", () => {
     expect(habitNameSchema.parse("  Ｅxercise  daily \n")).toBe(
       "Exercise daily",

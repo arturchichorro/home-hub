@@ -4,11 +4,16 @@ import {
   calendarDate,
   createHabitMutationSchema,
   renameHabitMutationSchema,
+  reorderHabitsMutationSchema,
   setHabitCompletedMutationSchema,
 } from "../habits";
 import type { ZeroAuthContext } from "./context";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
+import { nextSortKey, planReorder } from "./ordering";
 import { type Schema, zql } from "./schema.gen";
+
+const activeHabits = (householdId: string) =>
+  zql.habits.where("householdId", householdId).where("archivedAt", "IS", null);
 
 const defineMutator = defineMutatorWithType<Schema, ZeroAuthContext>();
 type Tx = Transaction<Schema>;
@@ -49,15 +54,39 @@ export const habitMutatorDefinitions = {
     async ({ tx, ctx, args }) => {
       await requireAccess(tx, ctx, args.householdId);
       const now = timestamp(tx, args.optimisticTimestamp);
+      const top = await tx.run(
+        activeHabits(args.householdId)
+          .orderBy("sortKey", "desc")
+          .orderBy("id", "asc")
+          .one(),
+      );
       await tx.mutate.habits.insert({
         id: args.habitId,
         householdId: args.householdId,
         name: args.name,
+        sortKey: nextSortKey(top?.sortKey ?? 0),
         createdOn: calendarDate(now, args.timeZone),
         archivedAt: null,
         createdAt: now,
         updatedAt: now,
       });
+    },
+  ),
+  reorder: defineMutator(
+    reorderHabitsMutationSchema,
+    async ({ tx, ctx, args }) => {
+      const habit = await requireHabit(tx, ctx, args);
+      if (habit.archivedAt != null)
+        throw new Error("Habit reorder not allowed");
+      const rows = await tx.run(activeHabits(args.householdId));
+      const updates = planReorder(
+        rows.map((row) => ({ id: row.id, sortKey: row.sortKey ?? 0 })),
+        args.orderedHabitIds,
+        args.habitId,
+      );
+      const updatedAt = timestamp(tx, args.optimisticTimestamp);
+      for (const update of updates)
+        await tx.mutate.habits.update({ ...update, updatedAt });
     },
   ),
   rename: defineMutator(

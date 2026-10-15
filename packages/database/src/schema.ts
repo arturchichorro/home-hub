@@ -168,6 +168,7 @@ export const habits = pgTable(
       .notNull()
       .references(() => households.id),
     name: text("name").notNull(),
+    sortKey: integer("sort_key").notNull().default(0),
     // Calendar dates stay strings throughout Zero; never convert them to UTC instants.
     createdOn: text("created_on").notNull(),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
@@ -188,6 +189,9 @@ export const habits = pgTable(
       "habits_created_on_date",
       sql`${table.createdOn} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND ${table.createdOn}::date::text = ${table.createdOn}`,
     ),
+    index("habits_household_sort_key_idx")
+      .on(table.householdId, table.sortKey, table.id)
+      .where(sql`${table.archivedAt} is null`),
     index("habits_household_id_archived_at_idx").on(
       table.householdId,
       table.archivedAt,

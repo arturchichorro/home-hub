@@ -76,6 +76,7 @@ function setup(location: "server" | "client" = "server") {
         id: habitId,
         householdId,
         name: "Exercise",
+        sortKey: 1024,
         createdOn: "2026-10-12",
         archivedAt: null,
       },
@@ -113,12 +114,21 @@ function setup(location: "server" | "client" = "server") {
     },
     run: async (query: unknown) => {
       const { ast, format } = query as {
-        ast: { table: Table; where?: Condition };
+        ast: { table: Table; where?: Condition; orderBy?: [string, string][] };
         format: { singular: boolean };
       };
       const rows = data[ast.table].filter((row) =>
         matches(row, ast.where, data),
       );
+      for (const [key, direction] of [...(ast.orderBy ?? [])].reverse()) {
+        rows.sort((a, b) => {
+          const av = a[key] as string | number;
+          const bv = b[key] as string | number;
+          return (
+            (av < bv ? -1 : av > bv ? 1 : 0) * (direction === "asc" ? 1 : -1)
+          );
+        });
+      }
       return format.singular ? rows[0] : rows;
     },
   } as unknown as Transaction<Schema>;
@@ -128,6 +138,111 @@ function setup(location: "server" | "client" = "server") {
 afterEach(() => vi.restoreAllMocks());
 
 describe("habit mutations", () => {
+  it.each(["client", "server"] as const)(
+    "reorders shared active habits with %s timestamps",
+    async (location) => {
+      const { tx, data, writes } = setup(location);
+      data.habits.push({
+        id: foreignId,
+        householdId,
+        name: "Read",
+        sortKey: 2048,
+        archivedAt: null,
+      });
+      await mutators.habits.reorder.fn({
+        tx,
+        ctx,
+        args: {
+          ...scope,
+          orderedHabitIds: [habitId, foreignId],
+          optimisticTimestamp: 1000,
+        },
+      });
+      expect(data.habits[0]?.sortKey).toBe(3072);
+      expect(writes).toHaveBeenCalledTimes(1);
+      expect(data.habits[0]?.updatedAt).toBe(
+        location === "server" ? now : 1000,
+      );
+    },
+  );
+  it.each(["foreign", "archived", "missing"] as const)(
+    "rejects %s IDs in the requested order",
+    async (reason) => {
+      const { tx, data, writes } = setup();
+      if (reason !== "missing")
+        data.habits.push({
+          id: foreignId,
+          householdId: reason === "foreign" ? foreignId : householdId,
+          sortKey: 2048,
+          archivedAt: reason === "archived" ? now : null,
+        });
+      await expect(
+        mutators.habits.reorder.fn({
+          tx,
+          ctx,
+          args: { ...scope, orderedHabitIds: [habitId, foreignId] },
+        }),
+      ).rejects.toThrow("not allowed");
+      expect(writes).not.toHaveBeenCalled();
+    },
+  );
+  it.each(["archived", "disabled", "not a member"] as const)(
+    "rejects reorder when %s",
+    async (reason) => {
+      const { tx, data, writes } = setup();
+      if (reason === "archived")
+        data.habits = [
+          { id: habitId, householdId, archivedAt: now, sortKey: 1024 },
+        ];
+      if (reason === "disabled") data.householdModuleSettings = [];
+      if (reason === "not a member") data.householdMembers = [];
+      await expect(
+        mutators.habits.reorder.fn({
+          tx,
+          ctx,
+          args: { ...scope, orderedHabitIds: [habitId] },
+        }),
+      ).rejects.toThrow("not allowed");
+      expect(writes).not.toHaveBeenCalled();
+    },
+  );
+  it("retains newly added habits when a stale client submits an order", async () => {
+    const { tx, data } = setup();
+    data.habits.push({
+      id: foreignId,
+      householdId,
+      sortKey: 2048,
+      archivedAt: null,
+    });
+    await mutators.habits.reorder.fn({
+      tx,
+      ctx,
+      args: { ...scope, orderedHabitIds: [habitId] },
+    });
+    expect(data.habits).toHaveLength(2);
+    expect(
+      data.habits.find((row) => row.id === foreignId)?.sortKey,
+    ).toBeDefined();
+  });
+  it("rebalances exhausted sort-key gaps without touching archived or foreign habits", async () => {
+    const { tx, data, writes } = setup();
+    const third = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+    const archived = "b5b8a5ea-89cb-4c31-a93d-33049ab11c73";
+    data.habits = [
+      { id: habitId, householdId, sortKey: 0, archivedAt: null },
+      { id: foreignId, householdId, sortKey: 3, archivedAt: null },
+      { id: third, householdId, sortKey: 2, archivedAt: null },
+      { id: archived, householdId, sortKey: 99, archivedAt: now },
+    ];
+    await mutators.habits.reorder.fn({
+      tx,
+      ctx,
+      args: { ...scope, orderedHabitIds: [foreignId, habitId, third] },
+    });
+    expect(data.habits.find((row) => row.id === habitId)?.sortKey).toBe(2048);
+    expect(data.habits.find((row) => row.id === archived)?.sortKey).toBe(99);
+    expect(writes).toHaveBeenCalledTimes(3);
+  });
   it.each(["client", "server"] as const)(
     "creates optimistically with %s timestamps and a local creation date",
     async (location) => {
@@ -150,6 +265,7 @@ describe("habit mutations", () => {
         householdId,
         name: "Read books",
         createdOn: location === "server" ? "2026-10-15" : "2026-10-13",
+        sortKey: 2048,
         createdAt: expectedTime,
         updatedAt: expectedTime,
         archivedAt: null,
