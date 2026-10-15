@@ -92,6 +92,13 @@ describe("month calendar layout", () => {
 });
 
 describe("shared habit month", () => {
+  it("keeps the calendar compact instead of stretching across the page", () => {
+    const html = renderToStaticMarkup(<HabitMonthCalendar {...props} />);
+    expect(html).toContain("max-w-sm");
+    expect(html.match(/class="h-14 border/g)).toHaveLength(31);
+    expect(html).not.toContain("sm:h-32");
+    expect(html).not.toContain("h-24");
+  });
   it("only enables tooltips for completed days and opens them after 200ms", () => {
     renderToStaticMarkup(<HabitMonthCalendar {...props} />);
     const tooltips = tooltipProps.mock.calls.map(([tooltip]) => tooltip);
@@ -99,7 +106,7 @@ describe("shared habit month", () => {
     const active = tooltips.filter((tooltip) => !tooltip.disabled);
     expect(active).toHaveLength(1);
     expect(active[0]?.delay).toBe(200);
-    const content = renderToStaticMarkup(<>{active[0]?.content}</>);
+    const content = renderToStaticMarkup(active[0]?.content);
     expect(content).toContain("Alice");
     expect(content).toContain("Bob");
     expect(content).not.toContain("No completions");

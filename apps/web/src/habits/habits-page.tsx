@@ -181,7 +181,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
           return (
             <section
               key={habit.id}
-              className="grid min-w-0 gap-3"
+              className={`grid min-w-0 gap-3 ${view === "month" ? "w-full max-w-sm" : ""}`}
               aria-label={habit.name}
             >
               <div className="flex items-center gap-2">

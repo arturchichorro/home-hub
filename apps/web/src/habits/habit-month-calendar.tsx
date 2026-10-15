@@ -76,7 +76,7 @@ export function HabitMonthCalendar({
       ),
   );
   return (
-    <div className="grid min-w-0 gap-3">
+    <div className="grid w-full min-w-0 max-w-sm gap-2">
       <div className="overflow-hidden rounded-md border border-border">
         <table className="w-full table-fixed border-collapse text-sm">
           <caption className="sr-only">
@@ -89,7 +89,7 @@ export function HabitMonthCalendar({
                 <th
                   key={weekday}
                   scope="col"
-                  className="border-b border-border py-2 text-center text-xs font-medium text-muted"
+                  className="border-b border-border py-1.5 text-center text-xs font-medium text-muted"
                 >
                   {new Intl.DateTimeFormat(undefined, {
                     weekday: "short",
@@ -138,7 +138,7 @@ export function HabitMonthCalendar({
                   return (
                     <td
                       key={date}
-                      className="h-24 border border-border p-0 align-top sm:h-32"
+                      className="h-14 border border-border p-0 align-top"
                     >
                       <Tooltip
                         disabled={completedMembers.length === 0}
@@ -166,7 +166,7 @@ export function HabitMonthCalendar({
                         trigger={
                           <Button
                             variant="ghost"
-                            className="h-full! w-full! items-stretch! justify-start! rounded-none! p-2! text-left [&>span]:w-full"
+                            className="h-full! w-full! items-stretch! justify-start! rounded-none! p-1! text-left [&>span]:w-full"
                             aria-label={`${habit.name}, ${date}. ${completionLabel} Your completion: ${ownCompleted ? "recorded" : "not recorded"}.`}
                             aria-pressed={ownCompleted}
                             disabled={!canEdit}
@@ -175,18 +175,18 @@ export function HabitMonthCalendar({
                               if (canEdit) onSetCompleted(date, !ownCompleted);
                             }}
                           >
-                            <span className="flex w-full flex-col items-start gap-2">
+                            <span className="flex w-full flex-col items-start gap-1">
                               <span
                                 aria-current={
                                   date === today ? "date" : undefined
                                 }
-                                className={`inline-flex size-6 items-center justify-center rounded-full text-xs ${date === today ? "bg-primary text-on-primary" : "text-muted"}`}
+                                className={`inline-flex size-5 items-center justify-center rounded-full text-xs ${date === today ? "bg-primary text-on-primary" : "text-muted"}`}
                               >
                                 {Number(date.slice(8))}
                               </span>
                               <span
                                 aria-hidden="true"
-                                className="flex flex-wrap gap-x-2 gap-y-1 text-lg font-semibold"
+                                className="flex flex-wrap gap-x-1 gap-y-0.5 text-sm font-semibold"
                               >
                                 {completedMembers.map((member) => (
                                   <span
@@ -213,7 +213,7 @@ export function HabitMonthCalendar({
       </div>
       <ul
         aria-label="Monthly completion totals"
-        className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted"
+        className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted"
       >
         {participants.map((member) => {
           const count = habit.completions.filter(
