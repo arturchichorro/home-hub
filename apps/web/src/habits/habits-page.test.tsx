@@ -2,10 +2,19 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HabitsPage } from "./habits-page";
 
-const { useQuery, useZeroMutationEnabled } = vi.hoisted(() => ({
+const { useQuery, useZeroMutationEnabled, pendingState } = vi.hoisted(() => ({
   useQuery: vi.fn(),
   useZeroMutationEnabled: vi.fn(),
+  pendingState: { current: new Set<string>() },
 }));
+vi.mock("react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react")>();
+  return {
+    ...actual,
+    useState: (initial: unknown) =>
+      actual.useState(initial instanceof Set ? pendingState.current : initial),
+  };
+});
 vi.mock("@rocicorp/zero/react", () => ({
   useZero: () => ({ userID: "me", mutate: vi.fn() }),
   useQuery,
@@ -42,6 +51,7 @@ function setup(rows = habits, type = "complete") {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  pendingState.current = new Set();
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
   useZeroMutationEnabled.mockReturnValue(true);
@@ -49,6 +59,25 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("Habits page", () => {
+  it.each(["habit-1:2026-10-14", "habit-order"])(
+    "only disables reorder handles for an order save (pending=%s)",
+    (pendingKey) => {
+      pendingState.current = new Set([pendingKey]);
+      setup();
+      const html = renderToStaticMarkup(
+        <HabitsPage householdId={householdId} />,
+      );
+      const handle = html.match(
+        /<button[^>]*aria-label="Reorder Read"[^>]*>/,
+      )?.[0];
+      expect(handle).toBeDefined();
+      if (pendingKey === "habit-order") expect(handle).toContain('disabled=""');
+      else {
+        expect(handle).not.toContain('disabled=""');
+        expect(handle).not.toContain('aria-disabled="true"');
+      }
+    },
+  );
   it("disables next-month navigation in the present month", () => {
     setup();
     const html = renderToStaticMarkup(<HabitsPage householdId={householdId} />);

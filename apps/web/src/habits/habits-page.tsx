@@ -147,7 +147,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
       ) : null}
       <HabitGrid
         habits={habits}
-        disabled={!enabled || archived || pending.size > 0}
+        disabled={!enabled || archived || pending.has("habit-order")}
         archived={archived}
         loading={loading}
         onMove={(habitId, orderedHabitIds) =>

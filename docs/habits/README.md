@@ -32,7 +32,8 @@ same compact ghost actions in the application header as Lists and Recipes.
 - Drag a habit using its dedicated grip to reorder it; keyboard dragging is also
   supported. The order is shared across household members and persists across
   month navigation. Archived habits retain their order but cannot be reordered.
-  New habits appear first. Reordering is unavailable offline or during pending writes.
+  New habits appear first. Reordering is unavailable offline or while another reorder is pending. Saving a
+  day never disables or dims the reorder handles.
 - Today uses bold foreground text, without a colored circle.
 - A square sets or clears your completion. Any past date since habit creation
   can be corrected. Future dates and archived habits are not editable.
