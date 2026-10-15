@@ -46,6 +46,9 @@
 
 :root {
   color-scheme: dark;
+  /* Categorical member markers share contrast; account identity supplies the hue. */
+  --member-marker-lightness: 0.8;
+  --member-marker-chroma: 0.14;
   --motion-duration-fast: 120ms;
   --motion-duration-normal: 180ms;
 }

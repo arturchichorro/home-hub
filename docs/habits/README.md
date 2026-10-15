@@ -10,9 +10,13 @@ every current member can see progress. No joining, targets or streaks are requir
 - Default to the current Monday–Sunday week; switch to month, navigate periods,
   or return to today. Each habit groups person rows, dated squares containing X
   for completion, and the displayed period's completion count.
-- Always show your editable row. Show other current members only when they have
-  completions in the displayed period; their rows are read-only. Month view
-  scrolls horizontally on narrow screens.
+- Week view shows your editable row and read-only rows for other current members
+  with completions. Month view is a shared seven-column Monday–Sunday calendar
+  per habit, with blank padding outside the selected month. Each day's cell
+  contains an X in each completing member's stable account-derived color.
+  Hover or focus a day to see the names; selecting it toggles only your completion.
+  Monthly totals form a colored member legend. Read-only days remain focusable
+  so their completion details are available to keyboard users.
 - A square sets or clears your completion. Any past date since habit creation
   can be corrected. Future dates and archived habits are not editable.
 - Use the current device timezone with no setup or stored timezone. Completion

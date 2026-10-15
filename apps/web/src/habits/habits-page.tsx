@@ -19,6 +19,7 @@ import {
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useEffect, useRef, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import { HabitMonthCalendar } from "./habit-month-calendar";
 import { HabitNameDialog } from "./habit-name-dialog";
 
 export function HabitsPage({ householdId }: { householdId: string }) {
@@ -222,125 +223,158 @@ export function HabitsPage({ householdId }: { householdId: string }) {
                   </>
                 ) : null}
               </div>
-              <div className="min-w-0 overflow-x-auto rounded-md border border-border">
-                <table className="w-max min-w-full border-collapse text-sm">
-                  <caption className="sr-only">
-                    {habit.name}, {label}. Completion counts are for this
-                    displayed {view}.
-                  </caption>
-                  <thead>
-                    <tr>
-                      <th
-                        scope="col"
-                        className="sticky left-0 z-10 min-w-36 bg-canvas px-3 py-2 text-left font-medium"
-                      >
-                        Person / count
-                      </th>
-                      {period.dates.map((date) => (
+              {view === "month" ? (
+                <HabitMonthCalendar
+                  habit={habit}
+                  members={members}
+                  currentUserId={zero.userID}
+                  dates={period.dates}
+                  today={today}
+                  label={label}
+                  archived={archived}
+                  enabled={enabled}
+                  pending={pending}
+                  onSetCompleted={(date, completed) =>
+                    void change(
+                      `${habit.id}:${date}`,
+                      mutators.habits.setCompleted({
+                        householdId,
+                        habitId: habit.id,
+                        completedOn: date,
+                        completed,
+                        timeZone,
+                        optimisticTimestamp: Date.now(),
+                      }),
+                    )
+                  }
+                />
+              ) : (
+                <div className="min-w-0 overflow-x-auto rounded-md border border-border">
+                  <table className="w-max min-w-full border-collapse text-sm">
+                    <caption className="sr-only">
+                      {habit.name}, {label}. Completion counts are for this
+                      displayed {view}.
+                    </caption>
+                    <thead>
+                      <tr>
                         <th
-                          key={date}
                           scope="col"
-                          aria-label={date}
-                          className="px-1 py-2 text-center font-normal text-muted"
+                          className="sticky left-0 z-10 min-w-36 bg-canvas px-3 py-2 text-left font-medium"
                         >
-                          <span className="block text-xs">
-                            {new Intl.DateTimeFormat(undefined, {
-                              weekday: "short",
-                              timeZone: "UTC",
-                            }).format(new Date(`${date}T12:00:00Z`))}
-                          </span>
-                          <span>{Number(date.slice(8))}</span>
+                          Person / count
                         </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibleMembers.map((member) => {
-                      const own = member.userId === zero.userID;
-                      const name = member.user?.username ?? "Member";
-                      const completed = new Set(
-                        habit.completions
-                          .filter(
-                            (completion) => completion.userId === member.userId,
-                          )
-                          .map((completion) => completion.completedOn),
-                      );
-                      return (
-                        <tr key={member.id} className="border-t border-border">
+                        {period.dates.map((date) => (
                           <th
-                            scope="row"
-                            className="sticky left-0 z-10 bg-canvas px-3 py-2 text-left font-normal"
+                            key={date}
+                            scope="col"
+                            aria-label={date}
+                            className="px-1 py-2 text-center font-normal text-muted"
                           >
-                            <span className="block max-w-36 truncate">
-                              {name}
-                              {own ? " (you)" : ""}
+                            <span className="block text-xs">
+                              {new Intl.DateTimeFormat(undefined, {
+                                weekday: "short",
+                                timeZone: "UTC",
+                              }).format(new Date(`${date}T12:00:00Z`))}
                             </span>
-                            <span className="text-xs text-muted">
-                              {completed.size}{" "}
-                              {completed.size === 1 ? "day" : "days"}
-                            </span>
+                            <span>{Number(date.slice(8))}</span>
                           </th>
-                          {period.dates.map((date) => {
-                            const checked = completed.has(date);
-                            const key = `${habit.id}:${date}`;
-                            const available =
-                              date >= habit.createdOn && date <= today;
-                            const description = `${habit.name}, ${name}, ${date}`;
-                            return (
-                              <td
-                                key={date}
-                                className={`px-1 py-2 text-center ${date === today ? "bg-raised" : ""}`}
-                              >
-                                {own && !archived ? (
-                                  <Button
-                                    className="size-11! rounded-sm! p-0!"
-                                    variant={checked ? "primary" : "secondary"}
-                                    aria-label={description}
-                                    aria-pressed={checked}
-                                    disabled={
-                                      !enabled ||
-                                      !available ||
-                                      pending.has(key) ||
-                                      pending.has(habit.id)
-                                    }
-                                    onClick={() =>
-                                      void change(
-                                        key,
-                                        mutators.habits.setCompleted({
-                                          householdId,
-                                          habitId: habit.id,
-                                          completedOn: date,
-                                          completed: !checked,
-                                          timeZone,
-                                          optimisticTimestamp: Date.now(),
-                                        }),
-                                      )
-                                    }
-                                  >
-                                    {checked ? (
-                                      "X"
-                                    ) : (
-                                      <span aria-hidden="true">·</span>
-                                    )}
-                                  </Button>
-                                ) : (
-                                  <span
-                                    role="img"
-                                    aria-label={`${description}: ${checked ? "completed" : "not completed"}`}
-                                    className={`inline-flex size-11 items-center justify-center rounded-sm ${checked ? "bg-primary text-on-primary" : "bg-surface text-subtle"}`}
-                                  >
-                                    {checked ? "X" : "·"}
-                                  </span>
-                                )}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleMembers.map((member) => {
+                        const own = member.userId === zero.userID;
+                        const name = member.user?.username ?? "Member";
+                        const completed = new Set(
+                          habit.completions
+                            .filter(
+                              (completion) =>
+                                completion.userId === member.userId,
+                            )
+                            .map((completion) => completion.completedOn),
+                        );
+                        return (
+                          <tr
+                            key={member.id}
+                            className="border-t border-border"
+                          >
+                            <th
+                              scope="row"
+                              className="sticky left-0 z-10 bg-canvas px-3 py-2 text-left font-normal"
+                            >
+                              <span className="block max-w-36 truncate">
+                                {name}
+                                {own ? " (you)" : ""}
+                              </span>
+                              <span className="text-xs text-muted">
+                                {completed.size}{" "}
+                                {completed.size === 1 ? "day" : "days"}
+                              </span>
+                            </th>
+                            {period.dates.map((date) => {
+                              const checked = completed.has(date);
+                              const key = `${habit.id}:${date}`;
+                              const available =
+                                date >= habit.createdOn && date <= today;
+                              const description = `${habit.name}, ${name}, ${date}`;
+                              return (
+                                <td
+                                  key={date}
+                                  className={`px-1 py-2 text-center ${date === today ? "bg-raised" : ""}`}
+                                >
+                                  {own && !archived ? (
+                                    <Button
+                                      className="size-11! rounded-sm! p-0!"
+                                      variant={
+                                        checked ? "primary" : "secondary"
+                                      }
+                                      aria-label={description}
+                                      aria-pressed={checked}
+                                      disabled={
+                                        !enabled ||
+                                        !available ||
+                                        pending.has(key) ||
+                                        pending.has(habit.id)
+                                      }
+                                      onClick={() =>
+                                        void change(
+                                          key,
+                                          mutators.habits.setCompleted({
+                                            householdId,
+                                            habitId: habit.id,
+                                            completedOn: date,
+                                            completed: !checked,
+                                            timeZone,
+                                            optimisticTimestamp: Date.now(),
+                                          }),
+                                        )
+                                      }
+                                    >
+                                      {checked ? (
+                                        "X"
+                                      ) : (
+                                        <span aria-hidden="true">·</span>
+                                      )}
+                                    </Button>
+                                  ) : (
+                                    <span
+                                      role="img"
+                                      aria-label={`${description}: ${checked ? "completed" : "not completed"}`}
+                                      className={`inline-flex size-11 items-center justify-center rounded-sm ${checked ? "bg-primary text-on-primary" : "bg-surface text-subtle"}`}
+                                    >
+                                      {checked ? "X" : "·"}
+                                    </span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </section>
           );
         })}
