@@ -3,6 +3,7 @@ import {
   adjacentHabitMonth,
   calendarDate,
   calendarDateSchema,
+  clampHabitMonth,
   createHabitMutationSchema,
   habitMonth,
   habitNameSchema,
@@ -15,6 +16,14 @@ const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const habitId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 
 describe("habit calendar", () => {
+  it.each([
+    ["2026-11-01", "2026-10-15", "2026-10-01"],
+    ["2027-01-01", "2026-12-31", "2026-12-01"],
+    ["2026-09-30", "2026-10-15", "2026-09-01"],
+    ["2026-10-01", "2026-09-30", "2026-09-01"],
+  ])("clamps %s to the current month as of %s", (anchor, today, expected) => {
+    expect(clampHabitMonth(anchor, today)).toBe(expected);
+  });
   it("assigns instants using the device timezone without moving stored dates", () => {
     const now = Date.parse("2026-10-19T00:30:00Z");
     expect(calendarDate(now, "America/New_York")).toBe("2026-10-18");

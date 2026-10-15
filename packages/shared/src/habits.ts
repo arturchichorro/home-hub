@@ -52,6 +52,11 @@ export function habitMonth(anchor: string) {
   return { startOn, endOn: shiftCalendarDate(startOn, length - 1), dates };
 }
 
+export function clampHabitMonth(anchor: string, today: string): string {
+  const month = anchor.slice(0, 7) > today.slice(0, 7) ? today : anchor;
+  return `${month.slice(0, 7)}-01`;
+}
+
 export function adjacentHabitMonth(anchor: string, direction: -1 | 1): string {
   const date = new Date(`${anchor.slice(0, 7)}-01T12:00:00Z`);
   date.setUTCMonth(date.getUTCMonth() + direction);

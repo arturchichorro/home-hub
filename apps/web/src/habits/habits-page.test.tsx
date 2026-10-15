@@ -46,6 +46,16 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("Habits page", () => {
+  it("disables next-month navigation in the present month", () => {
+    setup();
+    const html = renderToStaticMarkup(<HabitsPage householdId={householdId} />);
+    expect(
+      html.match(/<button[^>]*aria-label="Next month"[^>]*>/)?.[0],
+    ).toContain('disabled=""');
+    expect(
+      html.match(/<button[^>]*aria-label="Previous month"[^>]*>/)?.[0],
+    ).not.toContain('disabled=""');
+  });
   it("shows the current shared month without week-view controls", () => {
     setup();
     const html = renderToStaticMarkup(<HabitsPage householdId={householdId} />);

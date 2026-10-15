@@ -11,7 +11,8 @@ every current member can see progress. No joining, targets or streaks are requir
   debounced saves, blur/Enter canonicalization, Escape reversion and anchored
   error feedback on rejection. Archived names stay read-only text.
 - Show the current month, navigate months or return to today. Week view has been
-  removed. Each day box is shared by all household members, with colored vector
+  removed. Month navigation stops at the current device-local month, including
+  after clock/timezone changes. Each day box is shared by all household members, with colored vector
   completion marks and per-person monthly totals.
 - The shared seven-column Monday–Sunday calendar
   per habit, arranged in a responsive grid. Calendars stay capped at 24rem wide

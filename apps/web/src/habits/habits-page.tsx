@@ -1,6 +1,7 @@
 import {
   adjacentHabitMonth,
   calendarDate,
+  clampHabitMonth,
   habitMonth,
 } from "@home-hub/shared/habits";
 import { mutators } from "@home-hub/shared/zero/mutators";
@@ -34,7 +35,8 @@ export function HabitsPage({ householdId }: { householdId: string }) {
   const [error, setError] = useState<string>();
   const pendingRef = useRef(new Set<string>());
   const [pending, setPending] = useState(new Set<string>());
-  const period = habitMonth(anchor ?? today);
+  const period = habitMonth(clampHabitMonth(anchor ?? today, today));
+  const canGoNext = period.startOn < `${today.slice(0, 7)}-01`;
   const [habits, result] = useQuery(
     queries.habits.byHousehold({
       householdId,
@@ -107,7 +109,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
       <div className="flex flex-wrap items-center gap-2">
         <IconButton
           aria-label="Previous month"
-          onClick={() => setAnchor(adjacentHabitMonth(anchor ?? today, -1))}
+          onClick={() => setAnchor(adjacentHabitMonth(period.startOn, -1))}
         >
           <ChevronLeft aria-hidden="true" className="size-4" />
         </IconButton>
@@ -116,7 +118,13 @@ export function HabitsPage({ householdId }: { householdId: string }) {
         </span>
         <IconButton
           aria-label="Next month"
-          onClick={() => setAnchor(adjacentHabitMonth(anchor ?? today, 1))}
+          disabled={!canGoNext}
+          onClick={() => {
+            if (canGoNext)
+              setAnchor(
+                clampHabitMonth(adjacentHabitMonth(period.startOn, 1), today),
+              );
+          }}
         >
           <ChevronRight aria-hidden="true" className="size-4" />
         </IconButton>
