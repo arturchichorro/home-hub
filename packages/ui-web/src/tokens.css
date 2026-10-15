@@ -13,14 +13,6 @@
   --color-warning: oklch(0.8 0.14 85);
   --color-danger: oklch(0.68 0.19 28);
   --color-focus-ring: oklch(0.78 0.15 65);
-  --color-member-blue: oklch(0.76 0.09 250);
-  --color-member-sage: oklch(0.76 0.08 155);
-  --color-member-lavender: oklch(0.76 0.09 300);
-  --color-member-rose: oklch(0.76 0.08 15);
-  --color-member-amber: oklch(0.8 0.09 80);
-  --color-member-teal: oklch(0.76 0.07 195);
-  --color-member-apricot: oklch(0.77 0.09 50);
-  --color-member-mauve: oklch(0.76 0.08 340);
 
   --spacing: 0.25rem;
 
@@ -54,6 +46,15 @@
 
 :root {
   color-scheme: dark;
+  /* Runtime palette: keep these outside @theme so unused utility pruning cannot remove them. */
+  --color-member-blue: oklch(0.76 0.09 250);
+  --color-member-sage: oklch(0.76 0.08 155);
+  --color-member-lavender: oklch(0.76 0.09 300);
+  --color-member-rose: oklch(0.76 0.08 15);
+  --color-member-amber: oklch(0.8 0.09 80);
+  --color-member-teal: oklch(0.76 0.07 195);
+  --color-member-apricot: oklch(0.77 0.09 50);
+  --color-member-mauve: oklch(0.76 0.08 340);
   /* Categorical member markers share contrast; account identity supplies the hue. */
   --member-marker-lightness: 0.76;
   --member-marker-chroma: 0.08;
