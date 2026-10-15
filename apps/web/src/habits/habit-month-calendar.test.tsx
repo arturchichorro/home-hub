@@ -96,6 +96,12 @@ describe("member palette", () => {
 });
 
 describe("shared habit month", () => {
+  it("centers day numbers on the top line, with completion marks below", () => {
+    const html = renderToStaticMarkup(<HabitMonthCalendar {...props} />);
+    expect(html).toContain("flex w-full flex-col items-center gap-1");
+    expect(html).toContain("[&amp;&gt;span]:items-start");
+    expect(html).toContain("flex w-full flex-wrap justify-center");
+  });
   it("keeps the calendar compact instead of stretching across the page", () => {
     const html = renderToStaticMarkup(<HabitMonthCalendar {...props} />);
     expect(html).toContain("max-w-sm");

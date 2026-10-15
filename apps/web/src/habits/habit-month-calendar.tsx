@@ -156,7 +156,7 @@ export function HabitMonthCalendar({
                         trigger={
                           <Button
                             variant="ghost"
-                            className="h-full! w-full! items-stretch! justify-start! rounded-none! p-1! text-left [&>span]:w-full"
+                            className="h-full! w-full! items-stretch! justify-start! rounded-none! p-1! text-center [&>span]:w-full [&>span]:items-start"
                             aria-label={`${habit.name}, ${date}. ${completionLabel} Your completion: ${ownCompleted ? "recorded" : "not recorded"}.`}
                             aria-pressed={ownCompleted}
                             disabled={!canEdit}
@@ -165,7 +165,7 @@ export function HabitMonthCalendar({
                               if (canEdit) onSetCompleted(date, !ownCompleted);
                             }}
                           >
-                            <span className="flex w-full flex-col items-start gap-1">
+                            <span className="flex w-full flex-col items-center gap-1">
                               <span
                                 aria-current={
                                   date === today ? "date" : undefined
@@ -176,7 +176,7 @@ export function HabitMonthCalendar({
                               </span>
                               <span
                                 aria-hidden="true"
-                                className="flex flex-wrap gap-x-1 gap-y-0.5 text-sm font-semibold"
+                                className="flex w-full flex-wrap justify-center gap-x-1 gap-y-0.5"
                               >
                                 {completedMembers.map((member) => (
                                   <HabitMemberMark
