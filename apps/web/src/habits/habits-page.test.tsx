@@ -77,7 +77,7 @@ describe("Habits page", () => {
     expect(
       html.match(/<button[^>]*aria-label="Read, 2026-[^>]*>/g),
     ).toHaveLength(31);
-    expect(html).toContain("1 day");
+    expect(html).not.toContain("Monthly completion totals");
     expect(html).not.toContain('aria-label="Calendar view"');
     expect(html).not.toContain(">Week<");
     expect(html).toContain('aria-label="Habit name"');
@@ -100,14 +100,13 @@ describe("Habits page", () => {
       expect(button).toContain("disabled");
     }
   });
-  it("keeps empty shared days and own totals without requiring joining", () => {
+  it("shows empty shared days without summaries or enrollment", () => {
     const habit = habits[0];
     if (!habit) throw new Error("Missing habit fixture");
     setup([{ ...habit, completions: [] }]);
     const html = renderToStaticMarkup(<HabitsPage householdId={householdId} />);
-    expect(html).toContain("Alice");
-    expect(html).not.toContain("Bob");
-    expect(html).toContain("0 days");
+    expect(html).not.toContain("0 days");
+    expect(html).not.toContain("Monthly completion totals");
     expect(html).not.toContain("Join habit");
   });
   it("keeps cached data read-only without extra offline copy", () => {

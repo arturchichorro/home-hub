@@ -17,7 +17,7 @@ same compact ghost actions in the application header as Lists and Recipes.
 - Show the current month, navigate months or return to today. Week view has been
   removed. Month navigation stops at the current device-local month, including
   after clock/timezone changes. Each day box is shared by all household members, with colored vector
-  completion marks and per-person monthly totals.
+  completion marks. There is no summary text below each calendar.
 - The shared seven-column Monday–Sunday calendar
   per habit, arranged in a responsive grid with flexible columns (20rem minimum
   where space permits). Calendars fill their column width while retaining compact
@@ -27,7 +27,7 @@ same compact ghost actions in the application header as Lists and Recipes.
   consistently across habits and periods (palette collisions are resolved per roster).
   Hover or focus a completed day to see the names (200 ms hover delay); empty
   days have no tooltip. Selecting a day toggles only your completion.
-  Monthly totals form a colored member legend. Read-only days remain focusable
+  Member names appear only in completion tooltips. Read-only days remain focusable
   so their completion details are available to keyboard users.
 - Drag a habit using its dedicated grip to reorder it; keyboard dragging is also
   supported. The order is shared across household members and persists across

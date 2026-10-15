@@ -153,16 +153,16 @@ describe("shared habit month", () => {
     expect(html).not.toContain("2026-09-");
     expect(html).not.toContain("2026-11-");
     expect(html).toContain('aria-current="date"');
-    expect(html).toContain('aria-label="Monthly completion totals"');
-    expect(html).toContain("Alice (you): 1 day");
-    expect(html).toContain("Bob: 1 day");
+    expect(html).not.toContain('aria-label="Monthly completion totals"');
+    expect(html).not.toContain("(you):");
     expect(html).not.toContain("Charlie:");
   });
-  it("always includes the current member's legend even with no entries", () => {
+  it("does not add a summary beneath an empty calendar", () => {
     const html = renderToStaticMarkup(
       <HabitMonthCalendar {...props} habit={{ ...habit, completions: [] }} />,
     );
-    expect(html).toContain("Alice (you): 0 days");
+    expect(html).not.toContain("0 days");
+    expect(html).not.toContain("Monthly completion totals");
     expect(html).not.toContain("Bob:");
     expect(html).toContain("No completions.");
   });

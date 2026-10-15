@@ -1,8 +1,4 @@
-import {
-  type HabitCalendarProps,
-  HabitCompletionTotals,
-  HabitDay,
-} from "./habit-calendar-shared";
+import { type HabitCalendarProps, HabitDay } from "./habit-calendar-shared";
 import { habitMemberColors } from "./habit-member-mark";
 
 const weekdays = [
@@ -83,7 +79,6 @@ export function HabitMonthCalendar(props: HabitCalendarProps) {
           </tbody>
         </table>
       </div>
-      <HabitCompletionTotals {...props} colors={colors} />
     </div>
   );
 }
