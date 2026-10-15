@@ -143,11 +143,6 @@ export function HabitsPage({ householdId }: { householdId: string }) {
           Unable to load habits and household members.
         </InlineAlert>
       ) : null}
-      {!enabled && !archived ? (
-        <p className="text-sm text-muted">
-          Read-only while synchronization is unavailable.
-        </p>
-      ) : null}
       <HabitGrid
         habits={habits}
         disabled={!enabled || archived || pending.size > 0}

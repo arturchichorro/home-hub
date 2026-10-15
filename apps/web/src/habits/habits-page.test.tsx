@@ -103,15 +103,18 @@ describe("Habits page", () => {
     expect(html).toContain("0 days");
     expect(html).not.toContain("Join habit");
   });
-  it("renders cached data read-only while offline", () => {
+  it("keeps cached data read-only without extra offline copy", () => {
     setup();
     useZeroMutationEnabled.mockReturnValue(false);
     const html = renderToStaticMarkup(<HabitsPage householdId={householdId} />);
-    expect(html).toContain("Read-only");
+    expect(html).not.toContain("Read-only");
+    expect(html).not.toContain("synchronization is unavailable");
     expect(html).toContain("Alice");
     const buttons = html.match(/<button[^>]*aria-label="Read, 2026-[^>]*>/g);
     expect(buttons).toHaveLength(31);
-    expect(buttons?.every((button) => button.includes("disabled"))).toBe(true);
+    expect(
+      buttons?.every((button) => button.includes('aria-disabled="true"')),
+    ).toBe(true);
   });
   it.each(["unknown", "error", "complete"])(
     "handles %s query state",
