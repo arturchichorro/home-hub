@@ -126,7 +126,7 @@ describe("shared habit month", () => {
       />,
     );
     expect(html).toContain(
-      "flex h-4 w-full min-w-0 overflow-x-auto overflow-y-hidden",
+      "flex h-4 min-w-0 flex-1 overflow-x-auto overflow-y-hidden",
     );
     expect(html).toContain("[scrollbar-width:none]");
     expect(html).toContain("[&amp;::-webkit-scrollbar]:hidden");

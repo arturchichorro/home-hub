@@ -1,4 +1,5 @@
 import { Button, Tooltip } from "@home-hub/ui-web";
+import { HabitCompletionMarks } from "./habit-completion-marks";
 import { HabitMemberMark } from "./habit-member-mark";
 
 export type HabitCalendarProps = {
@@ -93,19 +94,7 @@ export function HabitDay({
             >
               {Number(date.slice(8))}
             </span>
-            <span
-              aria-hidden="true"
-              className="flex h-4 w-full min-w-0 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              <span className="mx-auto flex w-max shrink-0 gap-1">
-                {completedMembers.map((member) => (
-                  <HabitMemberMark
-                    key={member.userId}
-                    color={colors.get(member.userId)}
-                  />
-                ))}
-              </span>
-            </span>
+            <HabitCompletionMarks members={completedMembers} colors={colors} />
           </span>
         </Button>
       }

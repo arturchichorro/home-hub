@@ -24,7 +24,9 @@ same compact ghost actions in the application header as Lists and Recipes.
   3.5rem day heights, centered top-line dates and blank padding
   outside the selected month. Each day's cell
   contains a crisp vector X for each completing member in a fixed-height,
-  horizontally scrollable line without a visible scrollbar, using a muted palette
+  horizontally scrollable line without a visible scrollbar, using a muted palette.
+  A small `+N` indicator counts marks still hidden to the right and updates on
+  scrolling and resizing. Colors are assigned
   consistently across habits and periods (palette collisions are resolved per roster).
   Hover or focus a completed day to see the names (200 ms hover delay); empty
   days have no tooltip. Selecting a day toggles only your completion.
