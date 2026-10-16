@@ -105,9 +105,35 @@ describe("shared habit month", () => {
   });
   it("centers day numbers on the top line, with completion marks below", () => {
     const html = renderToStaticMarkup(<HabitMonthCalendar {...props} />);
-    expect(html).toContain("flex w-full flex-col items-center gap-1");
+    expect(html).toContain("flex w-full min-w-0 flex-col items-center gap-1");
     expect(html).toContain("[&amp;&gt;span]:items-start");
-    expect(html).toContain("flex w-full flex-wrap justify-center");
+    expect(html).toContain("mx-auto flex w-max shrink-0 gap-1");
+  });
+  it("keeps crowded days on a fixed-height horizontally scrollable line", () => {
+    const members = Array.from({ length: 12 }, (_, index) => ({
+      userId: `member-${index}`,
+      user: { username: `Member ${index}` },
+    }));
+    const completions = members.map((member) => ({
+      userId: member.userId,
+      completedOn: "2026-10-14",
+    }));
+    const html = renderToStaticMarkup(
+      <HabitMonthCalendar
+        {...props}
+        members={members}
+        habit={{ ...habit, completions }}
+      />,
+    );
+    expect(html).toContain(
+      "flex h-4 w-full min-w-0 overflow-x-auto overflow-y-hidden",
+    );
+    expect(html).toContain("[scrollbar-width:none]");
+    expect(html).toContain("[&amp;::-webkit-scrollbar]:hidden");
+    expect(html).not.toContain("flex-wrap");
+    expect(html.match(/lucide-x/g)).toHaveLength(12);
+    expect(html).toContain("Member 11");
+    expect(html.match(/class="h-14 border/g)).toHaveLength(31);
   });
   it("fills its grid column while keeping compact day heights", () => {
     const html = renderToStaticMarkup(<HabitMonthCalendar {...props} />);

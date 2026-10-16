@@ -77,7 +77,7 @@ export function HabitDay({
       trigger={
         <Button
           variant="ghost"
-          className="h-full! w-full! items-stretch! justify-start! rounded-none! p-1! text-center [&>span]:w-full [&>span]:items-start"
+          className="h-full! w-full! items-stretch! justify-start! rounded-none! p-1! text-center [&>span]:min-w-0 [&>span]:w-full [&>span]:items-start"
           aria-label={`${habit.name}, ${date}. ${completionLabel} Your completion: ${ownCompleted ? "recorded" : "not recorded"}.`}
           aria-pressed={ownCompleted}
           disabled={!canEdit}
@@ -86,7 +86,7 @@ export function HabitDay({
             if (canEdit) onSetCompleted(date, !ownCompleted);
           }}
         >
-          <span className="flex w-full flex-col items-center gap-1">
+          <span className="flex w-full min-w-0 flex-col items-center gap-1">
             <span
               aria-current={date === today ? "date" : undefined}
               className={`inline-flex size-5 items-center justify-center text-xs ${date === today ? "font-bold text-foreground" : "text-muted"}`}
@@ -95,14 +95,16 @@ export function HabitDay({
             </span>
             <span
               aria-hidden="true"
-              className="flex w-full flex-wrap justify-center gap-x-1 gap-y-0.5"
+              className="flex h-4 w-full min-w-0 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-              {completedMembers.map((member) => (
-                <HabitMemberMark
-                  key={member.userId}
-                  color={colors.get(member.userId)}
-                />
-              ))}
+              <span className="mx-auto flex w-max shrink-0 gap-1">
+                {completedMembers.map((member) => (
+                  <HabitMemberMark
+                    key={member.userId}
+                    color={colors.get(member.userId)}
+                  />
+                ))}
+              </span>
             </span>
           </span>
         </Button>
