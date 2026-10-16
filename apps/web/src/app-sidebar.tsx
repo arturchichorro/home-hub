@@ -11,6 +11,7 @@ import { queries } from "@home-hub/shared/zero/queries";
 import {
   BookOpen,
   Button,
+  Calendar,
   ChevronDown,
   Drawer,
   House,
@@ -60,13 +61,14 @@ type HouseholdNavigationGroupProps = {
 };
 
 type ModuleDefinition = {
-  key: "recipes" | "settings" | "lists";
+  key: "recipes" | "settings" | "lists" | "habits";
   label: string;
   Icon: typeof BookOpen;
   to:
     | "/households/$householdId/recipes"
     | "/households/$householdId/settings"
-    | "/households/$householdId/lists";
+    | "/households/$householdId/lists"
+    | "/households/$householdId/habits";
 };
 
 const moduleDefinitions: readonly ModuleDefinition[] = [
@@ -81,6 +83,12 @@ const moduleDefinitions: readonly ModuleDefinition[] = [
     label: "Recipes",
     Icon: BookOpen,
     to: "/households/$householdId/recipes",
+  },
+  {
+    key: "habits",
+    label: "Habits",
+    Icon: Calendar,
+    to: "/households/$householdId/habits",
   },
   {
     key: "settings",

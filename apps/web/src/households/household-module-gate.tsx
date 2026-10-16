@@ -1,14 +1,14 @@
+import type { HouseholdModuleKey } from "@home-hub/shared/modules";
 import { queries } from "@home-hub/shared/zero/queries";
 import { InlineAlert } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { Navigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
-type HouseholdModuleKey = "lists" | "recipes";
-
 type HouseholdModuleRoute =
   | "/households/$householdId/lists"
   | "/households/$householdId/recipes"
+  | "/households/$householdId/habits"
   | "/households/$householdId/settings";
 
 type ModuleSetting = {
@@ -39,6 +39,13 @@ export function getDefaultHouseholdModuleRoute(
     return "/households/$householdId/recipes";
   }
 
+  if (
+    settings.some(
+      (setting) => setting.moduleKey === "habits" && setting.enabled,
+    )
+  ) {
+    return "/households/$householdId/habits";
+  }
   return "/households/$householdId/settings";
 }
 

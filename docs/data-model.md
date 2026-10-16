@@ -123,7 +123,7 @@ each module addition includes an explicit migration. Household creation inserts
 a setting for every implemented module. A new module migration backfills every
 existing household with its chosen default; missing settings fail closed.
 
-Lists and Recipes are initially enabled. Deferred modules such as French
+Lists and Recipes are initially enabled; Habits defaults to disabled. Deferred modules such as French
 Vocabulary default to disabled. Disabling a module retains all of its rows.
 Core household and membership behavior has no module setting and cannot be
 disabled.
@@ -141,6 +141,11 @@ Recipes owns `recipes`, `recipe_ingredients`, `recipe_cook_logs`, and
 `recipe_images`. Their columns, constraints, normalization, ordering, and image
 metadata lifecycle are documented in the
 [Recipes module data model](./recipes/#data-model).
+
+### Habits module tables
+
+Habits owns `habits` and `habit_completions`; their fields, natural completion
+key and calendar-date constraints are documented in the [Habits module](./habits/).
 
 ## Schema invariants
 
