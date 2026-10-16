@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { hiddenMarksToRight } from "./habit-completion-marks";
+import { completionFade } from "./habit-completion-marks";
 
-describe("hidden completion count", () => {
-  it("counts fully and partially hidden marks", () => {
-    expect(hiddenMarksToRight([16, 36, 56, 76, 96], 40)).toBe(3);
-    expect(hiddenMarksToRight([16, 36, 56], 32)).toBe(2);
+describe("completion overflow fade", () => {
+  it("only fades the edge with more marks beyond it", () => {
+    expect(completionFade(0, 36, 190)).toBe("right");
+    expect(completionFade(80, 36, 190)).toBe("both");
+    expect(completionFade(154, 36, 190)).toBe("left");
   });
-  it("decreases as the strip scrolls and clears at the end", () => {
-    expect(hiddenMarksToRight([16, 36, 56, 76], 36)).toBe(2);
-    expect(hiddenMarksToRight([-4, 16, 36, 56], 36)).toBe(1);
-    expect(hiddenMarksToRight([-24, -4, 16, 36], 36)).toBe(0);
+  it("removes fading when marks fit, including after widening the cell", () => {
+    expect(completionFade(0, 36, 36)).toBe("none");
+    expect(completionFade(0, 250, 250)).toBe("none");
+    expect(completionFade(0, 36, 0)).toBe("none");
   });
-  it("updates when the viewport widens and tolerates subpixel rounding", () => {
-    expect(hiddenMarksToRight([16, 36, 56, 76], 80)).toBe(0);
-    expect(hiddenMarksToRight([36.25], 36)).toBe(0);
-    expect(hiddenMarksToRight([], 36)).toBe(0);
+  it("ignores subpixel rounding at either end", () => {
+    expect(completionFade(0.25, 36, 36.25)).toBe("none");
+    expect(completionFade(153.75, 36, 190)).toBe("left");
   });
 });
