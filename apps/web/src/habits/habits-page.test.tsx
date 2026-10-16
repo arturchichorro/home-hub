@@ -31,8 +31,7 @@ const habits = [
     id: "habit-1",
     householdId,
     name: "Read",
-    createdOn: "2026-10-13",
-    archivedAt: null,
+    status: "active",
     completions: [
       { userId: "me", completedOn: "2026-10-14" },
       { userId: "other", completedOn: "2026-10-13" },
@@ -113,21 +112,21 @@ describe("Habits page", () => {
     expect(html).not.toContain(">Rename<");
     expect(html).not.toContain("Its history will be kept");
   });
-  it("disables dates before creation and in the future", () => {
+  it("allows all past dates and disables future dates", () => {
     setup();
     const html = renderToStaticMarkup(<HabitsPage householdId={householdId} />);
-    for (const date of [
-      "2026-10-12",
-      "2026-10-16",
-      "2026-10-17",
-      "2026-10-18",
-    ]) {
+    for (const date of ["2026-10-16", "2026-10-17", "2026-10-18"]) {
       const button = html.match(
         new RegExp(`<button[^>]*aria-label="Read, ${date}[^>]*>`),
       )?.[0];
       expect(button).toBeDefined();
-      expect(button).toContain("disabled");
+      expect(button).toContain('aria-disabled="true"');
     }
+    const past = html.match(
+      /<button[^>]*aria-label="Read, 2026-10-12[^>]*>/,
+    )?.[0];
+    expect(past).toBeDefined();
+    expect(past).not.toContain('aria-disabled="true"');
   });
   it("shows empty shared days without summaries or enrollment", () => {
     const habit = habits[0];

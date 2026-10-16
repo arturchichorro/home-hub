@@ -131,12 +131,7 @@ describe("Habits queries", () => {
           type: "and",
           conditions: [
             equalsCondition("householdId", householdId),
-            {
-              type: "simple",
-              left: { name: "archivedAt" },
-              op: archived ? "IS NOT" : "IS",
-              right: { value: null },
-            },
+            equalsCondition("status", archived ? "archived" : "active"),
             moduleAccessCondition("habits"),
           ],
         },

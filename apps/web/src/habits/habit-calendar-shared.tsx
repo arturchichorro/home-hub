@@ -6,7 +6,6 @@ export type HabitCalendarProps = {
   habit: {
     id: string;
     name: string;
-    createdOn: string;
     completions: readonly { userId: string; completedOn: string }[];
   };
   members: readonly {
@@ -55,7 +54,6 @@ export function HabitDay({
     currentUserId !== undefined &&
     enabled &&
     !archived &&
-    date >= habit.createdOn &&
     date <= today &&
     !pending.has(habit.id) &&
     !pending.has(`${habit.id}:${date}`);

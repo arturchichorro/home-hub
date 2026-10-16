@@ -48,6 +48,14 @@ describe("habit calendar", () => {
 });
 
 describe("habit contracts", () => {
+  it("creates a habit without any creation-date or timezone argument", () => {
+    const args = { householdId, habitId, name: "Read", optimisticTimestamp: 0 };
+    expect(createHabitMutationSchema.safeParse(args).success).toBe(true);
+    expect(
+      createHabitMutationSchema.safeParse({ ...args, createdOn: "2026-10-15" })
+        .success,
+    ).toBe(false);
+  });
   it("rejects duplicate order IDs and an order missing the moved habit", () => {
     const args = {
       householdId,
@@ -107,7 +115,6 @@ describe("habit contracts", () => {
         householdId: "bad",
         habitId,
         name: "Exercise",
-        timeZone: "UTC",
         optimisticTimestamp: 0,
       }).success,
     ).toBe(false);

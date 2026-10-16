@@ -9,7 +9,6 @@ const props = {
   habit: {
     id: "habit-1",
     name: "Read",
-    createdOn: "2026-10-12",
     completions: [
       { userId: "alice", completedOn: "2026-10-14" },
       { userId: "bob", completedOn: "2026-10-14" },
@@ -47,6 +46,10 @@ function day(overrides: Partial<Parameters<typeof HabitDay>[0]> = {}) {
 beforeEach(() => vi.clearAllMocks());
 
 describe("shared calendar day", () => {
+  it("allows backfilling any past date without a creation cutoff", () => {
+    day({ date: "1900-01-01" }).button.props.onClick();
+    expect(props.onSetCompleted).toHaveBeenCalledWith("1900-01-01", true);
+  });
   it("clicking a shared day toggles only the viewer's completion", () => {
     const { button } = day();
     expect(button.props["aria-pressed"]).toBe(true);
@@ -68,7 +71,6 @@ describe("shared calendar day", () => {
     { archived: true },
     { enabled: false },
     { date: "2026-10-16" },
-    { date: "2026-10-11" },
     { pending: new Set(["habit-1:2026-10-14"]) },
     { pending: new Set(["habit-1"]) },
     { currentUserId: undefined },

@@ -27,9 +27,9 @@ vi.mock("@dnd-kit/react/sortable", () => ({
   useSortable: () => ({ ref: vi.fn(), handleRef: vi.fn(), isDragging: false }),
 }));
 const habits = [
-  { id: "a", name: "Read", createdOn: "2026-10-01", completions: [] },
-  { id: "b", name: "Walk", createdOn: "2026-10-01", completions: [] },
-  { id: "c", name: "Stretch", createdOn: "2026-10-01", completions: [] },
+  { id: "a", name: "Read", completions: [] },
+  { id: "b", name: "Walk", completions: [] },
+  { id: "c", name: "Stretch", completions: [] },
 ];
 const onMove = vi.fn();
 function render(disabled = false, archived = false) {

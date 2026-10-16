@@ -218,6 +218,13 @@
       "when": 1792098650562,
       "tag": "0030_low_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792166939536,
+      "tag": "0031_first_wind_dancer",
+      "breakpoints": true
     }
   ]
 }

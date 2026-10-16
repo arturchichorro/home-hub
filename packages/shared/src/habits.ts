@@ -69,7 +69,6 @@ export const createHabitMutationSchema = z
   .object({
     ...scope,
     name: habitNameSchema,
-    timeZone: timeZoneSchema,
     optimisticTimestamp: timestamp,
   })
   .strict();

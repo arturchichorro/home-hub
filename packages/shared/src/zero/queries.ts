@@ -190,7 +190,7 @@ const habitsByHousehold = defineHomeHubQuery(
   ({ args, ctx }) =>
     zql.habits
       .where("householdId", args.householdId)
-      .where("archivedAt", args.archived ? "IS NOT" : "IS", null)
+      .where("status", args.archived ? "archived" : "active")
       .whereExists("household", (household) =>
         household
           .where("deletedAt", "IS", null)

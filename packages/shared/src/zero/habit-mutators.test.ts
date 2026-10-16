@@ -76,9 +76,9 @@ function setup(location: "server" | "client" = "server") {
         id: habitId,
         householdId,
         name: "Exercise",
+        createdAt: now,
         sortKey: 1024,
-        createdOn: "2026-10-12",
-        archivedAt: null,
+        status: "active",
       },
     ],
     habitCompletions: [],
@@ -147,7 +147,7 @@ describe("habit mutations", () => {
         householdId,
         name: "Read",
         sortKey: 2048,
-        archivedAt: null,
+        status: "active",
       });
       await mutators.habits.reorder.fn({
         tx,
@@ -174,7 +174,7 @@ describe("habit mutations", () => {
           id: foreignId,
           householdId: reason === "foreign" ? foreignId : householdId,
           sortKey: 2048,
-          archivedAt: reason === "archived" ? now : null,
+          status: reason === "archived" ? "archived" : "active",
         });
       await expect(
         mutators.habits.reorder.fn({
@@ -192,7 +192,7 @@ describe("habit mutations", () => {
       const { tx, data, writes } = setup();
       if (reason === "archived")
         data.habits = [
-          { id: habitId, householdId, archivedAt: now, sortKey: 1024 },
+          { id: habitId, householdId, status: "archived", sortKey: 1024 },
         ];
       if (reason === "disabled") data.householdModuleSettings = [];
       if (reason === "not a member") data.householdMembers = [];
@@ -212,7 +212,7 @@ describe("habit mutations", () => {
       id: foreignId,
       householdId,
       sortKey: 2048,
-      archivedAt: null,
+      status: "active",
     });
     await mutators.habits.reorder.fn({
       tx,
@@ -229,10 +229,10 @@ describe("habit mutations", () => {
     const third = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
     const archived = "b5b8a5ea-89cb-4c31-a93d-33049ab11c73";
     data.habits = [
-      { id: habitId, householdId, sortKey: 0, archivedAt: null },
-      { id: foreignId, householdId, sortKey: 3, archivedAt: null },
-      { id: third, householdId, sortKey: 2, archivedAt: null },
-      { id: archived, householdId, sortKey: 99, archivedAt: now },
+      { id: habitId, householdId, sortKey: 0, status: "active" },
+      { id: foreignId, householdId, sortKey: 3, status: "active" },
+      { id: third, householdId, sortKey: 2, status: "active" },
+      { id: archived, householdId, sortKey: 99, status: "archived" },
     ];
     await mutators.habits.reorder.fn({
       tx,
@@ -244,7 +244,7 @@ describe("habit mutations", () => {
     expect(writes).toHaveBeenCalledTimes(3);
   });
   it.each(["client", "server"] as const)(
-    "creates optimistically with %s timestamps and a local creation date",
+    "creates optimistically with %s timestamps",
     async (location) => {
       const { tx, data } = setup(location);
       const optimisticTimestamp = Date.parse("2026-10-14T00:30:00Z");
@@ -255,7 +255,6 @@ describe("habit mutations", () => {
           ...scope,
           habitId: foreignId,
           name: "  Read  books ",
-          timeZone: "America/New_York",
           optimisticTimestamp,
         },
       });
@@ -264,11 +263,10 @@ describe("habit mutations", () => {
         id: foreignId,
         householdId,
         name: "Read books",
-        createdOn: location === "server" ? "2026-10-15" : "2026-10-13",
         sortKey: 2048,
         createdAt: expectedTime,
         updatedAt: expectedTime,
-        archivedAt: null,
+        status: "active",
       });
     },
   );
@@ -299,9 +297,7 @@ describe("habit mutations", () => {
     "rejects a foreign habit in %s",
     async (action) => {
       const { tx, data, writes } = setup();
-      data.habits = [
-        { id: habitId, householdId: foreignId, createdOn: "2026-10-12" },
-      ];
+      data.habits = [{ id: habitId, householdId: foreignId }];
       const request = { tx, ctx, args: { ...completeArgs, name: "Read" } };
       if (action === "rename")
         await expect(
@@ -331,7 +327,7 @@ describe("habit mutations", () => {
     expect(data.habits[0]?.name).toBe("Read");
     await mutators.habits.archive.fn({ tx, ctx, args: scope });
     await mutators.habits.archive.fn({ tx, ctx, args: scope });
-    expect(data.habits[0]?.archivedAt).toBe(now);
+    expect(data.habits[0]?.status).toBe("archived");
     expect(writes).toHaveBeenCalledTimes(2);
     await expect(
       mutators.habits.rename.fn({ tx, ctx, args: { ...scope, name: "Run" } }),
@@ -386,10 +382,10 @@ describe("habit mutations", () => {
     expect(data.habitCompletions).toHaveLength(1);
   });
   it.each([true, false])(
-    "rejects future/pre-creation date changes (completed=%s)",
+    "rejects future date changes (completed=%s)",
     async (completed) => {
       const { tx, writes } = setup();
-      for (const completedOn of ["2026-10-11", "2026-10-16"]) {
+      for (const completedOn of ["2026-10-16", "2026-10-17"]) {
         await expect(
           mutators.habits.setCompleted.fn({
             tx,
@@ -415,15 +411,15 @@ describe("habit mutations", () => {
       }),
     ).rejects.toThrow("not allowed");
   });
-  it("allows corrections to previous weeks without a target or enrollment", async () => {
+  it("allows backfilling before the habit creation timestamp without enrollment", async () => {
     const { tx, data } = setup();
     data.habits = [
       {
         id: habitId,
         householdId,
         name: "Read",
-        createdOn: "2026-01-01",
-        archivedAt: null,
+        createdAt: now,
+        status: "active",
       },
     ];
     await mutators.habits.setCompleted.fn({

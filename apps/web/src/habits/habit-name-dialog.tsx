@@ -46,7 +46,6 @@ export function HabitNameDialog({
       const mutation = zero.mutate(
         mutators.habits.create({
           ...scope,
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
       );
       const client = await mutation.client;

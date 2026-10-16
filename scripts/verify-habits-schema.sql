@@ -17,13 +17,16 @@ BEGIN
     RAISE EXCEPTION 'Application tables must remain in public';
   END IF;
   IF EXISTS (
-    SELECT FROM (VALUES ('habits', 'created_on'), ('habits', 'archived_at'), ('habits', 'sort_key'),
+    SELECT FROM (VALUES ('habits', 'status'), ('habits', 'sort_key'),
       ('habit_completions', 'completed_on'), ('habit_completions', 'user_id')) AS expected(table_name, column_name)
     LEFT JOIN pg_publication_tables published ON published.pubname = 'home_hub_zero'
       AND published.schemaname = 'public' AND published.tablename = expected.table_name
     WHERE published.tablename IS NULL OR NOT COALESCE(expected.column_name = ANY(published.attnames), false)
   ) THEN
     RAISE EXCEPTION 'Habits Zero publication columns are missing';
+  END IF;
+  IF EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'habits' AND column_name IN ('created_on', 'archived_at')) THEN
+    RAISE EXCEPTION 'Unused habit dates must be removed';
   END IF;
   IF EXISTS (
     SELECT FROM public.households h
@@ -34,7 +37,10 @@ BEGIN
 
   INSERT INTO users (id, username, email, password_hash) VALUES (person, person::text, person::text || '@example.invalid', 'test-only');
   INSERT INTO households (id, name) VALUES (household_a, 'Habits verification A'), (household_b, 'Habits verification B');
-  INSERT INTO habits (id, household_id, name, created_on) VALUES (habit, household_a, 'Read', '2026-10-12');
+  INSERT INTO habits (id, household_id, name) VALUES (habit, household_a, 'Read');
+  IF (SELECT status FROM habits WHERE id = habit) <> 'active' THEN
+    RAISE EXCEPTION 'New habits must default to active';
+  END IF;
   INSERT INTO habit_completions (household_id, habit_id, user_id, completed_on) VALUES (household_a, habit, person, '2026-10-14');
   INSERT INTO habit_completions (household_id, habit_id, user_id, completed_on) VALUES (household_a, habit, person, '2026-10-14') ON CONFLICT DO NOTHING;
   IF (SELECT count(*) FROM habit_completions WHERE habit_id = habit AND user_id = person) <> 1 THEN
@@ -58,6 +64,12 @@ BEGIN
   BEGIN
     UPDATE habits SET name = '' WHERE id = habit;
     RAISE EXCEPTION 'Empty habit name unexpectedly allowed';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+  UPDATE habits SET status = 'archived' WHERE id = habit;
+  BEGIN
+    UPDATE habits SET status = 'deleted' WHERE id = habit;
+    RAISE EXCEPTION 'Unknown habit status unexpectedly allowed';
   EXCEPTION WHEN check_violation THEN NULL;
   END;
 END $$;

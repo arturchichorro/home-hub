@@ -13,7 +13,7 @@ import { nextSortKey, planReorder } from "./ordering";
 import { type Schema, zql } from "./schema.gen";
 
 const activeHabits = (householdId: string) =>
-  zql.habits.where("householdId", householdId).where("archivedAt", "IS", null);
+  zql.habits.where("householdId", householdId).where("status", "active");
 
 const defineMutator = defineMutatorWithType<Schema, ZeroAuthContext>();
 type Tx = Transaction<Schema>;
@@ -65,8 +65,7 @@ export const habitMutatorDefinitions = {
         householdId: args.householdId,
         name: args.name,
         sortKey: nextSortKey(top?.sortKey ?? 0),
-        createdOn: calendarDate(now, args.timeZone),
-        archivedAt: null,
+        status: "active",
         createdAt: now,
         updatedAt: now,
       });
@@ -76,7 +75,7 @@ export const habitMutatorDefinitions = {
     reorderHabitsMutationSchema,
     async ({ tx, ctx, args }) => {
       const habit = await requireHabit(tx, ctx, args);
-      if (habit.archivedAt != null)
+      if (habit.status !== "active")
         throw new Error("Habit reorder not allowed");
       const rows = await tx.run(activeHabits(args.householdId));
       const updates = planReorder(
@@ -93,7 +92,7 @@ export const habitMutatorDefinitions = {
     renameHabitMutationSchema,
     async ({ tx, ctx, args }) => {
       const habit = await requireHabit(tx, ctx, args);
-      if (habit.archivedAt != null)
+      if (habit.status !== "active")
         throw new Error("Habit mutation not allowed");
       await tx.mutate.habits.update({
         id: habit.id,
@@ -106,11 +105,11 @@ export const habitMutatorDefinitions = {
     archiveHabitMutationSchema,
     async ({ tx, ctx, args }) => {
       const habit = await requireHabit(tx, ctx, args);
-      if (habit.archivedAt != null) return;
+      if (habit.status === "archived") return;
       const now = timestamp(tx, args.optimisticTimestamp);
       await tx.mutate.habits.update({
         id: habit.id,
-        archivedAt: now,
+        status: "archived",
         updatedAt: now,
       });
     },
@@ -121,8 +120,7 @@ export const habitMutatorDefinitions = {
       const habit = await requireHabit(tx, ctx, args);
       const now = timestamp(tx, args.optimisticTimestamp);
       if (
-        habit.archivedAt != null ||
-        args.completedOn < habit.createdOn ||
+        habit.status !== "active" ||
         args.completedOn > calendarDate(now, args.timeZone)
       ) {
         throw new Error("Habit completion not allowed");

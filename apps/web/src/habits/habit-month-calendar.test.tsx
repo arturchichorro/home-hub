@@ -23,7 +23,6 @@ beforeEach(() => vi.clearAllMocks());
 const habit = {
   id: "habit-1",
   name: "Read",
-  createdOn: "2026-10-13",
   completions: [
     { userId: "alice", completedOn: "2026-10-14" },
     { userId: "bob", completedOn: "2026-10-14" },
@@ -239,9 +238,9 @@ describe("shared habit month", () => {
       );
     },
   );
-  it("blocks future and pre-creation dates without hiding their details", () => {
+  it("blocks future dates without hiding their details", () => {
     const html = renderToStaticMarkup(<HabitMonthCalendar {...props} />);
-    for (const date of ["2026-10-12", "2026-10-16"]) {
+    for (const date of ["2026-10-16", "2026-10-17"]) {
       const button = html.match(
         new RegExp(`<button[^>]*aria-label="Read, ${date}[^>]*>`),
       )?.[0];
