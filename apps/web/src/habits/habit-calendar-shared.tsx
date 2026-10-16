@@ -78,7 +78,7 @@ export function HabitDay({
       trigger={
         <Button
           variant="ghost"
-          className="h-full! w-full! items-stretch! justify-start! rounded-none! p-1! text-center [&>span]:min-w-0 [&>span]:w-full [&>span]:items-start"
+          className={`h-full! w-full! items-stretch! justify-start! rounded-none! p-1! text-center [&>span]:min-w-0 [&>span]:w-full [&>span]:items-start ${ownCompleted ? "inset-ring-1 inset-ring-foreground" : ""}`}
           aria-label={`${habit.name}, ${date}. ${completionLabel} Your completion: ${ownCompleted ? "recorded" : "not recorded"}.`}
           aria-pressed={ownCompleted}
           disabled={!canEdit}
