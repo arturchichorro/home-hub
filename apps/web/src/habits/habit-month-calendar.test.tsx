@@ -96,7 +96,7 @@ describe("member palette", () => {
 });
 
 describe("shared habit month", () => {
-  it("adds a white inset border only to days completed by the current user", () => {
+  it("adds a subtle neutral fill only to days completed by the current user", () => {
     const html = renderToStaticMarkup(
       <HabitMonthCalendar
         {...props}
@@ -115,8 +115,9 @@ describe("shared habit month", () => {
     const other = html.match(
       /<button[^>]*aria-label="Read, 2026-10-13[^>]*>/,
     )?.[0];
-    expect(own).toContain("inset-ring-1 inset-ring-foreground");
-    expect(other).not.toContain("inset-ring-foreground");
+    expect(own).toContain("bg-raised!");
+    expect(own).not.toContain("inset-ring");
+    expect(other).not.toContain("bg-raised!");
     expect(html.match(/class="h-14 border/g)).toHaveLength(31);
   });
   it("marks today with bold white text, not an orange circle", () => {

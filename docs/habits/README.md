@@ -39,7 +39,7 @@ same compact ghost actions in the application header as Lists and Recipes.
   New habits appear first. Reordering is unavailable offline or while another reorder is pending. Saving a
   day never disables or dims the reorder handles.
 - Today uses bold foreground text, without a colored circle. Days completed by
-  the current user also have a white inset border, without changing cell size.
+  the current user also have a subtle neutral fill, without a border or change in cell size.
 - A square sets or clears your completion. Any past date since habit creation
   can be corrected. Future dates and archived habits are not editable.
 - Use the current device timezone with no setup or stored timezone. Completion
