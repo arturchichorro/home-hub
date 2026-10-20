@@ -14,6 +14,11 @@ same compact ghost actions in the application header as Lists and Recipes.
   Active names are seamless inline inputs using the existing shared editor:
   debounced saves, blur/Enter canonicalization, Escape reversion and anchored
   error feedback on rejection. Archived names stay read-only text.
+- Above month navigation, a horizontally scrolling daily-input strip shows each
+  active habit name above one today square, in the shared habit order. Clicking
+  toggles your completion using the same pending state and neutral fill as the
+  calendar. The strip stays on today even while browsing older months and is
+  hidden in the archive view. No heading or explanatory copy is displayed.
 - Show the current month, navigate months or return to today. Week view has been
   removed. Month navigation stops at the current device-local month, including
   after clock/timezone changes. Each day box is shared by all household members, with colored vector

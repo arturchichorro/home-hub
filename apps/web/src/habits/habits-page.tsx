@@ -20,6 +20,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { HabitActions } from "./habit-actions";
+import { HabitDailyInput } from "./habit-daily-input";
 import { HabitGrid } from "./habit-grid";
 import { HabitMonthCalendar } from "./habit-month-calendar";
 import { HabitNameDialog } from "./habit-name-dialog";
@@ -94,6 +95,20 @@ export function HabitsPage({ householdId }: { householdId: string }) {
     }
   }
 
+  function setCompleted(habitId: string, date: string, completed: boolean) {
+    void change(
+      `${habitId}:${date}`,
+      mutators.habits.setCompleted({
+        householdId,
+        habitId,
+        completedOn: date,
+        completed,
+        timeZone,
+        optimisticTimestamp: Date.now(),
+      }),
+    );
+  }
+
   const label = new Intl.DateTimeFormat(undefined, {
     month: "long",
     year: "numeric",
@@ -105,6 +120,19 @@ export function HabitsPage({ householdId }: { householdId: string }) {
     <div className="grid min-w-0 gap-6">
       {archived ? (
         <h1 className="text-sm font-medium text-muted">Archived habits</h1>
+      ) : null}
+      {!archived && result.type !== "error" && memberResult.type !== "error" ? (
+        <HabitDailyInput
+          householdId={householdId}
+          members={members}
+          currentUserId={zero.userID}
+          today={today}
+          enabled={enabled && memberResult.type === "complete"}
+          pending={pending}
+          onSetCompleted={(habitId, completed) =>
+            setCompleted(habitId, today, completed)
+          }
+        />
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <IconButton
@@ -213,17 +241,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
               enabled={enabled}
               pending={pending}
               onSetCompleted={(date, completed) =>
-                void change(
-                  `${habit.id}:${date}`,
-                  mutators.habits.setCompleted({
-                    householdId,
-                    habitId: habit.id,
-                    completedOn: date,
-                    completed,
-                    timeZone,
-                    optimisticTimestamp: Date.now(),
-                  }),
-                )
+                setCompleted(habit.id, date, completed)
               }
             />
           </>

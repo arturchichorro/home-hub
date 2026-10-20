@@ -46,10 +46,12 @@ const members = [
 function setup(rows = habits, type = "complete") {
   useQuery
     .mockReturnValueOnce([rows, { type }])
-    .mockReturnValueOnce([members, { type: "complete" }]);
+    .mockReturnValueOnce([members, { type: "complete" }])
+    .mockReturnValueOnce([rows, { type }]);
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  useQuery.mockReset();
   pendingState.current = new Set();
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
@@ -94,6 +96,10 @@ describe("Habits page", () => {
     expect(html).toContain("Bob");
     expect(html).not.toContain("Charlie");
     expect(html).toContain("October 2026");
+    expect(html).toContain("Today&#x27;s habits");
+    expect(html.indexOf("Today&#x27;s habits")).toBeLessThan(
+      html.indexOf('aria-label="Previous month"'),
+    );
     expect(html).toContain('aria-label="Current month"');
     expect(html).toContain("lucide-calendar");
     expect(html).not.toContain(">Today<");
@@ -104,7 +110,7 @@ describe("Habits page", () => {
     expect(html).toContain("Shared monthly calendar");
     expect(
       html.match(/<button[^>]*aria-label="Read, 2026-[^>]*>/g),
-    ).toHaveLength(31);
+    ).toHaveLength(32);
     expect(html).not.toContain("Monthly completion totals");
     expect(html).not.toContain('aria-label="Calendar view"');
     expect(html).not.toContain(">Week<");
@@ -145,7 +151,7 @@ describe("Habits page", () => {
     expect(html).not.toContain("synchronization is unavailable");
     expect(html).toContain("Alice");
     const buttons = html.match(/<button[^>]*aria-label="Read, 2026-[^>]*>/g);
-    expect(buttons).toHaveLength(31);
+    expect(buttons).toHaveLength(32);
     expect(
       buttons?.every((button) => button.includes('aria-disabled="true"')),
     ).toBe(true);
