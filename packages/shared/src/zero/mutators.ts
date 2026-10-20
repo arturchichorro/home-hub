@@ -16,6 +16,7 @@ import {
   updateRecipeMutationSchema,
 } from "../recipes";
 import type { ZeroAuthContext } from "./context";
+import { habitMutatorDefinitions } from "./habit-mutators";
 import { listMutatorDefinitions } from "./list-mutators";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
 import { appendSortKey, nextSortKey, planReorder } from "./ordering";
@@ -472,6 +473,7 @@ export const mutators = defineHomeHubMutators({
     reorder: reorderHouseholds,
   },
   lists: listMutatorDefinitions,
+  habits: habitMutatorDefinitions,
   recipes: {
     create: createRecipe,
     update: updateRecipe,

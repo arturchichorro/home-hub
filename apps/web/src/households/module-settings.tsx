@@ -1,4 +1,7 @@
-import { householdModuleCatalog } from "@home-hub/shared/modules";
+import {
+  type HouseholdModuleKey,
+  householdModuleCatalog,
+} from "@home-hub/shared/modules";
 import { queries } from "@home-hub/shared/zero/queries";
 import { InlineAlert, Switch } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
@@ -31,7 +34,7 @@ export function ModuleSettings({
       </InlineAlert>
     );
 
-  async function toggle(moduleKey: "lists" | "recipes", enabled: boolean) {
+  async function toggle(moduleKey: HouseholdModuleKey, enabled: boolean) {
     if (!mutationEnabled) return;
     setPendingKey(moduleKey);
     setError(undefined);

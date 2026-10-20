@@ -22,6 +22,8 @@ Home Hub is organized into small built-in modules:
 - [Lists](./lists/) provides multiple named, manually ordered shared lists.
 - [Recipes](./recipes/) provides shared recipes, their ingredients, cooking
   history, and images.
+- [Habits](./habits/) provides shared habits with personal daily checkmarks and
+  monthly calendar views; goals and streaks are deferred.
 - French Vocabulary is a deferred module for learning words and expressions.
 - Further built-in modules, such as household finance, may be added when their
   product boundaries are understood.
@@ -46,7 +48,7 @@ are always available and are not configurable modules.
 Disabling a module hides its navigation and blocks its server-side queries,
 mutations, uploads, and integrations. It does not delete the module's data.
 Re-enabling it restores access. Lists and Recipes are enabled by default to
-preserve the initial product, while later modules default to disabled unless a
+preserve the initial product. Habits defaults to disabled, as do later modules unless a
 specific product decision says otherwise.
 
 ## Cross-module behavior

@@ -11,7 +11,7 @@ type AppBreadcrumbHeaderProps = {
 
 type BreadcrumbLocation = {
   householdId?: string;
-  module?: "recipes" | "settings" | "lists";
+  module?: "recipes" | "settings" | "lists" | "habits";
   recipeId?: string;
   listId?: string;
 };
@@ -23,7 +23,8 @@ export function getBreadcrumbLocation(pathname: string): BreadcrumbLocation {
   const module =
     segments[2] === "recipes" ||
     segments[2] === "settings" ||
-    segments[2] === "lists"
+    segments[2] === "lists" ||
+    segments[2] === "habits"
       ? segments[2]
       : undefined;
 
@@ -106,7 +107,9 @@ export function AppBreadcrumbHeader({
         ? "Lists"
         : location.module === "settings"
           ? "Settings"
-          : undefined;
+          : location.module === "habits"
+            ? "Habits"
+            : undefined;
 
   return (
     <header className="sticky top-0 z-40 flex h-14 min-w-0 items-center gap-2 border-b border-border bg-canvas px-4 sm:px-6 lg:px-8">

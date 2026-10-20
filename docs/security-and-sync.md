@@ -229,7 +229,8 @@ authorized.
 Zero uses a custom PostgreSQL publication named `home_hub_zero` as a coarse
 replication allowlist. It publishes the columns required from `households`,
 `household_members`, `household_module_settings`, `lists`, `list_items`, `recipes`,
-`recipe_ingredients`, `recipe_cook_logs`, and `recipe_images`. It excludes
+`recipe_ingredients`, `recipe_cook_logs`, `recipe_images`, `habits`, and
+`habit_completions`. It excludes
 `users`, `refresh_tokens`, and `household_invites`, so password hashes, email
 addresses, refresh-token hashes, and invite-token hashes do not enter the Zero
 replica. The recipe-image publication also omits object keys. Publishing a
@@ -292,6 +293,14 @@ only previously synchronized Zero rows persist in the local cache.
 - Module-specific conflict rules are documented in
   [Shopping](./shopping/#synchronization-and-authorization) and
   [Recipes](./recipes/#synchronization-and-authorization).
+
+## Habits authorization
+
+Habits queries require current membership, a non-deleted household and enabled
+Habits settings. Only current members' completions appear in calendar queries.
+Any member may manage shared habits; only the authenticated actor may set or
+clear their own completion keys. Archived habits reject rename/completion writes.
+Calendar and schema details are in the [Habits module](./habits/).
 
 ## Module storage security
 

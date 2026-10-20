@@ -15,6 +15,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
 import { Route as AuthenticatedHouseholdsHouseholdIdRouteImport } from './routes/_authenticated.households.$householdId'
 import { Route as AuthenticatedHouseholdsHouseholdIdIndexRouteImport } from './routes/_authenticated.households.$householdId.index'
+import { Route as AuthenticatedHouseholdsHouseholdIdHabitsRouteImport } from './routes/_authenticated.households.$householdId.habits'
 import { Route as AuthenticatedHouseholdsHouseholdIdListsRouteImport } from './routes/_authenticated.households.$householdId.lists'
 import { Route as AuthenticatedHouseholdsHouseholdIdRecipesRouteImport } from './routes/_authenticated.households.$householdId.recipes'
 import { Route as AuthenticatedHouseholdsHouseholdIdSettingsRouteImport } from './routes/_authenticated.households.$householdId.settings'
@@ -52,6 +53,12 @@ const AuthenticatedHouseholdsHouseholdIdIndexRoute =
   AuthenticatedHouseholdsHouseholdIdIndexRouteImport.update({
     id: '/',
     path: '/',
+    getParentRoute: () => AuthenticatedHouseholdsHouseholdIdRoute,
+  } as any)
+const AuthenticatedHouseholdsHouseholdIdHabitsRoute =
+  AuthenticatedHouseholdsHouseholdIdHabitsRouteImport.update({
+    id: '/habits',
+    path: '/habits',
     getParentRoute: () => AuthenticatedHouseholdsHouseholdIdRoute,
   } as any)
 const AuthenticatedHouseholdsHouseholdIdListsRoute =
@@ -102,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/households/$householdId': typeof AuthenticatedHouseholdsHouseholdIdRouteWithChildren
+  '/households/$householdId/habits': typeof AuthenticatedHouseholdsHouseholdIdHabitsRoute
   '/households/$householdId/lists': typeof AuthenticatedHouseholdsHouseholdIdListsRouteWithChildren
   '/households/$householdId/recipes': typeof AuthenticatedHouseholdsHouseholdIdRecipesRouteWithChildren
   '/households/$householdId/settings': typeof AuthenticatedHouseholdsHouseholdIdSettingsRoute
@@ -115,6 +123,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/': typeof AuthenticatedIndexRoute
+  '/households/$householdId/habits': typeof AuthenticatedHouseholdsHouseholdIdHabitsRoute
   '/households/$householdId/settings': typeof AuthenticatedHouseholdsHouseholdIdSettingsRoute
   '/households/$householdId': typeof AuthenticatedHouseholdsHouseholdIdIndexRoute
   '/households/$householdId/lists/$listId': typeof AuthenticatedHouseholdsHouseholdIdListsListIdRoute
@@ -129,6 +138,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/households/$householdId': typeof AuthenticatedHouseholdsHouseholdIdRouteWithChildren
+  '/_authenticated/households/$householdId/habits': typeof AuthenticatedHouseholdsHouseholdIdHabitsRoute
   '/_authenticated/households/$householdId/lists': typeof AuthenticatedHouseholdsHouseholdIdListsRouteWithChildren
   '/_authenticated/households/$householdId/recipes': typeof AuthenticatedHouseholdsHouseholdIdRecipesRouteWithChildren
   '/_authenticated/households/$householdId/settings': typeof AuthenticatedHouseholdsHouseholdIdSettingsRoute
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/households/$householdId'
+    | '/households/$householdId/habits'
     | '/households/$householdId/lists'
     | '/households/$householdId/recipes'
     | '/households/$householdId/settings'
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/'
+    | '/households/$householdId/habits'
     | '/households/$householdId/settings'
     | '/households/$householdId'
     | '/households/$householdId/lists/$listId'
@@ -171,6 +183,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_authenticated/'
     | '/_authenticated/households/$householdId'
+    | '/_authenticated/households/$householdId/habits'
     | '/_authenticated/households/$householdId/lists'
     | '/_authenticated/households/$householdId/recipes'
     | '/_authenticated/households/$householdId/settings'
@@ -229,6 +242,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/households/$householdId/'
       preLoaderRoute: typeof AuthenticatedHouseholdsHouseholdIdIndexRouteImport
+      parentRoute: typeof AuthenticatedHouseholdsHouseholdIdRoute
+    }
+    '/_authenticated/households/$householdId/habits': {
+      id: '/_authenticated/households/$householdId/habits'
+      path: '/habits'
+      fullPath: '/households/$householdId/habits'
+      preLoaderRoute: typeof AuthenticatedHouseholdsHouseholdIdHabitsRouteImport
       parentRoute: typeof AuthenticatedHouseholdsHouseholdIdRoute
     }
     '/_authenticated/households/$householdId/lists': {
@@ -320,6 +340,7 @@ const AuthenticatedHouseholdsHouseholdIdRecipesRouteWithChildren =
   )
 
 interface AuthenticatedHouseholdsHouseholdIdRouteChildren {
+  AuthenticatedHouseholdsHouseholdIdHabitsRoute: typeof AuthenticatedHouseholdsHouseholdIdHabitsRoute
   AuthenticatedHouseholdsHouseholdIdListsRoute: typeof AuthenticatedHouseholdsHouseholdIdListsRouteWithChildren
   AuthenticatedHouseholdsHouseholdIdRecipesRoute: typeof AuthenticatedHouseholdsHouseholdIdRecipesRouteWithChildren
   AuthenticatedHouseholdsHouseholdIdSettingsRoute: typeof AuthenticatedHouseholdsHouseholdIdSettingsRoute
@@ -328,6 +349,8 @@ interface AuthenticatedHouseholdsHouseholdIdRouteChildren {
 
 const AuthenticatedHouseholdsHouseholdIdRouteChildren: AuthenticatedHouseholdsHouseholdIdRouteChildren =
   {
+    AuthenticatedHouseholdsHouseholdIdHabitsRoute:
+      AuthenticatedHouseholdsHouseholdIdHabitsRoute,
     AuthenticatedHouseholdsHouseholdIdListsRoute:
       AuthenticatedHouseholdsHouseholdIdListsRouteWithChildren,
     AuthenticatedHouseholdsHouseholdIdRecipesRoute:

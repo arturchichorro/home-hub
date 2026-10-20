@@ -29,7 +29,7 @@ function activeHouseholdCondition() {
   };
 }
 
-function moduleAccessCondition(moduleKey: "recipes" | "lists") {
+function moduleAccessCondition(moduleKey: "recipes" | "lists" | "habits") {
   return {
     type: "correlatedSubquery",
     op: "EXISTS",
@@ -105,6 +105,79 @@ function directMembershipCondition() {
     },
   };
 }
+
+describe("Habits queries", () => {
+  it.each([false, true])(
+    "authorizes archived=%s through membership and module settings",
+    (archived) => {
+      const ast = getAst(
+        queries.habits.byHousehold.fn({
+          args: {
+            householdId,
+            startOn: "2026-10-12",
+            endOn: "2026-10-18",
+            archived,
+          },
+          ctx: { userId },
+        }),
+      );
+      expect(ast).toMatchObject({
+        table: "habits",
+        orderBy: [
+          ["sortKey", "desc"],
+          ["id", "asc"],
+        ],
+        where: {
+          type: "and",
+          conditions: [
+            equalsCondition("householdId", householdId),
+            equalsCondition("status", archived ? "archived" : "active"),
+            moduleAccessCondition("habits"),
+          ],
+        },
+        related: [
+          {
+            correlation: {
+              parentField: ["householdId", "id"],
+              childField: ["householdId", "habitId"],
+            },
+            subquery: {
+              table: "habitCompletions",
+              where: {
+                type: "and",
+                conditions: [
+                  {
+                    type: "simple",
+                    left: { name: "completedOn" },
+                    op: ">=",
+                    right: { value: "2026-10-12" },
+                  },
+                  {
+                    type: "simple",
+                    left: { name: "completedOn" },
+                    op: "<=",
+                    right: { value: "2026-10-18" },
+                  },
+                  {
+                    type: "correlatedSubquery",
+                    op: "EXISTS",
+                    related: {
+                      correlation: {
+                        parentField: ["householdId", "userId"],
+                        childField: ["householdId", "userId"],
+                      },
+                      subquery: { table: "householdMembers" },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      });
+    },
+  );
+});
 
 describe("Lists queries", () => {
   it("previews only the first four current items in detail-list order", () => {

@@ -9,10 +9,11 @@ import {
 
 describe("household module catalogue", () => {
   it("defines the stable initial module keys", () => {
-    expect(householdModuleKeys).toEqual(["lists", "recipes"]);
+    expect(householdModuleKeys).toEqual(["lists", "recipes", "habits"]);
     expect(householdModuleCatalog.map(({ key }) => key)).toEqual([
       "lists",
       "recipes",
+      "habits",
     ]);
   });
 
@@ -22,10 +23,11 @@ describe("household module catalogue", () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  it("enables Lists and Recipes by default", () => {
+  it("enables Lists and Recipes but not Habits by default", () => {
     expect(householdModuleCatalog).toEqual([
       { key: "lists", label: "Lists", defaultEnabled: true },
       { key: "recipes", label: "Recipes", defaultEnabled: true },
+      { key: "habits", label: "Habits", defaultEnabled: false },
     ]);
   });
 

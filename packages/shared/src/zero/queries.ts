@@ -1,5 +1,6 @@
 import { defineQueriesWithType, defineQueryWithType } from "@rocicorp/zero";
 import * as z from "zod";
+import { habitsQuerySchema } from "../habits";
 import { listDetailArgsSchema } from "../lists";
 import type { ZeroAuthContext } from "./context";
 import { type Schema, zql } from "./schema.gen";
@@ -184,7 +185,36 @@ const recipeDetail = defineHomeHubQuery(
       .one(),
 );
 
+const habitsByHousehold = defineHomeHubQuery(
+  habitsQuerySchema,
+  ({ args, ctx }) =>
+    zql.habits
+      .where("householdId", args.householdId)
+      .where("status", args.archived ? "archived" : "active")
+      .whereExists("household", (household) =>
+        household
+          .where("deletedAt", "IS", null)
+          .whereExists("members", (member) =>
+            member.where("userId", ctx.userId),
+          )
+          .whereExists("moduleSettings", (setting) =>
+            setting.where("moduleKey", "habits").where("enabled", true),
+          ),
+      )
+      .related("completions", (completion) =>
+        completion
+          .where("completedOn", ">=", args.startOn)
+          .where("completedOn", "<=", args.endOn)
+          .whereExists("membership")
+          .orderBy("completedOn", "asc")
+          .orderBy("userId", "asc"),
+      )
+      .orderBy("sortKey", "desc")
+      .orderBy("id", "asc"),
+);
+
 export const queries = defineHomeHubQueries({
+  habits: { byHousehold: habitsByHousehold },
   householdMemberships: {
     byHousehold: householdMembersByHousehold,
     mine: myHouseholdMemberships,
