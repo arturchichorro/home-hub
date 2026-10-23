@@ -25,6 +25,7 @@ import { HabitGrid } from "./habit-grid";
 import { HabitMonthCalendar } from "./habit-month-calendar";
 import { HabitNameDialog } from "./habit-name-dialog";
 import { HabitNameInput } from "./habit-name-input";
+import { HabitNoteInput } from "./habit-note-input";
 
 export function HabitsPage({ householdId }: { householdId: string }) {
   const zero = useZero();
@@ -101,7 +102,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
       mutators.habits.setCompleted({
         householdId,
         habitId,
-        completedOn: date,
+        entryOn: date,
         completed,
         timeZone,
         optimisticTimestamp: Date.now(),
@@ -195,7 +196,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
             <div className="flex items-center gap-2">
               {handle}
               {archived ? (
-                <h2 className="min-w-0 flex-1 break-words text-lg font-medium text-primary">
+                <h2 className="min-w-0 max-w-1/2 break-words text-lg font-medium text-primary">
                   {habit.name}
                 </h2>
               ) : (
@@ -206,12 +207,21 @@ export function HabitsPage({ householdId }: { householdId: string }) {
                   disabled={pending.has(habit.id)}
                 />
               )}
+              <HabitNoteInput
+                householdId={householdId}
+                habitId={habit.id}
+                habitName={habit.name}
+                currentNote={habit.note ?? null}
+                disabled={pending.has(habit.id)}
+                readOnly={archived}
+              />
               {!archived ? (
                 <ConfirmationPopover
                   message={`Archive “${habit.name}”?`}
                   trigger={
                     <IconButton
                       aria-label={`Archive ${habit.name}`}
+                      className="ml-auto"
                       disabled={!enabled || pending.has(habit.id)}
                     >
                       <Archive aria-hidden="true" className="size-4" />

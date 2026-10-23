@@ -142,19 +142,19 @@ describe("Habits queries", () => {
               childField: ["householdId", "habitId"],
             },
             subquery: {
-              table: "habitCompletions",
+              table: "habitEntries",
               where: {
                 type: "and",
                 conditions: [
                   {
                     type: "simple",
-                    left: { name: "completedOn" },
+                    left: { name: "entryOn" },
                     op: ">=",
                     right: { value: "2026-10-12" },
                   },
                   {
                     type: "simple",
-                    left: { name: "completedOn" },
+                    left: { name: "entryOn" },
                     op: "<=",
                     right: { value: "2026-10-18" },
                   },

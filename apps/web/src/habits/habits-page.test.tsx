@@ -32,9 +32,9 @@ const habits = [
     householdId,
     name: "Read",
     status: "active",
-    completions: [
-      { userId: "me", completedOn: "2026-10-14" },
-      { userId: "other", completedOn: "2026-10-13" },
+    entries: [
+      { userId: "me", entryOn: "2026-10-14", completed: true },
+      { userId: "other", entryOn: "2026-10-13", completed: true },
     ],
   },
 ];
@@ -137,7 +137,7 @@ describe("Habits page", () => {
   it("shows empty shared days without summaries or enrollment", () => {
     const habit = habits[0];
     if (!habit) throw new Error("Missing habit fixture");
-    setup([{ ...habit, completions: [] }]);
+    setup([{ ...habit, entries: [] }]);
     const html = renderToStaticMarkup(<HabitsPage householdId={householdId} />);
     expect(html).not.toContain("0 days");
     expect(html).not.toContain("Monthly completion totals");

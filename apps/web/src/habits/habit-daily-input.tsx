@@ -3,6 +3,7 @@ import { InlineAlert } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { type HabitCalendarProps, HabitDay } from "./habit-calendar-shared";
 import { habitMemberColors } from "./habit-member-mark";
+import { HabitNoteInput } from "./habit-note-input";
 
 type Props = Pick<
   HabitCalendarProps,
@@ -72,6 +73,20 @@ export function HabitDailyInput({
               }
             />
           </div>
+          <HabitNoteInput
+            key={`${currentUserId}:${today}`}
+            householdId={householdId}
+            habitId={habit.id}
+            habitName={habit.name}
+            entryOn={today}
+            currentNote={
+              habit.entries.find(
+                (entry) =>
+                  entry.userId === currentUserId && entry.entryOn === today,
+              )?.note ?? null
+            }
+            disabled={!enabled || currentUserId === undefined}
+          />
         </li>
       ))}
     </ul>

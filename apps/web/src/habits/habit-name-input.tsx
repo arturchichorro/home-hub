@@ -54,7 +54,7 @@ export function HabitNameInput({
         aria-busy={editor.isSaving || undefined}
         aria-invalid={editor.error ? true : undefined}
         aria-errormessage={editor.error ? editor.errorId : undefined}
-        className="min-w-0 text-lg font-medium text-primary"
+        className="field-sizing-content min-w-0 max-w-1/2 flex-initial! text-lg font-medium text-primary"
         disabled={!mutationEnabled}
         maxLength={100}
         value={editor.value}

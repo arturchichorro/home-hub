@@ -8,7 +8,7 @@ DECLARE
   person uuid := gen_random_uuid();
   habit uuid := gen_random_uuid();
 BEGIN
-  IF to_regclass('public.habits') IS NULL OR to_regclass('public.habit_completions') IS NULL THEN
+  IF to_regclass('public.habits') IS NULL OR to_regclass('public.habit_entries') IS NULL THEN
     RAISE EXCEPTION 'Habits tables are missing';
   END IF;
   IF EXISTS (
@@ -17,8 +17,8 @@ BEGIN
     RAISE EXCEPTION 'Application tables must remain in public';
   END IF;
   IF EXISTS (
-    SELECT FROM (VALUES ('habits', 'status'), ('habits', 'sort_key'),
-      ('habit_completions', 'completed_on'), ('habit_completions', 'user_id')) AS expected(table_name, column_name)
+    SELECT FROM (VALUES ('habits', 'status'), ('habits', 'sort_key'), ('habits', 'note'), ('habit_entries', 'note'), ('habit_entries', 'completed'),
+      ('habit_entries', 'entry_on'), ('habit_entries', 'user_id')) AS expected(table_name, column_name)
     LEFT JOIN pg_publication_tables published ON published.pubname = 'home_hub_zero'
       AND published.schemaname = 'public' AND published.tablename = expected.table_name
     WHERE published.tablename IS NULL OR NOT COALESCE(expected.column_name = ANY(published.attnames), false)
@@ -41,29 +41,58 @@ BEGIN
   IF (SELECT status FROM habits WHERE id = habit) <> 'active' THEN
     RAISE EXCEPTION 'New habits must default to active';
   END IF;
-  INSERT INTO habit_completions (household_id, habit_id, user_id, completed_on) VALUES (household_a, habit, person, '2026-10-14');
-  INSERT INTO habit_completions (household_id, habit_id, user_id, completed_on) VALUES (household_a, habit, person, '2026-10-14') ON CONFLICT DO NOTHING;
-  IF (SELECT count(*) FROM habit_completions WHERE habit_id = habit AND user_id = person) <> 1 THEN
+  INSERT INTO habit_entries (household_id, habit_id, user_id, entry_on) VALUES (household_a, habit, person, '2026-10-14');
+  INSERT INTO habit_entries (household_id, habit_id, user_id, entry_on) VALUES (household_a, habit, person, '2026-10-14') ON CONFLICT DO NOTHING;
+  IF (SELECT count(*) FROM habit_entries WHERE habit_id = habit AND user_id = person) <> 1 THEN
     RAISE EXCEPTION 'Repeated completions must be idempotent';
   END IF;
   BEGIN
-    INSERT INTO habit_completions (household_id, habit_id, user_id, completed_on) VALUES (household_b, habit, person, '2026-10-15');
+    INSERT INTO habit_entries (household_id, habit_id, user_id, entry_on) VALUES (household_b, habit, person, '2026-10-15');
     RAISE EXCEPTION 'Cross-household completion unexpectedly allowed';
   EXCEPTION WHEN foreign_key_violation THEN NULL;
   END;
   BEGIN
-    INSERT INTO habit_completions (household_id, habit_id, user_id, completed_on) VALUES (household_a, habit, person, '2026-02-30');
+    INSERT INTO habit_entries (household_id, habit_id, user_id, entry_on) VALUES (household_a, habit, person, '2026-02-30');
     RAISE EXCEPTION 'Invalid date unexpectedly allowed';
   EXCEPTION WHEN datetime_field_overflow OR check_violation THEN NULL;
   END;
   BEGIN
-    INSERT INTO habit_completions (household_id, habit_id, user_id, completed_on) VALUES (household_a, habit, person, '2026-2-03');
+    INSERT INTO habit_entries (household_id, habit_id, user_id, entry_on) VALUES (household_a, habit, person, '2026-2-03');
     RAISE EXCEPTION 'Noncanonical date unexpectedly allowed';
   EXCEPTION WHEN check_violation THEN NULL;
   END;
   BEGIN
     UPDATE habits SET name = '' WHERE id = habit;
     RAISE EXCEPTION 'Empty habit name unexpectedly allowed';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+  UPDATE habits SET note = 'Shared note' WHERE id = habit;
+  UPDATE habit_entries SET note = 'Daily note', completed = false WHERE habit_id = habit;
+  IF NOT EXISTS (SELECT FROM habit_entries WHERE habit_id = habit AND note = 'Daily note' AND NOT completed) THEN
+    RAISE EXCEPTION 'Unchecking must retain the daily note';
+  END IF;
+  INSERT INTO habit_entries (household_id, habit_id, user_id, entry_on, note)
+    VALUES (household_a, habit, person, '2026-10-13', 'Note only');
+  IF EXISTS (SELECT FROM habit_entries WHERE habit_id = habit AND entry_on = '2026-10-13' AND completed) THEN
+    RAISE EXCEPTION 'Note-only entries must default to incomplete';
+  END IF;
+  INSERT INTO habit_entries (household_id, habit_id, user_id, entry_on, completed)
+    VALUES (household_a, habit, person, '2026-10-13', true)
+    ON CONFLICT (habit_id, user_id, entry_on) DO UPDATE SET completed = EXCLUDED.completed;
+  INSERT INTO habit_entries (household_id, habit_id, user_id, entry_on, note)
+    VALUES (household_a, habit, person, '2026-10-13', 'Edited note')
+    ON CONFLICT (habit_id, user_id, entry_on) DO UPDATE SET note = EXCLUDED.note;
+  IF NOT EXISTS (SELECT FROM habit_entries WHERE habit_id = habit AND entry_on = '2026-10-13' AND completed AND note = 'Edited note') THEN
+    RAISE EXCEPTION 'Partial upserts must preserve independent fields';
+  END IF;
+  BEGIN
+    UPDATE habits SET note = repeat('a', 501) WHERE id = habit;
+    RAISE EXCEPTION 'Overlong shared note unexpectedly allowed';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+  BEGIN
+    UPDATE habit_entries SET note = repeat('a', 501) WHERE habit_id = habit;
+    RAISE EXCEPTION 'Overlong daily note unexpectedly allowed';
   EXCEPTION WHEN check_violation THEN NULL;
   END;
   UPDATE habits SET status = 'archived' WHERE id = habit;

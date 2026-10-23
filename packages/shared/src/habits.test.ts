@@ -7,10 +7,13 @@ import {
   createHabitMutationSchema,
   habitMonth,
   habitNameSchema,
+  habitNoteSchema,
   habitsQuerySchema,
   reorderHabitsMutationSchema,
   setHabitCompletedMutationSchema,
   timeZoneSchema,
+  updateHabitEntryNoteMutationSchema,
+  updateHabitNoteMutationSchema,
 } from "./habits";
 
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
@@ -48,6 +51,43 @@ describe("habit calendar", () => {
 });
 
 describe("habit contracts", () => {
+  it("rejects a forged daily-note owner and overlong notes", () => {
+    const args = {
+      householdId,
+      habitId,
+      entryOn: "2026-10-15",
+      note: "Note",
+      timeZone: "UTC",
+      optimisticTimestamp: 0,
+    };
+    expect(updateHabitEntryNoteMutationSchema.safeParse(args).success).toBe(
+      true,
+    );
+    expect(
+      updateHabitEntryNoteMutationSchema.safeParse({ ...args, userId: habitId })
+        .success,
+    ).toBe(false);
+    expect(
+      updateHabitEntryNoteMutationSchema.safeParse({
+        ...args,
+        note: "a".repeat(501),
+      }).success,
+    ).toBe(false);
+  });
+  it("normalizes optional notes, preserves line breaks and limits them to 500 characters", () => {
+    expect(habitNoteSchema.parse("  Ｒead\n  slowly  ")).toBe("Read\n  slowly");
+    expect(habitNoteSchema.parse("   ")).toBeNull();
+    expect(habitNoteSchema.safeParse("a".repeat(501)).success).toBe(false);
+    expect(
+      updateHabitNoteMutationSchema.safeParse({
+        householdId,
+        habitId,
+        note: "Read",
+        optimisticTimestamp: 0,
+        userId: habitId,
+      }).success,
+    ).toBe(false);
+  });
   it("creates a habit without any creation-date or timezone argument", () => {
     const args = { householdId, habitId, name: "Read", optimisticTimestamp: 0 };
     expect(createHabitMutationSchema.safeParse(args).success).toBe(true);
@@ -98,7 +138,7 @@ describe("habit contracts", () => {
     const args = {
       householdId,
       habitId,
-      completedOn: "2026-10-12",
+      entryOn: "2026-10-12",
       completed: true,
       timeZone: "UTC",
       optimisticTimestamp: 0,
