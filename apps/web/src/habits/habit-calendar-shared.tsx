@@ -7,7 +7,12 @@ export type HabitCalendarProps = {
     id: string;
     name: string;
     note?: string | null;
-    completions: readonly { userId: string; completedOn: string }[];
+    entries: readonly {
+      userId: string;
+      entryOn: string;
+      completed: boolean | null;
+      note?: string | null;
+    }[];
   };
   members: readonly {
     userId: string;
@@ -37,10 +42,22 @@ export function HabitDay({
   colors,
 }: Omit<HabitCalendarProps, "dates" | "label"> & Colors & { date: string }) {
   const completedMembers = members.filter((member) =>
-    habit.completions.some(
-      (completion) =>
-        completion.userId === member.userId && completion.completedOn === date,
+    habit.entries.some(
+      (entry) =>
+        entry.userId === member.userId &&
+        entry.entryOn === date &&
+        entry.completed === true,
     ),
+  );
+  const notedMembers = members.filter((member) =>
+    habit.entries.some(
+      (entry) =>
+        entry.userId === member.userId && entry.entryOn === date && entry.note,
+    ),
+  );
+  const detailMembers = members.filter(
+    (member) =>
+      completedMembers.includes(member) || notedMembers.includes(member),
   );
   const ownCompleted = completedMembers.some(
     (member) => member.userId === currentUserId,
@@ -60,17 +77,32 @@ export function HabitDay({
     !pending.has(`${habit.id}:${date}`);
   return (
     <Tooltip
-      disabled={completedMembers.length === 0}
+      disabled={detailMembers.length === 0}
       delay={200}
       content={
         <div className="grid gap-1">
           <ul>
-            {completedMembers.map((member) => (
-              <li key={member.userId} className="flex items-center gap-1.5">
-                <HabitMemberMark color={colors.get(member.userId)} />
-                {member.user?.username ?? "Member"}
-              </li>
-            ))}
+            {detailMembers.map((member) => {
+              const note = habit.entries.find(
+                (entry) =>
+                  entry.userId === member.userId && entry.entryOn === date,
+              )?.note;
+              return (
+                <li key={member.userId} className="grid gap-1">
+                  <span className="flex items-center gap-1.5">
+                    {completedMembers.includes(member) ? (
+                      <HabitMemberMark color={colors.get(member.userId)} />
+                    ) : null}
+                    {member.user?.username ?? "Member"}
+                  </span>
+                  {note ? (
+                    <p className="break-words whitespace-pre-wrap text-xs text-muted">
+                      {note}
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         </div>
       }

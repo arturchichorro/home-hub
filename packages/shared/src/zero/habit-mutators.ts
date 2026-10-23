@@ -6,6 +6,7 @@ import {
   renameHabitMutationSchema,
   reorderHabitsMutationSchema,
   setHabitCompletedMutationSchema,
+  updateHabitEntryNoteMutationSchema,
   updateHabitNoteMutationSchema,
 } from "../habits";
 import type { ZeroAuthContext } from "./context";
@@ -47,6 +48,35 @@ async function requireHabit(
   );
   if (!habit) throw new Error("Habit mutation not allowed");
   return habit;
+}
+
+async function requireEntryAccess(
+  tx: Tx,
+  ctx: ZeroAuthContext,
+  args: {
+    householdId: string;
+    habitId: string;
+    entryOn: string;
+    timeZone: string;
+    optimisticTimestamp: number;
+  },
+) {
+  const habit = await requireHabit(tx, ctx, args);
+  const now = timestamp(tx, args.optimisticTimestamp);
+  if (
+    habit.status !== "active" ||
+    args.entryOn > calendarDate(now, args.timeZone)
+  )
+    throw new Error("Daily habit mutation not allowed");
+  return {
+    now,
+    key: {
+      householdId: args.householdId,
+      habitId: habit.id,
+      userId: ctx.userId,
+      entryOn: args.entryOn,
+    },
+  };
 }
 
 export const habitMutatorDefinitions = {
@@ -132,29 +162,23 @@ export const habitMutatorDefinitions = {
   setCompleted: defineMutator(
     setHabitCompletedMutationSchema,
     async ({ tx, ctx, args }) => {
-      const habit = await requireHabit(tx, ctx, args);
-      const now = timestamp(tx, args.optimisticTimestamp);
-      if (
-        habit.status !== "active" ||
-        args.completedOn > calendarDate(now, args.timeZone)
-      ) {
-        throw new Error("Habit completion not allowed");
-      }
-      // The actor is always trusted context, never a user ID supplied by the client.
-      const key = {
-        habitId: habit.id,
-        userId: ctx.userId,
-        completedOn: args.completedOn,
-      };
-      if (!args.completed) {
-        await tx.mutate.habitCompletions.delete(key);
-        return;
-      }
-      // Zero insert ignores an existing primary key, preserving its original timestamp.
-      await tx.mutate.habitCompletions.insert({
+      const { now, key } = await requireEntryAccess(tx, ctx, args);
+      // Partial upserts preserve the independently edited note, including when
+      // another device creates the day's row concurrently. createdAt uses its DB default.
+      await tx.mutate.habitEntries.upsert({
         ...key,
-        householdId: args.householdId,
-        createdAt: now,
+        completed: args.completed,
+        updatedAt: now,
+      });
+    },
+  ),
+  updateEntryNote: defineMutator(
+    updateHabitEntryNoteMutationSchema,
+    async ({ tx, ctx, args }) => {
+      const { now, key } = await requireEntryAccess(tx, ctx, args);
+      await tx.mutate.habitEntries.upsert({
+        ...key,
+        note: args.note,
         updatedAt: now,
       });
     },

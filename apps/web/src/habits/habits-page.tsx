@@ -102,7 +102,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
       mutators.habits.setCompleted({
         householdId,
         habitId,
-        completedOn: date,
+        entryOn: date,
         completed,
         timeZone,
         optimisticTimestamp: Date.now(),

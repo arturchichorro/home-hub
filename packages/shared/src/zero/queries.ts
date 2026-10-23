@@ -201,12 +201,12 @@ const habitsByHousehold = defineHomeHubQuery(
             setting.where("moduleKey", "habits").where("enabled", true),
           ),
       )
-      .related("completions", (completion) =>
-        completion
-          .where("completedOn", ">=", args.startOn)
-          .where("completedOn", "<=", args.endOn)
+      .related("entries", (entry) =>
+        entry
+          .where("entryOn", ">=", args.startOn)
+          .where("entryOn", "<=", args.endOn)
           .whereExists("membership")
-          .orderBy("completedOn", "asc")
+          .orderBy("entryOn", "asc")
           .orderBy("userId", "asc"),
       )
       .orderBy("sortKey", "desc")

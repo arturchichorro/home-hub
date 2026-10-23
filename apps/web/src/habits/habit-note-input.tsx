@@ -18,12 +18,14 @@ type Props = {
   currentNote: string | null;
   disabled?: boolean;
   readOnly?: boolean;
+  entryOn?: string;
 };
 export function HabitNoteInput({
   householdId,
   habitId,
   habitName,
   currentNote,
+  entryOn,
   disabled = false,
   readOnly = false,
 }: Props) {
@@ -38,14 +40,21 @@ export function HabitNoteInput({
     failureError: "Unable to save note.",
     save: async (note) => {
       try {
-        const mutation = zero.mutate(
-          mutators.habits.updateNote({
-            householdId,
-            habitId,
-            note,
-            optimisticTimestamp: Date.now(),
-          }),
-        );
+        const scope = {
+          householdId,
+          habitId,
+          note,
+          optimisticTimestamp: Date.now(),
+        };
+        const mutation = entryOn
+          ? zero.mutate(
+              mutators.habits.updateEntryNote({
+                ...scope,
+                entryOn,
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              }),
+            )
+          : zero.mutate(mutators.habits.updateNote(scope));
         const client = await mutation.client;
         const outcome =
           client.type === "error" ? client : await mutation.server;
@@ -69,11 +78,14 @@ export function HabitNoteInput({
     ) : null;
   return (
     <>
-      {currentNote !== null || editing ? (
+      {currentNote !== null ||
+      editing ||
+      editor.value !== "" ||
+      editor.error !== undefined ? (
         <Textarea
           ref={inputRef}
           appearance="seamless"
-          aria-label={`Note for ${habitName}`}
+          aria-label={`Note for ${habitName}${entryOn ? ` on ${entryOn}` : ""}`}
           aria-busy={editor.isSaving || undefined}
           aria-invalid={editor.error ? true : undefined}
           aria-errormessage={editor.error ? editor.errorId : undefined}
@@ -92,7 +104,7 @@ export function HabitNoteInput({
         />
       ) : (
         <IconButton
-          aria-label={`Add note to ${habitName}`}
+          aria-label={`Add note to ${habitName}${entryOn ? ` on ${entryOn}` : ""}`}
           className="size-7!"
           disabled={!enabled}
           onClick={() => setEditing(true)}

@@ -230,7 +230,7 @@ Zero uses a custom PostgreSQL publication named `home_hub_zero` as a coarse
 replication allowlist. It publishes the columns required from `households`,
 `household_members`, `household_module_settings`, `lists`, `list_items`, `recipes`,
 `recipe_ingredients`, `recipe_cook_logs`, `recipe_images`, `habits`, and
-`habit_completions`. It excludes
+`habit_entries`. It excludes
 `users`, `refresh_tokens`, and `household_invites`, so password hashes, email
 addresses, refresh-token hashes, and invite-token hashes do not enter the Zero
 replica. The recipe-image publication also omits object keys. Publishing a

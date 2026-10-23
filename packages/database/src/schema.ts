@@ -148,7 +148,7 @@ export const householdMembersRelations = relations(
       fields: [householdMembers.householdId],
       references: [households.id],
     }),
-    completions: many(habitCompletions),
+    entries: many(habitEntries),
     user: one(users, {
       fields: [householdMembers.userId],
       references: [users.id],
@@ -201,15 +201,17 @@ export const habits = pgTable(
   ],
 );
 
-export const habitCompletions = pgTable(
-  "habit_completions",
+export const habitEntries = pgTable(
+  "habit_entries",
   {
     householdId: uuid("household_id").notNull(),
     habitId: uuid("habit_id").notNull(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
-    completedOn: text("completed_on").notNull(),
+    entryOn: text("entry_on").notNull(),
+    completed: boolean("completed").notNull().default(false),
+    note: text("note"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -218,20 +220,24 @@ export const habitCompletions = pgTable(
       .defaultNow(),
   },
   (table) => [
-    // The natural key makes repeated/concurrent set-completed operations idempotent.
-    primaryKey({ columns: [table.habitId, table.userId, table.completedOn] }),
+    // One record per habit/person/day, shared by note and completion writes.
+    primaryKey({ columns: [table.habitId, table.userId, table.entryOn] }),
     foreignKey({
       columns: [table.householdId, table.habitId],
       foreignColumns: [habits.householdId, habits.id],
-      name: "habit_completions_household_habit_fk",
+      name: "habit_entries_household_habit_fk",
     }),
     check(
-      "habit_completions_completed_on_date",
-      sql`${table.completedOn} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND ${table.completedOn}::date::text = ${table.completedOn}`,
+      "habit_entries_entry_on_date",
+      sql`${table.entryOn} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND ${table.entryOn}::date::text = ${table.entryOn}`,
     ),
-    index("habit_completions_household_id_date_idx").on(
+    check(
+      "habit_entries_note_length",
+      sql`${table.note} IS NULL OR length(${table.note}) <= 500`,
+    ),
+    index("habit_entries_household_id_date_idx").on(
       table.householdId,
-      table.completedOn,
+      table.entryOn,
     ),
   ],
 );
@@ -241,22 +247,19 @@ export const habitsRelations = relations(habits, ({ one, many }) => ({
     fields: [habits.householdId],
     references: [households.id],
   }),
-  completions: many(habitCompletions),
+  entries: many(habitEntries),
 }));
 
-export const habitCompletionsRelations = relations(
-  habitCompletions,
-  ({ one }) => ({
-    habit: one(habits, {
-      fields: [habitCompletions.householdId, habitCompletions.habitId],
-      references: [habits.householdId, habits.id],
-    }),
-    membership: one(householdMembers, {
-      fields: [habitCompletions.householdId, habitCompletions.userId],
-      references: [householdMembers.householdId, householdMembers.userId],
-    }),
+export const habitEntriesRelations = relations(habitEntries, ({ one }) => ({
+  habit: one(habits, {
+    fields: [habitEntries.householdId, habitEntries.habitId],
+    references: [habits.householdId, habits.id],
   }),
-);
+  membership: one(householdMembers, {
+    fields: [habitEntries.householdId, habitEntries.userId],
+    references: [householdMembers.householdId, householdMembers.userId],
+  }),
+}));
 
 export const listItemStatusEnum = pgEnum("list_item_status", [
   "active",

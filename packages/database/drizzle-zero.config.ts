@@ -5,7 +5,7 @@ import * as drizzleSchema from "./src/schema";
 export default drizzleZeroConfig(drizzleSchema, {
   tables: {
     habits: true,
-    habitCompletions: true,
+    habitEntries: true,
     users: {
       id: true,
       username: true,

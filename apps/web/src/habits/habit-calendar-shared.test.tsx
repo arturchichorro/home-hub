@@ -9,9 +9,9 @@ const props = {
   habit: {
     id: "habit-1",
     name: "Read",
-    completions: [
-      { userId: "alice", completedOn: "2026-10-14" },
-      { userId: "bob", completedOn: "2026-10-14" },
+    entries: [
+      { userId: "alice", entryOn: "2026-10-14", completed: true },
+      { userId: "bob", entryOn: "2026-10-14", completed: true },
     ],
   },
   members: [

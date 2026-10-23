@@ -12,6 +12,7 @@ import {
   reorderHabitsMutationSchema,
   setHabitCompletedMutationSchema,
   timeZoneSchema,
+  updateHabitEntryNoteMutationSchema,
   updateHabitNoteMutationSchema,
 } from "./habits";
 
@@ -50,6 +51,29 @@ describe("habit calendar", () => {
 });
 
 describe("habit contracts", () => {
+  it("rejects a forged daily-note owner and overlong notes", () => {
+    const args = {
+      householdId,
+      habitId,
+      entryOn: "2026-10-15",
+      note: "Note",
+      timeZone: "UTC",
+      optimisticTimestamp: 0,
+    };
+    expect(updateHabitEntryNoteMutationSchema.safeParse(args).success).toBe(
+      true,
+    );
+    expect(
+      updateHabitEntryNoteMutationSchema.safeParse({ ...args, userId: habitId })
+        .success,
+    ).toBe(false);
+    expect(
+      updateHabitEntryNoteMutationSchema.safeParse({
+        ...args,
+        note: "a".repeat(501),
+      }).success,
+    ).toBe(false);
+  });
   it("normalizes optional notes, preserves line breaks and limits them to 500 characters", () => {
     expect(habitNoteSchema.parse("  Ｒead\n  slowly  ")).toBe("Read\n  slowly");
     expect(habitNoteSchema.parse("   ")).toBeNull();
@@ -114,7 +138,7 @@ describe("habit contracts", () => {
     const args = {
       householdId,
       habitId,
-      completedOn: "2026-10-12",
+      entryOn: "2026-10-12",
       completed: true,
       timeZone: "UTC",
       optimisticTimestamp: 0,

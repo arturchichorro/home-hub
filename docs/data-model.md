@@ -144,7 +144,7 @@ metadata lifecycle are documented in the
 
 ### Habits module tables
 
-Habits owns `habits` and `habit_completions`; their fields, natural completion
+Habits owns `habits` and `habit_entries`; their fields, natural daily-entry
 key and calendar-date constraints are documented in the [Habits module](./habits/).
 
 ## Schema invariants

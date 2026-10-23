@@ -10,7 +10,13 @@ const { useQuery, days } = vi.hoisted(() => ({
   useQuery: vi.fn(),
   days: vi.fn<(props: Parameters<typeof HabitDay>[0]) => void>(),
 }));
-vi.mock("@rocicorp/zero/react", () => ({ useQuery }));
+vi.mock("@rocicorp/zero/react", () => ({
+  useQuery,
+  useZero: () => ({ mutate: vi.fn() }),
+}));
+vi.mock("../zero/use-zero-mutation-enabled", () => ({
+  useZeroMutationEnabled: () => true,
+}));
 vi.mock("./habit-calendar-shared", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("./habit-calendar-shared")>();
@@ -26,9 +32,9 @@ const habits = [
   {
     id: "habit-walk",
     name: "Walk",
-    completions: [{ userId: "alice", completedOn: "2026-10-15" }],
+    entries: [{ userId: "alice", entryOn: "2026-10-15", completed: true }],
   },
-  { id: "habit-read", name: "Read", completions: [] },
+  { id: "habit-read", name: "Read", entries: [] },
 ];
 const props = {
   householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
@@ -46,6 +52,55 @@ beforeEach(() => {
 });
 
 describe("daily habit input", () => {
+  it("keeps notes editable while a completion is saving", () => {
+    useQuery.mockReturnValue([habits, { type: "complete" }]);
+    const html = renderToStaticMarkup(
+      <HabitDailyInput
+        {...props}
+        pending={new Set(["habit-walk:2026-10-15"])}
+      />,
+    );
+    const noteButton = html.match(
+      /<button[^>]*aria-label="Add note to Walk on 2026-10-15"[^>]*>/,
+    )?.[0];
+    expect(noteButton).toBeDefined();
+    expect(noteButton).not.toMatch(
+      /\s(?:disabled|aria-disabled|data-disabled)=/,
+    );
+    expect(html).toContain('aria-disabled="true"');
+  });
+  it("loads only the current member's daily note into the editor without requiring completion", () => {
+    const base = habits[0];
+    if (!base) throw new Error("Missing habit fixture");
+    useQuery.mockReturnValue([
+      [
+        {
+          ...base,
+          entries: [
+            {
+              userId: "alice",
+              entryOn: props.today,
+              completed: false,
+              note: "My note",
+            },
+            {
+              userId: "bob",
+              entryOn: props.today,
+              completed: false,
+              note: "Someone else's note",
+            },
+          ],
+        },
+      ],
+      { type: "complete" },
+    ]);
+    const html = renderToStaticMarkup(<HabitDailyInput {...props} />);
+    expect(html).toContain('aria-label="Note for Walk on 2026-10-15"');
+    expect(html).toContain("My note");
+    expect(html).not.toContain("Someone else");
+    expect(html).not.toContain('aria-pressed="true"');
+    expect(html).not.toContain("bg-raised!");
+  });
   it("queries today independently of the browsed calendar month", () => {
     renderToStaticMarkup(<HabitDailyInput {...props} />);
     expect(useQuery).toHaveBeenCalledWith(
@@ -63,7 +118,7 @@ describe("daily habit input", () => {
       html.indexOf(">Read</span>"),
     );
     expect(html.match(/<li /g)).toHaveLength(2);
-    expect(html.match(/<button /g)).toHaveLength(2);
+    expect(html.match(/<button[^>]*aria-pressed=/g)).toHaveLength(2);
     expect(html).toContain("size-14");
     expect(html).toContain("overflow-x-auto");
     expect(html).toContain("[scrollbar-width:none]");

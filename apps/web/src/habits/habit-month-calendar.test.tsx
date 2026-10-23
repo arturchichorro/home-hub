@@ -23,9 +23,9 @@ beforeEach(() => vi.clearAllMocks());
 const habit = {
   id: "habit-1",
   name: "Read",
-  completions: [
-    { userId: "alice", completedOn: "2026-10-14" },
-    { userId: "bob", completedOn: "2026-10-14" },
+  entries: [
+    { userId: "alice", entryOn: "2026-10-14", completed: true },
+    { userId: "bob", entryOn: "2026-10-14", completed: true },
   ],
 };
 const props = {
@@ -95,15 +95,42 @@ describe("member palette", () => {
 });
 
 describe("shared habit month", () => {
+  it("shows a note-only day's details without an X or completion highlight", () => {
+    const html = renderToStaticMarkup(
+      <HabitMonthCalendar
+        {...props}
+        habit={{
+          ...habit,
+          entries: [
+            {
+              userId: "alice",
+              entryOn: "2026-10-14",
+              completed: false,
+              note: "Rest day",
+            },
+          ],
+        }}
+      />,
+    );
+    expect(html).not.toContain("lucide-x");
+    expect(html).not.toContain("bg-raised!");
+    const active = tooltipProps.mock.calls
+      .map(([tooltip]) => tooltip)
+      .filter((tooltip) => !tooltip.disabled);
+    expect(active).toHaveLength(1);
+    const details = renderToStaticMarkup(active[0]?.content);
+    expect(details).toContain("Alice");
+    expect(details).toContain("Rest day");
+  });
   it("adds a subtle neutral fill only to days completed by the current user", () => {
     const html = renderToStaticMarkup(
       <HabitMonthCalendar
         {...props}
         habit={{
           ...habit,
-          completions: [
-            { userId: "alice", completedOn: "2026-10-14" },
-            { userId: "bob", completedOn: "2026-10-13" },
+          entries: [
+            { userId: "alice", entryOn: "2026-10-14", completed: true },
+            { userId: "bob", entryOn: "2026-10-13", completed: true },
           ],
         }}
       />,
@@ -137,15 +164,16 @@ describe("shared habit month", () => {
       userId: `member-${index}`,
       user: { username: `Member ${index}` },
     }));
-    const completions = members.map((member) => ({
+    const entries = members.map((member) => ({
       userId: member.userId,
-      completedOn: "2026-10-14",
+      entryOn: "2026-10-14",
+      completed: true,
     }));
     const html = renderToStaticMarkup(
       <HabitMonthCalendar
         {...props}
         members={members}
-        habit={{ ...habit, completions }}
+        habit={{ ...habit, entries }}
       />,
     );
     expect(html).toContain(
@@ -183,7 +211,7 @@ describe("shared habit month", () => {
   });
   it("never enables a tooltip for a completely empty month", () => {
     renderToStaticMarkup(
-      <HabitMonthCalendar {...props} habit={{ ...habit, completions: [] }} />,
+      <HabitMonthCalendar {...props} habit={{ ...habit, entries: [] }} />,
     );
     expect(tooltipProps.mock.calls).toHaveLength(31);
     expect(tooltipProps.mock.calls.every(([tooltip]) => tooltip.disabled)).toBe(
@@ -210,7 +238,7 @@ describe("shared habit month", () => {
   });
   it("does not add a summary beneath an empty calendar", () => {
     const html = renderToStaticMarkup(
-      <HabitMonthCalendar {...props} habit={{ ...habit, completions: [] }} />,
+      <HabitMonthCalendar {...props} habit={{ ...habit, entries: [] }} />,
     );
     expect(html).not.toContain("0 days");
     expect(html).not.toContain("Monthly completion totals");

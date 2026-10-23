@@ -123,12 +123,22 @@ export const archiveHabitMutationSchema = z
 export const setHabitCompletedMutationSchema = z
   .object({
     ...scope,
-    completedOn: calendarDateSchema,
+    entryOn: calendarDateSchema,
     completed: z.boolean(),
     timeZone: timeZoneSchema,
     optimisticTimestamp: timestamp,
   })
   .strict();
+export const updateHabitEntryNoteMutationSchema = z
+  .object({
+    ...scope,
+    entryOn: calendarDateSchema,
+    note: habitNoteSchema,
+    timeZone: timeZoneSchema,
+    optimisticTimestamp: timestamp,
+  })
+  .strict();
+
 export const habitsQuerySchema = z
   .object({
     householdId: z.uuid(),
