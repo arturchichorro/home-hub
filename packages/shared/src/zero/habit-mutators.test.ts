@@ -138,6 +138,46 @@ function setup(location: "server" | "client" = "server") {
 afterEach(() => vi.restoreAllMocks());
 
 describe("habit mutations", () => {
+  it("saves and clears a shared habit note without changing other habit fields", async () => {
+    const { tx, data } = setup();
+    await mutators.habits.updateNote.fn({
+      tx,
+      ctx,
+      args: { ...scope, note: "  Read\nslowly " },
+    });
+    expect(data.habits[0]).toMatchObject({
+      note: "Read\nslowly",
+      name: "Exercise",
+      sortKey: 1024,
+    });
+    await mutators.habits.updateNote.fn({
+      tx,
+      ctx,
+      args: { ...scope, note: "  " },
+    });
+    expect(data.habits[0]?.note).toBeNull();
+  });
+  it.each(["archived", "foreign", "disabled"])(
+    "rejects shared habit note writes when %s",
+    async (reason) => {
+      const { tx, data, writes } = setup();
+      if (reason === "archived")
+        data.habits = [{ id: habitId, householdId, status: "archived" }];
+      if (reason === "foreign")
+        data.habits = [
+          { id: habitId, householdId: foreignId, status: "active" },
+        ];
+      if (reason === "disabled") data.householdModuleSettings = [];
+      await expect(
+        mutators.habits.updateNote.fn({
+          tx,
+          ctx,
+          args: { ...scope, note: "Read" },
+        }),
+      ).rejects.toThrow("not allowed");
+      expect(writes).not.toHaveBeenCalled();
+    },
+  );
   it.each(["client", "server"] as const)(
     "reorders shared active habits with %s timestamps",
     async (location) => {

@@ -6,6 +6,7 @@ import {
   renameHabitMutationSchema,
   reorderHabitsMutationSchema,
   setHabitCompletedMutationSchema,
+  updateHabitNoteMutationSchema,
 } from "../habits";
 import type { ZeroAuthContext } from "./context";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
@@ -64,6 +65,7 @@ export const habitMutatorDefinitions = {
         id: args.habitId,
         householdId: args.householdId,
         name: args.name,
+        note: null,
         sortKey: nextSortKey(top?.sortKey ?? 0),
         status: "active",
         createdAt: now,
@@ -97,6 +99,19 @@ export const habitMutatorDefinitions = {
       await tx.mutate.habits.update({
         id: habit.id,
         name: args.name,
+        updatedAt: timestamp(tx, args.optimisticTimestamp),
+      });
+    },
+  ),
+  updateNote: defineMutator(
+    updateHabitNoteMutationSchema,
+    async ({ tx, ctx, args }) => {
+      const habit = await requireHabit(tx, ctx, args);
+      if (habit.status !== "active")
+        throw new Error("Habit note mutation not allowed");
+      await tx.mutate.habits.update({
+        id: habit.id,
+        note: args.note,
         updatedAt: timestamp(tx, args.optimisticTimestamp),
       });
     },

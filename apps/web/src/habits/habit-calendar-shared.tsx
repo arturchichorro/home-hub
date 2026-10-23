@@ -6,6 +6,7 @@ export type HabitCalendarProps = {
   habit: {
     id: string;
     name: string;
+    note?: string | null;
     completions: readonly { userId: string; completedOn: string }[];
   };
   members: readonly {

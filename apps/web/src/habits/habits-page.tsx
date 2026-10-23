@@ -25,6 +25,7 @@ import { HabitGrid } from "./habit-grid";
 import { HabitMonthCalendar } from "./habit-month-calendar";
 import { HabitNameDialog } from "./habit-name-dialog";
 import { HabitNameInput } from "./habit-name-input";
+import { HabitNoteInput } from "./habit-note-input";
 
 export function HabitsPage({ householdId }: { householdId: string }) {
   const zero = useZero();
@@ -206,6 +207,14 @@ export function HabitsPage({ householdId }: { householdId: string }) {
                   disabled={pending.has(habit.id)}
                 />
               )}
+              <HabitNoteInput
+                householdId={householdId}
+                habitId={habit.id}
+                habitName={habit.name}
+                currentNote={habit.note ?? null}
+                disabled={pending.has(habit.id)}
+                readOnly={archived}
+              />
               {!archived ? (
                 <ConfirmationPopover
                   message={`Archive “${habit.name}”?`}

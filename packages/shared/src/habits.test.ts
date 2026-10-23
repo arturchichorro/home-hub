@@ -7,10 +7,12 @@ import {
   createHabitMutationSchema,
   habitMonth,
   habitNameSchema,
+  habitNoteSchema,
   habitsQuerySchema,
   reorderHabitsMutationSchema,
   setHabitCompletedMutationSchema,
   timeZoneSchema,
+  updateHabitNoteMutationSchema,
 } from "./habits";
 
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
@@ -48,6 +50,20 @@ describe("habit calendar", () => {
 });
 
 describe("habit contracts", () => {
+  it("normalizes optional notes, preserves line breaks and limits them to 500 characters", () => {
+    expect(habitNoteSchema.parse("  Ｒead\n  slowly  ")).toBe("Read\n  slowly");
+    expect(habitNoteSchema.parse("   ")).toBeNull();
+    expect(habitNoteSchema.safeParse("a".repeat(501)).success).toBe(false);
+    expect(
+      updateHabitNoteMutationSchema.safeParse({
+        householdId,
+        habitId,
+        note: "Read",
+        optimisticTimestamp: 0,
+        userId: habitId,
+      }).success,
+    ).toBe(false);
+  });
   it("creates a habit without any creation-date or timezone argument", () => {
     const args = { householdId, habitId, name: "Read", optimisticTimestamp: 0 };
     expect(createHabitMutationSchema.safeParse(args).success).toBe(true);

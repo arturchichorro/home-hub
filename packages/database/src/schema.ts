@@ -168,6 +168,7 @@ export const habits = pgTable(
       .notNull()
       .references(() => households.id),
     name: text("name").notNull(),
+    note: text("note"),
     sortKey: integer("sort_key").notNull().default(0),
     status: text("status", { enum: ["active", "archived"] })
       .notNull()
@@ -184,6 +185,10 @@ export const habits = pgTable(
     check(
       "habits_name_length",
       sql`length(trim(${table.name})) between 1 and 100`,
+    ),
+    check(
+      "habits_note_length",
+      sql`${table.note} IS NULL OR length(${table.note}) <= 500`,
     ),
     check(
       "habits_status_allowed",

@@ -9,6 +9,14 @@ export const habitNameSchema = z
   .transform(cleanHabitName)
   .pipe(z.string().min(1).max(100));
 
+export function cleanHabitNote(value: string): string | null {
+  return value.normalize("NFKC").trim() || null;
+}
+export const habitNoteSchema = z
+  .string()
+  .transform(cleanHabitNote)
+  .pipe(z.string().max(500).nullable());
+
 export const timeZoneSchema = z
   .string()
   .max(100)
@@ -98,6 +106,14 @@ export const renameHabitMutationSchema = z
     optimisticTimestamp: timestamp,
   })
   .strict();
+export const updateHabitNoteMutationSchema = z
+  .object({
+    ...scope,
+    note: habitNoteSchema,
+    optimisticTimestamp: timestamp,
+  })
+  .strict();
+
 export const archiveHabitMutationSchema = z
   .object({
     ...scope,
