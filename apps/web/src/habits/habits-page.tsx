@@ -196,7 +196,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
             <div className="flex items-center gap-2">
               {handle}
               {archived ? (
-                <h2 className="min-w-0 flex-1 break-words text-lg font-medium text-primary">
+                <h2 className="min-w-0 max-w-1/2 break-words text-lg font-medium text-primary">
                   {habit.name}
                 </h2>
               ) : (
@@ -221,6 +221,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
                   trigger={
                     <IconButton
                       aria-label={`Archive ${habit.name}`}
+                      className="ml-auto"
                       disabled={!enabled || pending.has(habit.id)}
                     >
                       <Archive aria-hidden="true" className="size-4" />
