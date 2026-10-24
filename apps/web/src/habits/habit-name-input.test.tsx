@@ -54,6 +54,9 @@ describe("seamless habit name", () => {
     expect(html).toContain('aria-label="Habit name"');
     expect(html).toContain('value="Read"');
     expect(html).toContain("bg-transparent");
+    expect(html).toContain("field-sizing-content");
+    expect(html).toContain("flex-initial!");
+    expect(html).toContain("max-w-1/2");
     expect(html).not.toContain("Rename");
     const options = editorOptions();
     expect(options.currentValue).toBe("Read");

@@ -11,7 +11,7 @@ const now = Date.parse("2026-10-15T12:00:00Z");
 const scope = { householdId, habitId, optimisticTimestamp: now };
 const completeArgs = {
   ...scope,
-  completedOn: "2026-10-14",
+  entryOn: "2026-10-14",
   completed: true,
   timeZone: "UTC",
 };
@@ -21,7 +21,7 @@ type Table =
   | "householdMembers"
   | "householdModuleSettings"
   | "habits"
-  | "habitCompletions";
+  | "habitEntries";
 type Condition =
   | { type: "and"; conditions: Condition[] }
   | {
@@ -81,20 +81,32 @@ function setup(location: "server" | "client" = "server") {
         status: "active",
       },
     ],
-    habitCompletions: [],
+    habitEntries: [],
   };
   const writes = vi.fn();
   const sameKey = (table: Table, row: Row, key: Row) =>
-    table === "habitCompletions"
+    table === "habitEntries"
       ? row.habitId === key.habitId &&
         row.userId === key.userId &&
-        row.completedOn === key.completedOn
+        row.entryOn === key.entryOn
       : row.id === key.id;
   const crud = (table: Table) => ({
     insert: async (row: Row) => {
       writes(table, "insert", row);
       if (!data[table].some((entry) => sameKey(table, entry, row)))
         data[table].push({ ...row });
+    },
+    upsert: async (row: Row) => {
+      writes(table, "upsert", row);
+      const existing = data[table].find((entry) => sameKey(table, entry, row));
+      if (existing) Object.assign(existing, row);
+      else
+        data[table].push({
+          completed: false,
+          note: null,
+          createdAt: now,
+          ...row,
+        });
     },
     update: async (row: Row) => {
       writes(table, "update", row);
@@ -110,7 +122,7 @@ function setup(location: "server" | "client" = "server") {
     location,
     mutate: {
       habits: crud("habits"),
-      habitCompletions: crud("habitCompletions"),
+      habitEntries: crud("habitEntries"),
     },
     run: async (query: unknown) => {
       const { ast, format } = query as {
@@ -138,6 +150,147 @@ function setup(location: "server" | "client" = "server") {
 afterEach(() => vi.restoreAllMocks());
 
 describe("habit mutations", () => {
+  it("creates a personal note without completing the day, and retains it after unchecking", async () => {
+    const { tx, data } = setup();
+    await mutators.habits.updateEntryNote.fn({
+      tx,
+      ctx,
+      args: {
+        ...scope,
+        entryOn: completeArgs.entryOn,
+        note: "  Felt good ",
+        timeZone: "UTC",
+      },
+    });
+    expect(data.habitEntries).toContainEqual(
+      expect.objectContaining({
+        userId: ctx.userId,
+        completed: false,
+        note: "Felt good",
+      }),
+    );
+    await mutators.habits.setCompleted.fn({ tx, ctx, args: completeArgs });
+    await mutators.habits.setCompleted.fn({
+      tx,
+      ctx,
+      args: { ...completeArgs, completed: false },
+    });
+    expect(data.habitEntries[0]).toMatchObject({
+      completed: false,
+      note: "Felt good",
+    });
+  });
+  it("clears only the note and preserves completion", async () => {
+    const { tx, data } = setup();
+    await mutators.habits.setCompleted.fn({ tx, ctx, args: completeArgs });
+    await mutators.habits.updateEntryNote.fn({
+      tx,
+      ctx,
+      args: {
+        ...scope,
+        entryOn: completeArgs.entryOn,
+        note: "  ",
+        timeZone: "UTC",
+      },
+    });
+    expect(data.habitEntries[0]).toMatchObject({ completed: true, note: null });
+  });
+  it("merges concurrent independent note and completion changes on the natural key", async () => {
+    const { tx, data, writes } = setup();
+    await Promise.all([
+      mutators.habits.setCompleted.fn({ tx, ctx, args: completeArgs }),
+      mutators.habits.updateEntryNote.fn({
+        tx,
+        ctx,
+        args: {
+          ...scope,
+          entryOn: completeArgs.entryOn,
+          note: "Note",
+          timeZone: "UTC",
+        },
+      }),
+    ]);
+    expect(data.habitEntries).toHaveLength(1);
+    expect(data.habitEntries[0]).toMatchObject({
+      completed: true,
+      note: "Note",
+    });
+    const patches = writes.mock.calls
+      .filter(([table]) => table === "habitEntries")
+      .map((call) => call[2]);
+    expect(patches.find((patch) => "note" in patch)).not.toHaveProperty(
+      "completed",
+    );
+    expect(patches.find((patch) => "completed" in patch)).not.toHaveProperty(
+      "note",
+    );
+  });
+  it.each(["future", "archived", "foreign", "disabled"])(
+    "rejects daily note writes when %s",
+    async (reason) => {
+      const { tx, data, writes } = setup();
+      if (reason === "archived")
+        data.habits = [{ id: habitId, householdId, status: "archived" }];
+      if (reason === "foreign")
+        data.habits = [
+          { id: habitId, householdId: foreignId, status: "active" },
+        ];
+      if (reason === "disabled") data.householdModuleSettings = [];
+      await expect(
+        mutators.habits.updateEntryNote.fn({
+          tx,
+          ctx,
+          args: {
+            ...scope,
+            entryOn: reason === "future" ? "2026-10-16" : completeArgs.entryOn,
+            note: "Note",
+            timeZone: "UTC",
+          },
+        }),
+      ).rejects.toThrow("not allowed");
+      expect(writes).not.toHaveBeenCalled();
+    },
+  );
+  it("saves and clears a shared habit note without changing other habit fields", async () => {
+    const { tx, data } = setup();
+    await mutators.habits.updateNote.fn({
+      tx,
+      ctx,
+      args: { ...scope, note: "  Read\nslowly " },
+    });
+    expect(data.habits[0]).toMatchObject({
+      note: "Read\nslowly",
+      name: "Exercise",
+      sortKey: 1024,
+    });
+    await mutators.habits.updateNote.fn({
+      tx,
+      ctx,
+      args: { ...scope, note: "  " },
+    });
+    expect(data.habits[0]?.note).toBeNull();
+  });
+  it.each(["archived", "foreign", "disabled"])(
+    "rejects shared habit note writes when %s",
+    async (reason) => {
+      const { tx, data, writes } = setup();
+      if (reason === "archived")
+        data.habits = [{ id: habitId, householdId, status: "archived" }];
+      if (reason === "foreign")
+        data.habits = [
+          { id: habitId, householdId: foreignId, status: "active" },
+        ];
+      if (reason === "disabled") data.householdModuleSettings = [];
+      await expect(
+        mutators.habits.updateNote.fn({
+          tx,
+          ctx,
+          args: { ...scope, note: "Read" },
+        }),
+      ).rejects.toThrow("not allowed");
+      expect(writes).not.toHaveBeenCalled();
+    },
+  );
   it.each(["client", "server"] as const)(
     "reorders shared active habits with %s timestamps",
     async (location) => {
@@ -338,19 +491,19 @@ describe("habit mutations", () => {
   });
   it("sets and clears own completion without touching another member", async () => {
     const { tx, data } = setup();
-    data.habitCompletions.push({
+    data.habitEntries.push({
       householdId,
       habitId,
       userId: foreignId,
-      completedOn: completeArgs.completedOn,
+      entryOn: completeArgs.entryOn,
     });
     await mutators.habits.setCompleted.fn({ tx, ctx, args: completeArgs });
     await mutators.habits.setCompleted.fn({ tx, ctx, args: completeArgs });
-    expect(data.habitCompletions).toHaveLength(2);
-    expect(data.habitCompletions).toContainEqual(
+    expect(data.habitEntries).toHaveLength(2);
+    expect(data.habitEntries).toContainEqual(
       expect.objectContaining({
         userId: ctx.userId,
-        completedOn: completeArgs.completedOn,
+        entryOn: completeArgs.entryOn,
       }),
     );
     await mutators.habits.setCompleted.fn({
@@ -363,14 +516,16 @@ describe("habit mutations", () => {
       ctx,
       args: { ...completeArgs, completed: false },
     });
-    expect(data.habitCompletions).toEqual([
-      {
-        householdId,
-        habitId,
-        userId: foreignId,
-        completedOn: completeArgs.completedOn,
-      },
-    ]);
+    expect(data.habitEntries).toHaveLength(2);
+    expect(data.habitEntries).toContainEqual({
+      householdId,
+      habitId,
+      userId: foreignId,
+      entryOn: completeArgs.entryOn,
+    });
+    expect(data.habitEntries).toContainEqual(
+      expect.objectContaining({ userId: ctx.userId, completed: false }),
+    );
   });
   it("converges concurrent repeated set-completed requests on the natural key", async () => {
     const { tx, data } = setup();
@@ -379,18 +534,18 @@ describe("habit mutations", () => {
         mutators.habits.setCompleted.fn({ tx, ctx, args: completeArgs }),
       ),
     );
-    expect(data.habitCompletions).toHaveLength(1);
+    expect(data.habitEntries).toHaveLength(1);
   });
   it.each([true, false])(
     "rejects future date changes (completed=%s)",
     async (completed) => {
       const { tx, writes } = setup();
-      for (const completedOn of ["2026-10-16", "2026-10-17"]) {
+      for (const entryOn of ["2026-10-16", "2026-10-17"]) {
         await expect(
           mutators.habits.setCompleted.fn({
             tx,
             ctx,
-            args: { ...completeArgs, completed, completedOn },
+            args: { ...completeArgs, completed, entryOn },
           }),
         ).rejects.toThrow("not allowed");
       }
@@ -405,7 +560,7 @@ describe("habit mutations", () => {
         ctx,
         args: {
           ...completeArgs,
-          completedOn: "2026-10-16",
+          entryOn: "2026-10-16",
           optimisticTimestamp: now + 86400000,
         },
       }),
@@ -425,8 +580,8 @@ describe("habit mutations", () => {
     await mutators.habits.setCompleted.fn({
       tx,
       ctx,
-      args: { ...completeArgs, completedOn: "2026-02-01" },
+      args: { ...completeArgs, entryOn: "2026-02-01" },
     });
-    expect(data.habitCompletions[0]?.completedOn).toBe("2026-02-01");
+    expect(data.habitEntries[0]?.entryOn).toBe("2026-02-01");
   });
 });
