@@ -1,20 +1,13 @@
 import {
   type WorkoutExercise,
   type WorkoutSetValues,
-  workoutContentSchema,
   workoutSetValuesSchema,
 } from "@home-hub/shared/workouts";
 import type {
   WorkoutLog as LogRow,
   WorkoutLogSet,
 } from "@home-hub/shared/zero/schema";
-import {
-  ArrowLeft,
-  Check,
-  IconButton,
-  InlineAlert,
-  Input,
-} from "@home-hub/ui-web";
+import { Check, IconButton, InlineAlert, Input } from "@home-hub/ui-web";
 import { useEffect, useState } from "react";
 export type WorkoutLog = LogRow & { readonly sets: readonly WorkoutLogSet[] };
 function SetRow({
@@ -158,96 +151,57 @@ function SetRow({
     </form>
   );
 }
-export function WorkoutLogView({
-  log,
-  previous,
-  disabled,
-  onSave,
-  onClose,
-}: {
+export type WorkoutLogging = {
   log: WorkoutLog;
   previous: readonly WorkoutLog[];
-  disabled: boolean;
   onSave: (
     exerciseId: string,
     round: number,
     values: WorkoutSetValues,
   ) => Promise<boolean>;
-  onClose: () => void;
+};
+export function WorkoutExerciseSets({
+  exercise,
+  logging,
+  disabled,
+}: {
+  exercise: WorkoutExercise;
+  logging: WorkoutLogging;
+  disabled: boolean;
 }) {
-  const snapshot = workoutContentSchema.parse(log.snapshot);
+  const { log, previous, onSave } = logging;
+  const old = previous.find(
+    (p) =>
+      p.id !== log.id &&
+      p.status === "completed" &&
+      (p.completedAt ?? 0) < (log.completedAt ?? log.createdAt ?? 0) &&
+      p.sets.some((s) => s.exerciseId === exercise.id),
+  );
   return (
-    <section className="grid min-w-0 gap-2">
-      <div className="flex items-center gap-2">
-        <IconButton aria-label="Back to workout" onClick={onClose}>
-          <ArrowLeft aria-hidden="true" className="size-4" />
-        </IconButton>
-        <h1 className="text-xl font-semibold text-primary">{snapshot.title}</h1>
-        <span className="ml-auto text-xs text-muted">
-          {log.completedOn ?? new Date(log.createdAt ?? 0).toLocaleDateString()}
-          {log.status === "completed"
-            ? " · Done"
-            : log.status === "abandoned"
-              ? " · Abandoned"
-              : ""}
-        </span>
-      </div>
-      {snapshot.notes && (
-        <p className="whitespace-pre-line px-1 text-sm text-muted">
-          {snapshot.notes}
-        </p>
-      )}
-      <div className="divide-y divide-border">
-        {snapshot.exercises.map((exercise) => {
-          const old = previous.find(
-            (p) =>
-              p.id !== log.id &&
-              p.status === "completed" &&
-              (p.completedAt ?? 0) < (log.completedAt ?? log.createdAt ?? 0) &&
-              p.sets.some((s) => s.exerciseId === exercise.id),
-          );
-          return (
-            <section key={exercise.id} className="py-3">
-              <h2 className="text-sm font-medium">
-                {exercise.name}{" "}
-                <span className="font-normal text-muted">
-                  · {exercise.target} {exercise.unit}
-                  {exercise.unilateral ? " each side" : ""}
-                </span>
-              </h2>
-              {Array.from({ length: exercise.sets }, (_, i) => i + 1).map(
-                (round) => {
-                  const saved = log.sets.find(
-                    (s) => s.exerciseId === exercise.id && s.round === round,
-                  );
-                  const prior = old?.sets.find(
-                    (s) => s.exerciseId === exercise.id && s.round === round,
-                  );
-                  return (
-                    <SetRow
-                      key={round}
-                      exercise={exercise}
-                      round={round}
-                      saved={
-                        saved
-                          ? workoutSetValuesSchema.parse(saved.values)
-                          : undefined
-                      }
-                      previous={
-                        prior
-                          ? workoutSetValuesSchema.parse(prior.values)
-                          : undefined
-                      }
-                      disabled={disabled || log.status === "abandoned"}
-                      onSave={(values) => onSave(exercise.id, round, values)}
-                    />
-                  );
-                },
-              )}
-            </section>
-          );
-        })}
-      </div>
-    </section>
+    <div className="py-1">
+      {Array.from({ length: exercise.sets }, (_, i) => i + 1).map((round) => {
+        const saved = log.sets.find(
+          (s) => s.exerciseId === exercise.id && s.round === round,
+        );
+        const prior = old?.sets.find(
+          (s) => s.exerciseId === exercise.id && s.round === round,
+        );
+        return (
+          <SetRow
+            key={`${log.id}:${round}`}
+            exercise={exercise}
+            round={round}
+            saved={
+              saved ? workoutSetValuesSchema.parse(saved.values) : undefined
+            }
+            previous={
+              prior ? workoutSetValuesSchema.parse(prior.values) : undefined
+            }
+            disabled={disabled || log.status === "abandoned"}
+            onSave={(values) => onSave(exercise.id, round, values)}
+          />
+        );
+      })}
+    </div>
   );
 }

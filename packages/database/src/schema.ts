@@ -609,6 +609,7 @@ export const workoutLogs = pgTable(
   "workout_logs",
   {
     id: uuid("id").primaryKey(),
+    note: text("note").notNull().default(""),
     householdId: uuid("household_id").notNull(),
     userId: uuid("user_id")
       .notNull()

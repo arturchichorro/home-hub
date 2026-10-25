@@ -6,6 +6,7 @@ import {
   importWorkoutsSchema,
   reorderWorkoutsSchema,
   saveWorkoutSetSchema,
+  updateWorkoutLogNoteSchema,
   updateWorkoutSchema,
   workoutContentSchema,
   workoutLogActionSchema,
@@ -130,6 +131,7 @@ export const workoutMutatorDefinitions = {
         await tx.mutate.workoutLogs.update({
           id: existing.id,
           status: "completed",
+          ...(args.note === undefined ? {} : { note: args.note }),
           completedAt: now,
           completedOn: calendarDate(now, args.timeZone),
         });
@@ -140,6 +142,7 @@ export const workoutMutatorDefinitions = {
       householdId: args.householdId,
       workoutId: workout.id,
       userId: ctx.userId,
+      note: args.note ?? "",
       snapshot: workoutContentSchema.parse({
         title: workout.title,
         notes: workout.notes,
@@ -152,6 +155,17 @@ export const workoutMutatorDefinitions = {
         args.action === "complete" ? calendarDate(now, args.timeZone) : null,
     });
   }),
+  updateLogNote: define(
+    updateWorkoutLogNoteSchema,
+    async ({ tx, ctx, args }) => {
+      await access(tx, args.householdId, ctx.userId);
+      const log = await tx.run(
+        ownLog(args.householdId, args.workoutId, ctx.userId, args.logId),
+      );
+      if (!log) throw new Error("Workout log note update not allowed");
+      await tx.mutate.workoutLogs.update({ id: log.id, note: args.note });
+    },
+  ),
   saveSet: define(saveWorkoutSetSchema, async ({ tx, ctx, args }) => {
     await access(tx, args.householdId, ctx.userId);
     const log = await tx.run(

@@ -4,13 +4,18 @@ An owner-enabled module, disabled by default. Household members share standalone
 workouts; training logs and set values remain private to their author.
 
 - Open a workout from the list; its name appears in the breadcrumb and URL.
-- Edit its name, always-visible notes under the title, and exercises using seamless
-  controls. Exercise measure/load choices use the shared Base UI selects.
+- Edit its name and exercises using seamless controls. Workout notes are always
+  visible below the exercises. A settings-icon menu configures each exercise's
+  load convention and sides; the measure uses the shared Base UI select.
 - Reorder workouts like Lists: drag with a mouse, hold to drag on touch, or use
   Space and arrow keys. The household-shared order is persisted optimistically.
 - Press **Done** to record completion, with or without set entries.
-- Optionally log weight and reps/seconds per set, resume an unfinished log, or
-  review and correct previous entries. Logs snapshot the workout at creation.
+- “Log workout” expands weight/reps/seconds inputs beneath the existing exercise
+  rows without replacing the page. Unsaved exercise edits are saved first.
+- Each log has a private, autosaving free-text note. Completing or closing a log
+  preserves its latest note draft; notes can also be edited later in history.
+- Resume unfinished logs or review/correct previous entries. Logs snapshot the
+  workout at creation; editing a log never changes the shared workout.
 - Add the supplied A/B/C starter workouts.
 
 There are no plans, cycles, scheduling, timers, progression suggestions, or
@@ -33,3 +38,7 @@ rollback requires restoring the backup and previous code.
 `0036_fat_ender_wiggin.sql` adds ordering keys and an index, preserving the previous
 alphabetical order within each household. New workouts go first; starter import
 keeps A/B/C order. Earlier migrations remain unchanged.
+
+`0037_freezing_lyja.sql` adds the private log note with an empty-string default.
+Existing rows, snapshots, and set values are unchanged; the column is included
+in the existing all-column Zero publication.

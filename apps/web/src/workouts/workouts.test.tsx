@@ -3,7 +3,8 @@ import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkoutDetail } from "./workout-detail";
-import { type WorkoutLog, WorkoutLogView } from "./workout-log";
+import { WorkoutExercises } from "./workout-fields";
+import type { WorkoutLog } from "./workout-log";
 import { WorkoutsLibrary } from "./workouts-library";
 
 const { useQuery, enabled, header, mutate } = vi.hoisted(() => ({
@@ -70,6 +71,10 @@ describe("simple workouts", () => {
     );
     expect(html.match(/<textarea/g)).toHaveLength(1);
     expect(html).toContain('aria-label="Notes"');
+    expect(html.indexOf('aria-label="Notes"')).toBeGreaterThan(
+      html.lastIndexOf("Name for Dead bug"),
+    );
+    expect(html).not.toContain("Logging options");
     expect(html).not.toMatch(/<summary[^>]*>Notes<\/summary>/);
     expect(html).not.toContain("Program instructions");
     expect(html).not.toContain("Smallest available increase");
@@ -84,7 +89,7 @@ describe("simple workouts", () => {
       }),
     );
   });
-  it("uses labelled Base UI selects for exercise measures and loads", () => {
+  it("uses a Base UI measure select and a settings-icon menu", () => {
     useQuery
       .mockReturnValueOnce([workout, { type: "complete" }])
       .mockReturnValueOnce([[], { type: "complete" }]);
@@ -93,7 +98,8 @@ describe("simple workouts", () => {
     );
     expect(html).toContain('role="combobox"');
     expect(html).toContain('aria-label="Measure for Goblet squat"');
-    expect(html).toContain('aria-label="Load for Goblet squat"');
+    expect(html).toContain('aria-label="Settings for Goblet squat"');
+    expect(html).toContain('aria-haspopup="menu"');
     expect(html).not.toContain("<select");
   });
   it("disables Done while disconnected", () => {
@@ -118,14 +124,17 @@ describe("simple workouts", () => {
       completedAt: null,
       completedOn: null,
       sets: [],
+      note: "",
     };
     const html = renderToStaticMarkup(
-      <WorkoutLogView
-        log={log}
-        previous={[]}
+      <WorkoutExercises
+        current={starter.exercises}
         disabled={false}
         onSave={async () => true}
-        onClose={() => {}}
+        onStartLogging={async () => {}}
+        onCloseLogging={() => {}}
+        resume={false}
+        logging={{ log, previous: [], onSave: async () => true }}
       />,
     );
     expect(html.match(/<form/g)).toHaveLength(12);
@@ -134,7 +143,10 @@ describe("simple workouts", () => {
     expect(html).not.toContain("Good form, no symptoms");
     expect(html).not.toContain("Reps in reserve");
     expect(html).not.toMatch(/<summary[^>]*>Notes<\/summary>/);
-    expect(html).toContain("No forced wrist stretching.");
+    expect(html).toContain('data-exercise-id="');
+    expect(html).toContain('aria-label="Close log"');
+    expect(html).toContain('aria-label="Name for Goblet squat"');
+    expect(html).not.toContain("Back to workout");
   });
   it("shows the starter option only for an empty library", () => {
     useQuery.mockReturnValue([[], { type: "complete" }]);

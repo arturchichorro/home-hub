@@ -260,6 +260,13 @@
       "when": 1792950015991,
       "tag": "0036_fat_ender_wiggin",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1792950813237,
+      "tag": "0037_freezing_lyja",
+      "breakpoints": true
     }
   ]
 }

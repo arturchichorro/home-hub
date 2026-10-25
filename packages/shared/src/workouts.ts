@@ -74,8 +74,12 @@ export const workoutLogActionSchema = z
     ...scope,
     logId: z.uuid(),
     action: z.enum(["start", "complete"]),
+    note: z.string().max(1000000).optional(),
     timeZone: timeZoneSchema,
   })
+  .strict();
+export const updateWorkoutLogNoteSchema = z
+  .object({ ...scope, logId: z.uuid(), note: z.string().max(1000000) })
   .strict();
 export const workoutSetValuesSchema = z
   .object({

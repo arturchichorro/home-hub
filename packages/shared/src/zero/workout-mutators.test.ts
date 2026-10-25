@@ -226,6 +226,12 @@ describe("workout logging", () => {
       const requests = [
         () => log("complete"),
         () =>
+          mutators.workouts.updateLogNote.fn({
+            tx,
+            ctx,
+            args: { ...scope, logId, note: "A private note" },
+          }),
+        () =>
           mutators.workouts.reorder.fn({
             tx,
             ctx,
@@ -281,6 +287,91 @@ describe("workout logging", () => {
     await log("complete");
     expect(data.workoutLogs?.[0]?.completedAt).toBe(1234);
   });
+});
+describe("private log notes", () => {
+  it("saves a free-form note without changing the shared workout or its snapshot", async () => {
+    const { tx, data, log } = setup();
+    await log("start");
+    const note = "Light weights today.\nWrist felt better.";
+    await mutators.workouts.updateLogNote.fn({
+      tx,
+      ctx,
+      args: { ...scope, logId, note },
+    });
+    expect(data.workoutLogs?.[0]?.note).toBe(note);
+    expect(data.workouts?.[0]?.notes).toBe(starter.notes);
+    expect(
+      workoutContentSchema.parse(data.workoutLogs?.[0]?.snapshot).notes,
+    ).toBe(starter.notes);
+    await log("complete");
+    expect(data.workoutLogs?.[0]?.note).toBe(note);
+    await mutators.workouts.updateLogNote.fn({
+      tx,
+      ctx,
+      args: { ...scope, logId, note: "" },
+    });
+    expect(data.workoutLogs?.[0]).toMatchObject({
+      note: "",
+      status: "completed",
+    });
+  });
+  it("includes the latest note when completing, without waiting for autosave", async () => {
+    const { tx, data, log } = setup();
+    await log("start");
+    await mutators.workouts.log.fn({
+      tx,
+      ctx,
+      args: {
+        ...scope,
+        logId,
+        action: "complete",
+        note: "Latest draft",
+        timeZone: "UTC",
+      },
+    });
+    expect(data.workoutLogs?.[0]).toMatchObject({
+      note: "Latest draft",
+      status: "completed",
+    });
+  });
+  it("allows a note on a direct completion without set entries", async () => {
+    const { tx, data } = setup();
+    await mutators.workouts.log.fn({
+      tx,
+      ctx,
+      args: {
+        ...scope,
+        logId,
+        action: "complete",
+        note: "Quick session",
+        timeZone: "UTC",
+      },
+    });
+    expect(data.workoutLogs?.[0]?.note).toBe("Quick session");
+    expect(data.workoutLogSets).toHaveLength(0);
+  });
+  it.each(["foreign user", "foreign household", "foreign workout", "missing"])(
+    "rejects note writes for %s logs",
+    async (reason) => {
+      const { tx, data, log, writes } = setup();
+      await log("start");
+      const row = data.workoutLogs?.[0];
+      if (!row) throw new Error("log");
+      if (reason === "foreign user") row.userId = other;
+      if (reason === "foreign household") row.householdId = other;
+      if (reason === "foreign workout") row.workoutId = other;
+      if (reason === "missing") data.workoutLogs = [];
+      writes.mockClear();
+      await expect(
+        mutators.workouts.updateLogNote.fn({
+          tx,
+          ctx,
+          args: { ...scope, logId, note: "No" },
+        }),
+      ).rejects.toThrow("not allowed");
+      expect(writes).not.toHaveBeenCalled();
+    },
+  );
 });
 describe("workout ordering", () => {
   it.each(["server", "client"] as const)(
@@ -383,6 +474,7 @@ describe("workout query privacy", () => {
       ...data.workoutLogs[0],
       id: other,
       userId: other,
+      note: "SECRET log note",
     });
     data.workoutLogSets?.push({ logId: other, values: { note: "SECRET" } });
     const args = { householdId, workoutId };
