@@ -118,7 +118,6 @@ export function WorkoutExercises({
   onStartLogging,
   onCloseLogging,
   onCompleteLogging,
-  resume,
 }: {
   current: readonly WorkoutExercise[];
   disabled: boolean;
@@ -127,7 +126,6 @@ export function WorkoutExercises({
   onStartLogging: () => Promise<void>;
   onCloseLogging: () => void;
   onCompleteLogging: () => void;
-  resume: boolean;
 }) {
   const [starting, setStarting] = useState(false);
   const editor = useWorkoutExercisesEditor({
@@ -169,28 +167,22 @@ export function WorkoutExercises({
         <h2 className="flex-1 font-semibold">Exercises</h2>
         {logging ? (
           <>
-            <span className="text-xs text-muted">
-              {logging.log.completedOn ??
-                new Date(logging.log.createdAt ?? 0).toLocaleDateString()}
-              {logging.log.status === "completed"
-                ? " · Done"
-                : logging.log.status === "active"
-                  ? " · Draft"
-                  : ""}
-            </span>
-            {logging.log.status === "active" && (
-              <Button
-                size="compact"
-                disabled={disabled}
-                onClick={onCompleteLogging}
-              >
-                <Check aria-hidden="true" className="size-4" />
-                Done
-              </Button>
+            {logging.form.completedOn && (
+              <span className="text-xs text-muted">
+                {logging.form.completedOn}
+              </span>
             )}
+            <Button
+              size="compact"
+              disabled={disabled}
+              onClick={onCompleteLogging}
+            >
+              <Check aria-hidden="true" className="size-4" />
+              Done
+            </Button>
             <IconButton
-              aria-label="Close log"
-              title="Close log"
+              aria-label="Cancel log"
+              title="Cancel log"
               className="size-7!"
               onClick={onCloseLogging}
             >
@@ -213,7 +205,7 @@ export function WorkoutExercises({
               }}
             >
               <Play aria-hidden="true" className="size-4" />
-              {resume ? "Resume draft" : "Log workout"}
+              Log workout
             </Button>
             <IconButton
               aria-label="Add exercise"

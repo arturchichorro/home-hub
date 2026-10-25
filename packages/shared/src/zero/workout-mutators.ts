@@ -5,11 +5,9 @@ import {
   createWorkoutSchema,
   importWorkoutsSchema,
   reorderWorkoutsSchema,
-  saveWorkoutSetSchema,
-  updateWorkoutLogNoteSchema,
+  saveWorkoutLogSchema,
   updateWorkoutSchema,
   workoutContentSchema,
-  workoutLogActionSchema,
 } from "../workouts";
 import type { ZeroAuthContext } from "./context";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
@@ -116,78 +114,65 @@ export const workoutMutatorDefinitions = {
       });
     }
   }),
-  log: define(workoutLogActionSchema, async ({ tx, ctx, args }) => {
+  saveLog: define(saveWorkoutLogSchema, async ({ tx, ctx, args }) => {
     await access(tx, args.householdId, ctx.userId);
-    const workout = await tx.run(
-      scopedWorkout(args.householdId, args.workoutId),
-    );
-    if (!workout) throw new Error("Workout logging not allowed");
-    const existing = await tx.run(
-      ownLog(args.householdId, args.workoutId, ctx.userId, args.logId),
-    );
+    if (!(await tx.run(scopedWorkout(args.householdId, args.workoutId))))
+      throw new Error("Workout logging not allowed");
     const now = timestamp(tx, args.optimisticTimestamp);
-    if (existing) {
-      if (args.action === "complete" && existing.status === "active")
-        await tx.mutate.workoutLogs.update({
-          id: existing.id,
-          status: "completed",
-          ...(args.note === undefined ? {} : { note: args.note }),
-          completedAt: now,
-          completedOn: calendarDate(now, args.timeZone),
-        });
-      return;
-    }
-    await tx.mutate.workoutLogs.insert({
-      id: args.logId,
-      householdId: args.householdId,
-      workoutId: workout.id,
-      userId: ctx.userId,
-      note: args.note ?? "",
-      snapshot: workoutContentSchema.parse({
-        title: workout.title,
-        notes: workout.notes,
-        exercises: workout.exercises,
-      }),
-      status: args.action === "complete" ? "completed" : "active",
-      createdAt: now,
-      completedAt: args.action === "complete" ? now : null,
-      completedOn:
-        args.action === "complete" ? calendarDate(now, args.timeZone) : null,
-    });
-  }),
-  updateLogNote: define(
-    updateWorkoutLogNoteSchema,
-    async ({ tx, ctx, args }) => {
-      await access(tx, args.householdId, ctx.userId);
-      const log = await tx.run(
+    const completedOn = calendarDate(now, args.timeZone);
+    const existing =
+      (await tx.run(
         ownLog(args.householdId, args.workoutId, ctx.userId, args.logId),
-      );
-      if (!log) throw new Error("Workout log note update not allowed");
-      await tx.mutate.workoutLogs.update({ id: log.id, note: args.note });
-    },
-  ),
-  saveSet: define(saveWorkoutSetSchema, async ({ tx, ctx, args }) => {
-    await access(tx, args.householdId, ctx.userId);
-    const log = await tx.run(
-      ownLog(args.householdId, args.workoutId, ctx.userId, args.logId),
+      )) ??
+      (await tx.run(
+        zql.workoutLogs
+          .where("householdId", args.householdId)
+          .where("workoutId", args.workoutId)
+          .where("userId", ctx.userId)
+          .where("completedOn", completedOn)
+          .one(),
+      ));
+    const logId = existing?.id ?? args.logId;
+    // Existing logs retain the historical workout definition.
+    const snapshot = workoutContentSchema.parse(
+      existing?.snapshot ?? args.snapshot,
     );
-    if (!log || log.status === "abandoned")
-      throw new Error("Workout set update not allowed");
-    const exercise = workoutContentSchema
-      .parse(log.snapshot)
-      .exercises.find((e) => e.id === args.exerciseId);
-    if (
-      !exercise ||
-      args.round > exercise.sets ||
-      (!exercise.unilateral && args.values.rightAmount !== null) ||
-      (exercise.load === "bodyweight" && args.values.weightKg !== null)
-    )
-      throw new Error("Workout set update not allowed");
-    await tx.mutate.workoutLogSets.upsert({
-      logId: log.id,
-      exerciseId: exercise.id,
-      round: args.round,
-      values: args.values,
-    });
+    for (const set of args.sets) {
+      const exercise = snapshot.exercises.find((e) => e.id === set.exerciseId);
+      if (
+        !exercise ||
+        set.round > exercise.sets ||
+        (!exercise.unilateral && set.values.rightAmount !== null) ||
+        (exercise.load === "bodyweight" && set.values.weightKg !== null)
+      ) {
+        throw new Error("Workout set update not allowed");
+      }
+    }
+    if (existing) {
+      await tx.mutate.workoutLogs.update({ id: existing.id, note: args.note });
+      const oldSets = await tx.run(
+        zql.workoutLogSets.where("logId", existing.id),
+      );
+      for (const set of oldSets)
+        await tx.mutate.workoutLogSets.delete({
+          logId: set.logId,
+          exerciseId: set.exerciseId,
+          round: set.round,
+        });
+    } else {
+      await tx.mutate.workoutLogs.insert({
+        id: args.logId,
+        householdId: args.householdId,
+        workoutId: args.workoutId,
+        userId: ctx.userId,
+        note: args.note,
+        snapshot,
+        createdAt: now,
+        completedAt: now,
+        completedOn,
+      });
+    }
+    for (const set of args.sets)
+      await tx.mutate.workoutLogSets.insert({ logId, ...set });
   }),
 };

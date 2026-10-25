@@ -69,18 +69,6 @@ export const importWorkoutsSchema = z
     optimisticTimestamp: z.number().int().nonnegative(),
   })
   .strict();
-export const workoutLogActionSchema = z
-  .object({
-    ...scope,
-    logId: z.uuid(),
-    action: z.enum(["start", "complete"]),
-    note: z.string().max(1000000).optional(),
-    timeZone: timeZoneSchema,
-  })
-  .strict();
-export const updateWorkoutLogNoteSchema = z
-  .object({ ...scope, logId: z.uuid(), note: z.string().max(1000000) })
-  .strict();
 export const workoutSetValuesSchema = z
   .object({
     weightKg: z.number().min(0).max(1000).nullable(),
@@ -89,12 +77,28 @@ export const workoutSetValuesSchema = z
   })
   .strict();
 export type WorkoutSetValues = z.infer<typeof workoutSetValuesSchema>;
-export const saveWorkoutSetSchema = z
+export const workoutLogSetSchema = z
   .object({
-    ...scope,
-    logId: z.uuid(),
     exerciseId: z.uuid(),
     round: z.number().int().min(1).max(10),
     values: workoutSetValuesSchema,
+  })
+  .strict();
+export const saveWorkoutLogSchema = z
+  .object({
+    ...scope,
+    logId: z.uuid(),
+    snapshot: workoutContentSchema,
+    note: z.string().max(1000000),
+    timeZone: timeZoneSchema,
+    sets: z
+      .array(workoutLogSetSchema)
+      .max(400)
+      .refine(
+        (rows) =>
+          new Set(rows.map((row) => `${row.exerciseId}:${row.round}`)).size ===
+          rows.length,
+        "Set keys must be unique",
+      ),
   })
   .strict();

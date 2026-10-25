@@ -616,11 +616,8 @@ export const workoutLogs = pgTable(
       .references(() => users.id),
     workoutId: uuid("workout_id").notNull(),
     snapshot: jsonb("snapshot").notNull(),
-    status: text("status", {
-      enum: ["active", "completed", "abandoned"],
-    }).notNull(),
-    completedOn: text("completed_on"),
-    completedAt: timestamp("completed_at", { withTimezone: true }),
+    completedOn: text("completed_on").notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -630,22 +627,17 @@ export const workoutLogs = pgTable(
       columns: [t.householdId, t.workoutId],
       foreignColumns: [workouts.householdId, workouts.id],
     }),
-    uniqueIndex("workout_logs_one_active")
-      .on(t.householdId, t.userId, t.workoutId)
-      .where(sql`${t.status} = 'active'`),
+    uniqueIndex("workout_logs_one_per_day").on(
+      t.householdId,
+      t.userId,
+      t.workoutId,
+      t.completedOn,
+    ),
     index("workout_logs_owner").on(
       t.householdId,
       t.userId,
       t.workoutId,
       t.createdAt,
-    ),
-    check(
-      "workout_logs_status",
-      sql`${t.status} in ('active', 'completed', 'abandoned')`,
-    ),
-    check(
-      "workout_logs_completion",
-      sql`(${t.status} = 'completed') = (${t.completedAt} is not null and ${t.completedOn} is not null)`,
     ),
   ],
 );

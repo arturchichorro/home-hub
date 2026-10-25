@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkoutDetail } from "./workout-detail";
 import { WorkoutExercises } from "./workout-fields";
 import type { WorkoutLog } from "./workout-log";
+import { openWorkoutLog } from "./workout-log-form";
 import { WorkoutsLibrary } from "./workouts-library";
 
 const { useQuery, enabled, header, mutate } = vi.hoisted(() => ({
@@ -62,7 +63,7 @@ describe("simple workouts", () => {
       "Add workout",
     );
   });
-  it("has one notes field and a one-click Done action even without logged sets", async () => {
+  it("does not offer a completion shortcut while just browsing a workout", () => {
     useQuery
       .mockReturnValueOnce([workout, { type: "complete" }])
       .mockReturnValueOnce([[], { type: "complete" }]);
@@ -81,15 +82,10 @@ describe("simple workouts", () => {
     expect(html).not.toContain("Program instructions");
     expect(html).not.toContain("Smallest available increase");
     expect(html).not.toContain("Shared plan");
-    const action = header.mock.calls.at(-1)?.[0];
-    expect(renderToStaticMarkup(action)).toContain("Done");
-    expect(action.props.disabled).toBe(false);
-    action.props.onClick();
-    expect(mutate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        args: expect.objectContaining({ action: "complete", workoutId }),
-      }),
-    );
+    expect(header.mock.calls.at(-1)?.[0]).toBeNull();
+    expect(html).not.toContain("Done</span>");
+    expect(html).toContain("Log workout");
+    expect(mutate).not.toHaveBeenCalled();
   });
   it("uses a Base UI measure select and a settings-icon menu", () => {
     useQuery
@@ -104,53 +100,32 @@ describe("simple workouts", () => {
     expect(html).toContain('aria-haspopup="menu"');
     expect(html).not.toContain("<select");
   });
-  it("labels unfinished logs as drafts, not completed workouts", () => {
+  it("has no draft or resume state", () => {
     useQuery
       .mockReturnValueOnce([workout, { type: "complete" }])
-      .mockReturnValueOnce([
-        [
-          {
-            id: "draft",
-            snapshot: starter,
-            sets: [],
-            status: "active",
-            createdAt: Date.now(),
-            completedOn: null,
-          },
-        ],
-        { type: "complete" },
-      ]);
+      .mockReturnValueOnce([[], { type: "complete" }]);
     const html = renderToStaticMarkup(
       <WorkoutDetail householdId={householdId} workoutId={workoutId} />,
     );
-    expect(html).toContain("Resume draft");
-    expect(html).toContain("Draft");
+    expect(html).not.toContain("Draft");
+    expect(html).not.toContain("Resume");
     expect(html).not.toContain("In progress");
   });
-  it("disables Done while disconnected", () => {
+  it("disables starting a log while disconnected", () => {
     enabled.mockReturnValue(false);
     useQuery
       .mockReturnValueOnce([workout, { type: "complete" }])
       .mockReturnValueOnce([[], { type: "complete" }]);
-    renderToStaticMarkup(
+    const html = renderToStaticMarkup(
       <WorkoutDetail householdId={householdId} workoutId={workoutId} />,
     );
-    expect(header.mock.calls.at(-1)?.[0].props.disabled).toBe(true);
+    const start = [...html.matchAll(/<button[^>]*>[\s\S]*?<\/button>/g)]
+      .map((m) => m[0])
+      .find((button) => button.includes("Log workout"));
+    expect(start).toContain('disabled=""');
+    expect(header.mock.calls.at(-1)?.[0]).toBeNull();
   });
-  it("keeps logging to weight/reps and a save checkmark", () => {
-    const log: WorkoutLog = {
-      id: crypto.randomUUID(),
-      householdId,
-      userId: crypto.randomUUID(),
-      workoutId,
-      snapshot: starter,
-      status: "active",
-      createdAt: Date.now(),
-      completedAt: null,
-      completedOn: null,
-      sets: [],
-      note: "",
-    };
+  it("keeps new inputs local until Done, without per-set save buttons", () => {
     const html = renderToStaticMarkup(
       <WorkoutExercises
         current={starter.exercises}
@@ -159,18 +134,19 @@ describe("simple workouts", () => {
         onStartLogging={async () => {}}
         onCloseLogging={() => {}}
         onCompleteLogging={() => {}}
-        resume={false}
-        logging={{ log, previous: [], onSave: async () => true }}
+        logging={{
+          form: openWorkoutLog(starter),
+          previous: [],
+          onChange: () => {},
+        }}
       />,
     );
-    expect(html.match(/<form/g)).toHaveLength(12);
-    expect(html).toContain('aria-label="Save Goblet squat, set 1"');
+    expect(html.match(/aria-label="Log [^"]+, set [0-9]+"/g)).toHaveLength(12);
+    expect(html).not.toContain("<form");
+    expect(html).not.toContain('aria-label="Save ');
     expect(html).not.toContain("Rest timer");
-    expect(html).not.toContain("Good form, no symptoms");
     expect(html).not.toContain("Reps in reserve");
-    expect(html).not.toMatch(/<summary[^>]*>Notes<\/summary>/);
-    expect(html).toContain('data-exercise-id="');
-    expect(html).toContain('aria-label="Close log"');
+    expect(html).toContain('aria-label="Cancel log"');
     expect(html).toContain("Done</span>");
     expect(html).toContain(
       'aria-label="Left reps for Bench-supported one-arm row, set 1"',
@@ -180,23 +156,22 @@ describe("simple workouts", () => {
     );
     expect(html).toContain("Blank uses the left-side value");
     expect(html).not.toContain("reps left");
-    expect(html).toContain('aria-label="Name for Goblet squat"');
-    expect(html).not.toContain("Back to workout");
+    expect(mutate).not.toHaveBeenCalled();
   });
-  it("does not offer Done again while viewing a completed log", () => {
+  it("commits history edits to the same log with Done", () => {
     const log: WorkoutLog = {
       id: crypto.randomUUID(),
       householdId,
       userId: crypto.randomUUID(),
       workoutId,
       snapshot: starter,
-      status: "completed",
       createdAt: Date.now(),
       completedAt: Date.now(),
       completedOn: "2026-10-25",
       sets: [],
       note: "",
     };
+    const form = openWorkoutLog(starter, log);
     const html = renderToStaticMarkup(
       <WorkoutExercises
         current={starter.exercises}
@@ -205,23 +180,19 @@ describe("simple workouts", () => {
         onStartLogging={async () => {}}
         onCloseLogging={() => {}}
         onCompleteLogging={() => {}}
-        resume={false}
-        logging={{ log, previous: [], onSave: async () => true }}
+        logging={{ form, previous: [], onChange: () => {} }}
       />,
     );
-    const buttons = [...html.matchAll(/<button[^>]*>[\s\S]*?<\/button>/g)].map(
-      (m) => m[0],
-    );
-    expect(buttons.some((button) => button.includes("Done</span>"))).toBe(
-      false,
-    );
+    expect(form.id).toBe(log.id);
+    expect(html).toContain("Done</span>");
+    expect(html).toContain("2026-10-25");
+    expect(mutate).not.toHaveBeenCalled();
   });
   it("shows actual set details directly in history, including empty logs", () => {
     const exercise = starter.exercises[1];
     if (!exercise) throw new Error("seed");
     const entry = {
       id: "history",
-      status: "completed",
       completedOn: "2026-10-25",
       createdAt: Date.now(),
       snapshot: starter,

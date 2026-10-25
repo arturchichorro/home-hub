@@ -267,6 +267,20 @@
       "when": 1792950813237,
       "tag": "0037_freezing_lyja",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792958224258,
+      "tag": "0038_rainy_sunspot",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792959092527,
+      "tag": "0039_modern_dagger",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { starterWorkouts } from "./workout-seed";
 import {
   reorderWorkoutsSchema,
-  saveWorkoutSetSchema,
+  saveWorkoutLogSchema,
   updateWorkoutSchema,
   workoutContentSchema,
   workoutExercisesSchema,
@@ -80,30 +80,46 @@ describe("workouts", () => {
         .success,
     ).toBe(false);
   });
-  it("validates the simple weight/reps log and rejects actor spoofing", () => {
+  it("validates a complete submission and rejects spoofed actors and duplicate sets", () => {
+    const set = {
+      exerciseId: crypto.randomUUID(),
+      round: 1,
+      values: { weightKg: 8, amount: 10, rightAmount: null },
+    };
     const request = {
       householdId: crypto.randomUUID(),
       workoutId: crypto.randomUUID(),
       logId: crypto.randomUUID(),
-      exerciseId: crypto.randomUUID(),
-      round: 1,
       optimisticTimestamp: 1,
-      values: { weightKg: 8, amount: 10, rightAmount: null },
+      snapshot: starterWorkouts[0],
+      note: "",
+      timeZone: "UTC",
+      sets: [set],
     };
-    expect(saveWorkoutSetSchema.safeParse(request).success).toBe(true);
+    expect(saveWorkoutLogSchema.safeParse(request).success).toBe(true);
     expect(
-      saveWorkoutSetSchema.safeParse({
+      saveWorkoutLogSchema.safeParse({
         ...request,
         userId: crypto.randomUUID(),
       }).success,
     ).toBe(false);
+    expect(
+      saveWorkoutLogSchema.safeParse({ ...request, action: "start" }).success,
+    ).toBe(false);
+    expect(
+      saveWorkoutLogSchema.safeParse({ ...request, sets: [set, set] }).success,
+    ).toBe(false);
     for (const values of [
-      { ...request.values, amount: -1 },
-      { ...request.values, weightKg: -1 },
-      { ...request.values, amount: 1.5 },
-    ])
+      { ...set.values, amount: -1 },
+      { ...set.values, weightKg: -1 },
+      { ...set.values, amount: 1.5 },
+    ]) {
       expect(
-        saveWorkoutSetSchema.safeParse({ ...request, values }).success,
+        saveWorkoutLogSchema.safeParse({
+          ...request,
+          sets: [{ ...set, values }],
+        }).success,
       ).toBe(false);
+    }
   });
 });

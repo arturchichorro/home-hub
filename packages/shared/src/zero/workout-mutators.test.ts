@@ -1,7 +1,7 @@
 import type { Transaction } from "@rocicorp/zero";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { starterWorkouts } from "../workout-seed";
-import { workoutContentSchema } from "../workouts";
+import { type WorkoutSetValues, workoutContentSchema } from "../workouts";
 import { mutators } from "./mutators";
 import { queries } from "./queries";
 import type { Schema } from "./schema.gen";
@@ -93,6 +93,10 @@ function setup(location: "server" | "client" = "server") {
       const found = data[table]?.find((r) => sameKey(table, r, row));
       if (found) Object.assign(found, structuredClone(row));
     },
+    delete: async (row: Row) => {
+      writes(table, "delete", row);
+      data[table] = (data[table] ?? []).filter((r) => !sameKey(table, r, row));
+    },
     upsert: async (row: Row) => {
       writes(table, "upsert", row);
       const found = data[table]?.find((r) => sameKey(table, r, row));
@@ -133,90 +137,190 @@ function setup(location: "server" | "client" = "server") {
       return format.singular ? rows[0] : rows;
     },
   } as unknown as Transaction<Schema>;
-  const log = (action: "start" | "complete") =>
-    mutators.workouts.log.fn({
-      tx,
-      ctx,
-      args: { ...scope, logId, action, timeZone: "Europe/Brussels" },
-    });
-  const set = () =>
-    mutators.workouts.saveSet.fn({
+  const record = (
+    changes: Partial<
+      Parameters<typeof mutators.workouts.saveLog.fn>[0]["args"]
+    > = {},
+  ) =>
+    mutators.workouts.saveLog.fn({
       tx,
       ctx,
       args: {
         ...scope,
         logId,
-        exerciseId: starter.exercises[0]?.id ?? "",
-        round: 1,
-        values: { weightKg: 8, amount: 10, rightAmount: null },
+        snapshot: starter,
+        note: "",
+        sets: [],
+        timeZone: "Europe/Brussels",
+        ...changes,
       },
     });
-  return { tx, data, writes, log, set };
+  return { tx, data, writes, record };
 }
 afterEach(() => vi.restoreAllMocks());
-describe("workout logging", () => {
-  it("marks a workout done directly without starting or filling in sets", async () => {
-    const { data, log } = setup();
-    await log("complete");
+const recordedSet = {
+  exerciseId: starter.exercises[0]?.id ?? "",
+  round: 1,
+  values: { weightKg: 8, amount: 10, rightAmount: null },
+};
+describe("completed workout logs", () => {
+  it("creates the log, note and sets in a single explicit save", async () => {
+    const { data, record } = setup();
+    expect(data.workoutLogs).toHaveLength(0);
+    await record({ note: "Felt good.\nLight weights.", sets: [recordedSet] });
     expect(data.workoutLogs?.[0]).toMatchObject({
       userId,
       workoutId,
-      status: "completed",
       completedOn: "2026-10-26",
       completedAt: now,
+      note: "Felt good.\nLight weights.",
     });
-    expect(data.workoutLogSets).toHaveLength(0);
-    await log("complete");
+    expect(data.workoutLogs?.[0]).not.toHaveProperty("status");
+    expect(data.workoutLogSets).toHaveLength(1);
+  });
+  it("updates today's log even when another client submits a fresh ID", async () => {
+    const { data, record } = setup();
+    await record({ sets: [recordedSet], note: "First" });
+    await record({
+      logId: crypto.randomUUID(),
+      sets: [{ ...recordedSet, values: { ...recordedSet.values, amount: 12 } }],
+      note: "Updated",
+    });
     expect(data.workoutLogs).toHaveLength(1);
-  });
-  it("completes a partial log and keeps independently saved sets", async () => {
-    const { data, log, set } = setup();
-    await log("start");
-    await set();
-    await log("complete");
-    expect(data.workoutLogs?.[0]?.status).toBe("completed");
+    expect(data.workoutLogs?.[0]).toMatchObject({ id: logId, note: "Updated" });
     expect(data.workoutLogSets).toHaveLength(1);
-    await set();
-    expect(data.workoutLogSets).toHaveLength(1);
+    expect(data.workoutLogSets?.[0]).toMatchObject({
+      logId,
+      values: { amount: 12 },
+    });
   });
-  it("keeps historical content when a shared workout is edited", async () => {
-    const { data, tx, log } = setup();
-    await log("start");
+  it("creates a different log on the next local day and keeps historical edits on their original day", async () => {
+    const { data, record } = setup();
+    await record({ note: "Yesterday" });
+    vi.spyOn(Date, "now").mockReturnValue(now + 86400000);
+    const nextId = crypto.randomUUID();
+    await record({ logId: nextId, note: "Today" });
+    expect(data.workoutLogs).toHaveLength(2);
+    await record({ note: "Correct yesterday" });
+    expect(data.workoutLogs?.find((row) => row.id === nextId)).toMatchObject({
+      note: "Today",
+      completedOn: "2026-10-27",
+    });
+    expect(data.workoutLogs?.find((row) => row.id === logId)).toMatchObject({
+      note: "Correct yesterday",
+      completedOn: "2026-10-26",
+    });
+  });
+  it("keeps daily logs separate for different authors and workouts", async () => {
+    const { data, record, tx } = setup();
+    await record();
+    data.householdMembers?.push({ householdId, userId: other });
+    await mutators.workouts.saveLog.fn({
+      tx,
+      ctx: { userId: other },
+      args: {
+        ...scope,
+        logId: crypto.randomUUID(),
+        snapshot: starter,
+        note: "Other user",
+        sets: [],
+        timeZone: "Europe/Brussels",
+      },
+    });
+    data.workouts?.push({ ...data.workouts[0], id: other });
+    await record({ workoutId: other, logId: crypto.randomUUID() });
+    expect(data.workoutLogs).toHaveLength(3);
+  });
+  it("allows a deliberate note-only log without fabricating repetitions", async () => {
+    const { data, record } = setup();
+    await record({ note: "Mobility only" });
+    expect(data.workoutLogs).toHaveLength(1);
+    expect(data.workoutLogSets).toHaveLength(0);
+  });
+  it("is idempotent and atomically replaces edited set values", async () => {
+    const { data, record } = setup();
+    await record({ sets: [recordedSet] });
+    await record({ sets: [recordedSet] });
+    expect(data.workoutLogs).toHaveLength(1);
+    expect(data.workoutLogSets).toHaveLength(1);
+    await record({
+      note: "Corrected",
+      sets: [{ ...recordedSet, values: { ...recordedSet.values, amount: 11 } }],
+    });
+    expect(data.workoutLogSets).toHaveLength(1);
+    expect(data.workoutLogSets?.[0]?.values).toMatchObject({ amount: 11 });
+    await record({ note: "Note only", sets: [] });
+    expect(data.workoutLogSets).toHaveLength(0);
+  });
+  it("preserves original dates and snapshots while editing history", async () => {
+    const { data, record, tx } = setup();
+    await record({ sets: [recordedSet] });
     await mutators.workouts.update.fn({
       tx,
       ctx,
-      args: { ...scope, changes: { title: "Changed", notes: "One note" } },
+      args: { ...scope, changes: { title: "Changed", notes: "New notes" } },
     });
-    expect(data.workouts?.[0]).toMatchObject({
-      title: "Changed",
-      notes: "One note",
+    vi.spyOn(Date, "now").mockReturnValue(now + 86400000);
+    await record({
+      snapshot: { ...starter, title: "Another title" },
+      note: "Edited",
+    });
+    expect(data.workoutLogs?.[0]).toMatchObject({
+      completedAt: now,
+      completedOn: "2026-10-26",
+      note: "Edited",
     });
     expect(
       workoutContentSchema.parse(data.workoutLogs?.[0]?.snapshot).title,
     ).toBe(starter.title);
+    expect(data.workouts?.[0]?.notes).toBe("New notes");
   });
   it.each([
-    "foreign user",
-    "foreign household",
-    "foreign workout",
-    "abandoned",
-  ])("rejects set edits to %s logs", async (reason) => {
-    const { data, log, set, writes } = setup();
-    await log("start");
-    const row = data.workoutLogs?.[0];
-    if (!row) throw new Error("log");
-    if (reason === "foreign user") row.userId = other;
-    if (reason === "foreign household") row.householdId = other;
-    if (reason === "foreign workout") row.workoutId = other;
-    if (reason === "abandoned") row.status = "abandoned";
-    writes.mockClear();
-    await expect(set()).rejects.toThrow("not allowed");
+    "unknown exercise",
+    "too many sets",
+    "wrong side",
+    "bodyweight load",
+  ])("rejects %s before writing anything", async (reason) => {
+    const { data, record, writes } = setup();
+    const bodyweight = starter.exercises.find((e) => e.load === "bodyweight");
+    if (!bodyweight) throw new Error("seed");
+    const invalid: {
+      exerciseId: string;
+      round: number;
+      values: WorkoutSetValues;
+    } = { ...recordedSet, round: 2, values: { ...recordedSet.values } };
+    if (reason === "unknown exercise") invalid.exerciseId = other;
+    if (reason === "too many sets") invalid.round = 3;
+    if (reason === "wrong side") invalid.values.rightAmount = 8;
+    if (reason === "bodyweight load") invalid.exerciseId = bodyweight.id;
+    await expect(record({ sets: [recordedSet, invalid] })).rejects.toThrow(
+      "not allowed",
+    );
     expect(writes).not.toHaveBeenCalled();
+    expect(data.workoutLogs).toHaveLength(0);
   });
-  it.each(["disabled", "missing module", "not member", "deleted household"])(
-    "blocks every mutation when %s",
+  it.each(["foreign user", "foreign household", "foreign workout"])(
+    "cannot modify %s history",
     async (reason) => {
-      const { tx, data, log, set, writes } = setup();
+      const { data, record, writes } = setup();
+      await record({ note: "Original" });
+      const row = data.workoutLogs?.[0];
+      if (!row) throw new Error("log");
+      if (reason === "foreign user") row.userId = other;
+      if (reason === "foreign household") row.householdId = other;
+      if (reason === "foreign workout") row.workoutId = other;
+      writes.mockClear();
+      await expect(
+        record({ note: "No", sets: [recordedSet] }),
+      ).rejects.toThrow();
+      expect(writes).not.toHaveBeenCalled();
+      expect(row.note).toBe("Original");
+    },
+  );
+  it.each(["disabled", "missing module", "not member", "deleted household"])(
+    "blocks mutations when %s",
+    async (reason) => {
+      const { tx, data, record, writes } = setup();
       if (reason === "disabled" && data.householdModuleSettings?.[0])
         data.householdModuleSettings[0].enabled = false;
       if (reason === "missing module") data.householdModuleSettings = [];
@@ -224,20 +328,7 @@ describe("workout logging", () => {
       if (reason === "deleted household" && data.households?.[0])
         data.households[0].deletedAt = now;
       const requests = [
-        () => log("complete"),
-        () =>
-          mutators.workouts.updateLogNote.fn({
-            tx,
-            ctx,
-            args: { ...scope, logId, note: "A private note" },
-          }),
-        () =>
-          mutators.workouts.reorder.fn({
-            tx,
-            ctx,
-            args: { ...scope, orderedWorkoutIds: [workoutId] },
-          }),
-        set,
+        () => record({ sets: [recordedSet] }),
         () =>
           mutators.workouts.create.fn({
             tx,
@@ -248,21 +339,13 @@ describe("workout logging", () => {
           mutators.workouts.update.fn({
             tx,
             ctx,
-            args: { ...scope, changes: { notes: "One note" } },
+            args: { ...scope, changes: { notes: "No" } },
           }),
         () =>
-          mutators.workouts.importStarters.fn({
+          mutators.workouts.reorder.fn({
             tx,
             ctx,
-            args: {
-              householdId,
-              workoutIds: [
-                crypto.randomUUID(),
-                crypto.randomUUID(),
-                crypto.randomUUID(),
-              ],
-              optimisticTimestamp: 1,
-            },
+            args: { ...scope, orderedWorkoutIds: [workoutId] },
           }),
       ];
       for (const request of requests)
@@ -270,108 +353,16 @@ describe("workout logging", () => {
       expect(writes).not.toHaveBeenCalled();
     },
   );
-  it("rejects unknown or foreign workouts for logging", async () => {
-    const { data, log } = setup();
+  it("rejects unknown or foreign workouts", async () => {
+    const { data, record } = setup();
     if (data.workouts?.[0]) data.workouts[0].householdId = other;
-    await expect(log("complete")).rejects.toThrow("not allowed");
+    await expect(record()).rejects.toThrow("not allowed");
   });
-  it("cannot complete another person's log by its ID", async () => {
-    const { data, log } = setup();
-    await log("start");
-    if (data.workoutLogs?.[0]) data.workoutLogs[0].userId = other;
-    await expect(log("complete")).rejects.toThrow();
-    expect(data.workoutLogs?.[0]?.status).toBe("active");
-  });
-  it("uses optimistic time only on the client", async () => {
-    const { data, log } = setup("client");
-    await log("complete");
+  it("uses optimistic timestamps only on the client", async () => {
+    const { data, record } = setup("client");
+    await record();
     expect(data.workoutLogs?.[0]?.completedAt).toBe(1234);
   });
-});
-describe("private log notes", () => {
-  it("saves a free-form note without changing the shared workout or its snapshot", async () => {
-    const { tx, data, log } = setup();
-    await log("start");
-    const note = "Light weights today.\nWrist felt better.";
-    await mutators.workouts.updateLogNote.fn({
-      tx,
-      ctx,
-      args: { ...scope, logId, note },
-    });
-    expect(data.workoutLogs?.[0]?.note).toBe(note);
-    expect(data.workouts?.[0]?.notes).toBe(starter.notes);
-    expect(
-      workoutContentSchema.parse(data.workoutLogs?.[0]?.snapshot).notes,
-    ).toBe(starter.notes);
-    await log("complete");
-    expect(data.workoutLogs?.[0]?.note).toBe(note);
-    await mutators.workouts.updateLogNote.fn({
-      tx,
-      ctx,
-      args: { ...scope, logId, note: "" },
-    });
-    expect(data.workoutLogs?.[0]).toMatchObject({
-      note: "",
-      status: "completed",
-    });
-  });
-  it("includes the latest note when completing, without waiting for autosave", async () => {
-    const { tx, data, log } = setup();
-    await log("start");
-    await mutators.workouts.log.fn({
-      tx,
-      ctx,
-      args: {
-        ...scope,
-        logId,
-        action: "complete",
-        note: "Latest draft",
-        timeZone: "UTC",
-      },
-    });
-    expect(data.workoutLogs?.[0]).toMatchObject({
-      note: "Latest draft",
-      status: "completed",
-    });
-  });
-  it("allows a note on a direct completion without set entries", async () => {
-    const { tx, data } = setup();
-    await mutators.workouts.log.fn({
-      tx,
-      ctx,
-      args: {
-        ...scope,
-        logId,
-        action: "complete",
-        note: "Quick session",
-        timeZone: "UTC",
-      },
-    });
-    expect(data.workoutLogs?.[0]?.note).toBe("Quick session");
-    expect(data.workoutLogSets).toHaveLength(0);
-  });
-  it.each(["foreign user", "foreign household", "foreign workout", "missing"])(
-    "rejects note writes for %s logs",
-    async (reason) => {
-      const { tx, data, log, writes } = setup();
-      await log("start");
-      const row = data.workoutLogs?.[0];
-      if (!row) throw new Error("log");
-      if (reason === "foreign user") row.userId = other;
-      if (reason === "foreign household") row.householdId = other;
-      if (reason === "foreign workout") row.workoutId = other;
-      if (reason === "missing") data.workoutLogs = [];
-      writes.mockClear();
-      await expect(
-        mutators.workouts.updateLogNote.fn({
-          tx,
-          ctx,
-          args: { ...scope, logId, note: "No" },
-        }),
-      ).rejects.toThrow("not allowed");
-      expect(writes).not.toHaveBeenCalled();
-    },
-  );
 });
 describe("workout ordering", () => {
   it.each(["server", "client"] as const)(
@@ -465,33 +456,38 @@ describe("workout ordering", () => {
     expect(rows.map((w) => w.id)).toEqual([...ids, other, workoutId]);
   });
 });
-describe("workout query privacy", () => {
-  it("shares workouts while restricting logs and sets to their owner", async () => {
-    const { data, tx, log, set } = setup();
-    await log("start");
-    await set();
+describe("private log queries", () => {
+  it("shares definitions but never another user's log, note or sets", async () => {
+    const { data, tx, record } = setup();
+    await record({ sets: [recordedSet] });
     data.workoutLogs?.push({
       ...data.workoutLogs[0],
       id: other,
       userId: other,
-      note: "SECRET log note",
+      note: "SECRET",
     });
-    data.workoutLogSets?.push({ logId: other, values: { note: "SECRET" } });
-    const args = { householdId, workoutId };
+    data.workoutLogSets?.push({
+      logId: other,
+      exerciseId: other,
+      round: 1,
+      values: { note: "SECRET" },
+    });
     expect(
       await tx.run(
         queries.workouts.byHousehold.fn({ args: { householdId }, ctx }),
       ),
     ).toHaveLength(1);
-    const logs = await tx.run(queries.workouts.logs.fn({ args, ctx }));
+    const logs = await tx.run(
+      queries.workouts.logs.fn({ args: { householdId, workoutId }, ctx }),
+    );
     expect(logs).toHaveLength(1);
     expect(JSON.stringify(logs)).not.toContain("SECRET");
   });
   it.each(["module", "membership", "household"])(
     "blocks queries after losing %s access",
     async (reason) => {
-      const { data, tx, log } = setup();
-      await log("start");
+      const { data, tx, record } = setup();
+      await record();
       if (reason === "module") data.householdModuleSettings = [];
       if (reason === "membership") data.householdMembers = [];
       if (reason === "household" && data.households?.[0])
@@ -501,11 +497,6 @@ describe("workout query privacy", () => {
           queries.workouts.byHousehold.fn({ args: { householdId }, ctx }),
         ),
       ).toHaveLength(0);
-      expect(
-        await tx.run(
-          queries.workouts.detail.fn({ args: { householdId, workoutId }, ctx }),
-        ),
-      ).toBeUndefined();
       expect(
         await tx.run(
           queries.workouts.logs.fn({ args: { householdId, workoutId }, ctx }),

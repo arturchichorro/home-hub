@@ -4,12 +4,26 @@ import {
 } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
-import { Button, Check, History, InlineAlert } from "@home-hub/ui-web";
+import {
+  Button,
+  Check,
+  History,
+  InlineAlert,
+  Textarea,
+} from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { WorkoutExercises, WorkoutText } from "./workout-fields";
+import type { WorkoutLog } from "./workout-log";
+import {
+  collectWorkoutSets,
+  findDailyWorkoutLog,
+  openWorkoutLog,
+  setInputKey,
+  type WorkoutLogForm,
+} from "./workout-log-form";
 import { summarizeWorkoutLog } from "./workout-log-summary";
 
 export function WorkoutDetail({
@@ -27,19 +41,16 @@ export function WorkoutDetail({
   const [logs, logResult] = useQuery(
     queries.workouts.logs({ householdId, workoutId }),
   );
-  const [selectedId, setSelectedId] = useState<string>();
+  const latestWorkout = useRef(workout);
+  latestWorkout.current = workout;
+  const latestLogs = useRef(logs);
+  latestLogs.current = logs;
+  // This form exists only in component memory. Closing or navigating away drops it.
+  const [form, setForm] = useState<WorkoutLogForm>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const [done, setDone] = useState(false);
-  const noteDraft = useRef<{ logId: string; note: string } | undefined>(
-    undefined,
-  );
-  const active = logs.find((l) => l.status === "active");
-  const selected = logs.find((l) => l.id === selectedId);
-  const snapshot = selected
-    ? workoutContentSchema.parse(selected.snapshot)
-    : undefined;
   const loaded = result.type === "complete" && logResult.type === "complete";
   const disabled = !enabled || !loaded;
   const scope = () => ({
@@ -61,91 +72,58 @@ export function WorkoutDetail({
       return false;
     }
   }
-  function draftFor(id: string, saved: string | null) {
-    return noteDraft.current?.logId === id
-      ? noteDraft.current.note
-      : (saved ?? "");
+  function startLog(existing?: WorkoutLog) {
+    const current = latestWorkout.current;
+    if (!current || disabled || busy) return;
+    setForm(
+      openWorkoutLog(
+        workoutContentSchema.parse({
+          title: current.title,
+          notes: current.notes ?? "",
+          exercises: current.exercises,
+        }),
+        existing ??
+          findDailyWorkoutLog(
+            latestLogs.current,
+            Date.now(),
+            Intl.DateTimeFormat().resolvedOptions().timeZone,
+          ),
+      ),
+    );
+    setDone(false);
+    setError("");
   }
-  async function selectLog(id?: string) {
-    if (disabled || pending.current) return;
-    pending.current = true;
-    setBusy(true);
-    try {
-      if (selected) {
-        const note = draftFor(selected.id, selected.note).trim();
-        if (
-          !(await save(
-            mutators.workouts.updateLogNote({
-              ...scope(),
-              logId: selected.id,
-              note,
-            }),
-          ))
-        )
-          return;
-      }
-      setSelectedId(id);
-    } finally {
-      pending.current = false;
-      setBusy(false);
-    }
-  }
-  async function log(action: "start" | "complete") {
-    if (disabled || pending.current) return;
-    if (action === "start" && active) {
-      setSelectedId(active.id);
-      setDone(false);
+  async function finishLog() {
+    if (!form || disabled || pending.current) return;
+    const collected = collectWorkoutSets(form.snapshot.exercises, form.inputs);
+    if (!collected.success) {
+      setError(collected.error);
       return;
     }
     pending.current = true;
     setBusy(true);
-    setDone(false);
-    const entry = selected?.status === "active" ? selected : active;
-    const logId = entry?.id ?? crypto.randomUUID();
     try {
       if (
         await save(
-          mutators.workouts.log({
+          mutators.workouts.saveLog({
             ...scope(),
-            logId,
-            action,
-            ...(action === "complete"
-              ? { note: draftFor(logId, entry?.note ?? "").trim() }
-              : {}),
+            logId: form.id,
+            snapshot: form.snapshot,
+            note: form.note.trim(),
+            sets: collected.sets,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           }),
         )
       ) {
-        if (action === "start") setSelectedId(logId);
-        else {
-          setSelectedId(undefined);
-          setDone(true);
-        }
+        setForm(undefined);
+        setDone(true);
       }
     } finally {
       pending.current = false;
       setBusy(false);
     }
   }
-  const logRef = useRef(log);
-  logRef.current = log;
-  const canComplete = !selected || selected.status === "active";
-  const header = useMemo(
-    () =>
-      canComplete ? (
-        <Button
-          variant="ghost"
-          className="h-7! px-1.5! font-normal text-muted"
-          disabled={disabled || busy || !workout}
-          onClick={() => void logRef.current("complete")}
-        >
-          <Check aria-hidden="true" className="size-4" />
-          Done
-        </Button>
-      ) : null,
-    [canComplete, disabled, busy, workout],
-  );
-  useAppHeaderRightComponent(header);
+  useAppHeaderRightComponent(null);
   if (result.type === "error" || logResult.type === "error")
     return (
       <InlineAlert role="alert" variant="danger">
@@ -170,89 +148,93 @@ export function WorkoutDetail({
       )}
       <WorkoutText
         label="Workout name"
-        value={snapshot?.title ?? workout.title}
+        value={form?.snapshot.title ?? workout.title}
         disabled={disabled}
-        readOnly={!!selected}
+        readOnly={!!form}
         onSave={(title) =>
           save(mutators.workouts.update({ ...scope(), changes: { title } }))
         }
       />
       <WorkoutExercises
         current={
-          snapshot?.exercises ?? workoutExercisesSchema.parse(workout.exercises)
+          form?.snapshot.exercises ??
+          workoutExercisesSchema.parse(workout.exercises)
         }
         disabled={disabled || busy}
         onSave={(exercises) =>
           save(mutators.workouts.update({ ...scope(), changes: { exercises } }))
         }
-        onStartLogging={() => log("start")}
-        onCloseLogging={() => void selectLog()}
-        onCompleteLogging={() => void log("complete")}
-        resume={!!active}
+        onStartLogging={async () => startLog()}
+        onCloseLogging={() => {
+          if (!busy) {
+            setForm(undefined);
+            setError("");
+          }
+        }}
+        onCompleteLogging={() => void finishLog()}
         logging={
-          selected
+          form
             ? {
-                log: selected,
+                form,
                 previous: logs,
-                onSave: (exerciseId, round, values) =>
-                  save(
-                    mutators.workouts.saveSet({
-                      ...scope(),
-                      logId: selected.id,
-                      exerciseId,
-                      round,
-                      values,
-                    }),
-                  ),
+                onChange: (exerciseId, round, patch) =>
+                  setForm((current) => {
+                    if (!current) return current;
+                    const key = setInputKey(exerciseId, round);
+                    return {
+                      ...current,
+                      inputs: {
+                        ...current.inputs,
+                        [key]: {
+                          weightKg: "",
+                          amount: "",
+                          rightAmount: "",
+                          ...current.inputs[key],
+                          ...patch,
+                        },
+                      },
+                    };
+                  }),
               }
             : undefined
         }
       />
-      {selected && (
+      {form && (
         <section className="grid gap-1" aria-label="Workout log note">
           <h2 className="pt-2 text-sm font-medium">Log note</h2>
-          <WorkoutText
-            key={selected.id}
-            label="Log note"
+          <Textarea
+            appearance="seamless"
+            aria-label="Log note"
             placeholder="Add a log note…"
-            value={selected.note ?? ""}
-            multiline
-            disabled={disabled}
-            onDraftChange={(note) => {
-              noteDraft.current = { logId: selected.id, note };
+            rows={1}
+            maxLength={1000000}
+            disabled={disabled || busy}
+            value={form.note}
+            onChange={(event) => {
+              const note = event.target.value;
+              setForm((current) => (current ? { ...current, note } : current));
             }}
-            onSave={(note) =>
-              save(
-                mutators.workouts.updateLogNote({
-                  ...scope(),
-                  logId: selected.id,
-                  note,
-                }),
-              )
-            }
           />
-          {selected.status === "active" && (
-            <div>
-              <Button
-                size="compact"
-                disabled={disabled || busy}
-                onClick={() => void log("complete")}
-              >
-                <Check aria-hidden="true" className="size-4" />
-                Done
-              </Button>
-            </div>
-          )}
+          <div>
+            <Button
+              size="compact"
+              disabled={disabled || busy}
+              onClick={() => void finishLog()}
+            >
+              <Check aria-hidden="true" className="size-4" />
+              Done
+            </Button>
+          </div>
         </section>
       )}
       <section className="grid gap-1" aria-label="Workout notes">
         <h2 className="pt-2 text-sm font-medium">Notes</h2>
         <WorkoutText
           label="Notes"
-          value={snapshot?.notes ?? workout.notes ?? ""}
+          value={form?.snapshot.notes ?? workout.notes ?? ""}
           multiline
           disabled={disabled}
-          readOnly={!!selected}
+          readOnly={!!form}
           onSave={(notes) =>
             save(mutators.workouts.update({ ...scope(), changes: { notes } }))
           }
@@ -270,35 +252,21 @@ export function WorkoutDetail({
               <li key={entry.id}>
                 <button
                   type="button"
-                  aria-pressed={selectedId === entry.id}
+                  aria-pressed={form?.id === entry.id}
                   disabled={disabled || busy}
                   className="grid min-h-11 w-full min-w-0 gap-1 py-3 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                   onClick={() =>
-                    void selectLog(
-                      selectedId === entry.id ? undefined : entry.id,
-                    )
+                    form?.id === entry.id ? setForm(undefined) : startLog(entry)
                   }
                 >
                   <span className="flex items-center gap-3">
-                    {entry.status === "completed" && (
-                      <Check
-                        aria-hidden="true"
-                        className="size-4 shrink-0 text-muted"
-                      />
-                    )}
-                    <span>
-                      {entry.completedOn ??
-                        new Date(entry.createdAt ?? 0).toLocaleDateString()}
-                    </span>
-                    {entry.status !== "completed" && (
-                      <span className="ml-auto text-xs text-muted">
-                        {entry.status === "active" ? "Draft" : "Abandoned"}
-                      </span>
-                    )}
+                    <Check
+                      aria-hidden="true"
+                      className="size-4 shrink-0 text-muted"
+                    />
+                    <span>{entry.completedOn}</span>
                   </span>
-                  <span
-                    className={`grid min-w-0 gap-1 text-xs font-normal text-muted ${entry.status === "completed" ? "pl-7" : ""}`}
-                  >
+                  <span className="grid min-w-0 gap-1 pl-7 text-xs font-normal text-muted">
                     {summary.length ? (
                       summary.map((exercise) => (
                         <span key={exercise.id} className="break-words">
