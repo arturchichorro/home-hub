@@ -1,7 +1,7 @@
 import {
   type WorkoutExercise,
   type WorkoutSetValues,
-  workoutContentSchema,
+  workoutLogSnapshotSchema,
   workoutSetValuesSchema,
 } from "@home-hub/shared/workouts";
 import type { WorkoutLog } from "./workout-log";
@@ -21,7 +21,7 @@ function describeSet(exercise: WorkoutExercise, values: WorkoutSetValues) {
 export function summarizeWorkoutLog(
   log: Pick<WorkoutLog, "snapshot" | "sets">,
 ) {
-  return workoutContentSchema
+  return workoutLogSnapshotSchema
     .parse(log.snapshot)
     .exercises.flatMap((exercise) => {
       const sets = log.sets

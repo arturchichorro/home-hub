@@ -7,7 +7,7 @@ import {
   reorderWorkoutsSchema,
   saveWorkoutLogSchema,
   updateWorkoutSchema,
-  workoutContentSchema,
+  workoutLogSnapshotSchema,
 } from "../workouts";
 import type { ZeroAuthContext } from "./context";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
@@ -134,7 +134,7 @@ export const workoutMutatorDefinitions = {
       ));
     const logId = existing?.id ?? args.logId;
     // Existing logs retain the historical workout definition.
-    const snapshot = workoutContentSchema.parse(
+    const snapshot = workoutLogSnapshotSchema.parse(
       existing?.snapshot ?? args.snapshot,
     );
     for (const set of args.sets) {

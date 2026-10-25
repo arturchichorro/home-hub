@@ -15,6 +15,7 @@ if (!exercise) throw new Error("seed");
 describe("unsaved workout form", () => {
   it("starts empty without recording prescribed target values", () => {
     const form = openWorkoutLog(workout);
+    expect(form.snapshot).not.toHaveProperty("notes");
     expect(form.inputs).toEqual({});
     expect(form.note).toBe("");
     expect(form.completedAt).toBeNull();
@@ -83,7 +84,11 @@ describe("unsaved workout form", () => {
       householdId: crypto.randomUUID(),
       workoutId: crypto.randomUUID(),
       userId: crypto.randomUUID(),
-      snapshot: workout,
+      snapshot: {
+        title: workout.title,
+        exercises: workout.exercises,
+        notes: "Legacy copied notes",
+      },
       note: "Original",
       createdAt: 1,
       completedAt: 2,
@@ -116,6 +121,7 @@ describe("unsaved workout form", () => {
       existing,
     );
     expect(form.snapshot.title).toBe(workout.title);
+    expect(form.snapshot).not.toHaveProperty("notes");
     expect(form.completedOn).toBe(existing.completedOn);
     expect(collectWorkoutSets(form.snapshot.exercises, form.inputs)).toEqual({
       success: true,

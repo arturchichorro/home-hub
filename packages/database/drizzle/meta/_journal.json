@@ -281,6 +281,13 @@
       "when": 1792959092527,
       "tag": "0039_modern_dagger",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1792960037231,
+      "tag": "0040_remove-workout-log-snapshot-notes",
+      "breakpoints": true
     }
   ]
 }

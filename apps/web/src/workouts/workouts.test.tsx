@@ -196,7 +196,7 @@ describe("simple workouts", () => {
       householdId,
       userId: crypto.randomUUID(),
       workoutId,
-      snapshot: starter,
+      snapshot: { title: starter.title, exercises: starter.exercises },
       createdAt: Date.now(),
       completedAt: Date.now(),
       completedOn: "2026-10-25",
@@ -227,7 +227,7 @@ describe("simple workouts", () => {
       id: "history",
       completedOn: "2026-10-25",
       createdAt: Date.now(),
-      snapshot: starter,
+      snapshot: { title: starter.title, exercises: starter.exercises },
       sets: [1, 2].map((round) => ({
         logId: "history",
         exerciseId: exercise.id,

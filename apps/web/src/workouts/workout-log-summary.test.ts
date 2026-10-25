@@ -19,7 +19,7 @@ function log(
   sets: { round: number; values: WorkoutSetValues }[],
 ) {
   return {
-    snapshot: { title: "Earlier workout", notes: "", exercises: [exercise] },
+    snapshot: { title: "Earlier workout", exercises: [exercise] },
     sets: sets.map((s) => ({ logId: "log", exerciseId: exercise.id, ...s })),
   };
 }

@@ -1,9 +1,9 @@
 import { calendarDate } from "@home-hub/shared/habits";
 import {
-  type WorkoutContent,
   type WorkoutExercise,
+  type WorkoutLogSnapshot,
   type WorkoutSetValues,
-  workoutContentSchema,
+  workoutLogSnapshotSchema,
   workoutSetValuesSchema,
 } from "@home-hub/shared/workouts";
 import type { WorkoutLog } from "./workout-log";
@@ -16,7 +16,7 @@ export type WorkoutSetInput = {
 export type WorkoutSetInputs = Record<string, WorkoutSetInput>;
 export type WorkoutLogForm = {
   id: string;
-  snapshot: WorkoutContent;
+  snapshot: WorkoutLogSnapshot;
   note: string;
   inputs: WorkoutSetInputs;
   completedAt: number | null;
@@ -33,14 +33,17 @@ export function findDailyWorkoutLog(
   return logs.find((log) => log.completedOn === day);
 }
 export function openWorkoutLog(
-  workout: WorkoutContent,
+  workout: WorkoutLogSnapshot,
   existing?: WorkoutLog,
 ): WorkoutLogForm {
   return {
     id: existing?.id ?? crypto.randomUUID(),
     snapshot: existing
-      ? workoutContentSchema.parse(existing.snapshot)
-      : workoutContentSchema.parse(workout),
+      ? workoutLogSnapshotSchema.parse(existing.snapshot)
+      : workoutLogSnapshotSchema.parse({
+          title: workout.title,
+          exercises: workout.exercises,
+        }),
     note: existing?.note ?? "",
     completedAt: existing?.completedAt ?? null,
     completedOn: existing?.completedOn ?? null,

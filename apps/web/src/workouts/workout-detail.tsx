@@ -1,6 +1,6 @@
 import {
-  workoutContentSchema,
   workoutExercisesSchema,
+  workoutLogSnapshotSchema,
 } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
@@ -71,9 +71,8 @@ export function WorkoutDetail({
     if (!current || disabled || busy) return;
     setForm(
       openWorkoutLog(
-        workoutContentSchema.parse({
+        workoutLogSnapshotSchema.parse({
           title: current.title,
-          notes: current.notes ?? "",
           exercises: current.exercises,
         }),
         existing ??
@@ -223,7 +222,7 @@ export function WorkoutDetail({
         <h2 className="pt-2 text-sm font-medium">Notes</h2>
         <WorkoutText
           label="Notes"
-          value={form?.snapshot.notes ?? workout.notes ?? ""}
+          value={workout.notes ?? ""}
           multiline
           disabled={disabled}
           readOnly={!!form}

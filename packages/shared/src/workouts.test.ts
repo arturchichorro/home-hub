@@ -91,12 +91,21 @@ describe("workouts", () => {
       workoutId: crypto.randomUUID(),
       logId: crypto.randomUUID(),
       optimisticTimestamp: 1,
-      snapshot: starterWorkouts[0],
+      snapshot: {
+        title: starterWorkouts[0]?.title,
+        exercises: starterWorkouts[0]?.exercises,
+      },
       note: "",
       timeZone: "UTC",
       sets: [set],
     };
     expect(saveWorkoutLogSchema.safeParse(request).success).toBe(true);
+    expect(
+      saveWorkoutLogSchema.safeParse({
+        ...request,
+        snapshot: { ...request.snapshot, notes: "Do not copy workout notes" },
+      }).success,
+    ).toBe(false);
     expect(
       saveWorkoutLogSchema.safeParse({
         ...request,

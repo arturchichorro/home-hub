@@ -1,7 +1,11 @@
 import type { Transaction } from "@rocicorp/zero";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { starterWorkouts } from "../workout-seed";
-import { type WorkoutSetValues, workoutContentSchema } from "../workouts";
+import {
+  type WorkoutSetValues,
+  workoutContentSchema,
+  workoutLogSnapshotSchema,
+} from "../workouts";
 import { mutators } from "./mutators";
 import { queries } from "./queries";
 import type { Schema } from "./schema.gen";
@@ -15,6 +19,7 @@ const now = Date.parse("2026-10-25T23:30:00Z");
 const ctx = { userId },
   scope = { householdId, workoutId, optimisticTimestamp: 1234 };
 const starter = workoutContentSchema.parse(starterWorkouts[0]);
+const snapshot = { title: starter.title, exercises: starter.exercises };
 type Row = Record<string, unknown>;
 type Condition =
   | { type: "and"; conditions: Condition[] }
@@ -148,7 +153,7 @@ function setup(location: "server" | "client" = "server") {
       args: {
         ...scope,
         logId,
-        snapshot: starter,
+        snapshot,
         note: "",
         sets: [],
         timeZone: "Europe/Brussels",
@@ -176,6 +181,7 @@ describe("completed workout logs", () => {
       note: "Felt good.\nLight weights.",
     });
     expect(data.workoutLogs?.[0]).not.toHaveProperty("status");
+    expect(data.workoutLogs?.[0]?.snapshot).not.toHaveProperty("notes");
     expect(data.workoutLogSets).toHaveLength(1);
   });
   it("updates today's log even when another client submits a fresh ID", async () => {
@@ -221,7 +227,7 @@ describe("completed workout logs", () => {
       args: {
         ...scope,
         logId: crypto.randomUUID(),
-        snapshot: starter,
+        snapshot,
         note: "Other user",
         sets: [],
         timeZone: "Europe/Brussels",
@@ -262,7 +268,7 @@ describe("completed workout logs", () => {
     });
     vi.spyOn(Date, "now").mockReturnValue(now + 86400000);
     await record({
-      snapshot: { ...starter, title: "Another title" },
+      snapshot: { ...snapshot, title: "Another title" },
       note: "Edited",
     });
     expect(data.workoutLogs?.[0]).toMatchObject({
@@ -271,7 +277,7 @@ describe("completed workout logs", () => {
       note: "Edited",
     });
     expect(
-      workoutContentSchema.parse(data.workoutLogs?.[0]?.snapshot).title,
+      workoutLogSnapshotSchema.parse(data.workoutLogs?.[0]?.snapshot).title,
     ).toBe(starter.title);
     expect(data.workouts?.[0]?.notes).toBe("New notes");
   });

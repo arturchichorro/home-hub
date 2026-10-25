@@ -27,6 +27,14 @@ export const workoutContentSchema = z
     exercises: workoutExercisesSchema,
   })
   .strict();
+// Ignore legacy copied notes when reading; new mutation payloads remain strict.
+export const workoutLogSnapshotSchema = workoutContentSchema
+  .pick({
+    title: true,
+    exercises: true,
+  })
+  .strip();
+export type WorkoutLogSnapshot = z.infer<typeof workoutLogSnapshotSchema>;
 export type WorkoutExercise = z.infer<typeof workoutExerciseSchema>;
 export type WorkoutContent = z.infer<typeof workoutContentSchema>;
 const scope = {
@@ -88,7 +96,7 @@ export const saveWorkoutLogSchema = z
   .object({
     ...scope,
     logId: z.uuid(),
-    snapshot: workoutContentSchema,
+    snapshot: workoutLogSnapshotSchema.strict(),
     note: z.string().max(1000000),
     timeZone: timeZoneSchema,
     sets: z

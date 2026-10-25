@@ -30,9 +30,10 @@ workouts; training logs and set values remain private to their author.
   reps/seconds, side counts, and weights; matching sets are condensed. Deliberate
   note-only logs say “No sets logged.” Targets and previous values are not
   recorded automatically. Invalid partial rows block saving without losing input.
-- A new form captures the workout definition when opened and saves that snapshot
-  with the log. Historical edits retain the original snapshot and completion
-  dates; they never change the shared workout.
+- Logs capture only the workout title and exercise definitions, never shared
+  workout notes. The Notes section always shows the current shared notes, even
+  when opening history. Private log notes remain separate. Historical edits
+  retain the original title/exercises and completion dates.
 - Add the supplied A/B/C starter workouts.
 
 There are no plans, cycles, scheduling, timers, progression suggestions, or
@@ -70,3 +71,8 @@ reload clients afterwards. Rollback requires restoring the backup and old code.
 and day (completion time, creation time, then ID break ties), deletes older
 same-day duplicates and their sets/notes, and adds the daily unique index. This
 cleanup is intentional; back up and apply with the API/Zero stopped as above.
+
+`0040_remove-workout-log-snapshot-notes.sql` removes the copied notes key from
+existing log snapshots. Private log notes, titles, exercise definitions, dates,
+and set values remain unchanged. Apply before deploying the matching snapshot
+schema and reload clients; earlier migrations are unchanged.
