@@ -1,5 +1,14 @@
 export { Drawer } from "@base-ui/react/drawer";
 export {
+  AccordionHeader,
+  AccordionItem,
+  AccordionPanel,
+  type AccordionPanelProps,
+  AccordionRoot,
+  AccordionTrigger,
+  type AccordionTriggerProps,
+} from "./accordion";
+export {
   Button,
   type ButtonProps,
   type ButtonSize,

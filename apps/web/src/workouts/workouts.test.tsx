@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkoutDetail } from "./workout-detail";
 import { WorkoutExercises } from "./workout-fields";
+import { WorkoutHistoryEntry } from "./workout-history-entry";
 import { type WorkoutLog, WorkoutLogActions } from "./workout-log";
 import { openWorkoutLog } from "./workout-log-form";
 import { WorkoutsLibrary } from "./workouts-library";
@@ -49,6 +50,66 @@ beforeEach(() => {
   });
 });
 describe("simple workouts", () => {
+  it("offers the cooking-log-style message action for a saved entry without a note", () => {
+    const entry: WorkoutLog = {
+      id: crypto.randomUUID(),
+      householdId,
+      workoutId,
+      userId: crypto.randomUUID(),
+      snapshot: { title: starter.title, exercises: starter.exercises },
+      createdAt: 1,
+      completedAt: 2,
+      completedOn: "2026-10-25",
+      note: "",
+      sets: [],
+    };
+    const html = renderToStaticMarkup(
+      <WorkoutHistoryEntry
+        entry={entry}
+        householdId={householdId}
+        workoutId={workoutId}
+        disabled={false}
+        selected={false}
+        onSelect={() => {}}
+      />,
+    );
+    expect(html).toContain(
+      'aria-label="Add note to workout log from 2026-10-25"',
+    );
+    expect(html).toContain("lucide-message-square");
+    expect(html).not.toContain("<textarea");
+    expect(mutate).not.toHaveBeenCalled();
+  });
+  it("shows an existing private note in a collapsed Base UI accordion", () => {
+    const entry: WorkoutLog = {
+      id: crypto.randomUUID(),
+      householdId,
+      workoutId,
+      userId: crypto.randomUUID(),
+      snapshot: { title: starter.title, exercises: starter.exercises },
+      createdAt: 1,
+      completedAt: 2,
+      completedOn: "2026-10-25",
+      note: "Wrist felt good",
+      sets: [],
+    };
+    const html = renderToStaticMarkup(
+      <WorkoutHistoryEntry
+        entry={entry}
+        householdId={householdId}
+        workoutId={workoutId}
+        disabled={false}
+        selected={false}
+        onSelect={() => {}}
+      />,
+    );
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain("Wrist felt good");
+    expect(html).not.toContain("Add note to workout log");
+    expect(html).toContain('aria-label="Log note"');
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
   it("uses matching neutral checkmark and cancel icon buttons", () => {
     const html = renderToStaticMarkup(
       <WorkoutLogActions

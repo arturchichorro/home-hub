@@ -92,12 +92,20 @@ export const workoutLogSetSchema = z
     values: workoutSetValuesSchema,
   })
   .strict();
+export const updateWorkoutLogNoteSchema = z
+  .object({
+    householdId: z.uuid(),
+    workoutId: z.uuid(),
+    logId: z.uuid(),
+    note: z.string().trim().max(1000000),
+  })
+  .strict();
 export const saveWorkoutLogSchema = z
   .object({
     ...scope,
     logId: z.uuid(),
     snapshot: workoutLogSnapshotSchema.strict(),
-    note: z.string().max(1000000),
+    note: z.string().max(1000000).optional(),
     timeZone: timeZoneSchema,
     sets: z
       .array(workoutLogSetSchema)

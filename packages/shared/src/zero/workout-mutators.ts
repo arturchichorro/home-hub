@@ -6,6 +6,7 @@ import {
   importWorkoutsSchema,
   reorderWorkoutsSchema,
   saveWorkoutLogSchema,
+  updateWorkoutLogNoteSchema,
   updateWorkoutSchema,
   workoutLogSnapshotSchema,
 } from "../workouts";
@@ -114,6 +115,17 @@ export const workoutMutatorDefinitions = {
       });
     }
   }),
+  updateLogNote: define(
+    updateWorkoutLogNoteSchema,
+    async ({ tx, ctx, args }) => {
+      await access(tx, args.householdId, ctx.userId);
+      const log = await tx.run(
+        ownLog(args.householdId, args.workoutId, ctx.userId, args.logId),
+      );
+      if (!log) throw new Error("Workout log note update not allowed");
+      await tx.mutate.workoutLogs.update({ id: log.id, note: args.note });
+    },
+  ),
   saveLog: define(saveWorkoutLogSchema, async ({ tx, ctx, args }) => {
     await access(tx, args.householdId, ctx.userId);
     if (!(await tx.run(scopedWorkout(args.householdId, args.workoutId))))
@@ -149,7 +161,11 @@ export const workoutMutatorDefinitions = {
       }
     }
     if (existing) {
-      await tx.mutate.workoutLogs.update({ id: existing.id, note: args.note });
+      if (args.note !== undefined)
+        await tx.mutate.workoutLogs.update({
+          id: existing.id,
+          note: args.note,
+        });
       const oldSets = await tx.run(
         zql.workoutLogSets.where("logId", existing.id),
       );
@@ -165,7 +181,7 @@ export const workoutMutatorDefinitions = {
         householdId: args.householdId,
         workoutId: args.workoutId,
         userId: ctx.userId,
-        note: args.note,
+        note: args.note ?? "",
         snapshot,
         createdAt: now,
         completedAt: now,

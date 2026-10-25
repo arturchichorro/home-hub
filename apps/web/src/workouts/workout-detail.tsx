@@ -4,12 +4,13 @@ import {
 } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
-import { Check, History, InlineAlert, Textarea } from "@home-hub/ui-web";
+import { History, InlineAlert } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useRef, useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { WorkoutExercises, WorkoutText } from "./workout-fields";
+import { WorkoutHistoryEntry } from "./workout-history-entry";
 import { type WorkoutLog, WorkoutLogActions } from "./workout-log";
 import {
   collectWorkoutSets,
@@ -18,7 +19,6 @@ import {
   setInputKey,
   type WorkoutLogForm,
 } from "./workout-log-form";
-import { summarizeWorkoutLog } from "./workout-log-summary";
 
 export function WorkoutDetail({
   householdId,
@@ -108,7 +108,6 @@ export function WorkoutDetail({
             ...scope(),
             logId: form.id,
             snapshot: form.snapshot,
-            note: form.note.trim(),
             sets: collected.sets,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           }),
@@ -196,27 +195,11 @@ export function WorkoutDetail({
         }
       />
       {form && (
-        <section className="grid gap-1" aria-label="Workout log note">
-          <h2 className="pt-2 text-sm font-medium">Log note</h2>
-          <Textarea
-            appearance="seamless"
-            aria-label="Log note"
-            placeholder="Add a log note…"
-            rows={1}
-            maxLength={1000000}
-            disabled={disabled || busy}
-            value={form.note}
-            onChange={(event) => {
-              const note = event.target.value;
-              setForm((current) => (current ? { ...current, note } : current));
-            }}
-          />
-          <WorkoutLogActions
-            disabled={disabled || busy}
-            onComplete={() => void finishLog()}
-            onCancel={closeLog}
-          />
-        </section>
+        <WorkoutLogActions
+          disabled={disabled || busy}
+          onComplete={() => void finishLog()}
+          onCancel={closeLog}
+        />
       )}
       <section className="grid gap-1" aria-label="Workout notes">
         <h2 className="pt-2 text-sm font-medium">Notes</h2>
@@ -237,42 +220,19 @@ export function WorkoutDetail({
           History
         </h2>
         <ul className="divide-y divide-border">
-          {logs.map((entry) => {
-            const summary = summarizeWorkoutLog(entry);
-            return (
-              <li key={entry.id}>
-                <button
-                  type="button"
-                  aria-pressed={form?.id === entry.id}
-                  disabled={disabled || busy}
-                  className="grid min-h-11 w-full min-w-0 gap-1 py-3 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-                  onClick={() =>
-                    form?.id === entry.id ? setForm(undefined) : startLog(entry)
-                  }
-                >
-                  <span className="flex items-center gap-3">
-                    <Check
-                      aria-hidden="true"
-                      className="size-4 shrink-0 text-muted"
-                    />
-                    <span>{entry.completedOn}</span>
-                  </span>
-                  <span className="grid min-w-0 gap-1 pl-7 text-xs font-normal text-muted">
-                    {summary.length ? (
-                      summary.map((exercise) => (
-                        <span key={exercise.id} className="break-words">
-                          <span className="font-medium">{exercise.name}</span> —{" "}
-                          {exercise.details}
-                        </span>
-                      ))
-                    ) : (
-                      <span>No sets logged.</span>
-                    )}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
+          {logs.map((entry) => (
+            <WorkoutHistoryEntry
+              key={entry.id}
+              entry={entry}
+              householdId={householdId}
+              workoutId={workoutId}
+              selected={form?.id === entry.id}
+              disabled={disabled || busy}
+              onSelect={() =>
+                form?.id === entry.id ? closeLog() : startLog(entry)
+              }
+            />
+          ))}
         </ul>
       </section>
     </article>

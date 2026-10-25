@@ -13,8 +13,8 @@ workouts; training logs and set values remain private to their author.
 - Reorder workouts like Lists: drag with a mouse, hold to drag on touch, or use
   Space and arrow keys. The household-shared order is persisted optimistically.
 - **Log workout** opens an unsaved form. The **checkmark** (Save log) saves the
-  log, entered sets, and private note together; **X** cancels. Both are matching
-  neutral icon buttons, right-aligned beside the title and below the log note.
+  log and entered sets; **X** cancels. Both are matching neutral icon buttons,
+  right-aligned beside the title and below the sets.
   Navigating away or refreshing before saving also discards the form. Nothing
   is stored as a draft, and browsing a workout has no completion shortcut.
 - Each user has at most one log per workout per local calendar day. Logging again
@@ -24,8 +24,10 @@ workouts; training logs and set values remain private to their author.
   without replacing the page. Unsaved exercise edits are saved first.
 - Unilateral sets explicitly label **Left** and **Right** counts; an empty right
   count uses the left value. These are side counts, not repetitions in reserve.
-- Each log has a private free-text note, saved only with the checkmark. History
-  can be corrected the same way; cancelling leaves the saved record unchanged.
+- Add a private note afterward with the history entry's message icon, just like
+  cooking-log comments. The note opens in a Base UI accordion from `ui-web` and
+  autosaves after typing pauses or on blur. Existing notes start collapsed.
+  Notes update independently of set corrections; no unfinished log is created.
 - History contains finished logs only, showing actual exercises, sets,
   reps/seconds, side counts, and weights; matching sets are condensed. Deliberate
   note-only logs say “No sets logged.” Targets and previous values are not

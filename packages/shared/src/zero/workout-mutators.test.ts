@@ -370,6 +370,83 @@ describe("completed workout logs", () => {
     expect(data.workoutLogs?.[0]?.completedAt).toBe(1234);
   });
 });
+describe("private notes added after completion", () => {
+  const noteArgs = {
+    householdId,
+    workoutId,
+    logId,
+    note: "  Felt good.\nWrist rehab.  ",
+  };
+  it("updates only the existing note, not sets, snapshot or completion date", async () => {
+    const { tx, data, record, writes } = setup();
+    await record({ sets: [recordedSet] });
+    const before = structuredClone(data.workoutLogs?.[0]);
+    const sets = structuredClone(data.workoutLogSets);
+    writes.mockClear();
+    await mutators.workouts.updateLogNote.fn({ tx, ctx, args: noteArgs });
+    expect(data.workoutLogs?.[0]).toEqual({
+      ...before,
+      note: "Felt good.\nWrist rehab.",
+    });
+    expect(data.workoutLogSets).toEqual(sets);
+    expect(writes).toHaveBeenCalledTimes(1);
+    await mutators.workouts.saveLog.fn({
+      tx,
+      ctx,
+      args: {
+        ...scope,
+        logId,
+        snapshot,
+        sets: [],
+        timeZone: "Europe/Brussels",
+      },
+    });
+    expect(data.workoutLogs?.[0]?.note).toBe("Felt good.\nWrist rehab.");
+    await mutators.workouts.updateLogNote.fn({
+      tx,
+      ctx,
+      args: { ...noteArgs, note: "" },
+    });
+    expect(data.workoutLogs?.[0]?.note).toBe("");
+  });
+  it.each([
+    "missing log",
+    "foreign user",
+    "foreign household",
+    "foreign workout",
+  ])("rejects %s without creating or modifying logs", async (reason) => {
+    const { tx, data, record, writes } = setup();
+    if (reason !== "missing log") {
+      await record({ note: "Original" });
+      const row = data.workoutLogs?.[0];
+      if (!row) throw new Error("log");
+      if (reason === "foreign user") row.userId = other;
+      if (reason === "foreign household") row.householdId = other;
+      if (reason === "foreign workout") row.workoutId = other;
+    }
+    writes.mockClear();
+    await expect(
+      mutators.workouts.updateLogNote.fn({ tx, ctx, args: noteArgs }),
+    ).rejects.toThrow("not allowed");
+    expect(writes).not.toHaveBeenCalled();
+  });
+  it.each(["module", "membership", "household"])(
+    "rejects notes after losing %s access",
+    async (reason) => {
+      const { tx, data, record, writes } = setup();
+      await record();
+      if (reason === "module") data.householdModuleSettings = [];
+      if (reason === "membership") data.householdMembers = [];
+      if (reason === "household" && data.households?.[0])
+        data.households[0].deletedAt = now;
+      writes.mockClear();
+      await expect(
+        mutators.workouts.updateLogNote.fn({ tx, ctx, args: noteArgs }),
+      ).rejects.toThrow("not allowed");
+      expect(writes).not.toHaveBeenCalled();
+    },
+  );
+});
 describe("workout ordering", () => {
   it.each(["server", "client"] as const)(
     "persists a shared order with %s timestamps",

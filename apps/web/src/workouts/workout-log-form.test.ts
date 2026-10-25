@@ -17,7 +17,7 @@ describe("unsaved workout form", () => {
     const form = openWorkoutLog(workout);
     expect(form.snapshot).not.toHaveProperty("notes");
     expect(form.inputs).toEqual({});
-    expect(form.note).toBe("");
+    expect(form).not.toHaveProperty("note");
     expect(form.completedAt).toBeNull();
     expect(collectWorkoutSets(form.snapshot.exercises, form.inputs)).toEqual({
       success: true,
@@ -67,7 +67,6 @@ describe("unsaved workout form", () => {
   });
   it("does not restore anything after the form is discarded", () => {
     const discarded = openWorkoutLog(workout);
-    discarded.note = "Not saved";
     discarded.inputs[setInputKey(exercise.id, 1)] = {
       weightKg: "8",
       amount: "10",
@@ -76,7 +75,7 @@ describe("unsaved workout form", () => {
     const next = openWorkoutLog(workout);
     expect(next.id).not.toBe(discarded.id);
     expect(next.inputs).toEqual({});
-    expect(next.note).toBe("");
+    expect(next).not.toHaveProperty("note");
   });
   it("edits a copy of existing history and preserves its historical definition", () => {
     const existing: WorkoutLog = {
@@ -133,7 +132,6 @@ describe("unsaved workout form", () => {
         },
       ],
     });
-    form.note = "Not committed";
     form.inputs[setInputKey(exercise.id, 1)] = {
       weightKg: "9",
       amount: "11",

@@ -3,12 +3,40 @@ import { starterWorkouts } from "./workout-seed";
 import {
   reorderWorkoutsSchema,
   saveWorkoutLogSchema,
+  updateWorkoutLogNoteSchema,
   updateWorkoutSchema,
   workoutContentSchema,
   workoutExercisesSchema,
 } from "./workouts";
 
 describe("workouts", () => {
+  it("validates private note updates independently and rejects actor spoofing", () => {
+    const args = {
+      householdId: crypto.randomUUID(),
+      workoutId: crypto.randomUUID(),
+      logId: crypto.randomUUID(),
+      note: "  Felt good.\nWrist rehab.  ",
+    };
+    expect(updateWorkoutLogNoteSchema.parse(args).note).toBe(
+      "Felt good.\nWrist rehab.",
+    );
+    expect(updateWorkoutLogNoteSchema.parse({ ...args, note: "" }).note).toBe(
+      "",
+    );
+    expect(
+      updateWorkoutLogNoteSchema.safeParse({
+        ...args,
+        userId: crypto.randomUUID(),
+      }).success,
+    ).toBe(false);
+    expect(
+      updateWorkoutLogNoteSchema.safeParse({
+        ...args,
+        note: "a".repeat(1000001),
+      }).success,
+    ).toBe(false);
+  });
+
   it("ships three standalone workouts with one notes field", () => {
     expect(starterWorkouts.map((w) => w.title)).toEqual([
       "Workout A",

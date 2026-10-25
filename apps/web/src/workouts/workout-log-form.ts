@@ -17,7 +17,6 @@ export type WorkoutSetInputs = Record<string, WorkoutSetInput>;
 export type WorkoutLogForm = {
   id: string;
   snapshot: WorkoutLogSnapshot;
-  note: string;
   inputs: WorkoutSetInputs;
   completedAt: number | null;
   completedOn: string | null;
@@ -44,7 +43,6 @@ export function openWorkoutLog(
           title: workout.title,
           exercises: workout.exercises,
         }),
-    note: existing?.note ?? "",
     completedAt: existing?.completedAt ?? null,
     completedOn: existing?.completedOn ?? null,
     inputs: Object.fromEntries(
