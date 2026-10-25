@@ -111,6 +111,8 @@ describe("simple workouts", () => {
         [
           {
             id: "draft",
+            snapshot: starter,
+            sets: [],
             status: "active",
             createdAt: Date.now(),
             completedOn: null,
@@ -156,6 +158,7 @@ describe("simple workouts", () => {
         onSave={async () => true}
         onStartLogging={async () => {}}
         onCloseLogging={() => {}}
+        onCompleteLogging={() => {}}
         resume={false}
         logging={{ log, previous: [], onSave: async () => true }}
       />,
@@ -168,8 +171,78 @@ describe("simple workouts", () => {
     expect(html).not.toMatch(/<summary[^>]*>Notes<\/summary>/);
     expect(html).toContain('data-exercise-id="');
     expect(html).toContain('aria-label="Close log"');
+    expect(html).toContain("Done</span>");
+    expect(html).toContain(
+      'aria-label="Left reps for Bench-supported one-arm row, set 1"',
+    );
+    expect(html).toContain(
+      'aria-label="Right reps for Bench-supported one-arm row, set 1"',
+    );
+    expect(html).toContain("Blank uses the left-side value");
+    expect(html).not.toContain("reps left");
     expect(html).toContain('aria-label="Name for Goblet squat"');
     expect(html).not.toContain("Back to workout");
+  });
+  it("does not offer Done again while viewing a completed log", () => {
+    const log: WorkoutLog = {
+      id: crypto.randomUUID(),
+      householdId,
+      userId: crypto.randomUUID(),
+      workoutId,
+      snapshot: starter,
+      status: "completed",
+      createdAt: Date.now(),
+      completedAt: Date.now(),
+      completedOn: "2026-10-25",
+      sets: [],
+      note: "",
+    };
+    const html = renderToStaticMarkup(
+      <WorkoutExercises
+        current={starter.exercises}
+        disabled={false}
+        onSave={async () => true}
+        onStartLogging={async () => {}}
+        onCloseLogging={() => {}}
+        onCompleteLogging={() => {}}
+        resume={false}
+        logging={{ log, previous: [], onSave: async () => true }}
+      />,
+    );
+    const buttons = [...html.matchAll(/<button[^>]*>[\s\S]*?<\/button>/g)].map(
+      (m) => m[0],
+    );
+    expect(buttons.some((button) => button.includes("Done</span>"))).toBe(
+      false,
+    );
+  });
+  it("shows actual set details directly in history, including empty logs", () => {
+    const exercise = starter.exercises[1];
+    if (!exercise) throw new Error("seed");
+    const entry = {
+      id: "history",
+      status: "completed",
+      completedOn: "2026-10-25",
+      createdAt: Date.now(),
+      snapshot: starter,
+      sets: [1, 2].map((round) => ({
+        logId: "history",
+        exerciseId: exercise.id,
+        round,
+        values: { weightKg: 8, amount: 10, rightAmount: null },
+      })),
+    };
+    useQuery
+      .mockReturnValueOnce([workout, { type: "complete" }])
+      .mockReturnValueOnce([
+        [entry, { ...entry, id: "empty", sets: [] }],
+        { type: "complete" },
+      ]);
+    const html = renderToStaticMarkup(
+      <WorkoutDetail householdId={householdId} workoutId={workoutId} />,
+    );
+    expect(html).toContain("2 × 10 reps · 8 kg/hand");
+    expect(html).toContain("No sets logged.");
   });
   it("shows the starter option only for an empty library", () => {
     useQuery.mockReturnValue([[], { type: "complete" }]);

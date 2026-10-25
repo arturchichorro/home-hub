@@ -10,6 +10,7 @@ import { useMemo, useRef, useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { WorkoutExercises, WorkoutText } from "./workout-fields";
+import { summarizeWorkoutLog } from "./workout-log-summary";
 
 export function WorkoutDetail({
   householdId,
@@ -186,6 +187,7 @@ export function WorkoutDetail({
         }
         onStartLogging={() => log("start")}
         onCloseLogging={() => void selectLog()}
+        onCompleteLogging={() => void log("complete")}
         resume={!!active}
         logging={
           selected
@@ -229,6 +231,18 @@ export function WorkoutDetail({
               )
             }
           />
+          {selected.status === "active" && (
+            <div>
+              <Button
+                size="compact"
+                disabled={disabled || busy}
+                onClick={() => void log("complete")}
+              >
+                <Check aria-hidden="true" className="size-4" />
+                Done
+              </Button>
+            </div>
+          )}
         </section>
       )}
       <section className="grid gap-1" aria-label="Workout notes">
@@ -250,34 +264,58 @@ export function WorkoutDetail({
           History
         </h2>
         <ul className="divide-y divide-border">
-          {logs.map((entry) => (
-            <li key={entry.id}>
-              <button
-                type="button"
-                aria-pressed={selectedId === entry.id}
-                disabled={disabled || busy}
-                className="flex min-h-11 w-full items-center gap-3 py-2 text-left text-sm outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-focus-ring aria-pressed:text-primary"
-                onClick={() =>
-                  void selectLog(selectedId === entry.id ? undefined : entry.id)
-                }
-              >
-                {entry.status === "completed" && (
-                  <Check aria-hidden="true" className="size-4 text-muted" />
-                )}
-                <span>
-                  {entry.completedOn ??
-                    new Date(entry.createdAt ?? 0).toLocaleDateString()}
-                </span>
-                <span className="ml-auto text-xs text-muted">
-                  {entry.status === "completed"
-                    ? "Done"
-                    : entry.status === "active"
-                      ? "Draft"
-                      : "Abandoned"}
-                </span>
-              </button>
-            </li>
-          ))}
+          {logs.map((entry) => {
+            const summary = summarizeWorkoutLog(entry);
+            return (
+              <li key={entry.id}>
+                <button
+                  type="button"
+                  aria-pressed={selectedId === entry.id}
+                  disabled={disabled || busy}
+                  className="grid min-h-11 w-full min-w-0 gap-1 py-3 text-left text-sm outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-focus-ring aria-pressed:text-primary"
+                  onClick={() =>
+                    void selectLog(
+                      selectedId === entry.id ? undefined : entry.id,
+                    )
+                  }
+                >
+                  <span className="flex items-center gap-3">
+                    {entry.status === "completed" && (
+                      <Check
+                        aria-hidden="true"
+                        className="size-4 shrink-0 text-muted"
+                      />
+                    )}
+                    <span>
+                      {entry.completedOn ??
+                        new Date(entry.createdAt ?? 0).toLocaleDateString()}
+                    </span>
+                    <span className="ml-auto text-xs text-muted">
+                      {entry.status === "completed"
+                        ? "Done"
+                        : entry.status === "active"
+                          ? "Draft"
+                          : "Abandoned"}
+                    </span>
+                  </span>
+                  <span
+                    className={`grid min-w-0 gap-1 text-xs font-normal text-muted ${entry.status === "completed" ? "pl-7" : ""}`}
+                  >
+                    {summary.length ? (
+                      summary.map((exercise) => (
+                        <span key={exercise.id} className="break-words">
+                          <span className="font-medium">{exercise.name}</span> —{" "}
+                          {exercise.details}
+                        </span>
+                      ))
+                    ) : (
+                      <span>No sets logged.</span>
+                    )}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </section>
     </article>

@@ -91,9 +91,10 @@ function SetRow({
           </div>
         )}
         <div className="flex items-center gap-1">
+          {exercise.unilateral && <span>Left</span>}
           <Input
             appearance="seamless"
-            aria-label={`${exercise.unit} for ${label}`}
+            aria-label={`${exercise.unilateral ? "Left " : ""}${exercise.unit} for ${label}`}
             className="h-8! w-12 flex-none! text-sm"
             type="number"
             min="0"
@@ -102,27 +103,26 @@ function SetRow({
             value={values.amount}
             onValueChange={(v) => patch({ amount: Number(v) })}
           />
-          <span>
-            {exercise.unit}
-            {exercise.unilateral ? " left" : ""}
-          </span>
+          <span>{exercise.unit}</span>
         </div>
         {exercise.unilateral && (
           <div className="flex items-center gap-1">
+            <span>Right</span>
             <Input
               appearance="seamless"
-              aria-label={`${exercise.unit} right for ${label}`}
+              aria-label={`Right ${exercise.unit} for ${label}`}
               className="h-8! w-12 flex-none! text-sm"
               type="number"
               min="0"
               max="600"
-              placeholder="Same"
+              placeholder={String(values.amount)}
+              title="Blank uses the left-side value"
               value={values.rightAmount ?? ""}
               onValueChange={(v) =>
                 patch({ rightAmount: v === "" ? null : Number(v) })
               }
             />
-            <span>right</span>
+            <span>{exercise.unit}</span>
           </div>
         )}
         <IconButton

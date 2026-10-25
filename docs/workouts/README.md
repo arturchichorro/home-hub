@@ -10,13 +10,18 @@ workouts; training logs and set values remain private to their author.
   load convention and sides; the measure uses the shared Base UI select.
 - Reorder workouts like Lists: drag with a mouse, hold to drag on touch, or use
   Space and arrow keys. The household-shared order is persisted optimistically.
-- Press **Done** to record completion, with or without set entries.
+- Press **Done** beside the open log controls or below its note to record
+  completion, with or without set entries. The page-header shortcut also remains.
 - “Log workout” expands weight/reps/seconds inputs beneath the existing exercise
   rows without replacing the page. Unsaved exercise edits are saved first.
+- Unilateral sets explicitly label **Left** and **Right** counts; an empty right
+  count uses the left value. These are side counts, not repetitions in reserve.
 - Each log has a private, autosaving free-text note. Completing or closing a log
   preserves its latest note draft; notes can also be edited later in history.
 - Unfinished logs are labelled **Draft**: saved entries not yet marked Done.
-  Resume a draft or review/correct previous entries. Logs snapshot the
+  Resume a draft or review/correct previous entries. Each history row shows the
+  recorded exercises, sets, reps/seconds, side counts, and weights directly;
+  matching sets are condensed. Empty logs say “No sets logged.” Logs snapshot the
   workout at creation; editing a log never changes the shared workout.
 - Add the supplied A/B/C starter workouts.
 

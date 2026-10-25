@@ -1,6 +1,7 @@
 import type { WorkoutExercise } from "@home-hub/shared/workouts";
 import {
   Button,
+  Check,
   ErrorPopover,
   IconButton,
   InlineAlert,
@@ -116,6 +117,7 @@ export function WorkoutExercises({
   logging,
   onStartLogging,
   onCloseLogging,
+  onCompleteLogging,
   resume,
 }: {
   current: readonly WorkoutExercise[];
@@ -124,6 +126,7 @@ export function WorkoutExercises({
   logging?: WorkoutLogging | undefined;
   onStartLogging: () => Promise<void>;
   onCloseLogging: () => void;
+  onCompleteLogging: () => void;
   resume: boolean;
 }) {
   const [starting, setStarting] = useState(false);
@@ -169,8 +172,22 @@ export function WorkoutExercises({
             <span className="text-xs text-muted">
               {logging.log.completedOn ??
                 new Date(logging.log.createdAt ?? 0).toLocaleDateString()}
-              {logging.log.status === "completed" ? " · Done" : ""}
+              {logging.log.status === "completed"
+                ? " · Done"
+                : logging.log.status === "active"
+                  ? " · Draft"
+                  : ""}
             </span>
+            {logging.log.status === "active" && (
+              <Button
+                size="compact"
+                disabled={disabled}
+                onClick={onCompleteLogging}
+              >
+                <Check aria-hidden="true" className="size-4" />
+                Done
+              </Button>
+            )}
             <IconButton
               aria-label="Close log"
               title="Close log"
@@ -360,11 +377,15 @@ function ExerciseSettings({
         aria-label={`Settings for ${exercise.name}`}
         title="Exercise settings"
         disabled={disabled}
-        variant="ghost"
-        className="size-7! shrink-0 px-0!"
-      >
-        <Settings aria-hidden="true" className="size-4" />
-      </MenuTrigger>
+        render={
+          <IconButton
+            aria-label={`Settings for ${exercise.name}`}
+            className="size-7!"
+          >
+            <Settings aria-hidden="true" className="size-4" />
+          </IconButton>
+        }
+      />
       <MenuPopup align="end">
         <div className="px-3 py-1 text-xs text-muted">Load</div>
         <MenuRadioGroup

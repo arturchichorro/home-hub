@@ -14,17 +14,22 @@ export type MenuTriggerProps = Omit<
 > & {
   className?: string;
   variant?: ButtonVariant;
+  render?: BaseMenuTriggerProps["render"];
 };
 
 export function MenuTrigger({
   className,
   variant = "secondary",
+  render,
   ...props
 }: MenuTriggerProps) {
   return (
     <BaseMenu.Trigger
       {...props}
-      render={<Button className={className ?? ""} variant={variant} />}
+      className={render ? className : undefined}
+      render={
+        render ?? <Button className={className ?? ""} variant={variant} />
+      }
     />
   );
 }
