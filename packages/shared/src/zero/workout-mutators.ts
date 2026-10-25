@@ -1,24 +1,33 @@
 import { defineMutatorWithType, type Transaction } from "@rocicorp/zero";
 import { calendarDate } from "../habits";
+import { starterWorkouts } from "../workout-seed";
 import {
-  nextWorkout,
-  saveWorkoutPlanSchema,
+  createWorkoutSchema,
+  importWorkoutsSchema,
   saveWorkoutSetSchema,
-  startWorkoutCycleSchema,
-  startWorkoutSessionSchema,
-  workoutPlanSchema,
-  workoutSessionActionSchema,
-  workoutSnapshotSchema,
+  updateWorkoutSchema,
+  workoutContentSchema,
+  workoutLogActionSchema,
 } from "../workouts";
 import type { ZeroAuthContext } from "./context";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
 import { type Schema, zql } from "./schema.gen";
 
 const define = defineMutatorWithType<Schema, ZeroAuthContext>();
-const ownSessions = (householdId: string, userId: string) =>
-  zql.workoutSessions.where("householdId", householdId).where("userId", userId);
-const ownCycles = (householdId: string, userId: string) =>
-  zql.workoutCycles.where("householdId", householdId).where("userId", userId);
+const scopedWorkout = (householdId: string, id: string) =>
+  zql.workouts.where("householdId", householdId).where("id", id).one();
+const ownLog = (
+  householdId: string,
+  workoutId: string,
+  userId: string,
+  id: string,
+) =>
+  zql.workoutLogs
+    .where("householdId", householdId)
+    .where("workoutId", workoutId)
+    .where("userId", userId)
+    .where("id", id)
+    .one();
 async function access(
   tx: Transaction<Schema>,
   householdId: string,
@@ -31,195 +40,106 @@ async function access(
     moduleKey: "workouts",
   });
 }
-function timestamp(tx: Transaction<Schema>, optimistic: number) {
-  return tx.location === "server" ? Date.now() : optimistic;
-}
-
+const timestamp = (tx: Transaction<Schema>, optimistic: number) =>
+  tx.location === "server" ? Date.now() : optimistic;
 export const workoutMutatorDefinitions = {
-  savePlan: define(saveWorkoutPlanSchema, async ({ tx, ctx, args }) => {
+  create: define(createWorkoutSchema, async ({ tx, ctx, args }) => {
     await access(tx, args.householdId, ctx.userId);
-    const existing = await tx.run(
-      zql.workoutPlans
-        .where("householdId", args.householdId)
-        .where("id", args.planId)
-        .one(),
-    );
     const now = timestamp(tx, args.optimisticTimestamp);
-    if (args.create) {
-      if (existing) throw new Error("Plan already exists");
-      await tx.mutate.workoutPlans.insert({
-        id: args.planId,
+    await tx.mutate.workouts.insert({
+      id: args.workoutId,
+      householdId: args.householdId,
+      title: args.title,
+      notes: "",
+      exercises: [],
+      createdAt: now,
+      updatedAt: now,
+    });
+  }),
+  update: define(updateWorkoutSchema, async ({ tx, ctx, args }) => {
+    await access(tx, args.householdId, ctx.userId);
+    if (!(await tx.run(scopedWorkout(args.householdId, args.workoutId))))
+      throw new Error("Workout update not allowed");
+    await tx.mutate.workouts.update({
+      id: args.workoutId,
+      ...args.changes,
+      updatedAt: timestamp(tx, args.optimisticTimestamp),
+    });
+  }),
+  importStarters: define(importWorkoutsSchema, async ({ tx, ctx, args }) => {
+    await access(tx, args.householdId, ctx.userId);
+    const now = timestamp(tx, args.optimisticTimestamp);
+    for (const [index, content] of starterWorkouts.entries()) {
+      const id = args.workoutIds[index];
+      if (!id) throw new Error("Missing workout ID");
+      await tx.mutate.workouts.insert({
+        id,
         householdId: args.householdId,
-        title: args.title,
-        definition: args.definition,
+        ...content,
         createdAt: now,
-        updatedAt: now,
-      });
-    } else {
-      if (!existing) throw new Error("Workout plan update not allowed");
-      await tx.mutate.workoutPlans.update({
-        id: existing.id,
-        title: args.title,
-        definition: args.definition,
         updatedAt: now,
       });
     }
   }),
-  startCycle: define(startWorkoutCycleSchema, async ({ tx, ctx, args }) => {
+  log: define(workoutLogActionSchema, async ({ tx, ctx, args }) => {
     await access(tx, args.householdId, ctx.userId);
-    const plan = await tx.run(
-      zql.workoutPlans
-        .where("householdId", args.householdId)
-        .where("id", args.planId)
-        .one(),
+    const workout = await tx.run(
+      scopedWorkout(args.householdId, args.workoutId),
     );
-    if (
-      !plan ||
-      (await tx.run(
-        ownSessions(args.householdId, ctx.userId)
-          .where("status", "active")
-          .one(),
-      ))
-    )
-      throw new Error("Workout cycle start not allowed");
+    if (!workout) throw new Error("Workout logging not allowed");
+    const existing = await tx.run(
+      ownLog(args.householdId, args.workoutId, ctx.userId, args.logId),
+    );
     const now = timestamp(tx, args.optimisticTimestamp);
-    await tx.mutate.workoutCycles.insert({
-      id: args.cycleId,
+    if (existing) {
+      if (args.action === "complete" && existing.status === "active")
+        await tx.mutate.workoutLogs.update({
+          id: existing.id,
+          status: "completed",
+          completedAt: now,
+          completedOn: calendarDate(now, args.timeZone),
+        });
+      return;
+    }
+    await tx.mutate.workoutLogs.insert({
+      id: args.logId,
       householdId: args.householdId,
-      userId: ctx.userId,
-      planId: plan.id,
-      startedOn: calendarDate(now, args.timeZone),
-      createdAt: now,
-    });
-  }),
-  startSession: define(startWorkoutSessionSchema, async ({ tx, ctx, args }) => {
-    await access(tx, args.householdId, ctx.userId);
-    const cycle = await tx.run(
-      ownCycles(args.householdId, ctx.userId)
-        .orderBy("createdAt", "desc")
-        .orderBy("id", "desc")
-        .one(),
-    );
-    if (
-      !cycle ||
-      cycle.id !== args.cycleId ||
-      (await tx.run(
-        ownSessions(args.householdId, ctx.userId)
-          .where("status", "active")
-          .one(),
-      ))
-    )
-      throw new Error("Workout start not allowed");
-    const planRow = await tx.run(
-      zql.workoutPlans
-        .where("householdId", args.householdId)
-        .where("id", cycle.planId)
-        .one(),
-    );
-    if (!planRow) throw new Error("Workout plan not allowed");
-    const plan = workoutPlanSchema.parse(planRow.definition);
-    const last = await tx.run(
-      ownSessions(args.householdId, ctx.userId)
-        .where("cycleId", cycle.id)
-        .where("status", "completed")
-        .orderBy("completedAt", "desc")
-        .orderBy("id", "desc")
-        .one(),
-    );
-    const workout = nextWorkout(plan, last?.workoutId);
-    await tx.mutate.workoutSessions.insert({
-      id: args.sessionId,
-      householdId: args.householdId,
-      userId: ctx.userId,
-      cycleId: cycle.id,
       workoutId: workout.id,
-      snapshot: {
-        workout,
-        warmup: plan.warmup,
-        finish: plan.finish,
-        guidance: plan.guidance,
-        incrementKg: plan.incrementKg,
-      },
-      lowEnergy: args.lowEnergy,
-      status: "active",
-      note: "",
-      completedOn: null,
-      completedAt: null,
-      createdAt: timestamp(tx, args.optimisticTimestamp),
+      userId: ctx.userId,
+      snapshot: workoutContentSchema.parse({
+        title: workout.title,
+        notes: workout.notes,
+        exercises: workout.exercises,
+      }),
+      status: args.action === "complete" ? "completed" : "active",
+      createdAt: now,
+      completedAt: args.action === "complete" ? now : null,
+      completedOn:
+        args.action === "complete" ? calendarDate(now, args.timeZone) : null,
     });
   }),
   saveSet: define(saveWorkoutSetSchema, async ({ tx, ctx, args }) => {
     await access(tx, args.householdId, ctx.userId);
-    const session = await tx.run(
-      ownSessions(args.householdId, ctx.userId)
-        .where("id", args.sessionId)
-        .one(),
+    const log = await tx.run(
+      ownLog(args.householdId, args.workoutId, ctx.userId, args.logId),
     );
-    if (!session || session.status === "abandoned")
+    if (!log || log.status === "abandoned")
       throw new Error("Workout set update not allowed");
-    const { workout } = workoutSnapshotSchema.parse(session.snapshot);
-    const exercise = workout.exercises.find((e) => e.id === args.exerciseId);
+    const exercise = workoutContentSchema
+      .parse(log.snapshot)
+      .exercises.find((e) => e.id === args.exerciseId);
     if (
       !exercise ||
-      args.round > (session.lowEnergy ? 1 : exercise.sets) ||
+      args.round > exercise.sets ||
       (!exercise.unilateral && args.values.rightAmount !== null) ||
       (exercise.load === "bodyweight" && args.values.weightKg !== null)
     )
       throw new Error("Workout set update not allowed");
-    await tx.mutate.workoutSets.upsert({
-      sessionId: session.id,
+    await tx.mutate.workoutLogSets.upsert({
+      logId: log.id,
       exerciseId: exercise.id,
       round: args.round,
       values: args.values,
     });
   }),
-  sessionAction: define(
-    workoutSessionActionSchema,
-    async ({ tx, ctx, args }) => {
-      await access(tx, args.householdId, ctx.userId);
-      const session = await tx.run(
-        ownSessions(args.householdId, ctx.userId)
-          .where("id", args.sessionId)
-          .related("sets")
-          .one(),
-      );
-      if (!session) throw new Error("Workout session update not allowed");
-      if (args.action === "note") {
-        await tx.mutate.workoutSessions.update({
-          id: session.id,
-          note: args.note,
-        });
-        return;
-      }
-      if (session.status !== "active")
-        throw new Error("Workout session change not allowed");
-      if (args.action === "complete") {
-        const { workout } = workoutSnapshotSchema.parse(session.snapshot);
-        if (
-          !workout.exercises.every((e) =>
-            Array.from({ length: session.lowEnergy ? 1 : e.sets }, (_, i) =>
-              session.sets.some(
-                (s) => s.exerciseId === e.id && s.round === i + 1,
-              ),
-            ).every(Boolean),
-          )
-        )
-          throw new Error("Log each prescribed set before completing");
-        const now = timestamp(tx, args.optimisticTimestamp);
-        await tx.mutate.workoutSessions.update({
-          id: session.id,
-          status: "completed",
-          note: args.note,
-          completedAt: now,
-          completedOn: calendarDate(now, args.timeZone),
-        });
-      } else {
-        await tx.mutate.workoutSessions.update({
-          id: session.id,
-          status: "abandoned",
-          note: args.note,
-        });
-      }
-    },
-  ),
 };

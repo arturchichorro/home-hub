@@ -213,63 +213,53 @@ const habitsByHousehold = defineHomeHubQuery(
       .orderBy("id", "asc"),
 );
 
-const workoutPlans = defineHomeHubQuery(
+const authorizedWorkouts = (householdId: string, userId: string) =>
+  zql.workouts.where("householdId", householdId).whereExists("household", (h) =>
+    h
+      .where("deletedAt", "IS", null)
+      .whereExists("members", (m) => m.where("userId", userId))
+      .whereExists("moduleSettings", (s) =>
+        s.where("moduleKey", "workouts").where("enabled", true),
+      ),
+  );
+const workoutsByHousehold = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
-    zql.workoutPlans
-      .where("householdId", args.householdId)
-      .whereExists("household", (h) =>
-        h
-          .where("deletedAt", "IS", null)
-          .whereExists("members", (m) => m.where("userId", ctx.userId))
-          .whereExists("moduleSettings", (s) =>
-            s.where("moduleKey", "workouts").where("enabled", true),
-          ),
-      )
+    authorizedWorkouts(args.householdId, ctx.userId)
       .orderBy("title", "asc")
       .orderBy("id", "asc"),
 );
-const workoutCycles = defineHomeHubQuery(
-  householdIdArgsSchema,
-  ({ args, ctx }) =>
-    zql.workoutCycles
-      .where("householdId", args.householdId)
-      .where("userId", ctx.userId)
-      .whereExists("household", (h) =>
-        h
-          .where("deletedAt", "IS", null)
-          .whereExists("members", (m) => m.where("userId", ctx.userId))
-          .whereExists("moduleSettings", (s) =>
-            s.where("moduleKey", "workouts").where("enabled", true),
-          ),
-      )
-      .orderBy("createdAt", "desc")
-      .orderBy("id", "desc"),
+const workoutDetailArgs = z
+  .object({ householdId: z.uuid(), workoutId: z.uuid() })
+  .strict();
+const workoutDetail = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
+  authorizedWorkouts(args.householdId, ctx.userId)
+    .where("id", args.workoutId)
+    .one(),
 );
-const workoutSessions = defineHomeHubQuery(
-  householdIdArgsSchema,
-  ({ args, ctx }) =>
-    zql.workoutSessions
-      .where("householdId", args.householdId)
-      .where("userId", ctx.userId)
-      .whereExists("household", (h) =>
-        h
-          .where("deletedAt", "IS", null)
-          .whereExists("members", (m) => m.where("userId", ctx.userId))
-          .whereExists("moduleSettings", (s) =>
-            s.where("moduleKey", "workouts").where("enabled", true),
-          ),
-      )
-      .related("sets")
-      .orderBy("createdAt", "desc")
-      .orderBy("id", "desc"),
+const workoutLogs = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
+  zql.workoutLogs
+    .where("householdId", args.householdId)
+    .where("workoutId", args.workoutId)
+    .where("userId", ctx.userId)
+    .whereExists("household", (h) =>
+      h
+        .where("deletedAt", "IS", null)
+        .whereExists("members", (m) => m.where("userId", ctx.userId))
+        .whereExists("moduleSettings", (s) =>
+          s.where("moduleKey", "workouts").where("enabled", true),
+        ),
+    )
+    .related("sets")
+    .orderBy("createdAt", "desc")
+    .orderBy("id", "desc"),
 );
 
 export const queries = defineHomeHubQueries({
   workouts: {
-    plans: workoutPlans,
-    cycles: workoutCycles,
-    sessions: workoutSessions,
+    byHousehold: workoutsByHousehold,
+    detail: workoutDetail,
+    logs: workoutLogs,
   },
   habits: { byHousehold: habitsByHousehold },
   householdMemberships: {

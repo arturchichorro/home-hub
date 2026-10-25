@@ -14,6 +14,7 @@ type BreadcrumbLocation = {
   module?: "recipes" | "settings" | "lists" | "habits" | "workouts";
   recipeId?: string;
   listId?: string;
+  workoutId?: string;
 };
 
 export function getBreadcrumbLocation(pathname: string): BreadcrumbLocation {
@@ -33,6 +34,7 @@ export function getBreadcrumbLocation(pathname: string): BreadcrumbLocation {
   if (module) location.module = module;
   if (module === "recipes" && segments[3]) location.recipeId = segments[3];
   if (module === "lists" && segments[3]) location.listId = segments[3];
+  if (module === "workouts" && segments[3]) location.workoutId = segments[3];
   return location;
 }
 
@@ -83,6 +85,28 @@ function ListBreadcrumb({
       <BreadcrumbItem>
         <span aria-current="page" className="block max-w-64 truncate">
           {list?.name ?? "List"}
+        </span>
+      </BreadcrumbItem>
+    </>
+  );
+}
+
+function WorkoutBreadcrumb({
+  householdId,
+  workoutId,
+}: {
+  householdId: string;
+  workoutId: string;
+}) {
+  const [workout] = useQuery(
+    queries.workouts.detail({ householdId, workoutId }),
+  );
+  return (
+    <>
+      <BreadcrumbSeparator />
+      <BreadcrumbItem>
+        <span aria-current="page" className="block max-w-64 truncate">
+          {workout?.title ?? "Workout"}
         </span>
       </BreadcrumbItem>
     </>
@@ -168,6 +192,15 @@ export function AppBreadcrumbHeader({
                   >
                     Lists
                   </Link>
+                ) : location.workoutId ? (
+                  <Link
+                    to="/households/$householdId/workouts"
+                    activeOptions={{ exact: true }}
+                    params={{ householdId: location.householdId }}
+                    className="rounded-sm text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus-ring"
+                  >
+                    {moduleLabel}
+                  </Link>
                 ) : (
                   <span aria-current="page">{moduleLabel}</span>
                 )}
@@ -184,6 +217,12 @@ export function AppBreadcrumbHeader({
             <ListBreadcrumb
               householdId={location.householdId}
               listId={location.listId}
+            />
+          ) : null}
+          {location.householdId && location.workoutId ? (
+            <WorkoutBreadcrumb
+              householdId={location.householdId}
+              workoutId={location.workoutId}
             />
           ) : null}
         </ol>

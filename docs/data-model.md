@@ -1,7 +1,7 @@
 # Data model
 
-The [Workouts module](./workouts/) documents its shared plan and private cycle,
-session snapshot, and per-set storage boundaries.
+The [Workouts module](./workouts/) documents its shared workout and private
+log snapshot and per-set storage boundaries.
 
 This document owns persisted entities, columns, relationships, constraints,
 and schema-level invariants. Authorization, transaction locking, and

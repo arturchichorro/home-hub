@@ -1,60 +1,28 @@
 # Workouts
 
-Owner-enabled, disabled by default. Any household member can create/edit shared plans.
-Cycles, sessions, notes, and performance are private to their authenticated owner:
-all queries and mutations enforce membership, a live household, enabled Workouts,
-and owner identity for personal data. No member/owner role grants access to another
-person's training logs.
+An owner-enabled module, disabled by default. Household members share standalone
+workouts; training logs and set values remain private to their author.
 
-## Training flow
+- Open a workout from the list; its name appears in the breadcrumb and URL.
+- Edit its name, one notes field, and exercises using seamless controls.
+- Press **Done** to record completion, with or without set entries.
+- Optionally log weight and reps/seconds per set, resume an unfinished log, or
+  review and correct previous entries. Logs snapshot the workout at creation.
+- Add the supplied A/B/C starter workouts.
 
-Add the supplied six-week A/B/C program or build a plan, then start a personal cycle.
-The dashboard shows Monday–Sunday attendance (three sessions is a goal, not a cap),
-six seven-day cycle weeks, and the next workout. Completed sessions alone advance
-rotation; skipped days and abandoned sessions never create catch-up workouts.
-After six weeks, review the program and optionally start a new cycle; history remains.
+There are no plans, cycles, scheduling, timers, progression suggestions, or
+configured weight increments. Data lives in `workouts`, `workout_logs`, and
+`workout_log_sets`; membership, module availability, and private-log ownership
+are enforced in Zero queries and mutations.
 
-One resumable active session per person/household is enforced by a database unique
-index. Start in normal or low-energy mode (one round per pair, which counts).
-The session screen follows pair/round order with quiet divided rows, seamless
-kg/reps inputs, named icon actions, and optional technique/reserve/skip details.
-Warm-up, mobility, progression guidance, and the rest timer expand on demand.
-The dashboard uses the app-header add action and the same icon-led sections as
-Recipes; the plan editor uses seamless titles, compact targets, and row actions.
-Save each set explicitly with its checkmark or Enter; values remain drafts until
-saved. Shared plan edits remain a draft until the plan checkmark is pressed.
-Session notes reuse the existing debounced seamless editor (blur to normalize,
-Escape to revert), with anchored error feedback. A skipped set needs
-a reason (for example symptoms or replacing accessories with wrist rehab).
-Completion requires all prescribed sets to be logged or explicitly skipped.
-Abandoning retains logs but does not advance rotation. Completed logs are editable.
+## Upgrade
 
-Log kg per hand, a single dumbbell's kg, or bodyweight as configured, plus reps or
-seconds, optional separate right-side amounts (blank means same as left), reps in
-reserve, symptom-free good-form confirmation, and notes. Progression suggestions
-require every prescribed set at the ceiling, both sides, consistent load, explicit
-form confirmation, and at least two reps in reserve. Skipped/incomplete sets never
-qualify. Suggestions never change the next load automatically; increments are
-optional and must remain manageable. Timed/bodyweight exercises suggest variations.
-
-## Storage and synchronization
-
-Four module-owned tables: shared `workout_plans`, private `workout_cycles` and
-`workout_sessions`, and `workout_sets` keyed by session/exercise/round.
-Plans contain bounded validated structured JSON rather than a generic exercise
-catalogue. Sessions snapshot the workout and instructions server-side at start;
-later edits cannot rewrite history. Per-set writes merge independently. Concurrent
-edits to the same set or shared plan use the last accepted write.
-
-Identity always comes from trusted Zero context, never mutation arguments.
-Composite foreign keys bind cycles to household plans and sessions to their
-owner's cycle. Sets are synchronized only through authorized private sessions;
-there is no public sets query. All four tables join the existing Zero publication.
-Module disablement retains data but denies reads and writes. Disconnected editing
-is disabled; no additional offline queue is introduced.
-
-Migration `0034_slimy_darwin.sql` adds tables/publication entries and backfills
-disabled module settings. It is additive; apply before serving the new code.
-`scripts/verify-workouts-schema.sql` remains available for manual publication,
-tenant/owner foreign-key, single-active-session, completion, and set-key checks.
-CI retains the shared migration checks and standard test suite.
+`0034_slimy_darwin.sql` is unchanged. Apply the forward migration
+`0035_thin_runaways.sql` while API and Zero are stopped, then restart on the new
+code and reload clients. It expands existing plans into standalone workouts,
+including workouts removed from a plan but retained in history. It preserves
+log IDs, authors, dates, status, snapshots, and set values. Former instruction
+fields and legacy session/set annotations are consolidated into snapshot notes.
+After verifying the copy, it removes the superseded plan/cycle/session tables
+and updates the Zero publication. Back up before this contract migration;
+rollback requires restoring the backup and previous code.

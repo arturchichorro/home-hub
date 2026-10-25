@@ -304,11 +304,12 @@ Calendar and schema details are in the [Habits module](./habits/).
 
 ## Workouts authorization
 
-Workouts shares plans but keeps cycles, sessions, notes, and sets private to the
-verified actor, including from household owners. Queries and writes require a
-live household, membership, and enabled Workouts setting. Sets are returned only
-through owner-filtered sessions. The four `workout_*` tables are published to
-Zero; publication is not client authorization. See [Workouts](./workouts/).
+Workout definitions and notes are household-shared; training logs, their
+snapshots, and sets are private to the verified actor, including from household
+owners. Queries and writes require a live household, membership, and enabled
+Workouts setting. Sets are returned only through owner-filtered logs. The three
+module tables are published to Zero; publication is not client authorization.
+See [Workouts](./workouts/).
 
 ## Module storage security
 

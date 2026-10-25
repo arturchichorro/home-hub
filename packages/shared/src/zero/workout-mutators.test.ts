@@ -1,7 +1,7 @@
 import type { Transaction } from "@rocicorp/zero";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { starterWorkoutPlan } from "../workout-seed";
-import { workoutSnapshotSchema } from "../workouts";
+import { starterWorkouts } from "../workout-seed";
+import { workoutContentSchema } from "../workouts";
 import { mutators } from "./mutators";
 import { queries } from "./queries";
 import type { Schema } from "./schema.gen";
@@ -9,12 +9,12 @@ import type { Schema } from "./schema.gen";
 const householdId = crypto.randomUUID(),
   userId = crypto.randomUUID(),
   other = crypto.randomUUID(),
-  planId = crypto.randomUUID(),
-  cycleId = crypto.randomUUID(),
-  sessionId = crypto.randomUUID();
+  workoutId = crypto.randomUUID(),
+  logId = crypto.randomUUID();
 const now = Date.parse("2026-10-25T23:30:00Z");
 const ctx = { userId },
-  scope = { householdId, optimisticTimestamp: 1234 };
+  scope = { householdId, workoutId, optimisticTimestamp: 1234 };
+const starter = workoutContentSchema.parse(starterWorkouts[0]);
 type Row = Record<string, unknown>;
 type Condition =
   | { type: "and"; conditions: Condition[] }
@@ -54,6 +54,7 @@ function matches(
     return row[condition.left.name] === condition.right.value;
   throw new Error(`Unsupported operator ${condition.op}`);
 }
+
 function setup(location: "server" | "client" = "server") {
   vi.spyOn(Date, "now").mockReturnValue(now);
   const data: Record<string, Row[]> = {
@@ -62,36 +63,21 @@ function setup(location: "server" | "client" = "server") {
     householdModuleSettings: [
       { householdId, moduleKey: "workouts", enabled: true },
     ],
-    workoutPlans: [
-      {
-        id: planId,
-        householdId,
-        title: "Starter",
-        definition: structuredClone(starterWorkoutPlan),
-      },
-    ],
-    workoutCycles: [
-      {
-        id: cycleId,
-        householdId,
-        userId,
-        planId,
-        createdAt: 1,
-        startedOn: "2026-10-01",
-      },
-    ],
-    workoutSessions: [],
-    workoutSets: [],
+    workouts: [{ id: workoutId, householdId, ...structuredClone(starter) }],
+    workoutLogs: [],
+    workoutLogSets: [],
   };
   const writes = vi.fn();
   const sameKey = (table: string, a: Row, b: Row) =>
-    table === "workoutSets"
-      ? a.sessionId === b.sessionId &&
+    table === "workoutLogSets"
+      ? a.logId === b.logId &&
         a.exerciseId === b.exerciseId &&
         a.round === b.round
       : a.id === b.id;
   const crud = (table: string) => ({
     insert: async (row: Row) => {
+      if (data[table]?.some((r) => sameKey(table, r, row)))
+        throw new Error("duplicate");
       writes(table, "insert", row);
       data[table]?.push(structuredClone(row));
     },
@@ -110,9 +96,7 @@ function setup(location: "server" | "client" = "server") {
   const tx = {
     location,
     mutate: Object.fromEntries(
-      ["workoutPlans", "workoutCycles", "workoutSessions", "workoutSets"].map(
-        (t) => [t, crud(t)],
-      ),
+      ["workouts", "workoutLogs", "workoutLogSets"].map((t) => [t, crud(t)]),
     ),
     run: async (query: unknown) => {
       const { ast, format } = query as {
@@ -122,11 +106,11 @@ function setup(location: "server" | "client" = "server") {
       const rows = (data[ast.table] ?? [])
         .filter((r) => matches(r, ast.where, data))
         .map((r) =>
-          ast.table === "workoutSessions"
+          ast.table === "workoutLogs"
             ? {
                 ...r,
-                sets: (data.workoutSets ?? []).filter(
-                  (s) => s.sessionId === r.id,
+                sets: (data.workoutLogSets ?? []).filter(
+                  (s) => s.logId === r.id,
                 ),
               }
             : r,
@@ -142,211 +126,90 @@ function setup(location: "server" | "client" = "server") {
       return format.singular ? rows[0] : rows;
     },
   } as unknown as Transaction<Schema>;
-  const start = (lowEnergy = false, id = sessionId) =>
-    mutators.workouts.startSession.fn({
+  const log = (action: "start" | "complete") =>
+    mutators.workouts.log.fn({
+      tx,
+      ctx,
+      args: { ...scope, logId, action, timeZone: "Europe/Brussels" },
+    });
+  const set = () =>
+    mutators.workouts.saveSet.fn({
       tx,
       ctx,
       args: {
         ...scope,
-        cycleId,
-        sessionId: id,
-        lowEnergy,
-        timeZone: "Europe/Brussels",
+        logId,
+        exerciseId: starter.exercises[0]?.id ?? "",
+        round: 1,
+        values: { weightKg: 8, amount: 10, rightAmount: null },
       },
     });
-  const action = (action: "complete" | "abandon" | "note", id = sessionId) =>
-    mutators.workouts.sessionAction.fn({
-      tx,
-      ctx,
-      args: {
-        ...scope,
-        sessionId: id,
-        action,
-        note: "Morning",
-        timeZone: "Europe/Brussels",
-      },
-    });
-  async function logAll() {
-    const snapshot = workoutSnapshotSchema.parse(
-      data.workoutSessions?.find((r) => r.id === sessionId)?.snapshot,
-    );
-    for (const exercise of snapshot.workout.exercises)
-      for (
-        let round = 1;
-        round <= (data.workoutSessions?.[0]?.lowEnergy ? 1 : exercise.sets);
-        round++
-      )
-        await mutators.workouts.saveSet.fn({
-          tx,
-          ctx,
-          args: {
-            ...scope,
-            sessionId,
-            exerciseId: exercise.id,
-            round,
-            values: {
-              weightKg: exercise.load === "bodyweight" ? null : 8,
-              amount: exercise.min,
-              rightAmount: null,
-              rir: 3,
-              goodForm: true,
-              note: "",
-              skipped: false,
-            },
-          },
-        });
-  }
-  return { tx, data, writes, start, action, logAll };
+  return { tx, data, writes, log, set };
 }
 afterEach(() => vi.restoreAllMocks());
-describe("workout mutations", () => {
-  it("snapshots the authoritative plan, resumes only one session, completes, and rotates A→B", async () => {
-    const { data, start, action, logAll } = setup();
-    await start();
-    expect(data.workoutSessions?.[0]).toMatchObject({
+describe("workout logging", () => {
+  it("marks a workout done directly without starting or filling in sets", async () => {
+    const { data, log } = setup();
+    await log("complete");
+    expect(data.workoutLogs?.[0]).toMatchObject({
       userId,
-      status: "active",
-      createdAt: now,
-      workoutId: starterWorkoutPlan.workouts[0]?.id,
-    });
-    await expect(start(false, other)).rejects.toThrow("not allowed");
-    await expect(action("complete")).rejects.toThrow("Log each");
-    await logAll();
-    await action("complete");
-    expect(data.workoutSessions?.[0]).toMatchObject({
+      workoutId,
       status: "completed",
       completedOn: "2026-10-26",
       completedAt: now,
     });
-    await start(false, other);
-    expect(data.workoutSessions?.[1]?.workoutId).toBe(
-      starterWorkoutPlan.workouts[1]?.id,
-    );
+    expect(data.workoutLogSets).toHaveLength(0);
+    await log("complete");
+    expect(data.workoutLogs).toHaveLength(1);
   });
-  it("counts one-round low-energy sessions and keeps abandonment out of rotation", async () => {
-    const { data, start, action, logAll } = setup();
-    await start(true);
-    await logAll();
-    expect(data.workoutSets).toHaveLength(6);
-    await action("complete");
-    await start(false, other);
-    await action("abandon", other);
-    const third = crypto.randomUUID();
-    await start(true, third);
-    expect(data.workoutSessions?.[2]?.workoutId).toBe(
-      starterWorkoutPlan.workouts[1]?.id,
-    );
+  it("completes a partial log and keeps independently saved sets", async () => {
+    const { data, log, set } = setup();
+    await log("start");
+    await set();
+    await log("complete");
+    expect(data.workoutLogs?.[0]?.status).toBe("completed");
+    expect(data.workoutLogSets).toHaveLength(1);
+    await set();
+    expect(data.workoutLogSets).toHaveLength(1);
   });
-  it("preserves snapshots across plan edits and allows own completed set corrections", async () => {
-    const { tx, data, start, action, logAll } = setup();
-    await start();
-    await logAll();
-    await action("complete");
-    const definition = structuredClone(starterWorkoutPlan);
-    if (definition.workouts[0]) definition.workouts[0].name = "Changed";
-    await mutators.workouts.savePlan.fn({
+  it("keeps historical content when a shared workout is edited", async () => {
+    const { data, tx, log } = setup();
+    await log("start");
+    await mutators.workouts.update.fn({
       tx,
       ctx,
-      args: { ...scope, planId, create: false, title: "Changed", definition },
+      args: { ...scope, changes: { title: "Changed", notes: "One note" } },
+    });
+    expect(data.workouts?.[0]).toMatchObject({
+      title: "Changed",
+      notes: "One note",
     });
     expect(
-      workoutSnapshotSchema.parse(data.workoutSessions?.[0]?.snapshot).workout
-        .name,
-    ).toBe("Workout A");
-    const exercise = starterWorkoutPlan.workouts[0]?.exercises[0];
-    if (!exercise) throw new Error("seed");
-    await mutators.workouts.saveSet.fn({
-      tx,
-      ctx,
-      args: {
-        ...scope,
-        sessionId,
-        exerciseId: exercise.id,
-        round: 1,
-        values: {
-          weightKg: 9,
-          amount: 10,
-          rightAmount: null,
-          rir: 3,
-          goodForm: true,
-          note: "Corrected",
-          skipped: false,
-        },
-      },
-    });
-    expect(data.workoutSets).toHaveLength(12);
-    expect(data.workoutSets?.[0]?.values).toMatchObject({
-      weightKg: 9,
-      note: "Corrected",
-    });
+      workoutContentSchema.parse(data.workoutLogs?.[0]?.snapshot).title,
+    ).toBe(starter.title);
   });
   it.each([
     "foreign user",
     "foreign household",
+    "foreign workout",
     "abandoned",
-    "foreign exercise",
-    "excess round",
-  ])("rejects set writes for %s", async (reason) => {
-    const { tx, data, start, writes, action } = setup();
-    await start(true);
-    if (reason === "foreign user" && data.workoutSessions?.[0])
-      data.workoutSessions[0].userId = other;
-    if (reason === "foreign household" && data.workoutSessions?.[0])
-      data.workoutSessions[0].householdId = other;
-    if (reason === "abandoned") await action("abandon");
+  ])("rejects set edits to %s logs", async (reason) => {
+    const { data, log, set, writes } = setup();
+    await log("start");
+    const row = data.workoutLogs?.[0];
+    if (!row) throw new Error("log");
+    if (reason === "foreign user") row.userId = other;
+    if (reason === "foreign household") row.householdId = other;
+    if (reason === "foreign workout") row.workoutId = other;
+    if (reason === "abandoned") row.status = "abandoned";
     writes.mockClear();
-    await expect(
-      mutators.workouts.saveSet.fn({
-        tx,
-        ctx,
-        args: {
-          ...scope,
-          sessionId,
-          exerciseId:
-            reason === "foreign exercise"
-              ? other
-              : (starterWorkoutPlan.workouts[0]?.exercises[0]?.id ?? ""),
-          round: reason === "excess round" ? 2 : 1,
-          values: {
-            weightKg: 8,
-            amount: 10,
-            rightAmount: null,
-            rir: 3,
-            goodForm: true,
-            note: "",
-            skipped: false,
-          },
-        },
-      }),
-    ).rejects.toThrow("not allowed");
+    await expect(set()).rejects.toThrow("not allowed");
     expect(writes).not.toHaveBeenCalled();
   });
-  it.each(["foreign user", "foreign household"])(
-    "rejects session actions for %s",
-    async (reason) => {
-      const { tx, data, start, writes } = setup();
-      await start();
-      const session = data.workoutSessions?.[0];
-      if (!session) throw new Error("session");
-      session[reason === "foreign user" ? "userId" : "householdId"] = other;
-      writes.mockClear();
-      for (const action of ["note", "complete", "abandon"] as const)
-        await expect(
-          mutators.workouts.sessionAction.fn({
-            tx,
-            ctx,
-            args: { ...scope, sessionId, action, note: "", timeZone: "UTC" },
-          }),
-        ).rejects.toThrow("not allowed");
-      expect(writes).not.toHaveBeenCalled();
-    },
-  );
   it.each(["disabled", "missing module", "not member", "deleted household"])(
-    "blocks all mutations when %s",
+    "blocks every mutation when %s",
     async (reason) => {
-      const { tx, data, start, action, writes } = setup();
-      await start();
-      writes.mockClear();
+      const { tx, data, log, set, writes } = setup();
       if (reason === "disabled" && data.householdModuleSettings?.[0])
         data.householdModuleSettings[0].enabled = false;
       if (reason === "missing module") data.householdModuleSettings = [];
@@ -354,44 +217,32 @@ describe("workout mutations", () => {
       if (reason === "deleted household" && data.households?.[0])
         data.households[0].deletedAt = now;
       const requests = [
-        () => start(),
-        () => action("note"),
+        () => log("complete"),
+        set,
         () =>
-          mutators.workouts.startCycle.fn({
+          mutators.workouts.create.fn({
             tx,
             ctx,
-            args: { ...scope, cycleId: other, planId, timeZone: "UTC" },
+            args: { ...scope, title: "New" },
           }),
         () =>
-          mutators.workouts.savePlan.fn({
+          mutators.workouts.update.fn({
+            tx,
+            ctx,
+            args: { ...scope, changes: { notes: "One note" } },
+          }),
+        () =>
+          mutators.workouts.importStarters.fn({
             tx,
             ctx,
             args: {
-              ...scope,
-              planId,
-              create: false,
-              title: "Changed",
-              definition: starterWorkoutPlan,
-            },
-          }),
-        () =>
-          mutators.workouts.saveSet.fn({
-            tx,
-            ctx,
-            args: {
-              ...scope,
-              sessionId,
-              exerciseId: other,
-              round: 1,
-              values: {
-                weightKg: 1,
-                amount: 10,
-                rightAmount: null,
-                rir: 3,
-                goodForm: true,
-                note: "",
-                skipped: false,
-              },
+              householdId,
+              workoutIds: [
+                crypto.randomUUID(),
+                crypto.randomUUID(),
+                crypto.randomUUID(),
+              ],
+              optimisticTimestamp: 1,
             },
           }),
       ];
@@ -400,77 +251,69 @@ describe("workout mutations", () => {
       expect(writes).not.toHaveBeenCalled();
     },
   );
-  it("uses optimistic time on the client and authoritative time on the server", async () => {
-    const { data, start } = setup("client");
-    await start();
-    expect(data.workoutSessions?.[0]?.createdAt).toBe(1234);
+  it("rejects unknown or foreign workouts for logging", async () => {
+    const { data, log } = setup();
+    if (data.workouts?.[0]) data.workouts[0].householdId = other;
+    await expect(log("complete")).rejects.toThrow("not allowed");
   });
-  it("starts new cycles only for scoped plans and only without active sessions", async () => {
-    const { tx, data, start, action } = setup();
-    await start();
-    const request = {
-      tx,
-      ctx,
-      args: { ...scope, cycleId: other, planId, timeZone: "Europe/Brussels" },
-    };
-    await expect(mutators.workouts.startCycle.fn(request)).rejects.toThrow(
-      "not allowed",
-    );
-    await action("abandon");
-    await mutators.workouts.startCycle.fn(request);
-    expect(data.workoutCycles?.[1]).toMatchObject({
-      userId,
-      startedOn: "2026-10-26",
-      createdAt: now,
-    });
-    await expect(
-      mutators.workouts.startCycle.fn({
-        ...request,
-        args: { ...request.args, planId: crypto.randomUUID() },
-      }),
-    ).rejects.toThrow("not allowed");
+  it("cannot complete another person's log by its ID", async () => {
+    const { data, log } = setup();
+    await log("start");
+    if (data.workoutLogs?.[0]) data.workoutLogs[0].userId = other;
+    await expect(log("complete")).rejects.toThrow();
+    expect(data.workoutLogs?.[0]?.status).toBe("active");
+  });
+  it("uses optimistic time only on the client", async () => {
+    const { data, log } = setup("client");
+    await log("complete");
+    expect(data.workoutLogs?.[0]?.completedAt).toBe(1234);
   });
 });
-describe("private workout queries", () => {
-  it("shares plans but never synchronizes another person's cycles, sessions, or sets", async () => {
-    const { data, tx, start, logAll } = setup();
-    await start();
-    await logAll();
-    const ownSession = data.workoutSessions?.[0];
-    data.workoutSessions?.push({ ...ownSession, id: other, userId: other });
-    data.workoutSets?.push({
-      sessionId: other,
-      exerciseId: other,
-      round: 1,
-      values: { note: "SECRET" },
+describe("workout query privacy", () => {
+  it("shares workouts while restricting logs and sets to their owner", async () => {
+    const { data, tx, log, set } = setup();
+    await log("start");
+    await set();
+    data.workoutLogs?.push({
+      ...data.workoutLogs[0],
+      id: other,
+      userId: other,
     });
-    data.workoutCycles?.push({ id: other, householdId, userId: other });
-    const run = (q: unknown) => tx.run(q as Parameters<typeof tx.run>[0]);
-    const plans = await run(
-      queries.workouts.plans.fn({ args: { householdId }, ctx }),
-    );
-    expect(plans).toHaveLength(1);
-    const sessions = await run(
-      queries.workouts.sessions.fn({ args: { householdId }, ctx }),
-    );
-    expect(sessions).toHaveLength(1);
-    expect(JSON.stringify(sessions)).not.toContain("SECRET");
+    data.workoutLogSets?.push({ logId: other, values: { note: "SECRET" } });
+    const args = { householdId, workoutId };
     expect(
-      await run(queries.workouts.cycles.fn({ args: { householdId }, ctx })),
+      await tx.run(
+        queries.workouts.byHousehold.fn({ args: { householdId }, ctx }),
+      ),
     ).toHaveLength(1);
-    for (const reason of ["module", "membership", "household"]) {
+    const logs = await tx.run(queries.workouts.logs.fn({ args, ctx }));
+    expect(logs).toHaveLength(1);
+    expect(JSON.stringify(logs)).not.toContain("SECRET");
+  });
+  it.each(["module", "membership", "household"])(
+    "blocks queries after losing %s access",
+    async (reason) => {
+      const { data, tx, log } = setup();
+      await log("start");
       if (reason === "module") data.householdModuleSettings = [];
       if (reason === "membership") data.householdMembers = [];
       if (reason === "household" && data.households?.[0])
         data.households[0].deletedAt = now;
-      for (const query of [
-        queries.workouts.plans,
-        queries.workouts.sessions,
-        queries.workouts.cycles,
-      ])
-        expect(
-          await run(query.fn({ args: { householdId }, ctx })),
-        ).toHaveLength(0);
-    }
-  });
+      expect(
+        await tx.run(
+          queries.workouts.byHousehold.fn({ args: { householdId }, ctx }),
+        ),
+      ).toHaveLength(0);
+      expect(
+        await tx.run(
+          queries.workouts.detail.fn({ args: { householdId, workoutId }, ctx }),
+        ),
+      ).toBeUndefined();
+      expect(
+        await tx.run(
+          queries.workouts.logs.fn({ args: { householdId, workoutId }, ctx }),
+        ),
+      ).toHaveLength(0);
+    },
+  );
 });
