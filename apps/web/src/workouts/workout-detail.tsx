@@ -121,7 +121,7 @@ export function WorkoutDetail({
       <p className="text-muted">Workout not found.</p>
     ) : null;
   return (
-    <article className="grid min-w-0 gap-6">
+    <article className="grid min-w-0 gap-2">
       {error && (
         <InlineAlert role="alert" variant="danger">
           {error}
@@ -152,7 +152,7 @@ export function WorkoutDetail({
         />
       ) : (
         <>
-          <div className="grid gap-1">
+          <div className="grid gap-0">
             <WorkoutText
               label="Workout name"
               value={workout.title}
@@ -163,30 +163,22 @@ export function WorkoutDetail({
                 )
               }
             />
-            <details>
-              <summary className="cursor-pointer py-2 text-sm text-muted">
-                Notes
-              </summary>
-              <WorkoutText
-                label="Notes"
-                value={workout.notes ?? ""}
-                multiline
-                disabled={disabled}
-                onSave={(notes) =>
-                  save(
-                    mutators.workouts.update({
-                      ...scope(),
-                      changes: { notes },
-                    }),
-                  )
-                }
-              />
-            </details>
+            <WorkoutText
+              label="Notes"
+              value={workout.notes ?? ""}
+              multiline
+              disabled={disabled}
+              onSave={(notes) =>
+                save(
+                  mutators.workouts.update({ ...scope(), changes: { notes } }),
+                )
+              }
+            />
           </div>
           <div>
             <Button
               variant="ghost"
-              className="px-1! font-normal text-muted"
+              className="h-7! px-1! font-normal text-muted"
               disabled={disabled || busy}
               onClick={() => void log("start")}
             >
@@ -208,7 +200,7 @@ export function WorkoutDetail({
           />
 
           <section className="min-w-0">
-            <h2 className="flex items-center gap-2 py-2 font-semibold">
+            <h2 className="flex items-center gap-2 py-3 font-semibold">
               <History aria-hidden="true" className="size-4" />
               History
             </h2>

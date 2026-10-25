@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { starterWorkouts } from "./workout-seed";
 import {
+  reorderWorkoutsSchema,
   saveWorkoutSetSchema,
   updateWorkoutSchema,
   workoutContentSchema,
@@ -51,6 +52,31 @@ describe("workouts", () => {
     ).toBe(false);
     expect(
       updateWorkoutSchema.safeParse({ ...scope, changes: { incrementKg: 1 } })
+        .success,
+    ).toBe(false);
+  });
+  it("rejects duplicate or incomplete workout orders", () => {
+    const moved = crypto.randomUUID(),
+      other = crypto.randomUUID();
+    const args = {
+      householdId: crypto.randomUUID(),
+      workoutId: moved,
+      optimisticTimestamp: 1,
+    };
+    expect(
+      reorderWorkoutsSchema.safeParse({
+        ...args,
+        orderedWorkoutIds: [other, moved],
+      }).success,
+    ).toBe(true);
+    expect(
+      reorderWorkoutsSchema.safeParse({
+        ...args,
+        orderedWorkoutIds: [moved, moved],
+      }).success,
+    ).toBe(false);
+    expect(
+      reorderWorkoutsSchema.safeParse({ ...args, orderedWorkoutIds: [other] })
         .success,
     ).toBe(false);
   });

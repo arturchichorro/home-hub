@@ -253,6 +253,13 @@
       "when": 1792947954045,
       "tag": "0035_thin_runaways",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792950015991,
+      "tag": "0036_fat_ender_wiggin",
+      "breakpoints": true
     }
   ]
 }

@@ -177,7 +177,7 @@ export function WorkoutLogView({
 }) {
   const snapshot = workoutContentSchema.parse(log.snapshot);
   return (
-    <section className="grid min-w-0 gap-4">
+    <section className="grid min-w-0 gap-2">
       <div className="flex items-center gap-2">
         <IconButton aria-label="Back to workout" onClick={onClose}>
           <ArrowLeft aria-hidden="true" className="size-4" />
@@ -193,14 +193,9 @@ export function WorkoutLogView({
         </span>
       </div>
       {snapshot.notes && (
-        <details>
-          <summary className="cursor-pointer py-1 text-sm text-muted">
-            Notes
-          </summary>
-          <p className="whitespace-pre-line py-2 text-sm text-muted">
-            {snapshot.notes}
-          </p>
-        </details>
+        <p className="whitespace-pre-line px-1 text-sm text-muted">
+          {snapshot.notes}
+        </p>
       )}
       <div className="divide-y divide-border">
         {snapshot.exercises.map((exercise) => {

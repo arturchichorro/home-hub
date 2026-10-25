@@ -582,6 +582,7 @@ export const workouts = pgTable(
   "workouts",
   {
     id: uuid("id").primaryKey(),
+    sortKey: integer("sort_key").notNull().default(0),
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
@@ -597,6 +598,7 @@ export const workouts = pgTable(
   },
   (t) => [
     unique("workouts_household_id_id").on(t.householdId, t.id),
+    index("workouts_household_sort_key_id").on(t.householdId, t.sortKey, t.id),
     check(
       "workouts_title_length",
       sql`length(trim(${t.title})) between 1 and 150`,

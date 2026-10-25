@@ -34,6 +34,23 @@ const scope = {
   workoutId: z.uuid(),
   optimisticTimestamp: z.number().int().nonnegative(),
 };
+export const reorderWorkoutsSchema = z
+  .object({
+    ...scope,
+    orderedWorkoutIds: z
+      .array(z.uuid())
+      .min(1)
+      .max(500)
+      .refine(
+        (ids) => new Set(ids).size === ids.length,
+        "Workout IDs must be unique",
+      ),
+  })
+  .strict()
+  .refine(
+    (args) => args.orderedWorkoutIds.includes(args.workoutId),
+    "Order must include the moved workout",
+  );
 export const createWorkoutSchema = z.object({ ...scope, title }).strict();
 export const updateWorkoutSchema = z
   .object({

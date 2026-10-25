@@ -70,6 +70,7 @@ describe("simple workouts", () => {
     );
     expect(html.match(/<textarea/g)).toHaveLength(1);
     expect(html).toContain('aria-label="Notes"');
+    expect(html).not.toMatch(/<summary[^>]*>Notes<\/summary>/);
     expect(html).not.toContain("Program instructions");
     expect(html).not.toContain("Smallest available increase");
     expect(html).not.toContain("Shared plan");
@@ -82,6 +83,18 @@ describe("simple workouts", () => {
         args: expect.objectContaining({ action: "complete", workoutId }),
       }),
     );
+  });
+  it("uses labelled Base UI selects for exercise measures and loads", () => {
+    useQuery
+      .mockReturnValueOnce([workout, { type: "complete" }])
+      .mockReturnValueOnce([[], { type: "complete" }]);
+    const html = renderToStaticMarkup(
+      <WorkoutDetail householdId={householdId} workoutId={workoutId} />,
+    );
+    expect(html).toContain('role="combobox"');
+    expect(html).toContain('aria-label="Measure for Goblet squat"');
+    expect(html).toContain('aria-label="Load for Goblet squat"');
+    expect(html).not.toContain("<select");
   });
   it("disables Done while disconnected", () => {
     enabled.mockReturnValue(false);
@@ -120,7 +133,8 @@ describe("simple workouts", () => {
     expect(html).not.toContain("Rest timer");
     expect(html).not.toContain("Good form, no symptoms");
     expect(html).not.toContain("Reps in reserve");
-    expect(html.match(/<summary[^>]*>Notes<\/summary>/g)).toHaveLength(1);
+    expect(html).not.toMatch(/<summary[^>]*>Notes<\/summary>/);
+    expect(html).toContain("No forced wrist stretching.");
   });
   it("shows the starter option only for an empty library", () => {
     useQuery.mockReturnValue([[], { type: "complete" }]);

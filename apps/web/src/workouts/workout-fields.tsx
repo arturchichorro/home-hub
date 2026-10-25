@@ -9,6 +9,10 @@ import {
   InlineAlert,
   Input,
   Plus,
+  SelectItem,
+  SelectPopup,
+  SelectRoot,
+  SelectTrigger,
   Textarea,
   Trash2,
 } from "@home-hub/ui-web";
@@ -107,7 +111,7 @@ export function WorkoutExercises({
   }
   return (
     <form
-      className="grid min-w-0 gap-2"
+      className="grid min-w-0 gap-0"
       onSubmit={async (event) => {
         event.preventDefault();
         const parsed = workoutExercisesSchema.safeParse(exercises);
@@ -124,11 +128,12 @@ export function WorkoutExercises({
         }
       }}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 py-1">
         <h2 className="flex-1 font-semibold">Exercises</h2>
         <IconButton
           aria-label="Add exercise"
           title="Add exercise"
+          className="size-7!"
           disabled={disabled || busy || exercises.length >= 40}
           onClick={() => {
             setDirty(true);
@@ -152,6 +157,7 @@ export function WorkoutExercises({
           type="submit"
           aria-label="Save exercises"
           title="Save exercises"
+          className="size-7!"
           disabled={disabled || busy || !dirty}
         >
           <Check aria-hidden="true" className="size-4" />
@@ -162,11 +168,12 @@ export function WorkoutExercises({
         className="min-w-0 divide-y divide-border"
       >
         {exercises.map((exercise) => (
-          <div key={exercise.id} className="grid min-w-0 gap-1 py-2">
+          <div key={exercise.id} className="grid min-w-0 gap-0 py-1">
             <div className="flex min-w-0 items-center gap-2">
               <Input
                 appearance="seamless"
                 aria-label={`Name for ${exercise.name}`}
+                className="h-7!"
                 value={exercise.name}
                 maxLength={150}
                 required
@@ -175,6 +182,7 @@ export function WorkoutExercises({
               <IconButton
                 aria-label={`Remove ${exercise.name}`}
                 title="Remove exercise"
+                className="size-7!"
                 onClick={() => {
                   setDirty(true);
                   setExercises((rows) =>
@@ -185,65 +193,85 @@ export function WorkoutExercises({
                 <Trash2 aria-hidden="true" className="size-4" />
               </IconButton>
             </div>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
-              <Input
-                appearance="seamless"
-                aria-label={`Sets for ${exercise.name}`}
-                className="h-8! w-12 flex-none! text-sm"
-                type="number"
-                min="1"
-                max="10"
-                required
-                value={exercise.sets || ""}
-                onValueChange={(v) => change(exercise.id, { sets: Number(v) })}
-              />
-              <span>sets ×</span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+              <div className="flex items-center gap-1">
+                <Input
+                  appearance="seamless"
+                  aria-label={`Sets for ${exercise.name}`}
+                  className="h-8! w-8 flex-none! text-sm"
+                  type="number"
+                  min="1"
+                  max="10"
+                  required
+                  value={exercise.sets || ""}
+                  onValueChange={(v) =>
+                    change(exercise.id, { sets: Number(v) })
+                  }
+                />
+                <span>sets ×</span>
+              </div>
               <Input
                 appearance="seamless"
                 aria-label={`Target for ${exercise.name}`}
-                className="h-8! w-20 flex-none! text-sm"
+                className="h-8! w-16 flex-none! text-sm"
                 maxLength={100}
                 value={exercise.target}
                 onValueChange={(target) => change(exercise.id, { target })}
               />
-              <label className="sr-only" htmlFor={`unit-${exercise.id}`}>
-                Measure for {exercise.name}
-              </label>
-              <select
-                id={`unit-${exercise.id}`}
-                className="min-h-8 bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              <SelectRoot
                 value={exercise.unit}
-                onChange={(e) =>
-                  change(exercise.id, {
-                    unit: e.target.value as WorkoutExercise["unit"],
-                  })
-                }
+                disabled={disabled || busy}
+                items={[
+                  { value: "reps", label: "Reps" },
+                  { value: "seconds", label: "Seconds" },
+                ]}
+                onValueChange={(unit) => {
+                  if (unit === "reps" || unit === "seconds")
+                    change(exercise.id, { unit });
+                }}
               >
-                <option value="reps">reps</option>
-                <option value="seconds">seconds</option>
-              </select>
+                <SelectTrigger
+                  aria-label={`Measure for ${exercise.name}`}
+                  className="h-8! w-28! gap-2! px-2! text-xs"
+                />
+                <SelectPopup>
+                  <SelectItem value="reps">Reps</SelectItem>
+                  <SelectItem value="seconds">Seconds</SelectItem>
+                </SelectPopup>
+              </SelectRoot>
             </div>
             <details>
               <summary className="cursor-pointer py-1 text-xs text-muted">
                 Logging options
               </summary>
               <div className="flex flex-wrap items-center gap-3 py-1 text-xs text-muted">
-                <label className="flex items-center gap-2">
-                  Load
-                  <select
-                    className="min-h-8 bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-                    value={exercise.load}
-                    onChange={(e) =>
-                      change(exercise.id, {
-                        load: e.target.value as WorkoutExercise["load"],
-                      })
-                    }
-                  >
-                    <option value="per-hand">kg per hand</option>
-                    <option value="single">kg single dumbbell</option>
-                    <option value="bodyweight">bodyweight</option>
-                  </select>
-                </label>
+                <SelectRoot
+                  value={exercise.load}
+                  disabled={disabled || busy}
+                  items={[
+                    { value: "per-hand", label: "kg per hand" },
+                    { value: "single", label: "kg single dumbbell" },
+                    { value: "bodyweight", label: "Bodyweight" },
+                  ]}
+                  onValueChange={(load) => {
+                    if (
+                      load === "per-hand" ||
+                      load === "single" ||
+                      load === "bodyweight"
+                    )
+                      change(exercise.id, { load });
+                  }}
+                >
+                  <SelectTrigger
+                    aria-label={`Load for ${exercise.name}`}
+                    className="h-8! w-48! gap-2! px-2! text-xs"
+                  />
+                  <SelectPopup>
+                    <SelectItem value="per-hand">kg per hand</SelectItem>
+                    <SelectItem value="single">kg single dumbbell</SelectItem>
+                    <SelectItem value="bodyweight">Bodyweight</SelectItem>
+                  </SelectPopup>
+                </SelectRoot>
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"

@@ -3,7 +3,6 @@ import { queries } from "@home-hub/shared/zero/queries";
 import {
   Button,
   Check,
-  Dumbbell,
   IconButton,
   InlineAlert,
   Input,
@@ -11,10 +10,11 @@ import {
   X,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import { WorkoutList } from "./workout-list";
 
 export function WorkoutsLibrary({ householdId }: { householdId: string }) {
   const zero = useZero();
@@ -127,23 +127,20 @@ export function WorkoutsLibrary({ householdId }: { householdId: string }) {
           </IconButton>
         </form>
       )}
-      <ul className="divide-y divide-border">
-        {workouts.map((workout) => (
-          <li key={workout.id}>
-            <Link
-              to="/households/$householdId/workouts/$workoutId"
-              params={{ householdId, workoutId: workout.id }}
-              className="flex min-h-12 items-center gap-3 py-3 font-medium outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-focus-ring"
-            >
-              <Dumbbell
-                aria-hidden="true"
-                className="size-4 shrink-0 text-muted"
-              />
-              {workout.title}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <WorkoutList
+        workouts={workouts}
+        disabled={!enabled || busy || result.type !== "complete"}
+        onMove={(workoutId, orderedWorkoutIds) =>
+          void save(
+            mutators.workouts.reorder({
+              householdId,
+              workoutId,
+              orderedWorkoutIds,
+              optimisticTimestamp: Date.now(),
+            }),
+          )
+        }
+      />
       {result.type === "complete" && !workouts.length && (
         <div className="grid justify-items-start gap-3">
           <p className="text-sm text-muted">No workouts yet.</p>

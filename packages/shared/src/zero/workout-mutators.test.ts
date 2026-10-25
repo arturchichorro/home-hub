@@ -63,7 +63,14 @@ function setup(location: "server" | "client" = "server") {
     householdModuleSettings: [
       { householdId, moduleKey: "workouts", enabled: true },
     ],
-    workouts: [{ id: workoutId, householdId, ...structuredClone(starter) }],
+    workouts: [
+      {
+        id: workoutId,
+        householdId,
+        sortKey: 1024,
+        ...structuredClone(starter),
+      },
+    ],
     workoutLogs: [],
     workoutLogSets: [],
   };
@@ -218,6 +225,12 @@ describe("workout logging", () => {
         data.households[0].deletedAt = now;
       const requests = [
         () => log("complete"),
+        () =>
+          mutators.workouts.reorder.fn({
+            tx,
+            ctx,
+            args: { ...scope, orderedWorkoutIds: [workoutId] },
+          }),
         set,
         () =>
           mutators.workouts.create.fn({
@@ -267,6 +280,98 @@ describe("workout logging", () => {
     const { data, log } = setup("client");
     await log("complete");
     expect(data.workoutLogs?.[0]?.completedAt).toBe(1234);
+  });
+});
+describe("workout ordering", () => {
+  it.each(["server", "client"] as const)(
+    "persists a shared order with %s timestamps",
+    async (location) => {
+      const { tx, data } = setup(location);
+      data.workouts?.push({
+        id: other,
+        householdId,
+        sortKey: 2048,
+        ...structuredClone(starter),
+      });
+      await mutators.workouts.reorder.fn({
+        tx,
+        ctx,
+        args: { ...scope, orderedWorkoutIds: [workoutId, other] },
+      });
+      expect(data.workouts?.[0]).toMatchObject({
+        sortKey: 3072,
+        updatedAt: location === "server" ? now : 1234,
+      });
+      expect(
+        (
+          await tx.run(
+            queries.workouts.byHousehold.fn({ args: { householdId }, ctx }),
+          )
+        ).map((w) => w.id),
+      ).toEqual([workoutId, other]);
+    },
+  );
+  it("rejects foreign IDs instead of reordering across households", async () => {
+    const { tx, data, writes } = setup();
+    data.workouts?.push({
+      id: other,
+      householdId: other,
+      sortKey: 2048,
+      ...structuredClone(starter),
+    });
+    await expect(
+      mutators.workouts.reorder.fn({
+        tx,
+        ctx,
+        args: { ...scope, orderedWorkoutIds: [workoutId, other] },
+      }),
+    ).rejects.toThrow("not allowed");
+    expect(writes).not.toHaveBeenCalled();
+  });
+  it("keeps rows omitted by a stale client when rebalancing", async () => {
+    const { tx, data } = setup();
+    const added = crypto.randomUUID();
+    data.workouts = [
+      { id: workoutId, householdId, sortKey: 0, ...structuredClone(starter) },
+      { id: other, householdId, sortKey: 2, ...structuredClone(starter) },
+      { id: added, householdId, sortKey: 1, ...structuredClone(starter) },
+    ];
+    await mutators.workouts.reorder.fn({
+      tx,
+      ctx,
+      args: { ...scope, orderedWorkoutIds: [other, workoutId, added] },
+    });
+    expect(data.workouts).toHaveLength(3);
+    expect(
+      (
+        await tx.run(
+          queries.workouts.byHousehold.fn({ args: { householdId }, ctx }),
+        )
+      ).map((w) => w.id),
+    ).toEqual([other, workoutId, added]);
+  });
+  it("creates new workouts first and imports starters in A/B/C order", async () => {
+    const { tx, data } = setup();
+    await mutators.workouts.create.fn({
+      tx,
+      ctx,
+      args: { ...scope, workoutId: other, title: "New" },
+    });
+    expect(data.workouts?.find((w) => w.id === other)?.sortKey).toBe(2048);
+    const ids: [string, string, string] = [
+      crypto.randomUUID(),
+      crypto.randomUUID(),
+      crypto.randomUUID(),
+    ];
+    await mutators.workouts.importStarters.fn({
+      tx,
+      ctx,
+      args: { householdId, workoutIds: ids, optimisticTimestamp: 1 },
+    });
+    const rows = await tx.run(
+      queries.workouts.byHousehold.fn({ args: { householdId }, ctx }),
+    );
+    expect(rows.map((w) => w.id)).toEqual([...ids, other, workoutId]);
   });
 });
 describe("workout query privacy", () => {

@@ -4,7 +4,10 @@ An owner-enabled module, disabled by default. Household members share standalone
 workouts; training logs and set values remain private to their author.
 
 - Open a workout from the list; its name appears in the breadcrumb and URL.
-- Edit its name, one notes field, and exercises using seamless controls.
+- Edit its name, always-visible notes under the title, and exercises using seamless
+  controls. Exercise measure/load choices use the shared Base UI selects.
+- Reorder workouts like Lists: drag with a mouse, hold to drag on touch, or use
+  Space and arrow keys. The household-shared order is persisted optimistically.
 - Press **Done** to record completion, with or without set entries.
 - Optionally log weight and reps/seconds per set, resume an unfinished log, or
   review and correct previous entries. Logs snapshot the workout at creation.
@@ -26,3 +29,7 @@ fields and legacy session/set annotations are consolidated into snapshot notes.
 After verifying the copy, it removes the superseded plan/cycle/session tables
 and updates the Zero publication. Back up before this contract migration;
 rollback requires restoring the backup and previous code.
+
+`0036_fat_ender_wiggin.sql` adds ordering keys and an index, preserving the previous
+alphabetical order within each household. New workouts go first; starter import
+keeps A/B/C order. Earlier migrations remain unchanged.

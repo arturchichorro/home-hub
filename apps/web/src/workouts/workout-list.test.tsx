@@ -1,0 +1,114 @@
+import type { ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { reorderedWorkoutIds, WorkoutList } from "./workout-list";
+
+type DragEvent = {
+  canceled: boolean;
+  operation: { source: { initialIndex: number; index: number } | null };
+};
+const { provider, sortable } = vi.hoisted(() => ({
+  provider:
+    vi.fn<
+      (props: {
+        onDragEnd: (event: DragEvent) => void;
+        children: ReactNode;
+      }) => void
+    >(),
+  sortable: vi.fn(),
+}));
+vi.mock("@dnd-kit/react", () => ({
+  DragDropProvider: (props: Parameters<typeof provider>[0]) => {
+    provider(props);
+    return props.children;
+  },
+}));
+vi.mock("@dnd-kit/react/sortable", () => ({
+  isSortable: (source: unknown) => source != null,
+  useSortable: (options: unknown) => {
+    sortable(options);
+    return { ref: vi.fn(), handleRef: vi.fn(), isDragging: false };
+  },
+}));
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({
+    children,
+    params,
+    className,
+    draggable,
+  }: {
+    children: ReactNode;
+    params: { workoutId: string };
+    className: string;
+    draggable: boolean;
+  }) => (
+    <a
+      href={`/workouts/${params.workoutId}`}
+      className={className}
+      draggable={draggable}
+    >
+      {children}
+    </a>
+  ),
+}));
+const workouts = ["A", "B", "C"].map((id) => ({
+  id,
+  householdId: "home",
+  title: `Workout ${id}`,
+}));
+const onMove = vi.fn();
+function render(disabled = false) {
+  return renderToStaticMarkup(
+    <WorkoutList workouts={workouts} disabled={disabled} onMove={onMove} />,
+  );
+}
+function drag(canceled = false, from = 0, to = 2) {
+  const props = provider.mock.calls[0]?.[0];
+  if (!props) throw new Error("provider");
+  props.onDragEnd({
+    canceled,
+    operation: { source: { initialIndex: from, index: to } },
+  });
+}
+beforeEach(() => vi.clearAllMocks());
+describe("workout reordering", () => {
+  it("reorders without mutating or dropping IDs", () => {
+    expect(reorderedWorkoutIds(workouts, 0, 2)).toEqual({
+      workoutId: "A",
+      orderedWorkoutIds: ["B", "C", "A"],
+    });
+    expect(workouts.map((w) => w.id)).toEqual(["A", "B", "C"]);
+  });
+  it.each([
+    [0, 0],
+    [-1, 0],
+    [0, -1],
+    [3, 0],
+    [0, 3],
+  ])("ignores invalid movement %s → %s", (from, to) => {
+    expect(reorderedWorkoutIds(workouts, from, to)).toBeUndefined();
+  });
+  it("keeps each whole row a navigation and drag target, like Lists", () => {
+    const html = render();
+    expect(html).toContain('href="/workouts/A"');
+    expect(html).toContain('draggable="false"');
+    expect(html).toContain("touch-pan-y");
+    expect(html).not.toContain("<button");
+    drag();
+    expect(onMove).toHaveBeenCalledWith("A", ["B", "C", "A"]);
+  });
+  it.each(["canceled", "disabled", "unchanged"])(
+    "does not persist a %s drag",
+    (reason) => {
+      render(reason === "disabled");
+      drag(reason === "canceled", 0, reason === "unchanged" ? 0 : 2);
+      expect(onMove).not.toHaveBeenCalled();
+    },
+  );
+  it("disables sorting offline while preserving navigation", () => {
+    expect(render(true)).toContain('href="/workouts/A"');
+    expect(sortable).toHaveBeenCalledWith(
+      expect.objectContaining({ disabled: true, type: "household-workout" }),
+    );
+  });
+});
