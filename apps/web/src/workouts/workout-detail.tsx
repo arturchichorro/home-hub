@@ -4,7 +4,15 @@ import {
 } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
-import { History, InlineAlert } from "@home-hub/ui-web";
+import {
+  AccordionHeader,
+  AccordionItem,
+  AccordionPanel,
+  AccordionRoot,
+  AccordionTrigger,
+  History,
+  InlineAlert,
+} from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useRef, useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
@@ -202,17 +210,30 @@ export function WorkoutDetail({
         />
       )}
       <section className="grid gap-1" aria-label="Workout notes">
-        <h2 className="pt-2 text-sm font-medium">Notes</h2>
-        <WorkoutText
-          label="Notes"
-          value={workout.notes ?? ""}
-          multiline
-          disabled={disabled}
-          readOnly={!!form}
-          onSave={(notes) =>
-            save(mutators.workouts.update({ ...scope(), changes: { notes } }))
-          }
-        />
+        <AccordionRoot>
+          <AccordionItem value="notes">
+            <AccordionHeader render={(props) => <h2 {...props} />}>
+              <AccordionTrigger>Notes</AccordionTrigger>
+            </AccordionHeader>
+            <AccordionPanel>
+              <WorkoutText
+                label="Notes"
+                value={workout.notes ?? ""}
+                multiline
+                disabled={disabled}
+                readOnly={!!form}
+                onSave={(notes) =>
+                  save(
+                    mutators.workouts.update({
+                      ...scope(),
+                      changes: { notes },
+                    }),
+                  )
+                }
+              />
+            </AccordionPanel>
+          </AccordionItem>
+        </AccordionRoot>
       </section>
       <section className="min-w-0">
         <h2 className="flex items-center gap-2 py-3 font-semibold">

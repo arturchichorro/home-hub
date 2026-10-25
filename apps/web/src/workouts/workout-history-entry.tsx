@@ -1,14 +1,5 @@
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  AccordionRoot,
-  AccordionTrigger,
-  Check,
-  IconButton,
-  MessageSquare,
-} from "@home-hub/ui-web";
-import { useState } from "react";
+import { Check, IconButton, MessageSquare } from "@home-hub/ui-web";
+import { useId, useState } from "react";
 import type { WorkoutLog } from "./workout-log";
 import { WorkoutLogNoteInput } from "./workout-log-note-input";
 import { summarizeWorkoutLog } from "./workout-log-summary";
@@ -28,80 +19,69 @@ export function WorkoutHistoryEntry({
   disabled: boolean;
   onSelect: () => void;
 }) {
-  const [open, setOpen] = useState<string[]>([]);
-  const [showNoteEditor, setShowNoteEditor] = useState(false);
-  const [focusNote, setFocusNote] = useState(false);
+  const [editingNote, setEditingNote] = useState(false);
+  const summaryId = useId();
   const hasNote = !!entry.note?.trim();
+  const hasNoteEditor = hasNote || editingNote;
   const summary = summarizeWorkoutLog(entry);
   return (
-    <li>
-      <div className="flex min-w-0 items-start gap-2">
-        <button
-          type="button"
-          aria-pressed={selected}
-          disabled={disabled}
-          className="grid min-h-11 min-w-0 flex-1 gap-1 py-3 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-          onClick={onSelect}
-        >
-          <span className="flex items-center gap-3">
+    <li className="py-1">
+      <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center">
+          <button
+            type="button"
+            aria-pressed={selected}
+            aria-describedby={summaryId}
+            disabled={disabled}
+            className="flex min-h-11 shrink-0 items-center gap-3 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            onClick={onSelect}
+          >
             <Check aria-hidden="true" className="size-4 shrink-0 text-muted" />
-            <span>{entry.completedOn}</span>
-          </span>
-          <span className="grid min-w-0 gap-1 pl-7 text-xs font-normal text-muted">
-            {summary.length ? (
-              summary.map((exercise) => (
-                <span key={exercise.id} className="break-words">
-                  <span className="font-medium">{exercise.name}</span> —{" "}
-                  {exercise.details}
-                </span>
-              ))
-            ) : (
-              <span>No sets logged.</span>
-            )}
-          </span>
-        </button>
-        {!hasNote && !showNoteEditor && (
+            <span>
+              {entry.completedOn}
+              {hasNoteEditor ? ":" : null}
+            </span>
+          </button>
+          {hasNoteEditor && (
+            <WorkoutLogNoteInput
+              householdId={householdId}
+              workoutId={workoutId}
+              logId={entry.id}
+              note={entry.note ?? ""}
+              focusOnMount={editingNote && !hasNote}
+              disabled={disabled}
+              onFocus={() => setEditingNote(true)}
+              onBlur={() => setEditingNote(false)}
+            />
+          )}
+        </div>
+        {!hasNoteEditor && (
           <IconButton
             aria-label={`Add note to workout log from ${entry.completedOn}`}
             title="Add note"
-            className="mt-1 size-7!"
+            className="size-7!"
             disabled={disabled}
-            onClick={() => {
-              setShowNoteEditor(true);
-              setFocusNote(true);
-              setOpen(["note"]);
-            }}
+            onClick={() => setEditingNote(true)}
           >
             <MessageSquare aria-hidden="true" className="size-4" />
           </IconButton>
         )}
       </div>
-      {(hasNote || showNoteEditor) && (
-        <AccordionRoot
-          value={open}
-          onValueChange={(value) => {
-            setOpen(value);
-            if (value.length) setShowNoteEditor(true);
-          }}
-          className="min-w-0 pb-2 pl-7"
-        >
-          <AccordionItem value="note">
-            <AccordionHeader>
-              <AccordionTrigger>Note</AccordionTrigger>
-            </AccordionHeader>
-            <AccordionPanel>
-              <WorkoutLogNoteInput
-                householdId={householdId}
-                workoutId={workoutId}
-                logId={entry.id}
-                note={entry.note ?? ""}
-                focusOnMount={focusNote}
-                disabled={disabled}
-              />
-            </AccordionPanel>
-          </AccordionItem>
-        </AccordionRoot>
-      )}
+      <div
+        id={summaryId}
+        className="grid min-w-0 gap-1 pb-2 pl-7 text-xs font-normal text-muted"
+      >
+        {summary.length ? (
+          summary.map((exercise) => (
+            <span key={exercise.id} className="break-words">
+              <span className="font-medium">{exercise.name}</span> —{" "}
+              {exercise.details}
+            </span>
+          ))
+        ) : (
+          <span>No sets logged.</span>
+        )}
+      </div>
     </li>
   );
 }

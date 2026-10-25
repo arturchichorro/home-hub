@@ -1,5 +1,5 @@
 import { mutators } from "@home-hub/shared/zero/mutators";
-import { ErrorPopover, Textarea } from "@home-hub/ui-web";
+import { ErrorPopover, Input } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { useEffect, useRef } from "react";
 import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
@@ -12,6 +12,8 @@ export function WorkoutLogNoteInput({
   note,
   focusOnMount = false,
   disabled = false,
+  onFocus,
+  onBlur,
 }: {
   householdId: string;
   workoutId: string;
@@ -19,10 +21,12 @@ export function WorkoutLogNoteInput({
   note: string;
   focusOnMount?: boolean;
   disabled?: boolean;
+  onFocus: () => void;
+  onBlur: () => void;
 }) {
   const zero = useZero();
   const enabled = useZeroMutationEnabled();
-  const input = useRef<HTMLTextAreaElement>(null);
+  const input = useRef<HTMLInputElement>(null);
   const editor = useDebouncedTextEditor({
     currentValue: note,
     mutationEnabled: enabled && !disabled,
@@ -47,22 +51,25 @@ export function WorkoutLogNoteInput({
   }, [focusOnMount]);
   return (
     <>
-      <Textarea
+      <Input
         ref={input}
         appearance="seamless"
         aria-label="Log note"
         placeholder="Note…"
-        rows={1}
         maxLength={1000000}
-        className="text-sm text-muted"
+        className="h-7! w-full py-1 text-sm text-muted"
         disabled={!enabled || disabled}
         value={editor.value}
         aria-busy={editor.isSaving || undefined}
         aria-invalid={editor.error ? true : undefined}
         aria-errormessage={editor.error ? editor.errorId : undefined}
         onChange={(event) => editor.changeValue(event.target.value)}
-        onBlur={editor.handleBlur}
-        onKeyDown={(event) => editor.handleKeyDown(event, false)}
+        onFocus={onFocus}
+        onBlur={() => {
+          editor.handleBlur();
+          onBlur();
+        }}
+        onKeyDown={(event) => editor.handleKeyDown(event, true)}
       />
       <ErrorPopover
         anchor={input}

@@ -80,7 +80,7 @@ describe("simple workouts", () => {
     expect(html).not.toContain("<textarea");
     expect(mutate).not.toHaveBeenCalled();
   });
-  it("shows an existing private note in a collapsed Base UI accordion", () => {
+  it("shows an existing private note inline, like a cooking-log comment", () => {
     const entry: WorkoutLog = {
       id: crypto.randomUUID(),
       householdId,
@@ -103,8 +103,10 @@ describe("simple workouts", () => {
         onSelect={() => {}}
       />,
     );
-    expect(html).toContain('aria-expanded="false"');
-    expect(html).toContain("Wrist felt good");
+    expect(html).not.toContain("aria-expanded");
+    expect(html).not.toContain("<textarea");
+    expect(html).toContain("2026-10-25:");
+    expect(html).toContain('value="Wrist felt good"');
     expect(html).not.toContain("Add note to workout log");
     expect(html).toContain('aria-label="Log note"');
     expect(mutate).not.toHaveBeenCalled();
@@ -155,6 +157,8 @@ describe("simple workouts", () => {
     );
     expect(html.match(/<textarea/g)).toHaveLength(1);
     expect(html).toContain('aria-label="Notes"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('role="region"');
     expect(html.indexOf('aria-label="Notes"')).toBeGreaterThan(
       html.lastIndexOf("Name for Dead bug"),
     );
