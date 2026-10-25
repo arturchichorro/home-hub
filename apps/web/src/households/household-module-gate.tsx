@@ -9,6 +9,7 @@ type HouseholdModuleRoute =
   | "/households/$householdId/lists"
   | "/households/$householdId/recipes"
   | "/households/$householdId/habits"
+  | "/households/$householdId/workouts"
   | "/households/$householdId/settings";
 
 type ModuleSetting = {
@@ -46,6 +47,8 @@ export function getDefaultHouseholdModuleRoute(
   ) {
     return "/households/$householdId/habits";
   }
+  if (settings.some((s) => s.moduleKey === "workouts" && s.enabled))
+    return "/households/$householdId/workouts";
   return "/households/$householdId/settings";
 }
 
