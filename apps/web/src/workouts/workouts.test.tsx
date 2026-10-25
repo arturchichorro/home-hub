@@ -85,6 +85,14 @@ describe("simple workouts", () => {
     expect(header.mock.calls.at(-1)?.[0]).toBeNull();
     expect(html).not.toContain("Done</span>");
     expect(html).toContain("Log workout");
+    expect(html).not.toMatch(/<h2[^>]*>Exercises<\/h2>/);
+    const heading = html.slice(
+      html.indexOf("data-workout-heading"),
+      html.indexOf("<fieldset"),
+    );
+    expect(heading).toContain('aria-label="Workout name"');
+    expect(heading).toContain("Log workout");
+    expect(heading).toMatch(/lucide-plus[\s\S]*Add exercise/);
     expect(mutate).not.toHaveBeenCalled();
   });
   it("uses a Base UI measure select and a settings-icon menu", () => {

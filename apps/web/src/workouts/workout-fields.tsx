@@ -23,7 +23,7 @@ import {
   Trash2,
   X,
 } from "@home-hub/ui-web";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
 
 export function WorkoutText({
@@ -111,6 +111,7 @@ import { useWorkoutExercisesEditor } from "./use-workout-exercises-editor";
 import { WorkoutExerciseSets, type WorkoutLogging } from "./workout-log";
 
 export function WorkoutExercises({
+  title,
   current,
   disabled,
   onSave,
@@ -119,6 +120,7 @@ export function WorkoutExercises({
   onCloseLogging,
   onCompleteLogging,
 }: {
+  title?: ReactNode;
   current: readonly WorkoutExercise[];
   disabled: boolean;
   onSave: (exercises: WorkoutExercise[]) => Promise<boolean>;
@@ -163,77 +165,82 @@ export function WorkoutExercises({
         }
       }}
     >
-      <div className="flex flex-wrap items-center gap-2 py-1">
-        <h2 className="flex-1 font-semibold">Exercises</h2>
-        {logging ? (
-          <>
-            {logging.form.completedOn && (
-              <span className="text-xs text-muted">
-                {logging.form.completedOn}
-              </span>
-            )}
-            <Button
-              size="compact"
-              disabled={disabled}
-              onClick={onCompleteLogging}
-            >
-              <Check aria-hidden="true" className="size-4" />
-              Done
-            </Button>
-            <IconButton
-              aria-label="Cancel log"
-              title="Cancel log"
-              className="size-7!"
-              onClick={onCloseLogging}
-            >
-              <X aria-hidden="true" className="size-4" />
-            </IconButton>
-          </>
-        ) : (
-          <>
-            <Button
-              variant="ghost"
-              className="h-7! px-1! font-normal text-muted"
-              disabled={disabled || starting}
-              onClick={async () => {
-                setStarting(true);
-                try {
-                  if (await editor.flush()) await onStartLogging();
-                } finally {
-                  setStarting(false);
+      <div
+        className="flex min-w-0 items-center gap-2 py-1"
+        data-workout-heading
+      >
+        <div className="flex min-w-0 flex-1 items-center">{title}</div>
+        <div className="flex shrink-0 items-center gap-2">
+          {logging ? (
+            <>
+              {logging.form.completedOn && (
+                <span className="text-xs text-muted">
+                  {logging.form.completedOn}
+                </span>
+              )}
+              <Button
+                size="compact"
+                disabled={disabled}
+                onClick={onCompleteLogging}
+              >
+                <Check aria-hidden="true" className="size-4" />
+                Done
+              </Button>
+              <IconButton
+                aria-label="Cancel log"
+                title="Cancel log"
+                className="size-7!"
+                onClick={onCloseLogging}
+              >
+                <X aria-hidden="true" className="size-4" />
+              </IconButton>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                className="h-7! px-1! text-xs! font-normal text-muted sm:text-sm!"
+                disabled={disabled || starting}
+                onClick={async () => {
+                  setStarting(true);
+                  try {
+                    if (await editor.flush()) await onStartLogging();
+                  } finally {
+                    setStarting(false);
+                  }
+                }}
+              >
+                <Play aria-hidden="true" className="size-4" />
+                Log workout
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-7! px-1! text-xs! font-normal text-muted sm:text-sm!"
+                disabled={disabled || starting || exercises.length >= 40}
+                onClick={() =>
+                  editor.change(
+                    (rows) => [
+                      ...rows,
+                      {
+                        id: crypto.randomUUID(),
+                        name: "New exercise",
+                        sets: 2,
+                        target: "8–12",
+                        unit: "reps",
+                        unilateral: false,
+                        load: "per-hand",
+                      },
+                    ],
+                    true,
+                  )
                 }
-              }}
-            >
-              <Play aria-hidden="true" className="size-4" />
-              Log workout
-            </Button>
-            <IconButton
-              aria-label="Add exercise"
-              title="Add exercise"
-              className="size-7!"
-              disabled={disabled || starting || exercises.length >= 40}
-              onClick={() =>
-                editor.change(
-                  (rows) => [
-                    ...rows,
-                    {
-                      id: crypto.randomUUID(),
-                      name: "New exercise",
-                      sets: 2,
-                      target: "8–12",
-                      unit: "reps",
-                      unilateral: false,
-                      load: "per-hand",
-                    },
-                  ],
-                  true,
-                )
-              }
-            >
-              <Plus aria-hidden="true" className="size-4" />
-            </IconButton>
-          </>
-        )}
+              >
+                <Plus aria-hidden="true" className="size-4" />
+                Add exercise
+              </Button>
+            </>
+          )}
+        </div>
       </div>
       <fieldset
         disabled={disabled || starting}

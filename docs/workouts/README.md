@@ -4,6 +4,8 @@ An owner-enabled module, disabled by default. Household members share standalone
 workouts; training logs and set values remain private to their author.
 
 - Open a workout from the list; its name appears in the breadcrumb and URL.
+  **Log workout** and **+ Add exercise** sit to the right of the title; there is
+  no separate Exercises heading.
 - Exercise edits autosave after typing pauses or on blur; settings, additions,
   and removals save immediately. There is no save-confirmation button. Workout notes are always
   visible below the exercises. A settings-icon menu configures each exercise's

@@ -146,16 +146,18 @@ export function WorkoutDetail({
           Done
         </p>
       )}
-      <WorkoutText
-        label="Workout name"
-        value={form?.snapshot.title ?? workout.title}
-        disabled={disabled}
-        readOnly={!!form}
-        onSave={(title) =>
-          save(mutators.workouts.update({ ...scope(), changes: { title } }))
-        }
-      />
       <WorkoutExercises
+        title={
+          <WorkoutText
+            label="Workout name"
+            value={form?.snapshot.title ?? workout.title}
+            disabled={disabled}
+            readOnly={!!form}
+            onSave={(title) =>
+              save(mutators.workouts.update({ ...scope(), changes: { title } }))
+            }
+          />
+        }
         current={
           form?.snapshot.exercises ??
           workoutExercisesSchema.parse(workout.exercises)
