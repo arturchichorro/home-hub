@@ -131,8 +131,8 @@ cannot be recovered from the new status. No automatic rollback is provided.
 
 The implementation was verified with the full migration history and an upgrade
 from both `0028` and `0030` in disposable PostgreSQL databases; the normal local database was
-not migrated. CI runs `scripts/verify-habits-schema.sql` after migrations to check
-publication, backfill, composite tenancy, date validation and idempotent keys.
+not migrated. `scripts/verify-habits-schema.sql` remains available for manual
+publication, backfill, composite tenancy, date validation and idempotent-key checks.
 
 ### Notes (0032–0033)
 

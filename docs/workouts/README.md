@@ -55,6 +55,6 @@ is disabled; no additional offline queue is introduced.
 
 Migration `0034_slimy_darwin.sql` adds tables/publication entries and backfills
 disabled module settings. It is additive; apply before serving the new code.
-CI runs `scripts/verify-workouts-schema.sql` for publication, tenant/owner foreign
-keys, single-active-session, completion, and set-key invariants, alongside runtime
-validation, mutation/query authorization, progression, and rendered-screen tests.
+`scripts/verify-workouts-schema.sql` remains available for manual publication,
+tenant/owner foreign-key, single-active-session, completion, and set-key checks.
+CI retains the shared migration checks and standard test suite.
