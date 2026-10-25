@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { IconButton } from "./icon-button";
 import {
   MenuChevron,
   MenuItem,
@@ -27,6 +28,46 @@ describe("Menu", () => {
     expect(markup).toContain("Household");
   });
 
+  it("supports the same ghost hover treatment as icon actions", () => {
+    const markup = renderToStaticMarkup(
+      <MenuRoot>
+        <MenuTrigger variant="ghost" aria-label="Settings">
+          Settings
+        </MenuTrigger>
+      </MenuRoot>,
+    );
+    expect(markup).toContain(
+      "bg-transparent text-muted hover:bg-raised hover:text-foreground",
+    );
+    expect(markup).not.toContain("bg-transparent!");
+  });
+
+  it("can use an actual IconButton so hit areas and hover styles match", () => {
+    const trigger = renderToStaticMarkup(
+      <MenuRoot>
+        <MenuTrigger
+          aria-label="Settings"
+          render={
+            <IconButton aria-label="Settings" className="size-7!">
+              Settings icon
+            </IconButton>
+          }
+        >
+          Settings
+        </MenuTrigger>
+      </MenuRoot>,
+    );
+    const icon = renderToStaticMarkup(
+      <IconButton aria-label="Remove" className="size-7!">
+        Remove
+      </IconButton>,
+    );
+    expect(trigger.match(/class="([^"]+)"/)?.[1]).toBe(
+      icon.match(/class="([^"]+)"/)?.[1],
+    );
+    expect(trigger).toContain('aria-haspopup="menu"');
+    expect(trigger).toContain("Settings icon");
+  });
   it("provides a decorative, muted menu chevron", () => {
     const markup = renderToStaticMarkup(<MenuChevron />);
 

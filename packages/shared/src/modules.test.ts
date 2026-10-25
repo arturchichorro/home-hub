@@ -9,11 +9,17 @@ import {
 
 describe("household module catalogue", () => {
   it("defines the stable initial module keys", () => {
-    expect(householdModuleKeys).toEqual(["lists", "recipes", "habits"]);
+    expect(householdModuleKeys).toEqual([
+      "lists",
+      "recipes",
+      "habits",
+      "workouts",
+    ]);
     expect(householdModuleCatalog.map(({ key }) => key)).toEqual([
       "lists",
       "recipes",
       "habits",
+      "workouts",
     ]);
   });
 
@@ -28,6 +34,7 @@ describe("household module catalogue", () => {
       { key: "lists", label: "Lists", defaultEnabled: true },
       { key: "recipes", label: "Recipes", defaultEnabled: true },
       { key: "habits", label: "Habits", defaultEnabled: false },
+      { key: "workouts", label: "Workouts", defaultEnabled: false },
     ]);
   });
 

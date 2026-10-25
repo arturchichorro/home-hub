@@ -19,10 +19,13 @@ import { Route as AuthenticatedHouseholdsHouseholdIdHabitsRouteImport } from './
 import { Route as AuthenticatedHouseholdsHouseholdIdListsRouteImport } from './routes/_authenticated.households.$householdId.lists'
 import { Route as AuthenticatedHouseholdsHouseholdIdRecipesRouteImport } from './routes/_authenticated.households.$householdId.recipes'
 import { Route as AuthenticatedHouseholdsHouseholdIdSettingsRouteImport } from './routes/_authenticated.households.$householdId.settings'
+import { Route as AuthenticatedHouseholdsHouseholdIdWorkoutsRouteImport } from './routes/_authenticated.households.$householdId.workouts'
 import { Route as AuthenticatedHouseholdsHouseholdIdListsIndexRouteImport } from './routes/_authenticated.households.$householdId.lists.index'
 import { Route as AuthenticatedHouseholdsHouseholdIdListsListIdRouteImport } from './routes/_authenticated.households.$householdId.lists.$listId'
 import { Route as AuthenticatedHouseholdsHouseholdIdRecipesIndexRouteImport } from './routes/_authenticated.households.$householdId.recipes.index'
 import { Route as AuthenticatedHouseholdsHouseholdIdRecipesRecipeIdRouteImport } from './routes/_authenticated.households.$householdId.recipes.$recipeId'
+import { Route as AuthenticatedHouseholdsHouseholdIdWorkoutsIndexRouteImport } from './routes/_authenticated.households.$householdId.workouts.index'
+import { Route as AuthenticatedHouseholdsHouseholdIdWorkoutsWorkoutIdRouteImport } from './routes/_authenticated.households.$householdId.workouts.$workoutId'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -79,6 +82,12 @@ const AuthenticatedHouseholdsHouseholdIdSettingsRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedHouseholdsHouseholdIdRoute,
   } as any)
+const AuthenticatedHouseholdsHouseholdIdWorkoutsRoute =
+  AuthenticatedHouseholdsHouseholdIdWorkoutsRouteImport.update({
+    id: '/workouts',
+    path: '/workouts',
+    getParentRoute: () => AuthenticatedHouseholdsHouseholdIdRoute,
+  } as any)
 const AuthenticatedHouseholdsHouseholdIdListsIndexRoute =
   AuthenticatedHouseholdsHouseholdIdListsIndexRouteImport.update({
     id: '/',
@@ -103,6 +112,18 @@ const AuthenticatedHouseholdsHouseholdIdRecipesRecipeIdRoute =
     path: '/$recipeId',
     getParentRoute: () => AuthenticatedHouseholdsHouseholdIdRecipesRoute,
   } as any)
+const AuthenticatedHouseholdsHouseholdIdWorkoutsIndexRoute =
+  AuthenticatedHouseholdsHouseholdIdWorkoutsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedHouseholdsHouseholdIdWorkoutsRoute,
+  } as any)
+const AuthenticatedHouseholdsHouseholdIdWorkoutsWorkoutIdRoute =
+  AuthenticatedHouseholdsHouseholdIdWorkoutsWorkoutIdRouteImport.update({
+    id: '/$workoutId',
+    path: '/$workoutId',
+    getParentRoute: () => AuthenticatedHouseholdsHouseholdIdWorkoutsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -113,11 +134,14 @@ export interface FileRoutesByFullPath {
   '/households/$householdId/lists': typeof AuthenticatedHouseholdsHouseholdIdListsRouteWithChildren
   '/households/$householdId/recipes': typeof AuthenticatedHouseholdsHouseholdIdRecipesRouteWithChildren
   '/households/$householdId/settings': typeof AuthenticatedHouseholdsHouseholdIdSettingsRoute
+  '/households/$householdId/workouts': typeof AuthenticatedHouseholdsHouseholdIdWorkoutsRouteWithChildren
   '/households/$householdId/': typeof AuthenticatedHouseholdsHouseholdIdIndexRoute
   '/households/$householdId/lists/$listId': typeof AuthenticatedHouseholdsHouseholdIdListsListIdRoute
   '/households/$householdId/recipes/$recipeId': typeof AuthenticatedHouseholdsHouseholdIdRecipesRecipeIdRoute
+  '/households/$householdId/workouts/$workoutId': typeof AuthenticatedHouseholdsHouseholdIdWorkoutsWorkoutIdRoute
   '/households/$householdId/lists/': typeof AuthenticatedHouseholdsHouseholdIdListsIndexRoute
   '/households/$householdId/recipes/': typeof AuthenticatedHouseholdsHouseholdIdRecipesIndexRoute
+  '/households/$householdId/workouts/': typeof AuthenticatedHouseholdsHouseholdIdWorkoutsIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -128,8 +152,10 @@ export interface FileRoutesByTo {
   '/households/$householdId': typeof AuthenticatedHouseholdsHouseholdIdIndexRoute
   '/households/$householdId/lists/$listId': typeof AuthenticatedHouseholdsHouseholdIdListsListIdRoute
   '/households/$householdId/recipes/$recipeId': typeof AuthenticatedHouseholdsHouseholdIdRecipesRecipeIdRoute
+  '/households/$householdId/workouts/$workoutId': typeof AuthenticatedHouseholdsHouseholdIdWorkoutsWorkoutIdRoute
   '/households/$householdId/lists': typeof AuthenticatedHouseholdsHouseholdIdListsIndexRoute
   '/households/$householdId/recipes': typeof AuthenticatedHouseholdsHouseholdIdRecipesIndexRoute
+  '/households/$householdId/workouts': typeof AuthenticatedHouseholdsHouseholdIdWorkoutsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -142,11 +168,14 @@ export interface FileRoutesById {
   '/_authenticated/households/$householdId/lists': typeof AuthenticatedHouseholdsHouseholdIdListsRouteWithChildren
   '/_authenticated/households/$householdId/recipes': typeof AuthenticatedHouseholdsHouseholdIdRecipesRouteWithChildren
   '/_authenticated/households/$householdId/settings': typeof AuthenticatedHouseholdsHouseholdIdSettingsRoute
+  '/_authenticated/households/$householdId/workouts': typeof AuthenticatedHouseholdsHouseholdIdWorkoutsRouteWithChildren
   '/_authenticated/households/$householdId/': typeof AuthenticatedHouseholdsHouseholdIdIndexRoute
   '/_authenticated/households/$householdId/lists/$listId': typeof AuthenticatedHouseholdsHouseholdIdListsListIdRoute
   '/_authenticated/households/$householdId/recipes/$recipeId': typeof AuthenticatedHouseholdsHouseholdIdRecipesRecipeIdRoute
+  '/_authenticated/households/$householdId/workouts/$workoutId': typeof AuthenticatedHouseholdsHouseholdIdWorkoutsWorkoutIdRoute
   '/_authenticated/households/$householdId/lists/': typeof AuthenticatedHouseholdsHouseholdIdListsIndexRoute
   '/_authenticated/households/$householdId/recipes/': typeof AuthenticatedHouseholdsHouseholdIdRecipesIndexRoute
+  '/_authenticated/households/$householdId/workouts/': typeof AuthenticatedHouseholdsHouseholdIdWorkoutsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -159,11 +188,14 @@ export interface FileRouteTypes {
     | '/households/$householdId/lists'
     | '/households/$householdId/recipes'
     | '/households/$householdId/settings'
+    | '/households/$householdId/workouts'
     | '/households/$householdId/'
     | '/households/$householdId/lists/$listId'
     | '/households/$householdId/recipes/$recipeId'
+    | '/households/$householdId/workouts/$workoutId'
     | '/households/$householdId/lists/'
     | '/households/$householdId/recipes/'
+    | '/households/$householdId/workouts/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -174,8 +206,10 @@ export interface FileRouteTypes {
     | '/households/$householdId'
     | '/households/$householdId/lists/$listId'
     | '/households/$householdId/recipes/$recipeId'
+    | '/households/$householdId/workouts/$workoutId'
     | '/households/$householdId/lists'
     | '/households/$householdId/recipes'
+    | '/households/$householdId/workouts'
   id:
     | '__root__'
     | '/_authenticated'
@@ -187,11 +221,14 @@ export interface FileRouteTypes {
     | '/_authenticated/households/$householdId/lists'
     | '/_authenticated/households/$householdId/recipes'
     | '/_authenticated/households/$householdId/settings'
+    | '/_authenticated/households/$householdId/workouts'
     | '/_authenticated/households/$householdId/'
     | '/_authenticated/households/$householdId/lists/$listId'
     | '/_authenticated/households/$householdId/recipes/$recipeId'
+    | '/_authenticated/households/$householdId/workouts/$workoutId'
     | '/_authenticated/households/$householdId/lists/'
     | '/_authenticated/households/$householdId/recipes/'
+    | '/_authenticated/households/$householdId/workouts/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -272,6 +309,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHouseholdsHouseholdIdSettingsRouteImport
       parentRoute: typeof AuthenticatedHouseholdsHouseholdIdRoute
     }
+    '/_authenticated/households/$householdId/workouts': {
+      id: '/_authenticated/households/$householdId/workouts'
+      path: '/workouts'
+      fullPath: '/households/$householdId/workouts'
+      preLoaderRoute: typeof AuthenticatedHouseholdsHouseholdIdWorkoutsRouteImport
+      parentRoute: typeof AuthenticatedHouseholdsHouseholdIdRoute
+    }
     '/_authenticated/households/$householdId/lists/': {
       id: '/_authenticated/households/$householdId/lists/'
       path: '/'
@@ -299,6 +343,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/households/$householdId/recipes/$recipeId'
       preLoaderRoute: typeof AuthenticatedHouseholdsHouseholdIdRecipesRecipeIdRouteImport
       parentRoute: typeof AuthenticatedHouseholdsHouseholdIdRecipesRoute
+    }
+    '/_authenticated/households/$householdId/workouts/': {
+      id: '/_authenticated/households/$householdId/workouts/'
+      path: '/'
+      fullPath: '/households/$householdId/workouts/'
+      preLoaderRoute: typeof AuthenticatedHouseholdsHouseholdIdWorkoutsIndexRouteImport
+      parentRoute: typeof AuthenticatedHouseholdsHouseholdIdWorkoutsRoute
+    }
+    '/_authenticated/households/$householdId/workouts/$workoutId': {
+      id: '/_authenticated/households/$householdId/workouts/$workoutId'
+      path: '/$workoutId'
+      fullPath: '/households/$householdId/workouts/$workoutId'
+      preLoaderRoute: typeof AuthenticatedHouseholdsHouseholdIdWorkoutsWorkoutIdRouteImport
+      parentRoute: typeof AuthenticatedHouseholdsHouseholdIdWorkoutsRoute
     }
   }
 }
@@ -339,11 +397,30 @@ const AuthenticatedHouseholdsHouseholdIdRecipesRouteWithChildren =
     AuthenticatedHouseholdsHouseholdIdRecipesRouteChildren,
   )
 
+interface AuthenticatedHouseholdsHouseholdIdWorkoutsRouteChildren {
+  AuthenticatedHouseholdsHouseholdIdWorkoutsWorkoutIdRoute: typeof AuthenticatedHouseholdsHouseholdIdWorkoutsWorkoutIdRoute
+  AuthenticatedHouseholdsHouseholdIdWorkoutsIndexRoute: typeof AuthenticatedHouseholdsHouseholdIdWorkoutsIndexRoute
+}
+
+const AuthenticatedHouseholdsHouseholdIdWorkoutsRouteChildren: AuthenticatedHouseholdsHouseholdIdWorkoutsRouteChildren =
+  {
+    AuthenticatedHouseholdsHouseholdIdWorkoutsWorkoutIdRoute:
+      AuthenticatedHouseholdsHouseholdIdWorkoutsWorkoutIdRoute,
+    AuthenticatedHouseholdsHouseholdIdWorkoutsIndexRoute:
+      AuthenticatedHouseholdsHouseholdIdWorkoutsIndexRoute,
+  }
+
+const AuthenticatedHouseholdsHouseholdIdWorkoutsRouteWithChildren =
+  AuthenticatedHouseholdsHouseholdIdWorkoutsRoute._addFileChildren(
+    AuthenticatedHouseholdsHouseholdIdWorkoutsRouteChildren,
+  )
+
 interface AuthenticatedHouseholdsHouseholdIdRouteChildren {
   AuthenticatedHouseholdsHouseholdIdHabitsRoute: typeof AuthenticatedHouseholdsHouseholdIdHabitsRoute
   AuthenticatedHouseholdsHouseholdIdListsRoute: typeof AuthenticatedHouseholdsHouseholdIdListsRouteWithChildren
   AuthenticatedHouseholdsHouseholdIdRecipesRoute: typeof AuthenticatedHouseholdsHouseholdIdRecipesRouteWithChildren
   AuthenticatedHouseholdsHouseholdIdSettingsRoute: typeof AuthenticatedHouseholdsHouseholdIdSettingsRoute
+  AuthenticatedHouseholdsHouseholdIdWorkoutsRoute: typeof AuthenticatedHouseholdsHouseholdIdWorkoutsRouteWithChildren
   AuthenticatedHouseholdsHouseholdIdIndexRoute: typeof AuthenticatedHouseholdsHouseholdIdIndexRoute
 }
 
@@ -357,6 +434,8 @@ const AuthenticatedHouseholdsHouseholdIdRouteChildren: AuthenticatedHouseholdsHo
       AuthenticatedHouseholdsHouseholdIdRecipesRouteWithChildren,
     AuthenticatedHouseholdsHouseholdIdSettingsRoute:
       AuthenticatedHouseholdsHouseholdIdSettingsRoute,
+    AuthenticatedHouseholdsHouseholdIdWorkoutsRoute:
+      AuthenticatedHouseholdsHouseholdIdWorkoutsRouteWithChildren,
     AuthenticatedHouseholdsHouseholdIdIndexRoute:
       AuthenticatedHouseholdsHouseholdIdIndexRoute,
   }

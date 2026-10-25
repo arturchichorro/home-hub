@@ -6,6 +6,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -132,6 +133,8 @@ export const householdInvites = pgTable(
 );
 
 export const householdsRelations = relations(households, ({ many }) => ({
+  workouts: many(workouts),
+  workoutLogs: many(workoutLogs),
   habits: many(habits),
   images: many(recipeImages),
   listItems: many(listItems),
@@ -574,6 +577,109 @@ export const recipeImages = pgTable(
       .where(sql`${table.deletedAt} is null`),
   ],
 );
+
+export const workouts = pgTable(
+  "workouts",
+  {
+    id: uuid("id").primaryKey(),
+    sortKey: integer("sort_key").notNull().default(0),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    title: text("title").notNull(),
+    notes: text("notes").notNull().default(""),
+    exercises: jsonb("exercises").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("workouts_household_id_id").on(t.householdId, t.id),
+    index("workouts_household_sort_key_id").on(t.householdId, t.sortKey, t.id),
+    check(
+      "workouts_title_length",
+      sql`length(trim(${t.title})) between 1 and 150`,
+    ),
+  ],
+);
+export const workoutLogs = pgTable(
+  "workout_logs",
+  {
+    id: uuid("id").primaryKey(),
+    note: text("note").notNull().default(""),
+    householdId: uuid("household_id").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    workoutId: uuid("workout_id").notNull(),
+    snapshot: jsonb("snapshot").notNull(),
+    completedOn: text("completed_on").notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.householdId, t.workoutId],
+      foreignColumns: [workouts.householdId, workouts.id],
+    }),
+    uniqueIndex("workout_logs_one_per_day").on(
+      t.householdId,
+      t.userId,
+      t.workoutId,
+      t.completedOn,
+    ),
+    index("workout_logs_owner").on(
+      t.householdId,
+      t.userId,
+      t.workoutId,
+      t.createdAt,
+    ),
+  ],
+);
+export const workoutLogSets = pgTable(
+  "workout_log_sets",
+  {
+    logId: uuid("log_id")
+      .notNull()
+      .references(() => workoutLogs.id),
+    exerciseId: uuid("exercise_id").notNull(),
+    round: integer("round").notNull(),
+    values: jsonb("values").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.logId, t.exerciseId, t.round] }),
+    check("workout_log_sets_round", sql`${t.round} between 1 and 10`),
+  ],
+);
+export const workoutsRelations = relations(workouts, ({ one, many }) => ({
+  household: one(households, {
+    fields: [workouts.householdId],
+    references: [households.id],
+  }),
+  logs: many(workoutLogs),
+}));
+export const workoutLogsRelations = relations(workoutLogs, ({ one, many }) => ({
+  household: one(households, {
+    fields: [workoutLogs.householdId],
+    references: [households.id],
+  }),
+  workout: one(workouts, {
+    fields: [workoutLogs.householdId, workoutLogs.workoutId],
+    references: [workouts.householdId, workouts.id],
+  }),
+  sets: many(workoutLogSets),
+}));
+export const workoutLogSetsRelations = relations(workoutLogSets, ({ one }) => ({
+  log: one(workoutLogs, {
+    fields: [workoutLogSets.logId],
+    references: [workoutLogs.id],
+  }),
+}));
 
 export const recipeImagesRelations = relations(recipeImages, ({ one }) => ({
   household: one(households, {

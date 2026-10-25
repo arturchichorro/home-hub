@@ -239,6 +239,55 @@
       "when": 1792764882684,
       "tag": "0033_reflective_wasp",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792944297982,
+      "tag": "0034_slimy_darwin",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1792947954045,
+      "tag": "0035_thin_runaways",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792950015991,
+      "tag": "0036_fat_ender_wiggin",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1792950813237,
+      "tag": "0037_freezing_lyja",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792958224258,
+      "tag": "0038_rainy_sunspot",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792959092527,
+      "tag": "0039_modern_dagger",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1792960037231,
+      "tag": "0040_remove-workout-log-snapshot-notes",
+      "breakpoints": true
     }
   ]
 }

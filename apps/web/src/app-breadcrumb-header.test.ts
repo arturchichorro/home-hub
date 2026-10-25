@@ -19,6 +19,16 @@ describe("getBreadcrumbLocation", () => {
     });
   });
 
+  it("includes the opened workout", () => {
+    expect(
+      getBreadcrumbLocation("/households/home/workouts/workout-a"),
+    ).toEqual({
+      householdId: "home",
+      module: "workouts",
+      workoutId: "workout-a",
+    });
+  });
+
   it("returns the home location outside a household", () => {
     expect(getBreadcrumbLocation("/")).toEqual({});
   });
