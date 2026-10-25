@@ -1,10 +1,6 @@
-import {
-  type WorkoutExercise,
-  workoutExercisesSchema,
-} from "@home-hub/shared/workouts";
+import type { WorkoutExercise } from "@home-hub/shared/workouts";
 import {
   Button,
-  Check,
   ErrorPopover,
   IconButton,
   InlineAlert,
@@ -110,6 +106,7 @@ export function WorkoutText({
   );
 }
 
+import { useWorkoutExercisesEditor } from "./use-workout-exercises-editor";
 import { WorkoutExerciseSets, type WorkoutLogging } from "./workout-log";
 
 export function WorkoutExercises({
@@ -129,42 +126,31 @@ export function WorkoutExercises({
   onCloseLogging: () => void;
   resume: boolean;
 }) {
-  const [exercises, setExercises] = useState<WorkoutExercise[]>([...current]);
-  const [dirty, setDirty] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const currentJson = JSON.stringify(current);
-  useEffect(() => {
-    if (!dirty)
-      setExercises(workoutExercisesSchema.parse(JSON.parse(currentJson)));
-  }, [currentJson, dirty]);
-  function change(id: string, patch: Partial<WorkoutExercise>) {
-    setDirty(true);
-    setExercises((rows) =>
-      rows.map((e) => (e.id === id ? { ...e, ...patch } : e)),
+  const [starting, setStarting] = useState(false);
+  const editor = useWorkoutExercisesEditor({
+    current,
+    enabled: !disabled && !logging,
+    save: onSave,
+  });
+  const exercises = editor.exercises;
+  function change(
+    id: string,
+    patch: Partial<WorkoutExercise>,
+    immediate = false,
+  ) {
+    editor.change(
+      (rows) => rows.map((e) => (e.id === id ? { ...e, ...patch } : e)),
+      immediate,
     );
-  }
-  async function persist() {
-    if (!dirty) return true;
-    const parsed = workoutExercisesSchema.safeParse(exercises);
-    if (!parsed.success) {
-      setError("Check exercise names and set counts.");
-      return false;
-    }
-    setBusy(true);
-    setError("");
-    try {
-      const success = await onSave(parsed.data);
-      if (success) setDirty(false);
-      return success;
-    } finally {
-      setBusy(false);
-    }
   }
   return (
     <section
       aria-label="Workout exercises"
       className="grid min-w-0 gap-0"
+      aria-busy={editor.isSaving || starting || undefined}
+      onBlurCapture={() => {
+        if (!logging) void editor.flush();
+      }}
       onKeyDown={(event) => {
         if (
           !logging &&
@@ -172,7 +158,7 @@ export function WorkoutExercises({
           event.target instanceof HTMLInputElement
         ) {
           event.preventDefault();
-          if (!disabled && !busy) void persist();
+          if (!disabled && !starting) void editor.flush();
         }
       }}
     >
@@ -199,51 +185,49 @@ export function WorkoutExercises({
             <Button
               variant="ghost"
               className="h-7! px-1! font-normal text-muted"
-              disabled={disabled || busy}
+              disabled={disabled || starting}
               onClick={async () => {
-                if (await persist()) await onStartLogging();
+                setStarting(true);
+                try {
+                  if (await editor.flush()) await onStartLogging();
+                } finally {
+                  setStarting(false);
+                }
               }}
             >
               <Play aria-hidden="true" className="size-4" />
-              {resume ? "Resume logging" : "Log workout"}
+              {resume ? "Resume draft" : "Log workout"}
             </Button>
             <IconButton
               aria-label="Add exercise"
               title="Add exercise"
               className="size-7!"
-              disabled={disabled || busy || exercises.length >= 40}
-              onClick={() => {
-                setDirty(true);
-                setExercises((rows) => [
-                  ...rows,
-                  {
-                    id: crypto.randomUUID(),
-                    name: "New exercise",
-                    sets: 2,
-                    target: "8–12",
-                    unit: "reps",
-                    unilateral: false,
-                    load: "per-hand",
-                  },
-                ]);
-              }}
+              disabled={disabled || starting || exercises.length >= 40}
+              onClick={() =>
+                editor.change(
+                  (rows) => [
+                    ...rows,
+                    {
+                      id: crypto.randomUUID(),
+                      name: "New exercise",
+                      sets: 2,
+                      target: "8–12",
+                      unit: "reps",
+                      unilateral: false,
+                      load: "per-hand",
+                    },
+                  ],
+                  true,
+                )
+              }
             >
               <Plus aria-hidden="true" className="size-4" />
-            </IconButton>
-            <IconButton
-              aria-label="Save exercises"
-              title="Save exercises"
-              className="size-7!"
-              disabled={disabled || busy || !dirty}
-              onClick={() => void persist()}
-            >
-              <Check aria-hidden="true" className="size-4" />
             </IconButton>
           </>
         )}
       </div>
       <fieldset
-        disabled={disabled || busy}
+        disabled={disabled || starting}
         className="min-w-0 divide-y divide-border"
       >
         {(logging ? current : exercises).map((exercise) => (
@@ -267,19 +251,19 @@ export function WorkoutExercises({
                 <>
                   <ExerciseSettings
                     exercise={exercise}
-                    disabled={disabled || busy}
-                    onChange={(patch) => change(exercise.id, patch)}
+                    disabled={disabled || starting}
+                    onChange={(patch) => change(exercise.id, patch, true)}
                   />
                   <IconButton
                     aria-label={`Remove ${exercise.name}`}
                     title="Remove exercise"
                     className="size-7!"
-                    onClick={() => {
-                      setDirty(true);
-                      setExercises((rows) =>
-                        rows.filter((e) => e.id !== exercise.id),
-                      );
-                    }}
+                    onClick={() =>
+                      editor.change(
+                        (rows) => rows.filter((e) => e.id !== exercise.id),
+                        true,
+                      )
+                    }
                   >
                     <Trash2 aria-hidden="true" className="size-4" />
                   </IconButton>
@@ -315,14 +299,14 @@ export function WorkoutExercises({
               />
               <SelectRoot
                 value={exercise.unit}
-                disabled={disabled || busy || !!logging}
+                disabled={disabled || starting || !!logging}
                 items={[
                   { value: "reps", label: "Reps" },
                   { value: "seconds", label: "Seconds" },
                 ]}
                 onValueChange={(unit) => {
                   if (unit === "reps" || unit === "seconds")
-                    change(exercise.id, { unit });
+                    change(exercise.id, { unit }, true);
                 }}
               >
                 <SelectTrigger
@@ -339,18 +323,23 @@ export function WorkoutExercises({
               <WorkoutExerciseSets
                 exercise={exercise}
                 logging={logging}
-                disabled={disabled || busy}
+                disabled={disabled || starting}
               />
             )}
           </div>
         ))}
       </fieldset>
-      {!logging && dirty && (
-        <p className="text-xs text-muted">Unsaved exercises</p>
-      )}
-      {error && (
+      {editor.error && (
         <InlineAlert role="alert" variant="danger">
-          {error}
+          {editor.error}
+          <Button
+            variant="ghost"
+            size="compact"
+            onClick={() => void editor.flush()}
+            disabled={disabled || starting}
+          >
+            Retry
+          </Button>
         </InlineAlert>
       )}
     </section>
@@ -371,7 +360,8 @@ function ExerciseSettings({
         aria-label={`Settings for ${exercise.name}`}
         title="Exercise settings"
         disabled={disabled}
-        className="size-7! shrink-0 bg-transparent! px-0! text-muted"
+        variant="ghost"
+        className="size-7! shrink-0 px-0!"
       >
         <Settings aria-hidden="true" className="size-4" />
       </MenuTrigger>

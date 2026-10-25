@@ -272,7 +272,7 @@ export function WorkoutDetail({
                   {entry.status === "completed"
                     ? "Done"
                     : entry.status === "active"
-                      ? "In progress"
+                      ? "Draft"
                       : "Abandoned"}
                 </span>
               </button>

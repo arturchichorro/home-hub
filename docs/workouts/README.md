@@ -4,7 +4,8 @@ An owner-enabled module, disabled by default. Household members share standalone
 workouts; training logs and set values remain private to their author.
 
 - Open a workout from the list; its name appears in the breadcrumb and URL.
-- Edit its name and exercises using seamless controls. Workout notes are always
+- Exercise edits autosave after typing pauses or on blur; settings, additions,
+  and removals save immediately. There is no save-confirmation button. Workout notes are always
   visible below the exercises. A settings-icon menu configures each exercise's
   load convention and sides; the measure uses the shared Base UI select.
 - Reorder workouts like Lists: drag with a mouse, hold to drag on touch, or use
@@ -14,7 +15,8 @@ workouts; training logs and set values remain private to their author.
   rows without replacing the page. Unsaved exercise edits are saved first.
 - Each log has a private, autosaving free-text note. Completing or closing a log
   preserves its latest note draft; notes can also be edited later in history.
-- Resume unfinished logs or review/correct previous entries. Logs snapshot the
+- Unfinished logs are labelled **Draft**: saved entries not yet marked Done.
+  Resume a draft or review/correct previous entries. Logs snapshot the
   workout at creation; editing a log never changes the shared workout.
 - Add the supplied A/B/C starter workouts.
 

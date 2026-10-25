@@ -1,7 +1,7 @@
 import { Menu as BaseMenu } from "@base-ui/react/menu";
 import { Check, ChevronDown, type LucideProps } from "lucide-react";
 import type { ComponentProps } from "react";
-import { Button } from "./button";
+import { Button, type ButtonVariant } from "./button";
 
 export const MenuRoot = BaseMenu.Root;
 export const MenuRadioGroup = BaseMenu.RadioGroup;
@@ -13,13 +13,18 @@ export type MenuTriggerProps = Omit<
   "className" | "render"
 > & {
   className?: string;
+  variant?: ButtonVariant;
 };
 
-export function MenuTrigger({ className, ...props }: MenuTriggerProps) {
+export function MenuTrigger({
+  className,
+  variant = "secondary",
+  ...props
+}: MenuTriggerProps) {
   return (
     <BaseMenu.Trigger
       {...props}
-      render={<Button className={className ?? ""} variant="secondary" />}
+      render={<Button className={className ?? ""} variant={variant} />}
     />
   );
 }

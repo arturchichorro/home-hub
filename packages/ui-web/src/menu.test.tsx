@@ -27,6 +27,20 @@ describe("Menu", () => {
     expect(markup).toContain("Household");
   });
 
+  it("supports the same ghost hover treatment as icon actions", () => {
+    const markup = renderToStaticMarkup(
+      <MenuRoot>
+        <MenuTrigger variant="ghost" aria-label="Settings">
+          Settings
+        </MenuTrigger>
+      </MenuRoot>,
+    );
+    expect(markup).toContain(
+      "bg-transparent text-muted hover:bg-raised hover:text-foreground",
+    );
+    expect(markup).not.toContain("bg-transparent!");
+  });
+
   it("provides a decorative, muted menu chevron", () => {
     const markup = renderToStaticMarkup(<MenuChevron />);
 

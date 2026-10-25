@@ -75,6 +75,8 @@ describe("simple workouts", () => {
       html.lastIndexOf("Name for Dead bug"),
     );
     expect(html).not.toContain("Logging options");
+    expect(html).not.toContain('aria-label="Save exercises"');
+    expect(html).not.toContain("Unsaved exercises");
     expect(html).not.toMatch(/<summary[^>]*>Notes<\/summary>/);
     expect(html).not.toContain("Program instructions");
     expect(html).not.toContain("Smallest available increase");
@@ -101,6 +103,27 @@ describe("simple workouts", () => {
     expect(html).toContain('aria-label="Settings for Goblet squat"');
     expect(html).toContain('aria-haspopup="menu"');
     expect(html).not.toContain("<select");
+  });
+  it("labels unfinished logs as drafts, not completed workouts", () => {
+    useQuery
+      .mockReturnValueOnce([workout, { type: "complete" }])
+      .mockReturnValueOnce([
+        [
+          {
+            id: "draft",
+            status: "active",
+            createdAt: Date.now(),
+            completedOn: null,
+          },
+        ],
+        { type: "complete" },
+      ]);
+    const html = renderToStaticMarkup(
+      <WorkoutDetail householdId={householdId} workoutId={workoutId} />,
+    );
+    expect(html).toContain("Resume draft");
+    expect(html).toContain("Draft");
+    expect(html).not.toContain("In progress");
   });
   it("disables Done while disconnected", () => {
     enabled.mockReturnValue(false);
