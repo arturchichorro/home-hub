@@ -272,7 +272,7 @@ export function WorkoutDetail({
                   type="button"
                   aria-pressed={selectedId === entry.id}
                   disabled={disabled || busy}
-                  className="grid min-h-11 w-full min-w-0 gap-1 py-3 text-left text-sm outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-focus-ring aria-pressed:text-primary"
+                  className="grid min-h-11 w-full min-w-0 gap-1 py-3 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                   onClick={() =>
                     void selectLog(
                       selectedId === entry.id ? undefined : entry.id,
@@ -290,13 +290,11 @@ export function WorkoutDetail({
                       {entry.completedOn ??
                         new Date(entry.createdAt ?? 0).toLocaleDateString()}
                     </span>
-                    <span className="ml-auto text-xs text-muted">
-                      {entry.status === "completed"
-                        ? "Done"
-                        : entry.status === "active"
-                          ? "Draft"
-                          : "Abandoned"}
-                    </span>
+                    {entry.status !== "completed" && (
+                      <span className="ml-auto text-xs text-muted">
+                        {entry.status === "active" ? "Draft" : "Abandoned"}
+                      </span>
+                    )}
                   </span>
                   <span
                     className={`grid min-w-0 gap-1 text-xs font-normal text-muted ${entry.status === "completed" ? "pl-7" : ""}`}

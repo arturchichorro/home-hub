@@ -243,6 +243,18 @@ describe("simple workouts", () => {
     );
     expect(html).toContain("2 × 10 reps · 8 kg/hand");
     expect(html).toContain("No sets logged.");
+    const historyRows = [
+      ...html.matchAll(
+        /<button[^>]*aria-pressed="[^"]*"[^>]*>[\s\S]*?<\/button>/g,
+      ),
+    ].map((match) => match[0]);
+    expect(historyRows).toHaveLength(2);
+    for (const row of historyRows) {
+      expect(row).not.toContain("hover:text-primary");
+      expect(row).not.toContain("aria-pressed:text-primary");
+      expect(row).not.toContain("Done");
+      expect(row).toContain("lucide-check");
+    }
   });
   it("shows the starter option only for an empty library", () => {
     useQuery.mockReturnValue([[], { type: "complete" }]);
