@@ -1,5 +1,5 @@
 import { Select as BaseSelect } from "@base-ui/react/select";
-import { Check, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import type { ComponentProps } from "react";
 
 export const SelectRoot = BaseSelect.Root;
@@ -101,7 +101,7 @@ export type SelectItemProps = Omit<
 
 export function SelectItem({ children, className, ...props }: SelectItemProps) {
   const classes = [
-    "grid min-h-9 cursor-default grid-cols-[1rem_minmax(0,1fr)] items-center gap-2 rounded-sm px-3 py-2 text-sm text-foreground outline-none",
+    "flex min-h-9 cursor-default items-center rounded-sm px-3 py-2 text-sm text-foreground outline-none",
     "data-selected:bg-surface data-highlighted:bg-surface data-disabled:opacity-50",
     className,
   ]
@@ -110,13 +110,6 @@ export function SelectItem({ children, className, ...props }: SelectItemProps) {
 
   return (
     <BaseSelect.Item {...props} className={classes}>
-      <BaseSelect.ItemIndicator
-        aria-hidden="true"
-        keepMounted
-        className="invisible flex size-4 items-center justify-center text-primary data-selected:visible"
-      >
-        <Check aria-hidden="true" className="size-3" strokeWidth={2} />
-      </BaseSelect.ItemIndicator>
       <BaseSelect.ItemText className="min-w-0 truncate">
         {children}
       </BaseSelect.ItemText>
