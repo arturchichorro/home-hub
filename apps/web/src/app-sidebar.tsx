@@ -61,14 +61,15 @@ type HouseholdNavigationGroupProps = {
 };
 
 type ModuleDefinition = {
-  key: "recipes" | "settings" | "lists" | "habits";
+  key: "recipes" | "settings" | "lists" | "habits" | "workouts";
   label: string;
   Icon: typeof BookOpen;
   to:
     | "/households/$householdId/recipes"
     | "/households/$householdId/settings"
     | "/households/$householdId/lists"
-    | "/households/$householdId/habits";
+    | "/households/$householdId/habits"
+    | "/households/$householdId/workouts";
 };
 
 const moduleDefinitions: readonly ModuleDefinition[] = [
@@ -89,6 +90,12 @@ const moduleDefinitions: readonly ModuleDefinition[] = [
     label: "Habits",
     Icon: Calendar,
     to: "/households/$householdId/habits",
+  },
+  {
+    key: "workouts",
+    label: "Workouts",
+    Icon: Calendar,
+    to: "/households/$householdId/workouts",
   },
   {
     key: "settings",

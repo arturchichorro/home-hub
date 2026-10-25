@@ -134,6 +134,11 @@ jobs:
           docker exec -i "${{ job.services.postgres.id }}" \
             psql -U home_hub -d home_hub -v ON_ERROR_STOP=1 < scripts/verify-habits-schema.sql
 
+      - name: Verify Workouts schema invariants
+        run: |
+          docker exec -i "${{ job.services.postgres.id }}" \
+            psql -U home_hub -d home_hub -v ON_ERROR_STOP=1 < scripts/verify-workouts-schema.sql
+
       - name: Build production web application
         env:
           VITE_ZERO_CACHE_URL: https://home.achichorro.com/zero

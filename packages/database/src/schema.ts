@@ -6,6 +6,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -132,6 +133,9 @@ export const householdInvites = pgTable(
 );
 
 export const householdsRelations = relations(households, ({ many }) => ({
+  workoutPlans: many(workoutPlans),
+  workoutCycles: many(workoutCycles),
+  workoutSessions: many(workoutSessions),
   habits: many(habits),
   images: many(recipeImages),
   listItems: many(listItems),
@@ -574,6 +578,171 @@ export const recipeImages = pgTable(
       .where(sql`${table.deletedAt} is null`),
   ],
 );
+
+export const workoutPlans = pgTable(
+  "workout_plans",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    title: text("title").notNull(),
+    definition: jsonb("definition").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("workout_plans_household_id_id").on(t.householdId, t.id),
+    check(
+      "workout_plan_title_length",
+      sql`length(trim(${t.title})) between 1 and 150`,
+    ),
+  ],
+);
+
+export const workoutCycles = pgTable(
+  "workout_cycles",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    planId: uuid("plan_id").notNull(),
+    startedOn: text("started_on").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.householdId, t.planId],
+      foreignColumns: [workoutPlans.householdId, workoutPlans.id],
+    }),
+    unique("workout_cycles_scope_id").on(t.householdId, t.userId, t.id),
+    index("workout_cycles_owner").on(t.householdId, t.userId, t.createdAt),
+  ],
+);
+
+export const workoutSessions = pgTable(
+  "workout_sessions",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id").notNull(),
+    userId: uuid("user_id").notNull(),
+    cycleId: uuid("cycle_id").notNull(),
+    workoutId: uuid("workout_id").notNull(),
+    snapshot: jsonb("snapshot").notNull(),
+    lowEnergy: boolean("low_energy").notNull(),
+    status: text("status", {
+      enum: ["active", "completed", "abandoned"],
+    }).notNull(),
+    completedOn: text("completed_on"),
+    note: text("note").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.householdId, t.userId, t.cycleId],
+      foreignColumns: [
+        workoutCycles.householdId,
+        workoutCycles.userId,
+        workoutCycles.id,
+      ],
+    }),
+    uniqueIndex("workout_sessions_one_active")
+      .on(t.householdId, t.userId)
+      .where(sql`${t.status} = 'active'`),
+    index("workout_sessions_owner_history").on(
+      t.householdId,
+      t.userId,
+      t.createdAt,
+    ),
+    check(
+      "workout_session_status",
+      sql`${t.status} in ('active', 'completed', 'abandoned')`,
+    ),
+    check(
+      "workout_session_completion",
+      sql`(${t.status} = 'completed') = (${t.completedAt} is not null and ${t.completedOn} is not null)`,
+    ),
+    check("workout_session_note_length", sql`length(${t.note}) <= 1000`),
+  ],
+);
+export const workoutSets = pgTable(
+  "workout_sets",
+  {
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => workoutSessions.id),
+    exerciseId: uuid("exercise_id").notNull(),
+    round: integer("round").notNull(),
+    values: jsonb("values").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.sessionId, t.exerciseId, t.round] }),
+    check("workout_set_round", sql`${t.round} between 1 and 10`),
+  ],
+);
+export const workoutPlansRelations = relations(
+  workoutPlans,
+  ({ one, many }) => ({
+    household: one(households, {
+      fields: [workoutPlans.householdId],
+      references: [households.id],
+    }),
+    cycles: many(workoutCycles),
+  }),
+);
+export const workoutCyclesRelations = relations(
+  workoutCycles,
+  ({ one, many }) => ({
+    household: one(households, {
+      fields: [workoutCycles.householdId],
+      references: [households.id],
+    }),
+    plan: one(workoutPlans, {
+      fields: [workoutCycles.householdId, workoutCycles.planId],
+      references: [workoutPlans.householdId, workoutPlans.id],
+    }),
+    sessions: many(workoutSessions),
+  }),
+);
+export const workoutSessionsRelations = relations(
+  workoutSessions,
+  ({ one, many }) => ({
+    household: one(households, {
+      fields: [workoutSessions.householdId],
+      references: [households.id],
+    }),
+    cycle: one(workoutCycles, {
+      fields: [
+        workoutSessions.householdId,
+        workoutSessions.userId,
+        workoutSessions.cycleId,
+      ],
+      references: [
+        workoutCycles.householdId,
+        workoutCycles.userId,
+        workoutCycles.id,
+      ],
+    }),
+    sets: many(workoutSets),
+  }),
+);
+export const workoutSetsRelations = relations(workoutSets, ({ one }) => ({
+  session: one(workoutSessions, {
+    fields: [workoutSets.sessionId],
+    references: [workoutSessions.id],
+  }),
+}));
 
 export const recipeImagesRelations = relations(recipeImages, ({ one }) => ({
   household: one(households, {

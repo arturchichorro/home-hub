@@ -239,6 +239,13 @@
       "when": 1792764882684,
       "tag": "0033_reflective_wasp",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792944297982,
+      "tag": "0034_slimy_darwin",
+      "breakpoints": true
     }
   ]
 }

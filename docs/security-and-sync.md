@@ -302,6 +302,14 @@ Any member may manage shared habits; only the authenticated actor may set or
 clear their own completion keys. Archived habits reject rename/completion writes.
 Calendar and schema details are in the [Habits module](./habits/).
 
+## Workouts authorization
+
+Workouts shares plans but keeps cycles, sessions, notes, and sets private to the
+verified actor, including from household owners. Queries and writes require a
+live household, membership, and enabled Workouts setting. Sets are returned only
+through owner-filtered sessions. The four `workout_*` tables are published to
+Zero; publication is not client authorization. See [Workouts](./workouts/).
+
 ## Module storage security
 
 The Recipes module owns the complete presigned original-upload, signed
