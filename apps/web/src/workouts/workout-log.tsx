@@ -4,13 +4,44 @@ import type {
   WorkoutLog as LogRow,
   WorkoutLogSet,
 } from "@home-hub/shared/zero/schema";
-import { Input } from "@home-hub/ui-web";
+import { Check, IconButton, Input, X } from "@home-hub/ui-web";
 import {
   setInputKey,
   type WorkoutLogForm,
   type WorkoutSetInput,
 } from "./workout-log-form";
 export type WorkoutLog = LogRow & { readonly sets: readonly WorkoutLogSet[] };
+export function WorkoutLogActions({
+  disabled,
+  onComplete,
+  onCancel,
+}: {
+  disabled: boolean;
+  onComplete: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-end gap-2" data-log-actions>
+      <IconButton
+        aria-label="Save log"
+        title="Save log"
+        className="size-7!"
+        disabled={disabled}
+        onClick={onComplete}
+      >
+        <Check aria-hidden="true" className="size-4" />
+      </IconButton>
+      <IconButton
+        aria-label="Cancel log"
+        title="Cancel log"
+        className="size-7!"
+        onClick={onCancel}
+      >
+        <X aria-hidden="true" className="size-4" />
+      </IconButton>
+    </div>
+  );
+}
 export type WorkoutLogging = {
   form: WorkoutLogForm;
   previous: readonly WorkoutLog[];

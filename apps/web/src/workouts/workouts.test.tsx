@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkoutDetail } from "./workout-detail";
 import { WorkoutExercises } from "./workout-fields";
-import type { WorkoutLog } from "./workout-log";
+import { type WorkoutLog, WorkoutLogActions } from "./workout-log";
 import { openWorkoutLog } from "./workout-log-form";
 import { WorkoutsLibrary } from "./workouts-library";
 
@@ -49,6 +49,28 @@ beforeEach(() => {
   });
 });
 describe("simple workouts", () => {
+  it("uses matching neutral checkmark and cancel icon buttons", () => {
+    const html = renderToStaticMarkup(
+      <WorkoutLogActions
+        disabled={false}
+        onComplete={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    const buttons = html.match(/<button[^>]*>/g) ?? [];
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0]).toContain('aria-label="Save log"');
+    expect(buttons[1]).toContain('aria-label="Cancel log"');
+    expect(buttons[0]?.match(/class="([^"]+)"/)?.[1]).toBe(
+      buttons[1]?.match(/class="([^"]+)"/)?.[1],
+    );
+    expect(html).toContain("lucide-check");
+    expect(html).toContain("lucide-x");
+    expect(html).toContain("justify-end");
+    expect(html).not.toContain("Done");
+    expect(html).not.toContain("bg-primary text-on-primary");
+  });
+
   it("lists standalone linked workouts, without plans or instruction text", () => {
     useQuery.mockReturnValue([[workout], { type: "complete" }]);
     const html = renderToStaticMarkup(
@@ -151,11 +173,13 @@ describe("simple workouts", () => {
     );
     expect(html.match(/aria-label="Log [^"]+, set [0-9]+"/g)).toHaveLength(12);
     expect(html).not.toContain("<form");
-    expect(html).not.toContain('aria-label="Save ');
+    expect(html).not.toMatch(/aria-label="Save [^"]+, set /);
     expect(html).not.toContain("Rest timer");
     expect(html).not.toContain("Reps in reserve");
     expect(html).toContain('aria-label="Cancel log"');
-    expect(html).toContain("Done</span>");
+    expect(html).toContain('aria-label="Save log"');
+    expect(html).not.toContain("Done</span>");
+    expect(html).not.toContain("bg-primary text-on-primary");
     expect(html).toContain(
       'aria-label="Left reps for Bench-supported one-arm row, set 1"',
     );
@@ -192,7 +216,7 @@ describe("simple workouts", () => {
       />,
     );
     expect(form.id).toBe(log.id);
-    expect(html).toContain("Done</span>");
+    expect(html).toContain('aria-label="Save log"');
     expect(html).toContain("2026-10-25");
     expect(mutate).not.toHaveBeenCalled();
   });

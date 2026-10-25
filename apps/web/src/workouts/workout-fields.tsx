@@ -1,7 +1,6 @@
 import type { WorkoutExercise } from "@home-hub/shared/workouts";
 import {
   Button,
-  Check,
   ErrorPopover,
   IconButton,
   InlineAlert,
@@ -21,7 +20,6 @@ import {
   Settings,
   Textarea,
   Trash2,
-  X,
 } from "@home-hub/ui-web";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
@@ -108,7 +106,11 @@ export function WorkoutText({
 }
 
 import { useWorkoutExercisesEditor } from "./use-workout-exercises-editor";
-import { WorkoutExerciseSets, type WorkoutLogging } from "./workout-log";
+import {
+  WorkoutExerciseSets,
+  WorkoutLogActions,
+  type WorkoutLogging,
+} from "./workout-log";
 
 export function WorkoutExercises({
   title,
@@ -178,22 +180,11 @@ export function WorkoutExercises({
                   {logging.form.completedOn}
                 </span>
               )}
-              <Button
-                size="compact"
+              <WorkoutLogActions
                 disabled={disabled}
-                onClick={onCompleteLogging}
-              >
-                <Check aria-hidden="true" className="size-4" />
-                Done
-              </Button>
-              <IconButton
-                aria-label="Cancel log"
-                title="Cancel log"
-                className="size-7!"
-                onClick={onCloseLogging}
-              >
-                <X aria-hidden="true" className="size-4" />
-              </IconButton>
+                onComplete={onCompleteLogging}
+                onCancel={onCloseLogging}
+              />
             </>
           ) : (
             <>

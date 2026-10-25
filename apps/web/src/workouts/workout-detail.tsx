@@ -4,19 +4,13 @@ import {
 } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
-import {
-  Button,
-  Check,
-  History,
-  InlineAlert,
-  Textarea,
-} from "@home-hub/ui-web";
+import { Check, History, InlineAlert, Textarea } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useRef, useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { WorkoutExercises, WorkoutText } from "./workout-fields";
-import type { WorkoutLog } from "./workout-log";
+import { type WorkoutLog, WorkoutLogActions } from "./workout-log";
 import {
   collectWorkoutSets,
   findDailyWorkoutLog,
@@ -93,6 +87,12 @@ export function WorkoutDetail({
     setDone(false);
     setError("");
   }
+  function closeLog() {
+    if (!pending.current) {
+      setForm(undefined);
+      setError("");
+    }
+  }
   async function finishLog() {
     if (!form || disabled || pending.current) return;
     const collected = collectWorkoutSets(form.snapshot.exercises, form.inputs);
@@ -167,12 +167,7 @@ export function WorkoutDetail({
           save(mutators.workouts.update({ ...scope(), changes: { exercises } }))
         }
         onStartLogging={async () => startLog()}
-        onCloseLogging={() => {
-          if (!busy) {
-            setForm(undefined);
-            setError("");
-          }
-        }}
+        onCloseLogging={closeLog}
         onCompleteLogging={() => void finishLog()}
         logging={
           form
@@ -217,16 +212,11 @@ export function WorkoutDetail({
               setForm((current) => (current ? { ...current, note } : current));
             }}
           />
-          <div>
-            <Button
-              size="compact"
-              disabled={disabled || busy}
-              onClick={() => void finishLog()}
-            >
-              <Check aria-hidden="true" className="size-4" />
-              Done
-            </Button>
-          </div>
+          <WorkoutLogActions
+            disabled={disabled || busy}
+            onComplete={() => void finishLog()}
+            onCancel={closeLog}
+          />
         </section>
       )}
       <section className="grid gap-1" aria-label="Workout notes">

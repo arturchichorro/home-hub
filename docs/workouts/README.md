@@ -12,26 +12,27 @@ workouts; training logs and set values remain private to their author.
   load convention and sides; the measure uses the shared Base UI select.
 - Reorder workouts like Lists: drag with a mouse, hold to drag on touch, or use
   Space and arrow keys. The household-shared order is persisted optimistically.
-- **Log workout** opens an unsaved form. Only **Done**, beside its controls or
-  below its note, saves the log, entered sets, and private note together.
-  Closing, navigating away, or refreshing before Done discards the form. Nothing
-  is stored as a draft, and browsing a workout has no Done shortcut.
+- **Log workout** opens an unsaved form. The **checkmark** (Save log) saves the
+  log, entered sets, and private note together; **X** cancels. Both are matching
+  neutral icon buttons, right-aligned beside the title and below the log note.
+  Navigating away or refreshing before saving also discards the form. Nothing
+  is stored as a draft, and browsing a workout has no completion shortcut.
 - Each user has at most one log per workout per local calendar day. Logging again
-  opens today's saved entry; Done updates that same record. Other workouts and
+  opens today's saved entry; saving updates that same record. Other workouts and
   other authors have independent daily logs. The database enforces uniqueness.
-- “Log workout” expands weight/reps/seconds inputs beneath the existing exercise
-  rows without replacing the page. Unsaved exercise edits are saved first.
+- Logging expands weight/reps/seconds inputs beneath the existing exercise rows
+  without replacing the page. Unsaved exercise edits are saved first.
 - Unilateral sets explicitly label **Left** and **Right** counts; an empty right
   count uses the left value. These are side counts, not repetitions in reserve.
-- Each log has a private free-text note, saved only with Done. History entries
-  can be corrected with Done; cancelling leaves the saved record unchanged.
+- Each log has a private free-text note, saved only with the checkmark. History
+  can be corrected the same way; cancelling leaves the saved record unchanged.
 - History contains finished logs only, showing actual exercises, sets,
   reps/seconds, side counts, and weights; matching sets are condensed. Deliberate
   note-only logs say “No sets logged.” Targets and previous values are not
-  recorded automatically. Invalid partial rows block Done without losing input.
+  recorded automatically. Invalid partial rows block saving without losing input.
 - A new form captures the workout definition when opened and saves that snapshot
-  on Done. Historical edits retain the original snapshot and completion dates;
-  they never change the shared workout.
+  with the log. Historical edits retain the original snapshot and completion
+  dates; they never change the shared workout.
 - Add the supplied A/B/C starter workouts.
 
 There are no plans, cycles, scheduling, timers, progression suggestions, or
