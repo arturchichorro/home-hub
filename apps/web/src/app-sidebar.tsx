@@ -14,6 +14,7 @@ import {
   Calendar,
   ChevronDown,
   Drawer,
+  Dumbbell,
   House,
   HousePlus,
   IconButton,
@@ -94,7 +95,7 @@ const moduleDefinitions: readonly ModuleDefinition[] = [
   {
     key: "workouts",
     label: "Workouts",
-    Icon: Calendar,
+    Icon: Dumbbell,
     to: "/households/$householdId/workouts",
   },
   {

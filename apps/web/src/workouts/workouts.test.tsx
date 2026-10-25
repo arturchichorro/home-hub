@@ -6,9 +6,10 @@ import { PlanEditor } from "./plan-editor";
 import { type Session, WorkoutSession } from "./workout-session";
 import { WorkoutsPage } from "./workouts-page";
 
-const { useQuery, useZeroMutationEnabled } = vi.hoisted(() => ({
+const { useQuery, useZeroMutationEnabled, header } = vi.hoisted(() => ({
   useQuery: vi.fn(),
   useZeroMutationEnabled: vi.fn(),
+  header: vi.fn(),
 }));
 vi.mock("@rocicorp/zero/react", () => ({
   useZero: () => ({ userID: "me", mutate: vi.fn() }),
@@ -16,6 +17,9 @@ vi.mock("@rocicorp/zero/react", () => ({
 }));
 vi.mock("../zero/use-zero-mutation-enabled", () => ({
   useZeroMutationEnabled,
+}));
+vi.mock("../app-header-right-component", () => ({
+  useAppHeaderRightComponent: header,
 }));
 const snapshot = workoutSnapshotSchema.parse({
   workout: starterWorkoutPlan.workouts[0],
@@ -54,56 +58,74 @@ function renderSession(s: Session, disabled = false) {
     />,
   );
 }
+function button(html: string, label: string) {
+  return [...html.matchAll(/<button\b[^>]*>[\s\S]*?<\/button>/g)]
+    .map((m) => m[0])
+    .find((markup) => markup.includes(label));
+}
 beforeEach(() => {
   vi.clearAllMocks();
   useQuery.mockReset();
   useZeroMutationEnabled.mockReturnValue(true);
 });
 describe("guided workouts", () => {
-  it("renders exercises in pair/round order, with warm-up, mobility, safety, and twelve set forms", () => {
+  it("renders quiet set rows in pair/round order, preserving warm-up, mobility, safety, and twelve set forms", () => {
     const html = renderSession(session());
-    expect(html.match(/<form/g) ?? []).length(12);
-    const first = html.indexOf("Goblet squat"),
-      press = html.indexOf("Dumbbell bench press");
-    expect(press).toBeGreaterThan(first);
-    expect(html.indexOf("Goblet squat", first + 1)).toBeGreaterThan(press);
+    const forms = [...html.matchAll(/<form aria-label="([^"]+)"/g)].map(
+      (m) => m[1],
+    );
+    expect(forms).toHaveLength(12);
+    expect(forms.slice(0, 4)).toEqual([
+      "Log Goblet squat, set 1",
+      "Log Dumbbell bench press, set 1",
+      "Log Goblet squat, set 2",
+      "Log Dumbbell bench press, set 2",
+    ]);
     expect(html).toContain("Kiné");
     expect(html).toContain("3–4 clean");
-    expect(html).toContain("Skip set");
     expect(html).toContain("Private log");
-    expect(
-      html.match(
-        /<button[^>]*disabled=""[^>]*><span[^>]*>Complete session/,
-      )?.[0],
-    ).toBeDefined();
+    expect(html).toContain('aria-label="Save Goblet squat, set 1"');
+    expect(html).toContain('aria-label="Options for Goblet squat, set 1"');
+    expect(button(html, "Complete session")).toContain('disabled=""');
+    expect(html).not.toContain("rounded-md border border-border p-3");
   });
   it("low-energy sessions prescribe one round, not twelve sets", () => {
     const html = renderSession(session(true));
-    expect(html.match(/<form/g) ?? []).length(6);
+    expect(html.match(/<form/g) ?? []).toHaveLength(6);
     expect(html).toContain("Low energy");
     expect(html).not.toContain("Round 2");
   });
   it("disables logging when disconnected and for abandoned sessions", () => {
+    useZeroMutationEnabled.mockReturnValue(false);
+    const html = renderSession(session(), true);
+    expect(html.match(/<fieldset disabled=""/g) ?? []).toHaveLength(12);
     expect(
-      renderSession(session(), true).match(/<fieldset disabled=""/g) ?? [],
-    ).length(12);
-    const abandoned = { ...session(), status: "abandoned" as const };
-    const html = renderSession(abandoned);
-    expect(html.match(/<fieldset disabled=""/g) ?? []).length(12);
-    expect(html).not.toContain(">Complete session");
+      html.match(/<textarea[^>]*aria-label="Session note"[^>]*>/)?.[0],
+    ).toContain('disabled=""');
+    const abandoned = renderSession({ ...session(), status: "abandoned" });
+    expect(abandoned.match(/<fieldset disabled=""/g) ?? []).toHaveLength(12);
+    expect(button(abandoned, "Complete session")).toBeUndefined();
   });
-  it("completed sessions keep editable sets and omit the completion command", () => {
-    const s = {
+  it("completed sessions keep editable sets and omit completion/abandon commands", () => {
+    const html = renderSession({
       ...session(),
-      status: "completed" as const,
+      status: "completed",
       completedAt: Date.now(),
       completedOn: "2026-10-26",
-    };
-    const html = renderSession(s);
-    expect(html).not.toContain(">Complete session");
+    });
+    expect(button(html, "Complete session")).toBeUndefined();
+    expect(html).not.toContain('aria-label="Abandon session"');
     expect(html).not.toContain('<fieldset disabled=""');
   });
-  it("provides a structured plan editor, not a JSON textarea", () => {
+  it("uses a seamless session note instead of a conventional form and save button", () => {
+    const html = renderSession(session());
+    const note = html.match(
+      /<textarea[^>]*aria-label="Session note"[^>]*>/,
+    )?.[0];
+    expect(note).toContain("bg-transparent");
+    expect(html).not.toContain('aria-label="Save session note"');
+  });
+  it("provides seamless plan/exercise editing, named icon actions, and optional technique settings", () => {
     const html = renderToStaticMarkup(
       <PlanEditor
         initial={starterWorkoutPlan}
@@ -118,10 +140,15 @@ describe("guided workouts", () => {
     expect(html).toContain("Move workout earlier");
     expect(html).toContain("Smallest available increase");
     expect(html).toContain("Add exercise");
+    expect(
+      html.match(/<input[^>]*aria-label="Plan title"[^>]*>/)?.[0],
+    ).toContain("bg-transparent");
+    expect(html).toContain('aria-label="Remove Goblet squat from Workout A"');
+    expect(html).not.toContain("rounded-lg border border-border p-4");
   });
 });
 describe("workout dashboard", () => {
-  it("offers the supplied plan and explains private logging", () => {
+  it("offers the supplied plan and explains private logging without a duplicate module heading", () => {
     useQuery.mockReturnValue([[], { type: "complete" }]);
     const html = renderToStaticMarkup(
       <WorkoutsPage householdId={crypto.randomUUID()} />,
@@ -129,16 +156,20 @@ describe("workout dashboard", () => {
     expect(html).toContain("Add six-week A/B/C starter plan");
     expect(html).toContain("Your sessions and performance stay private");
     expect(html).toContain("0 / 3 sessions");
+    expect(html).not.toContain("<h1");
+    expect(renderToStaticMarkup(header.mock.calls.at(-1)?.[0])).toContain(
+      "Add plan",
+    );
   });
-  it("does not offer mutation controls as enabled before initial queries complete", () => {
+  it("disables the app-header create action before initial queries complete", () => {
     useQuery.mockReturnValue([[], { type: "unknown" }]);
     const html = renderToStaticMarkup(
       <WorkoutsPage householdId={crypto.randomUUID()} />,
     );
     expect(html).toContain("Loading workouts");
     expect(
-      html.match(/<button[^>]*disabled=""[^>]*><span[^>]*>Create plan/)?.[0],
-    ).toBeDefined();
+      button(renderToStaticMarkup(header.mock.calls.at(-1)?.[0]), "Add plan"),
+    ).toContain('disabled=""');
   });
   it("shows query failure and offline read-only feedback", () => {
     useQuery.mockReturnValue([[], { type: "error" }]);

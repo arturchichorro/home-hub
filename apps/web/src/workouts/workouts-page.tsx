@@ -13,9 +13,22 @@ import {
 } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
-import { Button, ConfirmationPopover, InlineAlert } from "@home-hub/ui-web";
+import {
+  Button,
+  Calendar,
+  Check,
+  ConfirmationPopover,
+  Dumbbell,
+  History,
+  IconButton,
+  InlineAlert,
+  Pencil,
+  Play,
+  Plus,
+} from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { PlanEditor } from "./plan-editor";
 import { WorkoutSession } from "./workout-session";
@@ -82,6 +95,57 @@ export function WorkoutsPage({ householdId }: { householdId: string }) {
     (r) => r.type === "complete",
   );
   const disabled = !enabled || busy || !loaded;
+  const createPlan = useCallback(
+    () =>
+      setEditing({
+        id: crypto.randomUUID(),
+        title: "New plan",
+        create: true,
+        plan: {
+          warmup: "",
+          finish: "",
+          guidance: "",
+          incrementKg: null,
+          workouts: [
+            {
+              id: crypto.randomUUID(),
+              name: "Workout A",
+              exercises: [
+                {
+                  id: crypto.randomUUID(),
+                  name: "New exercise",
+                  pair: 1,
+                  sets: 2,
+                  min: 8,
+                  max: 12,
+                  load: "per-hand",
+                  unit: "reps",
+                  unilateral: false,
+                  cues: "",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    [],
+  );
+  const headerActions = useMemo(
+    () =>
+      editing || selected ? null : (
+        <Button
+          variant="ghost"
+          className="h-7! px-1.5! font-normal text-muted"
+          disabled={disabled}
+          onClick={createPlan}
+        >
+          <Plus aria-hidden="true" className="size-4" />
+          Add plan
+        </Button>
+      ),
+    [editing, selected, disabled, createPlan],
+  );
+  useAppHeaderRightComponent(headerActions);
   async function change(
     request: Parameters<typeof zero.mutate>[0],
   ): Promise<boolean> {
@@ -110,7 +174,7 @@ export function WorkoutsPage({ householdId }: { householdId: string }) {
   }
   const scope = () => ({ householdId, optimisticTimestamp: Date.now() });
   return (
-    <div className="mx-auto grid w-full max-w-4xl gap-6">
+    <div className="grid min-w-0 gap-6">
       {error && (
         <InlineAlert role="alert" variant="danger">
           {error}
@@ -185,73 +249,80 @@ export function WorkoutsPage({ householdId }: { householdId: string }) {
         />
       ) : (
         <>
-          <div>
-            <h1 className="text-2xl font-semibold">Workouts</h1>
-            <p className="mt-1 text-muted">
-              Shared plans. Your sessions and performance stay private.
-            </p>
-          </div>
-          <section className="grid gap-3 rounded-lg border border-border p-5">
-            <h2 className="text-lg font-semibold">
-              {thisWeek} / 3 sessions this week
+          <p className="text-xs text-muted">
+            Shared plans. Your sessions and performance stay private.
+          </p>
+          <section className="grid gap-3">
+            <h2 className="flex items-center gap-2 font-semibold">
+              <Calendar aria-hidden="true" className="size-4" />
+              This week{" "}
+              <span className="ml-auto text-sm font-normal text-muted">
+                {thisWeek} / 3 sessions
+              </span>
             </h2>
-            <p className="text-sm text-muted">
-              Monday–Sunday · Ideally leave a day between sessions. Missed a
-              day? Continue the next letter; don't catch up.
+            <p className="text-xs text-muted">
+              Monday–Sunday · Leave a day between sessions when possible. Missed
+              a day? Continue the next letter, without catch-up.
             </p>
             {cycle && (
               <>
-                <p>
-                  Week {Math.min(week, 6)} of 6 · {cycleSessions.length}{" "}
-                  sessions in this cycle
-                </p>
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-                  {Array.from({ length: 6 }, (_, i) => {
-                    const start = shiftCalendarDate(cycle.startedOn, i * 7);
-                    const end = shiftCalendarDate(start, 6);
-                    const count = cycleSessions.filter(
-                      (s) =>
-                        s.completedOn &&
-                        s.completedOn >= start &&
-                        s.completedOn <= end,
-                    ).length;
-                    return (
-                      <div
-                        key={start}
-                        className="rounded bg-raised p-2 text-center text-sm"
-                      >
-                        Week {i + 1}
-                        <br />
-                        {count} / 3
-                      </div>
-                    );
-                  })}
-                </div>
+                <details>
+                  <summary className="cursor-pointer py-1 text-sm text-muted">
+                    Week {Math.min(week, 6)} of 6 · {cycleSessions.length}{" "}
+                    sessions in this cycle
+                  </summary>
+                  <div className="grid grid-cols-3 gap-4 py-3 sm:grid-cols-6">
+                    {Array.from({ length: 6 }, (_, i) => {
+                      const start = shiftCalendarDate(cycle.startedOn, i * 7);
+                      const end = shiftCalendarDate(start, 6);
+                      const count = cycleSessions.filter(
+                        (s) =>
+                          s.completedOn &&
+                          s.completedOn >= start &&
+                          s.completedOn <= end,
+                      ).length;
+                      return (
+                        <div key={start} className="text-sm">
+                          <p className="text-xs text-muted">Week {i + 1}</p>
+                          <p className="mt-1 tabular-nums">
+                            {count} <span className="text-muted">/ 3</span>
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
                 {week > 6 && (
-                  <p className="text-sm">
-                    Six weeks reached: review consistency, loads, volume, and
-                    exercise choices. Start a new cycle when ready; history is
-                    retained.
+                  <p className="text-sm text-muted">
+                    Six weeks reached: review consistency, loads, and exercise
+                    choices. Start a new cycle when ready; history is retained.
                   </p>
                 )}
               </>
             )}
             {active ? (
-              <Button
-                disabled={!loaded}
-                onClick={() => setSelectedSession(active.id)}
-              >
-                Resume{" "}
-                {workoutSnapshotSchema.parse(active.snapshot).workout.name}
-              </Button>
+              <div>
+                <Button
+                  size="compact"
+                  disabled={!loaded}
+                  onClick={() => setSelectedSession(active.id)}
+                >
+                  <Play aria-hidden="true" className="size-4" />
+                  Resume{" "}
+                  {workoutSnapshotSchema.parse(active.snapshot).workout.name}
+                </Button>
+              </div>
             ) : next && cycle ? (
-              <>
-                <h3 className="font-semibold">Next: {next.name}</h3>
+              <div className="grid gap-2 pt-2">
+                <h3 className="text-lg font-semibold text-primary">
+                  {next.name}
+                </h3>
                 <div className="flex flex-wrap gap-2">
                   {[false, true].map((lowEnergy) => (
                     <Button
+                      size="compact"
                       key={String(lowEnergy)}
-                      variant={lowEnergy ? "secondary" : "primary"}
+                      variant={lowEnergy ? "ghost" : "primary"}
                       disabled={disabled}
                       onClick={async () => {
                         const sessionId = crypto.randomUUID();
@@ -269,67 +340,137 @@ export function WorkoutsPage({ householdId }: { householdId: string }) {
                           setSelectedSession(sessionId);
                       }}
                     >
+                      <Play aria-hidden="true" className="size-4" />
                       {lowEnergy ? "Low-energy · one round" : "Start workout"}
                     </Button>
                   ))}
                 </div>
-                <p className="text-sm text-muted">
+                <p className="text-xs text-muted">
                   {week === 1
                     ? "First week: leave 3–4 reps in reserve."
                     : "Keep 2–3 clean reps in reserve."}{" "}
                   Low-energy sessions count.
                 </p>
-              </>
+              </div>
             ) : (
-              <p>Choose a plan below to start your personal six-week cycle.</p>
+              <p className="text-sm text-muted">
+                Choose a plan to start your personal six-week cycle.
+              </p>
             )}
           </section>
-          <section className="grid gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold">Shared plans</h2>
-              <Button
-                variant="secondary"
-                disabled={disabled}
-                onClick={() =>
-                  setEditing({
-                    id: crypto.randomUUID(),
-                    title: "New plan",
-                    create: true,
-                    plan: {
-                      warmup: "",
-                      finish: "",
-                      guidance: "",
-                      incrementKg: null,
-                      workouts: [
-                        {
-                          id: crypto.randomUUID(),
-                          name: "Workout A",
-                          exercises: [
-                            {
-                              id: crypto.randomUUID(),
-                              name: "New exercise",
-                              pair: 1,
-                              sets: 2,
-                              min: 8,
-                              max: 12,
-                              load: "per-hand",
-                              unit: "reps",
-                              unilateral: false,
-                              cues: "",
-                            },
-                          ],
-                        },
-                      ],
-                    },
-                  })
-                }
-              >
-                Create plan
-              </Button>
-            </div>
+          <section className="min-w-0">
+            <h2 className="flex items-center gap-2 py-3 font-semibold">
+              <Dumbbell aria-hidden="true" className="size-4" />
+              Plans
+            </h2>
+            <ul className="min-w-0 divide-y divide-border">
+              {plans.map((row) => {
+                const definition = workoutPlanSchema.parse(row.definition);
+                return (
+                  <li key={row.id} className="grid min-w-0 gap-1 py-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <button
+                          type="button"
+                          className="text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                          disabled={disabled}
+                          onClick={() =>
+                            setEditing({
+                              id: row.id,
+                              title: row.title,
+                              plan: definition,
+                              create: false,
+                            })
+                          }
+                        >
+                          {row.title}
+                        </button>
+                        <p className="mt-1 text-xs text-muted">
+                          {definition.workouts.map((w) => w.name).join(" → ")}
+                        </p>
+                      </div>
+                      <IconButton
+                        className="size-8!"
+                        aria-label={`Edit ${row.title}`}
+                        title="Edit plan"
+                        disabled={disabled}
+                        onClick={() =>
+                          setEditing({
+                            id: row.id,
+                            title: row.title,
+                            plan: definition,
+                            create: false,
+                          })
+                        }
+                      >
+                        <Pencil aria-hidden="true" className="size-4" />
+                      </IconButton>
+                      <ConfirmationPopover
+                        message={
+                          cycle
+                            ? "Start a new six-week cycle at the first workout? Your previous history will be retained."
+                            : "Start your personal six-week cycle with this plan?"
+                        }
+                        trigger={
+                          <IconButton
+                            className="size-8!"
+                            aria-label={`Start ${cycle ? "new " : ""}six-week cycle with ${row.title}`}
+                            title={cycle ? "Start new cycle" : "Start cycle"}
+                            disabled={disabled || !!active}
+                          >
+                            <Play aria-hidden="true" className="size-4" />
+                          </IconButton>
+                        }
+                        onConfirm={() =>
+                          change(
+                            mutators.workouts.startCycle({
+                              ...scope(),
+                              planId: row.id,
+                              cycleId: crypto.randomUUID(),
+                              timeZone,
+                            }),
+                          ).then(() => {})
+                        }
+                      />
+                    </div>
+                    <details>
+                      <summary className="cursor-pointer py-2 text-xs text-muted">
+                        Program details
+                      </summary>
+                      <div className="grid gap-3 py-2 text-sm text-muted">
+                        <p className="whitespace-pre-line">
+                          {definition.guidance}
+                        </p>
+                        <p className="whitespace-pre-line">
+                          {definition.warmup}
+                        </p>
+                        {definition.workouts.map((w) => (
+                          <div key={w.id}>
+                            <h4 className="font-medium text-foreground">
+                              {w.name}
+                            </h4>
+                            {w.exercises.map((e) => (
+                              <p key={e.id}>
+                                {e.pair} · {e.name}: {e.sets} × {e.min}–{e.max}{" "}
+                                {e.unit}
+                                {e.unilateral ? " each side" : ""} — {e.cues}
+                              </p>
+                            ))}
+                          </div>
+                        ))}
+                        <p className="whitespace-pre-line">
+                          {definition.finish}
+                        </p>
+                      </div>
+                    </details>
+                  </li>
+                );
+              })}
+            </ul>
             {!plans.some((p) => p.title === starterWorkoutTitle) && (
               <Button
-                variant="secondary"
+                variant="ghost"
+                className="h-auto! min-h-8 justify-start! whitespace-normal! px-1! text-left font-normal text-muted"
                 disabled={disabled}
                 onClick={() =>
                   void change(
@@ -343,116 +484,48 @@ export function WorkoutsPage({ householdId }: { householdId: string }) {
                   )
                 }
               >
+                <Plus aria-hidden="true" className="size-4 shrink-0" />
                 Add six-week A/B/C starter plan
               </Button>
             )}
-            {plans.map((row) => {
-              const definition = workoutPlanSchema.parse(row.definition);
-              return (
-                <div
-                  key={row.id}
-                  className="grid gap-3 rounded-lg border border-border p-4"
-                >
-                  <h3 className="font-semibold">{row.title}</h3>
-                  <p className="text-sm text-muted">
-                    {definition.workouts.map((w) => w.name).join(" → ")}
-                  </p>
-                  <details>
-                    <summary className="cursor-pointer text-sm">
-                      Preview program
-                    </summary>
-                    <div className="grid gap-3 py-3 text-sm">
-                      <p className="whitespace-pre-line">
-                        {definition.guidance}
-                      </p>
-                      <p className="whitespace-pre-line">{definition.warmup}</p>
-                      {definition.workouts.map((w) => (
-                        <div key={w.id}>
-                          <h4 className="font-medium">{w.name}</h4>
-                          {w.exercises.map((e) => (
-                            <p key={e.id}>
-                              {e.pair} · {e.name}: {e.sets} × {e.min}–{e.max}{" "}
-                              {e.unit}
-                              {e.unilateral ? " each side" : ""} — {e.cues}
-                            </p>
-                          ))}
-                        </div>
-                      ))}
-                      <p className="whitespace-pre-line">{definition.finish}</p>
-                    </div>
-                  </details>
-                  <div className="flex flex-wrap gap-2">
-                    <ConfirmationPopover
-                      message={
-                        cycle
-                          ? "Start a new six-week cycle at the first workout? Your previous history will be retained."
-                          : "Start your personal six-week cycle with this plan?"
-                      }
-                      trigger={
-                        <Button
-                          variant="secondary"
-                          disabled={disabled || !!active}
-                        >
-                          {cycle
-                            ? "Start new six-week cycle"
-                            : "Start six-week cycle"}
-                        </Button>
-                      }
-                      onConfirm={() =>
-                        change(
-                          mutators.workouts.startCycle({
-                            ...scope(),
-                            planId: row.id,
-                            cycleId: crypto.randomUUID(),
-                            timeZone,
-                          }),
-                        ).then(() => {})
-                      }
-                    />
-                    <Button
-                      variant="ghost"
-                      disabled={disabled}
-                      onClick={() =>
-                        setEditing({
-                          id: row.id,
-                          title: row.title,
-                          plan: definition,
-                          create: false,
-                        })
-                      }
-                    >
-                      Edit plan
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
           </section>
-          <section className="grid gap-3">
-            <h2 className="text-lg font-semibold">Your session history</h2>
+          <section className="min-w-0">
+            <h2 className="flex items-center gap-2 py-3 font-semibold">
+              <History aria-hidden="true" className="size-4" />
+              Your history
+            </h2>
             {!sessions.length && loaded && (
-              <p className="text-muted">
+              <p className="py-2 text-sm text-muted">
                 No sessions yet. Showing up is the goal.
               </p>
             )}
-            {sessions.map((s) => (
-              <button
-                type="button"
-                key={s.id}
-                className="flex flex-wrap justify-between gap-2 rounded-lg border border-border p-4 text-left hover:bg-raised"
-                onClick={() => setSelectedSession(s.id)}
-              >
-                <span>
-                  {workoutSnapshotSchema.parse(s.snapshot).workout.name}
-                  {s.lowEnergy ? " · Low energy" : ""}
-                </span>
-                <span className="text-sm text-muted">
-                  {s.completedOn ??
-                    new Date(s.createdAt ?? 0).toLocaleDateString()}{" "}
-                  · {s.status}
-                </span>
-              </button>
-            ))}
+            <ul className="divide-y divide-border">
+              {sessions.map((s) => (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    className="flex min-h-11 w-full flex-wrap items-center gap-x-3 gap-y-1 py-2 text-left text-sm outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-focus-ring"
+                    onClick={() => setSelectedSession(s.id)}
+                  >
+                    {s.status === "completed" && (
+                      <Check
+                        aria-hidden="true"
+                        className="size-3.5 text-muted"
+                      />
+                    )}
+                    <span>
+                      {workoutSnapshotSchema.parse(s.snapshot).workout.name}
+                      {s.lowEnergy ? " · Low energy" : ""}
+                    </span>
+                    <span className="ml-auto text-xs text-muted">
+                      {s.completedOn ??
+                        new Date(s.createdAt ?? 0).toLocaleDateString()}{" "}
+                      · {s.status}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           </section>
         </>
       )}

@@ -16,9 +16,15 @@ After six weeks, review the program and optionally start a new cycle; history re
 
 One resumable active session per person/household is enforced by a database unique
 index. Start in normal or low-energy mode (one round per pair, which counts).
-The session screen follows pair/round order with cues, previous performance,
-per-set logging, optional wall-clock rest countdown, warm-up, and mobility.
-Save each set explicitly; values remain drafts until saved. A skipped set needs
+The session screen follows pair/round order with quiet divided rows, seamless
+kg/reps inputs, named icon actions, and optional technique/reserve/skip details.
+Warm-up, mobility, progression guidance, and the rest timer expand on demand.
+The dashboard uses the app-header add action and the same icon-led sections as
+Recipes; the plan editor uses seamless titles, compact targets, and row actions.
+Save each set explicitly with its checkmark or Enter; values remain drafts until
+saved. Shared plan edits remain a draft until the plan checkmark is pressed.
+Session notes reuse the existing debounced seamless editor (blur to normalize,
+Escape to revert), with anchored error feedback. A skipped set needs
 a reason (for example symptoms or replacing accessories with wrist rehab).
 Completion requires all prescribed sets to be logged or explicitly skipped.
 Abandoning retains logs but does not advance rotation. Completed logs are editable.
