@@ -4,7 +4,10 @@ import { MediaSessionProvider } from "../media/session";
 import { ExerciseMedia } from "./exercise-media";
 
 const { useQuery } = vi.hoisted(() => ({ useQuery: vi.fn() }));
-vi.mock("@rocicorp/zero/react", () => ({ useQuery }));
+vi.mock("@rocicorp/zero/react", () => ({
+  useQuery,
+  useZero: () => ({ mutate: vi.fn() }),
+}));
 vi.mock("../zero/use-zero-mutation-enabled", () => ({
   useZeroMutationEnabled: () => true,
 }));
@@ -62,6 +65,8 @@ describe("inline exercise media", () => {
     expect(html).toContain('aria-label="Open picture for Push-up"');
     expect(html).toContain('aria-label="Add picture for Push-up"');
     expect(html).toContain("size-12");
+    expect(html).toContain("Drag to reorder, or press Space and arrow keys");
+    expect(html).toContain('draggable="false"');
   });
   it("keeps reference pictures viewable while logging without shared editing controls", () => {
     const html = renderToStaticMarkup(
@@ -76,6 +81,7 @@ describe("inline exercise media", () => {
     );
     expect(html).toContain('aria-label="Open picture for Push-up"');
     expect(html).not.toContain('aria-label="Add picture for Push-up"');
+    expect(html).not.toContain("Drag to reorder");
   });
   it("does not attempt media requests outside an authenticated session", () => {
     useQuery.mockClear();

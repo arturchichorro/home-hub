@@ -1,3 +1,5 @@
+import { DragDropProvider } from "@dnd-kit/react";
+import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import {
   type ExerciseMediaImage,
   exerciseImagesFromRows,
@@ -7,9 +9,10 @@ import {
   stillImageContentTypeSchema,
   stillImageUploadSchema,
 } from "@home-hub/shared/media";
+import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import { ErrorPopover, IconButton, ImagePlus } from "@home-hub/ui-web";
-import { useQuery } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "@rocicorp/zero/react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { ImageViewer } from "../media/image-viewer";
 import { type MediaSession, useMediaSession } from "../media/session";
@@ -25,6 +28,7 @@ import {
   deleteExerciseImage,
   requestExerciseImageUpload,
 } from "./exercise-media-api";
+import { workoutOrderingSensors } from "./workout-list";
 
 type Props = {
   householdId: string;
@@ -42,12 +46,25 @@ function ExerciseThumbnail({
   session,
   name,
   onOpen,
+  index,
+  sortGroup,
+  sortingDisabled,
 }: {
+  index: number;
+  sortGroup: string;
+  sortingDisabled: boolean;
   image: ExerciseMediaImage;
   session: MediaSession;
   name: string;
   onOpen: () => void;
 }) {
+  const sortable = useSortable({
+    id: image.id,
+    index,
+    type: sortGroup,
+    accept: sortGroup,
+    disabled: sortingDisabled,
+  });
   const state = useExerciseImageUrl({
     ...session,
     householdId: image.householdId,
@@ -56,16 +73,30 @@ function ExerciseThumbnail({
     variant: "thumbnail",
   });
   return (
-    <li className="size-12 shrink-0 overflow-hidden rounded-lg bg-raised">
+    <li
+      ref={sortable.ref}
+      data-exercise-media-attachment-id={image.id}
+      className={`size-12 shrink-0 overflow-hidden rounded-lg bg-raised ${sortable.isDragging ? "opacity-60" : ""}`}
+    >
       <button
+        ref={sortable.handleRef}
         type="button"
+        draggable={false}
         aria-label={`Open picture for ${name}`}
-        className="size-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-focus-ring"
-        onClick={onOpen}
+        title={
+          sortingDisabled
+            ? undefined
+            : "Drag to reorder, or press Space and arrow keys"
+        }
+        className={`size-full touch-pan-y select-none focus-visible:outline-2 focus-visible:outline-focus-ring ${sortingDisabled ? "cursor-zoom-in" : "cursor-grab active:cursor-grabbing"}`}
+        onClick={() => {
+          if (!sortable.isDragging) onOpen();
+        }}
       >
         {state.url ? (
           <img
             src={state.url}
+            draggable={false}
             alt=""
             width={image.width ?? undefined}
             height={image.height ?? undefined}
@@ -91,6 +122,7 @@ function ExerciseMediaGallery({
   session,
 }: Props & { session: MediaSession }) {
   const enabled = useZeroMutationEnabled();
+  const zero = useZero();
   const [rows, result] = useQuery(
     queries.workouts.exerciseMedia({ householdId, exerciseId }),
   );
@@ -98,6 +130,7 @@ function ExerciseMediaGallery({
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [reordering, setReordering] = useState(false);
   const [error, setError] = useState<string>();
   const [deleteError, setDeleteError] = useState<string>();
   const button = useRef<HTMLButtonElement>(null),
@@ -108,6 +141,7 @@ function ExerciseMediaGallery({
   const selected = images.find((image) => image.id === selectedId);
   const writable =
     enabled && !disabled && !readOnly && result.type === "complete";
+  const sortingDisabled = !writable || busy || deleting || reordering;
   const thumbnail = useExerciseImageUrl({
     ...session,
     householdId,
@@ -139,6 +173,29 @@ function ExerciseMediaGallery({
     }
   }, [selectedId, viewer.url, images, session, householdId, exerciseId]);
 
+  async function reorder(attachmentId: string, orderedAttachmentIds: string[]) {
+    if (sortingDisabled) return;
+    setReordering(true);
+    setError(undefined);
+    try {
+      const mutation = zero.mutate(
+        mutators.workouts.reorderExerciseMedia({
+          householdId,
+          exerciseId,
+          attachmentId,
+          orderedAttachmentIds,
+          optimisticTimestamp: Date.now(),
+        }),
+      );
+      const client = await mutation.client;
+      const outcome = client.type === "error" ? client : await mutation.server;
+      if (outcome.type === "error") throw new Error("Reorder failed");
+    } catch {
+      setError("Unable to reorder these pictures. Try again.");
+    } finally {
+      setReordering(false);
+    }
+  }
   async function upload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -236,23 +293,49 @@ function ExerciseMediaGallery({
       {(images.length > 0 || !readOnly) && (
         <div className="my-1 flex max-w-full min-w-0 items-center gap-2">
           {images.length > 0 && (
-            <ul
-              aria-label={`Pictures for ${name}`}
-              className="flex max-w-full min-w-0 gap-2 overflow-x-auto overscroll-x-contain"
+            <DragDropProvider
+              sensors={workoutOrderingSensors}
+              onDragEnd={(event) => {
+                const source = event.operation.source;
+                if (
+                  sortingDisabled ||
+                  event.canceled ||
+                  !isSortable(source) ||
+                  source.initialIndex === source.index
+                )
+                  return;
+                const attachmentId = String(source.id);
+                const ids = images.map((image) => image.id),
+                  from = ids.indexOf(attachmentId),
+                  to = source.index;
+                if (from < 0 || to < 0 || to >= ids.length || from === to)
+                  return;
+                ids.splice(from, 1);
+                ids.splice(to, 0, attachmentId);
+                void reorder(attachmentId, ids);
+              }}
             >
-              {images.map((image) => (
-                <ExerciseThumbnail
-                  key={image.id}
-                  image={image}
-                  session={session}
-                  name={name}
-                  onOpen={() => {
-                    setDeleteError(undefined);
-                    setSelectedId(image.id);
-                  }}
-                />
-              ))}
-            </ul>
+              <ul
+                aria-label={`Pictures for ${name}`}
+                className="flex max-w-full min-w-0 gap-2 overflow-x-auto overscroll-x-contain"
+              >
+                {images.map((image, index) => (
+                  <ExerciseThumbnail
+                    key={image.id}
+                    index={index}
+                    sortGroup={`exercise-media:${householdId}:${exerciseId}`}
+                    sortingDisabled={sortingDisabled}
+                    image={image}
+                    session={session}
+                    name={name}
+                    onOpen={() => {
+                      setDeleteError(undefined);
+                      setSelectedId(image.id);
+                    }}
+                  />
+                ))}
+              </ul>
+            </DragDropProvider>
           )}
           {!readOnly && (
             <IconButton
@@ -262,7 +345,7 @@ function ExerciseMediaGallery({
               variant="ghost"
               className="size-6! shrink-0"
               busy={busy}
-              disabled={!writable || busy}
+              disabled={!writable || busy || reordering}
               onClick={() => {
                 const fileInput = input.current;
                 if (!fileInput) return;
@@ -300,7 +383,7 @@ function ExerciseMediaGallery({
         viewerUrl={viewer.url}
         error={viewer.error}
         alt={name}
-        canDelete={writable}
+        canDelete={writable && !reordering}
         deleting={deleting}
         actionError={deleteError}
         deleteDescription="This removes the picture from this exercise in every workout."

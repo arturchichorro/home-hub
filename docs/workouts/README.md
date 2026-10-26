@@ -43,8 +43,9 @@ workouts; training logs and set values remain private to their author.
   sets and target ranges belong to each workout.
 
 - Exercise pictures appear as compact inline strips like cooking-log photos, in
-  the catalog and every workout using that movement. Uploads and deletion are
-  shared, not per-slot or private log attachments. The viewer supports navigation;
+  the catalog and every workout using that movement. Uploads, deletion and picture
+  ordering are shared, not per-slot or private log attachments. Reorder by mouse
+  drag, touch hold, or Space and arrow keys; failed saves roll back with an error. The viewer supports navigation;
   while logging, reference pictures remain viewable but shared media editing is
   hidden. Opening the viewer never saves or replaces the in-memory log form.
   Still JPEG/PNG/WebP use the existing shared-media pipeline; video and animation
