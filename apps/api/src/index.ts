@@ -22,6 +22,11 @@ import { createRenameHouseholdService } from "./households/rename";
 import { createRevokeHouseholdInviteService } from "./households/revoke-invite";
 import { createSetHouseholdModuleEnabledService } from "./households/set-module-enabled";
 import { createTransferHouseholdOwnershipService } from "./households/transfer-ownership";
+import { inspectR2Object } from "./media/inspect-object";
+import { processMediaImage } from "./media/process-image";
+import { createR2Client } from "./media/r2-client";
+import { signMediaRead } from "./media/sign-read";
+import { signMediaUpload } from "./media/sign-upload";
 import { consoleStructuredLogger } from "./observability";
 import { createDatabaseReadinessCheck } from "./readiness";
 import { createConfirmRecipeImageUploadService } from "./recipes/images/confirm-upload";
@@ -29,11 +34,7 @@ import { createRecipeImageReadUrlService } from "./recipes/images/create-read-ur
 import { createRecipeImageReadUrlsService } from "./recipes/images/create-read-urls";
 import { createRecipeImageUploadService } from "./recipes/images/create-upload";
 import { createDeleteRecipeImageService } from "./recipes/images/delete";
-import { inspectR2Object } from "./recipes/images/inspect-object";
-import { processRecipeImageDerivatives } from "./recipes/images/process-derivatives";
-import { createR2Client } from "./recipes/images/r2-client";
-import { signRecipeImageRead } from "./recipes/images/sign-read";
-import { signRecipeImageUpload } from "./recipes/images/sign-upload";
+import { recipeImageMediaIdentity } from "./recipes/images/media-identity";
 import { closeHttpServer, createGracefulShutdown } from "./server-lifecycle";
 import { createZeroDbProvider } from "./zero/db-provider";
 
@@ -101,7 +102,7 @@ const recipeImages = {
   createRecipeImageUpload: createRecipeImageUploadService({
     db: infrastructure.db,
     signUpload: ({ objectKey, contentType }) =>
-      signRecipeImageUpload({
+      signMediaUpload({
         client: infrastructure.r2Client,
         bucket: infrastructure.config.R2_BUCKET,
         objectKey,
@@ -116,37 +117,33 @@ const recipeImages = {
         bucket: infrastructure.config.R2_BUCKET,
         objectKey,
       }),
-    processDerivatives: ({ householdId, imageId, recipeId }) =>
-      processRecipeImageDerivatives({
+    processDerivatives: (input) =>
+      processMediaImage({
         baseUrl: infrastructure.config.IMAGE_DELIVERY_BASE_URL,
-        householdId,
-        imageId,
-        recipeId,
+        identity: recipeImageMediaIdentity(input),
+        contentType: input.contentType,
+        byteSize: input.byteSize,
         secret: infrastructure.config.IMAGE_DELIVERY_SIGNING_SECRET,
       }),
   }),
   createRecipeImageReadUrl: createRecipeImageReadUrlService({
     db: infrastructure.db,
-    signRead: ({ householdId, imageId, recipeId, variant }) =>
-      signRecipeImageRead({
+    signRead: (input) =>
+      signMediaRead({
         baseUrl: infrastructure.config.IMAGE_DELIVERY_BASE_URL,
-        householdId,
-        imageId,
-        recipeId,
+        identity: recipeImageMediaIdentity(input),
+        variant: input.variant,
         secret: infrastructure.config.IMAGE_DELIVERY_SIGNING_SECRET,
-        variant,
       }),
   }),
   createRecipeImageReadUrls: createRecipeImageReadUrlsService({
     db: infrastructure.db,
-    signRead: ({ householdId, imageId, recipeId, variant }) =>
-      signRecipeImageRead({
+    signRead: (input) =>
+      signMediaRead({
         baseUrl: infrastructure.config.IMAGE_DELIVERY_BASE_URL,
-        householdId,
-        imageId,
-        recipeId,
+        identity: recipeImageMediaIdentity(input),
+        variant: input.variant,
         secret: infrastructure.config.IMAGE_DELIVERY_SIGNING_SECRET,
-        variant,
       }),
   }),
   deleteRecipeImage: createDeleteRecipeImageService({

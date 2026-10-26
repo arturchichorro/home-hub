@@ -137,7 +137,8 @@ export const householdsRelations = relations(households, ({ many }) => ({
   workouts: many(workouts),
   workoutLogs: many(workoutLogs),
   habits: many(habits),
-  images: many(recipeImages),
+  media: many(media),
+  images: many(recipeMedia),
   listItems: many(listItems),
   lists: many(lists),
   members: many(householdMembers),
@@ -456,7 +457,7 @@ export const recipesRelations = relations(recipes, ({ many, one }) => ({
   }),
   ingredients: many(recipeIngredients),
   cookLogs: many(recipeCookLogs),
-  images: many(recipeImages),
+  images: many(recipeMedia),
 }));
 
 export const recipeIngredientsRelations = relations(
@@ -484,7 +485,7 @@ export const recipeCookLogsRelations = relations(
       fields: [recipeCookLogs.householdId, recipeCookLogs.recipeId],
       references: [recipes.householdId, recipes.id],
     }),
-    images: many(recipeImages),
+    images: many(recipeMedia),
   }),
 );
 
@@ -521,21 +522,75 @@ export const householdModuleSettingsRelations = relations(
   }),
 );
 
-export const recipeImages = pgTable(
-  "recipe_images",
+export const media = pgTable(
+  "media",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    kind: text("kind").notNull(),
+    objectKey: text("object_key").notNull().unique(),
+    contentType: text("content_type").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    durationMs: integer("duration_ms"),
+    animated: boolean("animated"),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("media_household_id_id").on(table.householdId, table.id),
+    check("media_kind", sql`${table.kind} IN ('image', 'video')`),
+    // Expand with the video feature, not before its validation/delivery exists.
+    check(
+      "media_supported_content_type",
+      sql`${table.kind} = 'image' AND ${table.contentType} IN ('image/jpeg', 'image/png', 'image/webp')`,
+    ),
+    check(
+      "media_byte_size_range",
+      sql`${table.byteSize} > 0 AND ${table.byteSize} <= 10485760`,
+    ),
+    check(
+      "media_dimensions_range",
+      sql`${table.width} > 0 AND ${table.width} <= 16384 AND ${table.height} > 0 AND ${table.height} <= 16384`,
+    ),
+    check(
+      "media_duration",
+      sql`${table.durationMs} IS NULL OR (${table.kind} = 'video' AND ${table.durationMs} > 0)`,
+    ),
+    check(
+      "media_animation",
+      sql`${table.animated} IS NULL OR ${table.kind} = 'image'`,
+    ),
+  ],
+);
+
+export const mediaRelations = relations(media, ({ one, many }) => ({
+  household: one(households, {
+    fields: [media.householdId],
+    references: [households.id],
+  }),
+  recipeAttachments: many(recipeMedia),
+}));
+
+export const recipeMedia = pgTable(
+  "recipe_media",
   {
     id: uuid("id").primaryKey(),
     householdId: uuid("household_id").notNull(),
     recipeId: uuid("recipe_id").notNull(),
     cookLogId: uuid("cook_log_id"),
-    objectKey: text("object_key").notNull().unique(),
-    contentType: text("content_type").notNull(),
-    byteSize: integer("byte_size").notNull(),
+    mediaId: uuid("media_id").notNull(),
     sortKey: integer("sort_key").notNull(),
-    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    width: integer("width").notNull(),
-    height: integer("height").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -547,7 +602,7 @@ export const recipeImages = pgTable(
     foreignKey({
       columns: [table.householdId, table.recipeId],
       foreignColumns: [recipes.householdId, recipes.id],
-      name: "recipe_images_household_recipe_fk",
+      name: "recipe_media_household_recipe_fk",
     }),
     foreignKey({
       columns: [table.householdId, table.recipeId, table.cookLogId],
@@ -556,24 +611,18 @@ export const recipeImages = pgTable(
         recipeCookLogs.recipeId,
         recipeCookLogs.id,
       ],
-      name: "recipe_images_household_recipe_cook_log_fk",
+      name: "recipe_media_household_recipe_cook_log_fk",
     }),
-    check(
-      "recipe_images_content_type_allowed",
-      sql`${table.contentType} IN ('image/jpeg', 'image/png', 'image/webp')`,
-    ),
-    check(
-      "recipe_images_byte_size_range",
-      sql`${table.byteSize} > 0 AND ${table.byteSize} <= 10485760`,
-    ),
-    check(
-      "recipe_images_dimensions_range",
-      sql`${table.width} > 0 AND ${table.width} <= 16384 AND ${table.height} > 0 AND ${table.height} <= 16384`,
-    ),
-    index("recipe_images_recipe_id_sort_key_id_idx")
+    foreignKey({
+      columns: [table.householdId, table.mediaId],
+      foreignColumns: [media.householdId, media.id],
+      name: "recipe_media_household_media_fk",
+    }),
+    index("recipe_media_media_id_idx").on(table.mediaId),
+    index("recipe_media_recipe_id_sort_key_id_idx")
       .on(table.recipeId, table.sortKey, table.id)
       .where(sql`${table.deletedAt} is null`),
-    index("recipe_images_cook_log_id_sort_key_id_idx")
+    index("recipe_media_cook_log_id_sort_key_id_idx")
       .on(table.cookLogId, table.sortKey, table.id)
       .where(sql`${table.deletedAt} is null`),
   ],
@@ -804,20 +853,24 @@ export const workoutLogSetsRelations = relations(workoutLogSets, ({ one }) => ({
   }),
 }));
 
-export const recipeImagesRelations = relations(recipeImages, ({ one }) => ({
+export const recipeMediaRelations = relations(recipeMedia, ({ one }) => ({
+  asset: one(media, {
+    fields: [recipeMedia.householdId, recipeMedia.mediaId],
+    references: [media.householdId, media.id],
+  }),
   household: one(households, {
-    fields: [recipeImages.householdId],
+    fields: [recipeMedia.householdId],
     references: [households.id],
   }),
   recipe: one(recipes, {
-    fields: [recipeImages.householdId, recipeImages.recipeId],
+    fields: [recipeMedia.householdId, recipeMedia.recipeId],
     references: [recipes.householdId, recipes.id],
   }),
   cookLog: one(recipeCookLogs, {
     fields: [
-      recipeImages.householdId,
-      recipeImages.recipeId,
-      recipeImages.cookLogId,
+      recipeMedia.householdId,
+      recipeMedia.recipeId,
+      recipeMedia.cookLogId,
     ],
     references: [
       recipeCookLogs.householdId,

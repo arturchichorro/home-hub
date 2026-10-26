@@ -2,7 +2,8 @@ import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
-  recipeImages,
+  media,
+  recipeMedia as recipeImages,
   recipes,
 } from "@home-hub/database/schema";
 import { describe, expect, it, vi } from "vitest";
@@ -33,6 +34,7 @@ const input = { userId, householdId, recipeId, imageId };
 
 const pendingImage = {
   id: imageId,
+  mediaId: imageId,
   objectKey,
   contentType: "image/webp",
   byteSize: 2_048,
@@ -81,6 +83,7 @@ function createFakeDatabase({
         tables.push(table);
         return builder;
       },
+      innerJoin: () => builder,
       where: (_condition: unknown) => builder,
       limit: (_limit: unknown) => builder,
       for: async (strength: unknown) => {
@@ -151,6 +154,10 @@ describe("confirm recipe image upload service", () => {
       householdId,
       imageId,
       recipeId,
+      mediaId: imageId,
+      objectKey,
+      contentType: pendingImage.contentType,
+      byteSize: pendingImage.byteSize,
     });
     expect(lockStrengths).toEqual([
       "share",
@@ -169,11 +176,12 @@ describe("confirm recipe image upload service", () => {
       householdModuleSettings,
       recipeImages,
       recipes,
-      recipeImages,
+      media,
     ]);
     expect(updatedValues).toEqual([
       {
         confirmedAt: result.image.confirmedAt,
+        animated: false,
         updatedAt: result.image.confirmedAt,
       },
     ]);

@@ -431,20 +431,41 @@ describe("recipe queries", () => {
           },
           subquery: {
             alias: "images",
-            table: "recipeImages",
+            table: "recipeMedia",
             limit: 1,
             where: {
               type: "and",
               conditions: [
-                {
-                  type: "simple",
-                  left: { type: "column", name: "confirmedAt" },
-                  op: "IS NOT",
-                  right: { type: "literal", value: null },
-                },
                 activeHouseholdCondition(),
+                {
+                  type: "correlatedSubquery",
+                  op: "EXISTS",
+                  related: {
+                    correlation: {
+                      parentField: ["householdId", "mediaId"],
+                      childField: ["householdId", "id"],
+                    },
+                    subquery: {
+                      table: "media",
+                      where: {
+                        type: "and",
+                        conditions: [
+                          equalsCondition("kind", "image"),
+                          {
+                            type: "simple",
+                            left: { type: "column", name: "confirmedAt" },
+                            op: "IS NOT",
+                            right: { type: "literal", value: null },
+                          },
+                          activeHouseholdCondition(),
+                        ],
+                      },
+                    },
+                  },
+                },
               ],
             },
+            related: [{ subquery: { table: "media", alias: "asset" } }],
             orderBy: [
               ["sortKey", "desc"],
               ["id", "asc"],
@@ -535,19 +556,40 @@ describe("recipe queries", () => {
           },
           subquery: {
             alias: "images",
-            table: "recipeImages",
+            table: "recipeMedia",
             where: {
               type: "and",
               conditions: [
-                {
-                  type: "simple",
-                  left: { type: "column", name: "confirmedAt" },
-                  op: "IS NOT",
-                  right: { type: "literal", value: null },
-                },
                 activeHouseholdCondition(),
+                {
+                  type: "correlatedSubquery",
+                  op: "EXISTS",
+                  related: {
+                    correlation: {
+                      parentField: ["householdId", "mediaId"],
+                      childField: ["householdId", "id"],
+                    },
+                    subquery: {
+                      table: "media",
+                      where: {
+                        type: "and",
+                        conditions: [
+                          equalsCondition("kind", "image"),
+                          {
+                            type: "simple",
+                            left: { type: "column", name: "confirmedAt" },
+                            op: "IS NOT",
+                            right: { type: "literal", value: null },
+                          },
+                          activeHouseholdCondition(),
+                        ],
+                      },
+                    },
+                  },
+                },
               ],
             },
+            related: [{ subquery: { table: "media", alias: "asset" } }],
             orderBy: [
               ["sortKey", "desc"],
               ["id", "asc"],

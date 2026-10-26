@@ -118,7 +118,7 @@ function createFakeTransaction({
         insert: cookLogInsert,
         update: cookLogUpdate,
       },
-      recipeImages: { update: imageUpdate },
+      recipeMedia: { update: imageUpdate },
       recipeIngredients: {
         delete: ingredientDelete,
         insert: ingredientInsert,

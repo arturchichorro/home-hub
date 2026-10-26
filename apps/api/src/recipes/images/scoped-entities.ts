@@ -1,7 +1,8 @@
 import type { DatabaseTransaction } from "@home-hub/database";
 import {
+  media,
   recipeCookLogs,
-  recipeImages,
+  recipeMedia,
   recipes,
 } from "@home-hub/database/schema";
 import { and, eq, exists, inArray, isNotNull, isNull } from "drizzle-orm";
@@ -71,27 +72,48 @@ export async function findRecipeCookLogForShare(
   return cookLog;
 }
 
-export async function findConfirmedRecipeImageForShare(
+const details = {
+  id: recipeMedia.id,
+  mediaId: media.id,
+  objectKey: media.objectKey,
+  contentType: media.contentType,
+  byteSize: media.byteSize,
+  confirmedAt: media.confirmedAt,
+};
+
+const assetJoin = and(
+  eq(media.id, recipeMedia.mediaId),
+  eq(media.householdId, recipeMedia.householdId),
+);
+
+function scopedImageQuery(
   tx: DatabaseTransaction,
   { householdId, recipeId, imageId }: RecipeImageInput,
 ) {
-  const [image] = await tx
-    .select({ objectKey: recipeImages.objectKey })
-    .from(recipeImages)
+  return tx
+    .select(details)
+    .from(recipeMedia)
+    .innerJoin(media, assetJoin)
     .where(
       and(
-        eq(recipeImages.id, imageId),
-        eq(recipeImages.householdId, householdId),
-        eq(recipeImages.recipeId, recipeId),
-        isNotNull(recipeImages.confirmedAt),
-        isNull(recipeImages.deletedAt),
+        eq(recipeMedia.id, imageId),
+        eq(recipeMedia.householdId, householdId),
+        eq(recipeMedia.recipeId, recipeId),
+        isNull(recipeMedia.deletedAt),
+        isNull(media.deletedAt),
+        eq(media.kind, "image"),
         activeRecipeExists(tx, { householdId, recipeId }),
       ),
     )
-    .limit(1)
-    .for("share");
+    .limit(1);
+}
 
-  return image;
+export async function findConfirmedRecipeImageForShare(
+  tx: DatabaseTransaction,
+  input: RecipeImageInput,
+) {
+  const [image] = await scopedImageQuery(tx, input).for("share");
+  return image?.confirmedAt ? image : undefined;
 }
 
 export async function findConfirmedHouseholdRecipeImagesForShare(
@@ -99,14 +121,17 @@ export async function findConfirmedHouseholdRecipeImagesForShare(
   { householdId, imageIds }: { householdId: string; imageIds: string[] },
 ) {
   return tx
-    .select({ id: recipeImages.id, recipeId: recipeImages.recipeId })
-    .from(recipeImages)
+    .select({ ...details, recipeId: recipeMedia.recipeId })
+    .from(recipeMedia)
+    .innerJoin(media, assetJoin)
     .where(
       and(
-        inArray(recipeImages.id, imageIds),
-        eq(recipeImages.householdId, householdId),
-        isNotNull(recipeImages.confirmedAt),
-        isNull(recipeImages.deletedAt),
+        inArray(recipeMedia.id, imageIds),
+        eq(recipeMedia.householdId, householdId),
+        isNotNull(media.confirmedAt),
+        isNull(recipeMedia.deletedAt),
+        isNull(media.deletedAt),
+        eq(media.kind, "image"),
         exists(
           tx
             .select({ id: recipes.id })
@@ -114,7 +139,7 @@ export async function findConfirmedHouseholdRecipeImagesForShare(
             .where(
               and(
                 eq(recipes.householdId, householdId),
-                eq(recipes.id, recipeImages.recipeId),
+                eq(recipes.id, recipeMedia.recipeId),
                 isNull(recipes.deletedAt),
               ),
             ),
@@ -124,98 +149,19 @@ export async function findConfirmedHouseholdRecipeImagesForShare(
     .for("share");
 }
 
-const recipeImageDetails = {
-  id: recipeImages.id,
-  objectKey: recipeImages.objectKey,
-  contentType: recipeImages.contentType,
-  byteSize: recipeImages.byteSize,
-  confirmedAt: recipeImages.confirmedAt,
-};
-
 export async function findRecipeImageForShare(
   tx: DatabaseTransaction,
-  { householdId, recipeId, imageId }: RecipeImageInput,
+  input: RecipeImageInput,
 ) {
-  const [image] = await tx
-    .select(recipeImageDetails)
-    .from(recipeImages)
-    .where(
-      and(
-        eq(recipeImages.id, imageId),
-        eq(recipeImages.householdId, householdId),
-        eq(recipeImages.recipeId, recipeId),
-        isNull(recipeImages.deletedAt),
-        activeRecipeExists(tx, { householdId, recipeId }),
-      ),
-    )
-    .limit(1)
-    .for("share");
-
+  const [image] = await scopedImageQuery(tx, input).for("share");
   return image;
 }
-
 export async function findRecipeImageForUpdate(
   tx: DatabaseTransaction,
-  { householdId, recipeId, imageId }: RecipeImageInput,
+  input: RecipeImageInput,
 ) {
-  const [image] = await tx
-    .select(recipeImageDetails)
-    .from(recipeImages)
-    .where(
-      and(
-        eq(recipeImages.id, imageId),
-        eq(recipeImages.householdId, householdId),
-        eq(recipeImages.recipeId, recipeId),
-        isNull(recipeImages.deletedAt),
-        activeRecipeExists(tx, { householdId, recipeId }),
-      ),
-    )
-    .limit(1)
-    .for("update");
-
+  const [image] = await scopedImageQuery(tx, input).for("update");
   return image;
 }
-
-export async function findRecipeImageObjectForShare(
-  tx: DatabaseTransaction,
-  { householdId, recipeId, imageId }: RecipeImageInput,
-) {
-  const [image] = await tx
-    .select({ objectKey: recipeImages.objectKey })
-    .from(recipeImages)
-    .where(
-      and(
-        eq(recipeImages.id, imageId),
-        eq(recipeImages.householdId, householdId),
-        eq(recipeImages.recipeId, recipeId),
-        isNull(recipeImages.deletedAt),
-        activeRecipeExists(tx, { householdId, recipeId }),
-      ),
-    )
-    .limit(1)
-    .for("share");
-
-  return image;
-}
-
-export async function findRecipeImageObjectForUpdate(
-  tx: DatabaseTransaction,
-  { householdId, recipeId, imageId }: RecipeImageInput,
-) {
-  const [image] = await tx
-    .select({ objectKey: recipeImages.objectKey })
-    .from(recipeImages)
-    .where(
-      and(
-        eq(recipeImages.id, imageId),
-        eq(recipeImages.householdId, householdId),
-        eq(recipeImages.recipeId, recipeId),
-        isNull(recipeImages.deletedAt),
-        activeRecipeExists(tx, { householdId, recipeId }),
-      ),
-    )
-    .limit(1)
-    .for("update");
-
-  return image;
-}
+export const findRecipeImageObjectForShare = findRecipeImageForShare;
+export const findRecipeImageObjectForUpdate = findRecipeImageForUpdate;
