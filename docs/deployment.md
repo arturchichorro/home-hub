@@ -89,6 +89,13 @@ networking changes to `main` rather than deploying the whole development branch.
 The first promotion must be coordinated with the vps-infra handoff watcher;
 subsequent application releases need no shared-ingress rebuild.
 
+## Shared-media contract migration
+
+The `0042` catalog key change and `0043` shared-media contract require coordinated
+API/Zero maintenance and a backed-up disposable replica rebuild. Routine deployment
+does not perform that one-time cutover. Follow [Shared media rollout](./media/#migration-and-rollout)
+before releasing these migrations; deploy the backward-compatible Worker first.
+
 ## Cloudflare image delivery Worker
 
 `apps/image-delivery` owns the independently deployed Worker that generates

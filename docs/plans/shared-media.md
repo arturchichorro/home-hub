@@ -10,7 +10,8 @@ This phase migrates existing recipe images and keeps uploads, galleries, covers,
 cooking-log pictures, ordering and delivery working unchanged. **Do not implement
 video uploads/playback, animated-image playback, exercise attachments, a media
 library/reuse picker, transcoding jobs, streaming infrastructure or cleanup jobs.**
-Planning only; no implementation, push or deployment yet.
+Implementation approved on the current branch, with local commits only. No push
+or deployment is authorized.
 
 ## Recommended model
 
@@ -115,7 +116,7 @@ prepare database-backup restoration or an explicit reverse-migration procedure.
 - Test the real Zero transition/rebuild and actual web/API Docker builds, not just
   SQL and full-checkout builds. No exercise or video UI ships in this phase.
 
-## Decisions to approve
+## Approved decisions
 
 1. One `media` table and typed `*_media` attachments; no format-specific tables.
 2. Implement the foundation and recipe-image migration now; defer video and
