@@ -322,17 +322,33 @@ export function createExerciseMediaServices(
       const authorized = await db.transaction(async (tx) => {
         const access = await authorizeHousehold(tx, input);
         if (access.kind !== "authorized") return access;
+        // Reorders/uploads lock the catalog parent before attachment rows.
+        // Acquire these shared locks in the same order to avoid deadlocks.
+        const parents = await tx
+          .select({ id: exercises.id })
+          .from(exercises)
+          .where(
+            and(
+              eq(exercises.householdId, input.householdId),
+              eq(exercises.archived, false),
+              inArray(
+                exercises.id,
+                unique.map((request) => request.exerciseId),
+              ),
+            ),
+          )
+          .orderBy(exercises.id)
+          .for("share");
+        if (!parents.length)
+          return {
+            kind: "attachments" as const,
+            rows: new Map<string, Attachment>(),
+          };
         const rows = await tx
           .select(details)
           .from(exerciseMedia)
           .innerJoin(media, join)
-          .innerJoin(
-            exercises,
-            and(
-              eq(exercises.id, exerciseMedia.exerciseId),
-              eq(exercises.householdId, exerciseMedia.householdId),
-            ),
-          )
+
           .where(
             and(
               eq(exerciseMedia.householdId, input.householdId),
@@ -340,7 +356,10 @@ export function createExerciseMediaServices(
                 exerciseMedia.id,
                 unique.map((r) => r.attachmentId),
               ),
-              eq(exercises.archived, false),
+              inArray(
+                exerciseMedia.exerciseId,
+                parents.map((parent) => parent.id),
+              ),
               isNull(exerciseMedia.deletedAt),
               isNull(media.deletedAt),
               eq(media.kind, "image"),

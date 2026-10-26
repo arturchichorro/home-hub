@@ -3,6 +3,27 @@ import { stillImageContentTypeSchema, stillImageUploadSchema } from "./media";
 import { mediaImageVariants } from "./media-delivery";
 import type { ExerciseMedia, Media } from "./zero/schema.gen";
 
+export const reorderExerciseMediaSchema = z
+  .object({
+    householdId: z.uuid(),
+    exerciseId: z.uuid(),
+    attachmentId: z.uuid(),
+    orderedAttachmentIds: z
+      .array(z.uuid())
+      .min(1)
+      .max(500)
+      .refine(
+        (ids) => new Set(ids).size === ids.length,
+        "Attachment IDs must be unique",
+      ),
+    optimisticTimestamp: z.number().int().nonnegative(),
+  })
+  .strict()
+  .refine(
+    (args) => args.orderedAttachmentIds.includes(args.attachmentId),
+    "Order must include the moved attachment",
+  );
+
 export const createExerciseMediaUploadSchema = stillImageUploadSchema;
 export const exerciseMediaUploadResponseSchema = z
   .object({

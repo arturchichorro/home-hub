@@ -3,10 +3,32 @@ import {
   createExerciseMediaUploadSchema,
   exerciseImagesFromRows,
   exerciseMediaReadRequestSchema,
+  reorderExerciseMediaSchema,
 } from "./exercise-media";
 import { queries } from "./zero/queries";
 
 describe("shared exercise media", () => {
+  it("requires a unique bounded order containing the moved attachment", () => {
+    const attachmentId = crypto.randomUUID();
+    const input = {
+      householdId: crypto.randomUUID(),
+      exerciseId: crypto.randomUUID(),
+      attachmentId,
+      orderedAttachmentIds: [attachmentId],
+      optimisticTimestamp: 1,
+    };
+    expect(reorderExerciseMediaSchema.safeParse(input).success).toBe(true);
+    for (const patch of [
+      { orderedAttachmentIds: [] },
+      { orderedAttachmentIds: [attachmentId, attachmentId] },
+      { orderedAttachmentIds: [crypto.randomUUID()] },
+      { orderedAttachmentIds: Array(501).fill(attachmentId) },
+      { workoutId: crypto.randomUUID() },
+    ])
+      expect(
+        reorderExerciseMediaSchema.safeParse({ ...input, ...patch }).success,
+      ).toBe(false);
+  });
   it("rejects videos, GIF and client-controlled storage identity", () => {
     for (const extra of [
       { contentType: "video/mp4" },

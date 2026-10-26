@@ -1,4 +1,5 @@
 import { defineMutatorWithType, type Transaction } from "@rocicorp/zero";
+import { reorderExerciseMediaSchema } from "../exercise-media";
 import { calendarDate } from "../habits";
 import { starterWorkouts } from "../workout-seed";
 import {
@@ -123,6 +124,62 @@ async function access(
 const timestamp = (tx: Transaction<Schema>, optimistic: number) =>
   tx.location === "server" ? Date.now() : optimistic;
 export const workoutMutatorDefinitions = {
+  reorderExerciseMedia: define(
+    reorderExerciseMediaSchema,
+    async ({ tx, ctx, args }) => {
+      await access(tx, args.householdId, ctx.userId);
+      const parent = () =>
+        tx.run(
+          scopedCatalog(args.householdId)
+            .where("id", args.exerciseId)
+            .where("archived", false)
+            .one(),
+        );
+      if (!(await parent()))
+        throw new Error("Exercise media reorder not allowed");
+      const readRows = () =>
+        tx.run(
+          zql.exerciseMedia
+            .where("householdId", args.householdId)
+            .where("exerciseId", args.exerciseId)
+            .where("deletedAt", "IS", null)
+            .related("asset"),
+        );
+      const validate = (rows: Awaited<ReturnType<typeof readRows>>) => {
+        const visible = new Set(
+          rows
+            .filter(
+              (row) =>
+                row.asset?.kind === "image" &&
+                row.asset.confirmedAt !== null &&
+                row.asset.deletedAt === null,
+            )
+            .map((row) => row.id),
+        );
+        if (
+          !visible.has(args.attachmentId) ||
+          args.orderedAttachmentIds.some((id) => !visible.has(id))
+        )
+          throw new Error("Exercise media reorder not allowed");
+      };
+      validate(await readRows());
+      const now = timestamp(tx, args.optimisticTimestamp);
+      // Match upload's parent lock, then re-read: pending/concurrent additions must
+      // survive gap rebalancing, and deleted/archived records must not be reordered.
+      await tx.mutate.exercises.update({ id: args.exerciseId, updatedAt: now });
+      if (!(await parent()))
+        throw new Error("Exercise media reorder not allowed");
+      const rows = await readRows();
+      validate(rows);
+      for (const update of planReorder(
+        rows,
+        args.orderedAttachmentIds,
+        args.attachmentId,
+      )) {
+        await tx.mutate.exerciseMedia.update({ ...update, updatedAt: now });
+      }
+    },
+  ),
   reorder: define(reorderWorkoutsSchema, async ({ tx, ctx, args }) => {
     await access(tx, args.householdId, ctx.userId);
     const rows = await tx.run(scopedWorkouts(args.householdId));

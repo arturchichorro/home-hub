@@ -11,6 +11,8 @@ import {
   workoutExercises,
   workouts,
 } from "@home-hub/database/schema";
+import { mutators } from "@home-hub/shared/zero/mutators";
+import { queries } from "@home-hub/shared/zero/queries";
 import { and, eq } from "drizzle-orm";
 import {
   afterAll,
@@ -22,6 +24,7 @@ import {
   vi,
 } from "vitest";
 import { InvalidMediaUploadError } from "../media/process-image";
+import { createZeroDbProvider } from "../zero/db-provider";
 import { createExerciseMediaServices } from "./exercise-media";
 
 const databaseUrl = process.env.MEDIA_TEST_DATABASE_URL;
@@ -194,6 +197,95 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
     expect(inspectObject).toHaveBeenCalledOnce();
     expect(processImage).toHaveBeenCalledOnce();
   });
+  it("persists picture ordering through the actual Zero/Drizzle transaction adapter", async () => {
+    const items: Awaited<ReturnType<typeof pending>>[] = [];
+    for (let i = 0; i < 4; i++) items.push(await pending());
+    for (const item of items.slice(0, 3))
+      await services().confirmUpload({
+        ...scope(),
+        attachmentId: item.attachmentId,
+      });
+    const provider = createZeroDbProvider({ db: client.db });
+    const order = [
+      items[2]?.attachmentId,
+      items[0]?.attachmentId,
+      items[1]?.attachmentId,
+    ].filter((id) => id !== undefined);
+    const moved = order[0];
+    if (!moved) throw new Error("Missing picture");
+    await provider.transaction((tx) =>
+      mutators.workouts.reorderExerciseMedia.fn({
+        tx,
+        ctx: { userId },
+        args: {
+          householdId,
+          exerciseId,
+          attachmentId: moved,
+          orderedAttachmentIds: order,
+          optimisticTimestamp: 1,
+        },
+      }),
+    );
+    const synced = await provider.run(
+      queries.workouts.exerciseMedia.fn({
+        args: { householdId, exerciseId },
+        ctx: { userId },
+      }),
+    );
+    expect(synced.map((row) => row.id)).toEqual(order);
+    const [all] = await client.db
+      .select()
+      .from(exerciseMedia)
+      .where(eq(exerciseMedia.id, items[3]?.attachmentId ?? ""));
+    expect(all).toBeDefined(); // The unconfirmed upload is retained, not dropped by reorder.
+  });
+  it("serializes reorders with uploads and batched reads without deadlocking", async () => {
+    const first = await pending(),
+      second = await pending();
+    await services().confirmUpload({
+      ...scope(),
+      attachmentId: first.attachmentId,
+    });
+    await services().confirmUpload({
+      ...scope(),
+      attachmentId: second.attachmentId,
+    });
+    const provider = createZeroDbProvider({ db: client.db });
+    for (let i = 0; i < 4; i++) {
+      const order =
+        i % 2
+          ? [first.attachmentId, second.attachmentId]
+          : [second.attachmentId, first.attachmentId];
+      const moved = order[0];
+      if (!moved) throw new Error("Missing picture");
+      const [, reads] = await Promise.all([
+        provider.transaction((tx) =>
+          mutators.workouts.reorderExerciseMedia.fn({
+            tx,
+            ctx: { userId },
+            args: {
+              householdId,
+              exerciseId,
+              attachmentId: moved,
+              orderedAttachmentIds: order,
+              optimisticTimestamp: 1,
+            },
+          }),
+        ),
+        services().readUrls({
+          userId,
+          householdId,
+          requests: order.map((attachmentId) => ({
+            exerciseId,
+            attachmentId,
+            variant: "thumbnail" as const,
+          })),
+        }),
+        upload(),
+      ]);
+      expect(reads.kind).toBe("success");
+    }
+  }, 15000);
   it("shares catalog media across workout slots and preserves it after rename/slot removal", async () => {
     const workoutIds = [randomUUID(), randomUUID()];
     await client.db.insert(workouts).values(

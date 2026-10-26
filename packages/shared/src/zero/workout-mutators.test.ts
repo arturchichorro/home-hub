@@ -103,6 +103,8 @@ function setup(location: "server" | "client" = "server") {
     })),
     workoutLogs: [],
     workoutLogSets: [],
+    exerciseMedia: [],
+    media: [],
   };
   const writes = vi.fn();
   const sameKey = (table: string, a: Row, b: Row) =>
@@ -145,6 +147,7 @@ function setup(location: "server" | "client" = "server") {
         "workoutExercises",
         "workoutLogs",
         "workoutLogSets",
+        "exerciseMedia",
       ].map((t) => [t, crud(t)]),
     ),
     run: async (query: unknown) => {
@@ -162,29 +165,39 @@ function setup(location: "server" | "client" = "server") {
                   (s) => s.logId === r.id,
                 ),
               }
-            : ast.table === "workouts"
+            : ast.table === "exerciseMedia"
               ? {
                   ...r,
-                  exercises: (data.workoutExercises ?? [])
-                    .filter(
-                      (e) =>
-                        e.workoutId === r.id && e.householdId === r.householdId,
-                    )
-                    .map((e) => ({
-                      ...e,
-                      exercise: (data.exercises ?? []).find(
-                        (x) =>
-                          x.id === e.exerciseId &&
-                          x.householdId === e.householdId,
-                      ),
-                    }))
-                    .sort(
-                      (a: Row, b: Row) =>
-                        Number(b.sortKey) - Number(a.sortKey) ||
-                        String(a.id).localeCompare(String(b.id)),
-                    ),
+                  asset: (data.media ?? []).find(
+                    (asset) =>
+                      asset.id === r.mediaId &&
+                      asset.householdId === r.householdId,
+                  ),
                 }
-              : r,
+              : ast.table === "workouts"
+                ? {
+                    ...r,
+                    exercises: (data.workoutExercises ?? [])
+                      .filter(
+                        (e) =>
+                          e.workoutId === r.id &&
+                          e.householdId === r.householdId,
+                      )
+                      .map((e) => ({
+                        ...e,
+                        exercise: (data.exercises ?? []).find(
+                          (x) =>
+                            x.id === e.exerciseId &&
+                            x.householdId === e.householdId,
+                        ),
+                      }))
+                      .sort(
+                        (a: Row, b: Row) =>
+                          Number(b.sortKey) - Number(a.sortKey) ||
+                          String(a.id).localeCompare(String(b.id)),
+                      ),
+                  }
+                : r,
         );
       for (const [field, direction] of [...(ast.orderBy ?? [])].reverse())
         rows.sort((a, b) => {
@@ -223,6 +236,167 @@ const recordedSet = {
   round: 1,
   values: { weightKg: 8, amount: 10, rightAmount: null },
 };
+describe("exercise picture ordering", () => {
+  function mediaSetup(location: "server" | "client" = "server") {
+    const context = setup(location);
+    const exerciseId = String(context.data.exercises?.[0]?.id);
+    const ids = [
+      crypto.randomUUID(),
+      crypto.randomUUID(),
+      crypto.randomUUID(),
+      crypto.randomUUID(),
+    ];
+    context.data.exerciseMedia = ids.map((id, index) => ({
+      id,
+      householdId,
+      exerciseId,
+      mediaId: crypto.randomUUID(),
+      sortKey: [4, 2, 3, 1][index],
+      deletedAt: null,
+    }));
+    context.data.media = context.data.exerciseMedia.map((row, index) => ({
+      id: row.mediaId,
+      householdId,
+      kind: "image",
+      confirmedAt: index === 3 ? null : now,
+      deletedAt: null,
+    }));
+    const move = (
+      orderedAttachmentIds: string[],
+      attachmentId = ids[0] ?? "",
+    ) =>
+      mutators.workouts.reorderExerciseMedia.fn({
+        tx: context.tx,
+        ctx,
+        args: {
+          householdId,
+          exerciseId,
+          attachmentId,
+          orderedAttachmentIds,
+          optimisticTimestamp: 1234,
+        },
+      });
+    const order = () =>
+      [...(context.data.exerciseMedia ?? [])]
+        .sort((a, b) => Number(b.sortKey) - Number(a.sortKey))
+        .map((row) => row.id);
+    return {
+      ...context,
+      ids: ids as [string, string, string, string],
+      exerciseId,
+      move,
+      order,
+    };
+  }
+  it.each(["client", "server"] as const)(
+    "optimistically/server-orders one picture with sparse keys: %s",
+    async (location) => {
+      const { ids, move, data, writes } = mediaSetup(location);
+      await move([ids[1], ids[0], ids[2]], ids[1]);
+      expect(
+        data.exerciseMedia?.find((row) => row.id === ids[1])?.sortKey,
+      ).toBe(1028);
+      expect(
+        writes.mock.calls.filter(([table]) => table === "exerciseMedia"),
+      ).toEqual([
+        [
+          "exerciseMedia",
+          "update",
+          {
+            id: ids[1],
+            sortKey: 1028,
+            updatedAt: location === "server" ? now : 1234,
+          },
+        ],
+      ]);
+    },
+  );
+  it("rebalances the entire scope without losing pending or unseen uploads", async () => {
+    const state = mediaSetup();
+    const { ids, data } = state;
+    const extraId = crypto.randomUUID(),
+      assetId = crypto.randomUUID();
+    data.exerciseMedia?.push({
+      id: extraId,
+      householdId,
+      exerciseId: state.exerciseId,
+      mediaId: assetId,
+      sortKey: 6,
+      deletedAt: null,
+    });
+    data.media?.push({
+      id: assetId,
+      householdId,
+      kind: "image",
+      confirmedAt: now,
+      deletedAt: null,
+    });
+    data.workoutLogs = [{ id: logId, note: "Keep private notes", snapshot }];
+    const assetsBefore = JSON.stringify(data.media),
+      logsBefore = JSON.stringify(data.workoutLogs);
+    await state.move([ids[2], ids[0], ids[1]]);
+    expect(state.order()).toEqual([extraId, ids[2], ids[0], ids[1], ids[3]]);
+    expect(JSON.stringify(data.media)).toBe(assetsBefore);
+    expect(JSON.stringify(data.workoutLogs)).toBe(logsBefore);
+  });
+  it.each(["deleted", "pending", "asset-deleted", "video", "foreign"])(
+    "rejects non-visible or foreign attachment IDs: %s",
+    async (kind) => {
+      const state = mediaSetup();
+      const { data, ids } = state;
+      const row = data.exerciseMedia?.[1],
+        asset = data.media?.[1];
+      if (!row || !asset) throw new Error("fixture");
+      if (kind === "deleted") row.deletedAt = now;
+      if (kind === "pending") asset.confirmedAt = null;
+      if (kind === "asset-deleted") asset.deletedAt = now;
+      if (kind === "video") asset.kind = "video";
+      if (kind === "foreign") row.exerciseId = crypto.randomUUID();
+      await expect(
+        state.move([ids[1], ids[0], ids[2]], ids[1]),
+      ).rejects.toThrow("Exercise media reorder not allowed");
+      expect(state.writes).not.toHaveBeenCalled();
+    },
+  );
+  it.each(["membership", "module", "archived"])(
+    "rejects unavailable media scope: %s",
+    async (kind) => {
+      const state = mediaSetup();
+      if (kind === "membership") state.data.householdMembers = [];
+      if (kind === "module") state.data.householdModuleSettings = [];
+      if (kind === "archived") {
+        const parent = state.data.exercises?.[0];
+        if (parent) parent.archived = true;
+      }
+      await expect(
+        state.move([state.ids[1], state.ids[0], state.ids[2]], state.ids[1]),
+      ).rejects.toThrow();
+      expect(state.writes).not.toHaveBeenCalled();
+    },
+  );
+  it.each(["archive", "delete"])(
+    "rechecks catalog/attachments after acquiring the parent lock: %s",
+    async (change) => {
+      const state = mediaSetup();
+      state.writes.mockImplementationOnce(() => {
+        const row =
+          change === "archive"
+            ? state.data.exercises?.[0]
+            : state.data.exerciseMedia?.[1];
+        if (row) {
+          if (change === "archive") row.archived = true;
+          else row.deletedAt = now;
+        }
+      });
+      await expect(
+        state.move([state.ids[1], state.ids[0], state.ids[2]], state.ids[1]),
+      ).rejects.toThrow();
+      expect(
+        state.writes.mock.calls.some(([table]) => table === "exerciseMedia"),
+      ).toBe(false);
+    },
+  );
+});
 describe("shared exercise catalog", () => {
   const first = starter.exercises[0];
   if (!first) throw new Error("seed");
