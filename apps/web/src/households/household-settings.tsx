@@ -51,7 +51,10 @@ export function HouseholdSettings({
     membership?.role === "owner" &&
     locallyTransferredHouseholdId !== household.id;
   return (
-    <div className="grid gap-4" aria-busy={result.type !== "complete"}>
+    <div
+      className="grid grid-cols-1 gap-4"
+      aria-busy={result.type !== "complete"}
+    >
       <div className="flex">
         {isOwner ? (
           <HouseholdNameInput

@@ -40,9 +40,26 @@ workouts; training logs and set values remain private to their author.
 - Add the supplied A/B/C starter workouts.
 
 There are no plans, cycles, scheduling, timers, progression suggestions, or
-configured weight increments. Data lives in `workouts`, `workout_logs`, and
-`workout_log_sets`; membership, module availability, and private-log ownership
-are enforced in Zero queries and mutations.
+configured weight increments. Membership, module availability, and private-log
+ownership are enforced in Zero queries and mutations.
+
+## Data model
+
+- `workouts`: household-shared title, notes, ordering and timestamps.
+- `workout_exercises`: typed exercise rows with name, sets, target, unit, sides,
+  load convention, ordering and timestamps. A composite household/workout foreign
+  key prevents cross-household references. The primary key is `(workout_id, id)`:
+  existing starter exercise IDs are reused across workouts and remain unchanged.
+- `workout_logs`: private daily records, notes and immutable title/exercise
+  snapshots. Historical definitions remain JSON so later edits/deletions never
+  rewrite logged workouts.
+- `workout_log_sets`: recorded values belonging to a log. Its exercise ID refers
+  to the immutable snapshot, deliberately not to the deletable editable row.
+
+Exercise autosaves send field-level patches and explicit additions/deletions,
+never a replacement array. Unrelated concurrent edits and unseen additions are
+preserved. Mutations serialize through the parent workout before checking the
+current row count/order and applying changes atomically.
 
 ## Upgrade
 
@@ -79,3 +96,11 @@ cleanup is intentional; back up and apply with the API/Zero stopped as above.
 existing log snapshots. Private log notes, titles, exercise definitions, dates,
 and set values remain unchanged. Apply before deploying the matching snapshot
 schema and reload clients; earlier migrations are unchanged.
+
+`0041_far_the_fallen.sql` copies editable JSON exercises into
+`workout_exercises`, preserving IDs, definitions, array order and timestamps,
+including reused IDs across workouts. It verifies the exact copy before dropping
+`workouts.exercises` and publishes the new table to Zero. Existing log snapshots,
+private notes and recorded sets are untouched. Back up, stop API/Zero, apply the
+migration, deploy matching code, restart and reload clients. Rollback requires
+the backup and previous code; earlier migrations are unchanged.

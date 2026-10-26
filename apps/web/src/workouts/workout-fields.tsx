@@ -125,7 +125,10 @@ export function WorkoutExercises({
   title?: ReactNode;
   current: readonly WorkoutExercise[];
   disabled: boolean;
-  onSave: (exercises: WorkoutExercise[]) => Promise<boolean>;
+  onSave: (
+    exercises: WorkoutExercise[],
+    previous: readonly WorkoutExercise[],
+  ) => Promise<boolean>;
   logging?: WorkoutLogging | undefined;
   onStartLogging: () => Promise<void>;
   onCloseLogging: () => void;

@@ -64,10 +64,91 @@ export const updateWorkoutSchema = z
   .object({
     ...scope,
     changes: workoutContentSchema
+      .pick({ title: true, notes: true })
       .partial()
       .refine((v) => Object.keys(v).length > 0),
   })
   .strict();
+const workoutExercisePatchSchema = workoutExerciseSchema
+  .omit({ id: true })
+  .partial()
+  .refine(
+    (value) => Object.keys(value).length > 0,
+    "Exercise changes are required",
+  );
+export const editWorkoutExercisesSchema = z
+  .object({
+    ...scope,
+    creates: z.array(workoutExerciseSchema).max(40),
+    updates: z
+      .array(
+        z
+          .object({ exerciseId: z.uuid(), changes: workoutExercisePatchSchema })
+          .strict(),
+      )
+      .max(40),
+    deletes: z.array(z.uuid()).max(40),
+  })
+  .strict()
+  .refine((args) => {
+    const ids = [
+      ...args.creates.map((e) => e.id),
+      ...args.updates.map((e) => e.exerciseId),
+      ...args.deletes,
+    ];
+    return ids.length > 0 && new Set(ids).size === ids.length;
+  }, "Exercise operations must be nonempty and unique");
+export type WorkoutExerciseEdits = Pick<
+  z.infer<typeof editWorkoutExercisesSchema>,
+  "creates" | "updates" | "deletes"
+>;
+export function planExerciseEdits(
+  before: readonly WorkoutExercise[],
+  after: readonly WorkoutExercise[],
+): WorkoutExerciseEdits {
+  const old = new Map(before.map((e) => [e.id, e]));
+  const nextIds = new Set(after.map((e) => e.id));
+  const result: WorkoutExerciseEdits = {
+    creates: [],
+    updates: [],
+    deletes: before.filter((e) => !nextIds.has(e.id)).map((e) => e.id),
+  };
+  for (const exercise of after) {
+    const previous = old.get(exercise.id);
+    if (!previous) {
+      result.creates.push(exercise);
+      continue;
+    }
+    const { id: _id, ...fields } = exercise;
+    const changes = Object.fromEntries(
+      Object.entries(fields).filter(
+        ([key, value]) => value !== previous[key as keyof WorkoutExercise],
+      ),
+    );
+    if (Object.keys(changes).length)
+      result.updates.push({
+        exerciseId: exercise.id,
+        changes: workoutExercisePatchSchema.parse(changes),
+      });
+  }
+  return result;
+}
+// Related database rows include scope/order/timestamps; snapshots and form inputs do not.
+export function workoutExercisesFromRows(
+  rows: readonly WorkoutExercise[],
+): WorkoutExercise[] {
+  return workoutExercisesSchema.parse(
+    rows.map(({ id, name, sets, target, unit, unilateral, load }) => ({
+      id,
+      name,
+      sets,
+      target,
+      unit,
+      unilateral,
+      load,
+    })),
+  );
+}
 export const importWorkoutsSchema = z
   .object({
     householdId: z.uuid(),

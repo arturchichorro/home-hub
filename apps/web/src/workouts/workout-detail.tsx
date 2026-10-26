@@ -1,5 +1,6 @@
 import {
-  workoutExercisesSchema,
+  planExerciseEdits,
+  workoutExercisesFromRows,
   workoutLogSnapshotSchema,
 } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
@@ -81,7 +82,7 @@ export function WorkoutDetail({
       openWorkoutLog(
         workoutLogSnapshotSchema.parse({
           title: current.title,
-          exercises: current.exercises,
+          exercises: workoutExercisesFromRows(current.exercises),
         }),
         existing ??
           findDailyWorkoutLog(
@@ -166,12 +167,21 @@ export function WorkoutDetail({
         }
         current={
           form?.snapshot.exercises ??
-          workoutExercisesSchema.parse(workout.exercises)
+          workoutExercisesFromRows(workout.exercises)
         }
         disabled={disabled || busy}
-        onSave={(exercises) =>
-          save(mutators.workouts.update({ ...scope(), changes: { exercises } }))
-        }
+        onSave={async (exercises, previous) => {
+          const edits = planExerciseEdits(previous, exercises);
+          if (
+            !edits.creates.length &&
+            !edits.updates.length &&
+            !edits.deletes.length
+          )
+            return true;
+          return save(
+            mutators.workouts.editExercises({ ...scope(), ...edits }),
+          );
+        }}
         onStartLogging={async () => startLog()}
         onCloseLogging={closeLog}
         onCompleteLogging={() => void finishLog()}
