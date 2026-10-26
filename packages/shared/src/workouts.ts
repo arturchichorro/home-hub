@@ -135,7 +135,7 @@ export function planExerciseEdits(
 }
 // Related database rows include scope/order/timestamps; snapshots and form inputs do not.
 export function workoutExercisesFromRows(
-  rows: readonly WorkoutExercise[],
+  rows: readonly (Omit<WorkoutExercise, "load"> & { load: string })[],
 ): WorkoutExercise[] {
   return workoutExercisesSchema.parse(
     rows.map(({ id, name, sets, target, unit, unilateral, load }) => ({
