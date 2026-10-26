@@ -49,6 +49,9 @@ describe("normalized workout exercise edits", () => {
       updatedAt: 2,
     };
     expect(workoutExercisesFromRows([row])).toEqual([first]);
+    expect(() =>
+      workoutExercisesFromRows([{ ...row, load: "invalid" }]),
+    ).toThrow();
   });
   it("rejects whole-array workout updates and ambiguous/invalid exercise operations", () => {
     expect(

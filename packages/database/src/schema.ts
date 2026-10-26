@@ -616,9 +616,9 @@ export const workoutExercises = pgTable(
     target: text("target").notNull(),
     unit: text("unit", { enum: ["reps", "seconds"] }).notNull(),
     unilateral: boolean("unilateral").notNull(),
-    load: text("load", {
-      enum: ["per-hand", "single", "bodyweight"],
-    }).notNull(),
+    // The CHECK below and shared Zod schema enforce allowed values. A Drizzle
+    // enum here makes Zero emit a database-config type import into the web build.
+    load: text("load").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
