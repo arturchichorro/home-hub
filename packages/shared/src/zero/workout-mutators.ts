@@ -3,6 +3,7 @@ import { calendarDate } from "../habits";
 import { starterWorkouts } from "../workout-seed";
 import {
   createWorkoutSchema,
+  editWorkoutExercisesSchema,
   importWorkoutsSchema,
   reorderWorkoutsSchema,
   saveWorkoutLogSchema,
@@ -12,7 +13,7 @@ import {
 } from "../workouts";
 import type { ZeroAuthContext } from "./context";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
-import { nextSortKey, planReorder } from "./ordering";
+import { appendSortKey, nextSortKey, planReorder } from "./ordering";
 import { type Schema, zql } from "./schema.gen";
 
 const define = defineMutatorWithType<Schema, ZeroAuthContext>();
@@ -20,6 +21,10 @@ const scopedWorkouts = (householdId: string) =>
   zql.workouts.where("householdId", householdId);
 const scopedWorkout = (householdId: string, id: string) =>
   scopedWorkouts(householdId).where("id", id).one();
+const scopedExercises = (householdId: string, workoutId: string) =>
+  zql.workoutExercises
+    .where("householdId", householdId)
+    .where("workoutId", workoutId);
 const ownLog = (
   householdId: string,
   workoutId: string,
@@ -76,7 +81,6 @@ export const workoutMutatorDefinitions = {
       title: args.title,
       sortKey: nextSortKey(top?.sortKey ?? 0),
       notes: "",
-      exercises: [],
       createdAt: now,
       updatedAt: now,
     });
@@ -91,6 +95,60 @@ export const workoutMutatorDefinitions = {
       updatedAt: timestamp(tx, args.optimisticTimestamp),
     });
   }),
+  editExercises: define(
+    editWorkoutExercisesSchema,
+    async ({ tx, ctx, args }) => {
+      await access(tx, args.householdId, ctx.userId);
+      if (!(await tx.run(scopedWorkout(args.householdId, args.workoutId))))
+        throw new Error("Exercise update not allowed");
+      const validate = (rows: readonly { id: string }[]) => {
+        const ids = new Set(rows.map((row) => row.id));
+        if (
+          args.creates.some((row) => ids.has(row.id)) ||
+          args.updates.some((row) => !ids.has(row.exerciseId)) ||
+          args.deletes.some((id) => !ids.has(id)) ||
+          rows.length + args.creates.length - args.deletes.length > 40
+        )
+          throw new Error("Exercise update not allowed");
+      };
+      let rows = await tx.run(
+        scopedExercises(args.householdId, args.workoutId),
+      );
+      validate(rows);
+      const now = timestamp(tx, args.optimisticTimestamp);
+      // This parent UPDATE takes a server row lock until commit. Re-read under
+      // that lock so concurrent additions cannot bypass limits or reuse order keys.
+      await tx.mutate.workouts.update({ id: args.workoutId, updatedAt: now });
+      rows = await tx.run(scopedExercises(args.householdId, args.workoutId));
+      validate(rows);
+      let bottom = rows.length
+        ? Math.min(...rows.map((row) => row.sortKey ?? 0))
+        : 1024;
+      for (const id of args.deletes)
+        await tx.mutate.workoutExercises.delete({
+          workoutId: args.workoutId,
+          id,
+        });
+      for (const update of args.updates)
+        await tx.mutate.workoutExercises.update({
+          workoutId: args.workoutId,
+          id: update.exerciseId,
+          ...update.changes,
+          updatedAt: now,
+        });
+      for (const exercise of args.creates) {
+        bottom = appendSortKey(bottom);
+        await tx.mutate.workoutExercises.insert({
+          ...exercise,
+          householdId: args.householdId,
+          workoutId: args.workoutId,
+          sortKey: bottom,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    },
+  ),
   importStarters: define(importWorkoutsSchema, async ({ tx, ctx, args }) => {
     await access(tx, args.householdId, ctx.userId);
     const now = timestamp(tx, args.optimisticTimestamp);
@@ -108,11 +166,21 @@ export const workoutMutatorDefinitions = {
       await tx.mutate.workouts.insert({
         id,
         householdId: args.householdId,
-        ...content,
+        title: content.title,
+        notes: content.notes,
         sortKey,
         createdAt: now,
         updatedAt: now,
       });
+      for (const [exerciseIndex, exercise] of content.exercises.entries())
+        await tx.mutate.workoutExercises.insert({
+          ...exercise,
+          householdId: args.householdId,
+          workoutId: id,
+          sortKey: (content.exercises.length - exerciseIndex) * 1024,
+          createdAt: now,
+          updatedAt: now,
+        });
     }
   }),
   updateLogNote: define(

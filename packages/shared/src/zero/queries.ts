@@ -235,6 +235,9 @@ const workoutDetailArgs = z
 const workoutDetail = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
   authorizedWorkouts(args.householdId, ctx.userId)
     .where("id", args.workoutId)
+    .related("exercises", (exercises) =>
+      exercises.orderBy("sortKey", "desc").orderBy("id", "asc"),
+    )
     .one(),
 );
 const workoutLogs = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
