@@ -1,3 +1,5 @@
+import { starterWorkouts } from "@home-hub/shared/workout-seed";
+import { normalizeExerciseName } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import {
@@ -14,6 +16,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import { ExerciseCatalog } from "./exercise-catalog";
 import { WorkoutList } from "./workout-list";
 
 export function WorkoutsLibrary({ householdId }: { householdId: string }) {
@@ -152,6 +155,13 @@ export function WorkoutsLibrary({ householdId }: { householdId: string }) {
               void save(
                 mutators.workouts.importStarters({
                   householdId,
+                  catalogExerciseIds: [
+                    ...new Set(
+                      starterWorkouts.flatMap((w) =>
+                        w.exercises.map((e) => normalizeExerciseName(e.name)),
+                      ),
+                    ),
+                  ].map(() => crypto.randomUUID()),
                   workoutIds: [
                     crypto.randomUUID(),
                     crypto.randomUUID(),
@@ -167,6 +177,7 @@ export function WorkoutsLibrary({ householdId }: { householdId: string }) {
           </Button>
         </div>
       )}
+      <ExerciseCatalog householdId={householdId} />
     </section>
   );
 }

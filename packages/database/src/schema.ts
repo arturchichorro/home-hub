@@ -7,6 +7,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   primaryKey,
@@ -136,7 +137,8 @@ export const householdsRelations = relations(households, ({ many }) => ({
   workouts: many(workouts),
   workoutLogs: many(workoutLogs),
   habits: many(habits),
-  images: many(recipeImages),
+  media: many(media),
+  images: many(recipeMedia),
   listItems: many(listItems),
   lists: many(lists),
   members: many(householdMembers),
@@ -455,7 +457,7 @@ export const recipesRelations = relations(recipes, ({ many, one }) => ({
   }),
   ingredients: many(recipeIngredients),
   cookLogs: many(recipeCookLogs),
-  images: many(recipeImages),
+  images: many(recipeMedia),
 }));
 
 export const recipeIngredientsRelations = relations(
@@ -483,7 +485,7 @@ export const recipeCookLogsRelations = relations(
       fields: [recipeCookLogs.householdId, recipeCookLogs.recipeId],
       references: [recipes.householdId, recipes.id],
     }),
-    images: many(recipeImages),
+    images: many(recipeMedia),
   }),
 );
 
@@ -520,21 +522,76 @@ export const householdModuleSettingsRelations = relations(
   }),
 );
 
-export const recipeImages = pgTable(
-  "recipe_images",
+export const media = pgTable(
+  "media",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    kind: text("kind").notNull(),
+    objectKey: text("object_key").notNull().unique(),
+    contentType: text("content_type").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    durationMs: integer("duration_ms"),
+    animated: boolean("animated"),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("media_household_id_id").on(table.householdId, table.id),
+    check("media_kind", sql`${table.kind} IN ('image', 'video')`),
+    // Expand with the video feature, not before its validation/delivery exists.
+    check(
+      "media_supported_content_type",
+      sql`${table.kind} = 'image' AND ${table.contentType} IN ('image/jpeg', 'image/png', 'image/webp')`,
+    ),
+    check(
+      "media_byte_size_range",
+      sql`${table.byteSize} > 0 AND ${table.byteSize} <= 10485760`,
+    ),
+    check(
+      "media_dimensions_range",
+      sql`${table.width} > 0 AND ${table.width} <= 16384 AND ${table.height} > 0 AND ${table.height} <= 16384`,
+    ),
+    check(
+      "media_duration",
+      sql`${table.durationMs} IS NULL OR (${table.kind} = 'video' AND ${table.durationMs} > 0)`,
+    ),
+    check(
+      "media_animation",
+      sql`${table.animated} IS NULL OR ${table.kind} = 'image'`,
+    ),
+  ],
+);
+
+export const mediaRelations = relations(media, ({ one, many }) => ({
+  household: one(households, {
+    fields: [media.householdId],
+    references: [households.id],
+  }),
+  recipeAttachments: many(recipeMedia),
+  exerciseAttachments: many(exerciseMedia),
+}));
+
+export const recipeMedia = pgTable(
+  "recipe_media",
   {
     id: uuid("id").primaryKey(),
     householdId: uuid("household_id").notNull(),
     recipeId: uuid("recipe_id").notNull(),
     cookLogId: uuid("cook_log_id"),
-    objectKey: text("object_key").notNull().unique(),
-    contentType: text("content_type").notNull(),
-    byteSize: integer("byte_size").notNull(),
+    mediaId: uuid("media_id").notNull(),
     sortKey: integer("sort_key").notNull(),
-    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    width: integer("width").notNull(),
-    height: integer("height").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -546,7 +603,7 @@ export const recipeImages = pgTable(
     foreignKey({
       columns: [table.householdId, table.recipeId],
       foreignColumns: [recipes.householdId, recipes.id],
-      name: "recipe_images_household_recipe_fk",
+      name: "recipe_media_household_recipe_fk",
     }),
     foreignKey({
       columns: [table.householdId, table.recipeId, table.cookLogId],
@@ -555,24 +612,18 @@ export const recipeImages = pgTable(
         recipeCookLogs.recipeId,
         recipeCookLogs.id,
       ],
-      name: "recipe_images_household_recipe_cook_log_fk",
+      name: "recipe_media_household_recipe_cook_log_fk",
     }),
-    check(
-      "recipe_images_content_type_allowed",
-      sql`${table.contentType} IN ('image/jpeg', 'image/png', 'image/webp')`,
-    ),
-    check(
-      "recipe_images_byte_size_range",
-      sql`${table.byteSize} > 0 AND ${table.byteSize} <= 10485760`,
-    ),
-    check(
-      "recipe_images_dimensions_range",
-      sql`${table.width} > 0 AND ${table.width} <= 16384 AND ${table.height} > 0 AND ${table.height} <= 16384`,
-    ),
-    index("recipe_images_recipe_id_sort_key_id_idx")
+    foreignKey({
+      columns: [table.householdId, table.mediaId],
+      foreignColumns: [media.householdId, media.id],
+      name: "recipe_media_household_media_fk",
+    }),
+    index("recipe_media_media_id_idx").on(table.mediaId),
+    index("recipe_media_recipe_id_sort_key_id_idx")
       .on(table.recipeId, table.sortKey, table.id)
       .where(sql`${table.deletedAt} is null`),
-    index("recipe_images_cook_log_id_sort_key_id_idx")
+    index("recipe_media_cook_log_id_sort_key_id_idx")
       .on(table.cookLogId, table.sortKey, table.id)
       .where(sql`${table.deletedAt} is null`),
   ],
@@ -604,6 +655,90 @@ export const workouts = pgTable(
     ),
   ],
 );
+export const exercises = pgTable(
+  "exercises",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    unit: text("unit").notNull(),
+    load: text("load").notNull(),
+    unilateral: boolean("unilateral").notNull(),
+    archived: boolean("archived").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("exercises_household_id_id").on(t.householdId, t.id),
+    uniqueIndex("exercises_household_name").on(t.householdId, t.normalizedName),
+    check(
+      "exercises_name_length",
+      sql`length(trim(${t.name})) between 1 and 150`,
+    ),
+    check("exercises_unit", sql`${t.unit} in ('reps', 'seconds')`),
+    check(
+      "exercises_load",
+      sql`${t.load} in ('per-hand', 'single', 'bodyweight')`,
+    ),
+  ],
+);
+export const exerciseMedia = pgTable(
+  "exercise_media",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id").notNull(),
+    exerciseId: uuid("exercise_id").notNull(),
+    mediaId: uuid("media_id").notNull(),
+    sortKey: integer("sort_key").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.householdId, table.exerciseId],
+      foreignColumns: [exercises.householdId, exercises.id],
+      name: "exercise_media_household_exercise_fk",
+    }),
+    foreignKey({
+      columns: [table.householdId, table.mediaId],
+      foreignColumns: [media.householdId, media.id],
+      name: "exercise_media_household_media_fk",
+    }),
+    index("exercise_media_exercise_sort_id")
+      .on(table.householdId, table.exerciseId, table.sortKey, table.id)
+      .where(sql`${table.deletedAt} IS NULL`),
+    index("exercise_media_media_id").on(table.mediaId),
+  ],
+);
+export const exerciseMediaRelations = relations(exerciseMedia, ({ one }) => ({
+  exercise: one(exercises, {
+    fields: [exerciseMedia.householdId, exerciseMedia.exerciseId],
+    references: [exercises.householdId, exercises.id],
+  }),
+  asset: one(media, {
+    fields: [exerciseMedia.householdId, exerciseMedia.mediaId],
+    references: [media.householdId, media.id],
+  }),
+}));
+export const exercisesRelations = relations(exercises, ({ one, many }) => ({
+  images: many(exerciseMedia),
+  household: one(households, {
+    fields: [exercises.householdId],
+    references: [households.id],
+  }),
+}));
 export const workoutExercises = pgTable(
   "workout_exercises",
   {
@@ -611,14 +746,9 @@ export const workoutExercises = pgTable(
     householdId: uuid("household_id").notNull(),
     workoutId: uuid("workout_id").notNull(),
     sortKey: integer("sort_key").notNull().default(0),
-    name: text("name").notNull(),
+    exerciseId: uuid("exercise_id").notNull(),
     sets: integer("sets").notNull(),
     target: text("target").notNull(),
-    unit: text("unit", { enum: ["reps", "seconds"] }).notNull(),
-    unilateral: boolean("unilateral").notNull(),
-    // The CHECK below and shared Zod schema enforce allowed values. A Drizzle
-    // enum here makes Zero emit a database-config type import into the web build.
-    load: text("load").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -638,17 +768,13 @@ export const workoutExercises = pgTable(
       t.sortKey,
       t.id,
     ),
-    check(
-      "workout_exercises_name_length",
-      sql`length(trim(${t.name})) between 1 and 150`,
-    ),
+    foreignKey({
+      name: "workout_exercises_catalog_fk",
+      columns: [t.householdId, t.exerciseId],
+      foreignColumns: [exercises.householdId, exercises.id],
+    }),
     check("workout_exercises_sets", sql`${t.sets} between 1 and 10`),
     check("workout_exercises_target_length", sql`length(${t.target}) <= 100`),
-    check("workout_exercises_unit", sql`${t.unit} in ('reps', 'seconds')`),
-    check(
-      "workout_exercises_load",
-      sql`${t.load} in ('per-hand', 'single', 'bodyweight')`,
-    ),
   ],
 );
 export const workoutExercisesRelations = relations(
@@ -657,6 +783,10 @@ export const workoutExercisesRelations = relations(
     workout: one(workouts, {
       fields: [workoutExercises.householdId, workoutExercises.workoutId],
       references: [workouts.householdId, workouts.id],
+    }),
+    exercise: one(exercises, {
+      fields: [workoutExercises.householdId, workoutExercises.exerciseId],
+      references: [exercises.householdId, exercises.id],
     }),
   }),
 );
@@ -682,6 +812,7 @@ export const workoutLogs = pgTable(
       columns: [t.householdId, t.workoutId],
       foreignColumns: [workouts.householdId, workouts.id],
     }),
+    unique("workout_logs_household_id_id").on(t.householdId, t.id),
     uniqueIndex("workout_logs_one_per_day").on(
       t.householdId,
       t.userId,
@@ -699,16 +830,46 @@ export const workoutLogs = pgTable(
 export const workoutLogSets = pgTable(
   "workout_log_sets",
   {
-    logId: uuid("log_id")
-      .notNull()
-      .references(() => workoutLogs.id),
+    logId: uuid("log_id").notNull(),
+    householdId: uuid("household_id").notNull(),
+    workoutExerciseId: uuid("workout_exercise_id").notNull(),
     exerciseId: uuid("exercise_id").notNull(),
     round: integer("round").notNull(),
-    values: jsonb("values").notNull(),
+    amount: integer("amount").notNull(),
+    rightAmount: integer("right_amount"),
+    weightKg: numeric("weight_kg", { mode: "number" }),
+    unit: text("unit").notNull(),
+    load: text("load").notNull(),
+    unilateral: boolean("unilateral").notNull(),
   },
   (t) => [
-    primaryKey({ columns: [t.logId, t.exerciseId, t.round] }),
+    primaryKey({ columns: [t.logId, t.workoutExerciseId, t.round] }),
+    foreignKey({
+      name: "workout_log_sets_log_fk",
+      columns: [t.householdId, t.logId],
+      foreignColumns: [workoutLogs.householdId, workoutLogs.id],
+    }),
+    foreignKey({
+      name: "workout_log_sets_catalog_fk",
+      columns: [t.householdId, t.exerciseId],
+      foreignColumns: [exercises.householdId, exercises.id],
+    }),
+    index("workout_log_sets_exercise").on(t.householdId, t.exerciseId, t.logId),
     check("workout_log_sets_round", sql`${t.round} between 1 and 10`),
+    check("workout_log_sets_amount", sql`${t.amount} between 0 and 600`),
+    check(
+      "workout_log_sets_right_amount",
+      sql`${t.rightAmount} is null or (${t.unilateral} and ${t.rightAmount} between 0 and 600)`,
+    ),
+    check(
+      "workout_log_sets_weight",
+      sql`${t.weightKg} is null or (${t.load} <> 'bodyweight' and ${t.weightKg} between 0 and 1000)`,
+    ),
+    check("workout_log_sets_unit", sql`${t.unit} in ('reps', 'seconds')`),
+    check(
+      "workout_log_sets_load",
+      sql`${t.load} in ('per-hand', 'single', 'bodyweight')`,
+    ),
   ],
 );
 export const workoutsRelations = relations(workouts, ({ one, many }) => ({
@@ -737,20 +898,24 @@ export const workoutLogSetsRelations = relations(workoutLogSets, ({ one }) => ({
   }),
 }));
 
-export const recipeImagesRelations = relations(recipeImages, ({ one }) => ({
+export const recipeMediaRelations = relations(recipeMedia, ({ one }) => ({
+  asset: one(media, {
+    fields: [recipeMedia.householdId, recipeMedia.mediaId],
+    references: [media.householdId, media.id],
+  }),
   household: one(households, {
-    fields: [recipeImages.householdId],
+    fields: [recipeMedia.householdId],
     references: [households.id],
   }),
   recipe: one(recipes, {
-    fields: [recipeImages.householdId, recipeImages.recipeId],
+    fields: [recipeMedia.householdId, recipeMedia.recipeId],
     references: [recipes.householdId, recipes.id],
   }),
   cookLog: one(recipeCookLogs, {
     fields: [
-      recipeImages.householdId,
-      recipeImages.recipeId,
-      recipeImages.cookLogId,
+      recipeMedia.householdId,
+      recipeMedia.recipeId,
+      recipeMedia.cookLogId,
     ],
     references: [
       recipeCookLogs.householdId,

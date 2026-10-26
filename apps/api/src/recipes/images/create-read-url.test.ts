@@ -2,7 +2,7 @@ import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
-  recipeImages,
+  recipeMedia as recipeImages,
   recipes,
 } from "@home-hub/database/schema";
 import { describe, expect, it, vi } from "vitest";
@@ -38,7 +38,9 @@ function createFakeDatabase({
   const results = [
     membership ? { id: "membership-id" } : undefined,
     moduleEnabled ? { householdId } : undefined,
-    image ? { objectKey } : undefined,
+    image
+      ? { objectKey, mediaId: imageId, confirmedAt: new Date() }
+      : undefined,
   ];
   const tables: unknown[] = [];
   const lockStrengths: unknown[] = [];
@@ -49,6 +51,7 @@ function createFakeDatabase({
         tables.push(table);
         return builder;
       },
+      innerJoin: () => builder,
       where: (_condition: unknown) => builder,
       limit: (_limit: unknown) => builder,
       for: async (strength: unknown) => {
@@ -109,6 +112,8 @@ describe("create recipe image read URL service", () => {
       imageId,
       recipeId,
       variant: "card",
+      mediaId: imageId,
+      objectKey,
     });
     expect(events).toEqual(["transaction:start", "transaction:end", "sign"]);
     expect(lockStrengths).toEqual(["share", "share", "share"]);

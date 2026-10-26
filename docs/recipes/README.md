@@ -168,45 +168,27 @@ exhausted gaps cause the recipe's ingredients to be rebalanced.
 
 Each row represents one cooking event. Multiple events may have the same
 `cooked_at` value. Logs do not attribute who cooked or recorded the event.
-Deleting a cooking log first clears its images' `cook_log_id`, preserving those
-images as general recipe pictures.
+Deleting a cooking log soft-deletes the log while retaining its attachments and
+pictures in the overall recipe gallery.
 
-### `recipe_images`
+### `recipe_media` and shared `media`
 
-- `id`
-- `household_id`
-- `recipe_id`
-- `cook_log_id`, nullable
-- `object_key`
-- `content_type`
-- `byte_size`
-- `width`, `height`: display dimensions supplied by the browser
-- `sort_key`: integer
-- `confirmed_at`, nullable
-- `created_at`, `updated_at`
+`recipe_media` stores attachment IDs, household/recipe, optional cooking-log context,
+`media_id`, sparse `sort_key`, soft-deletion state and timestamps. The shared `media`
+table stores original-object metadata and confirmation/lifecycle state. See the
+[shared media model and rollout](../media/) for the split and migration guarantees.
 
-Every image belongs to one recipe and may optionally provide context for one
-cooking log from that recipe. Cooking-log images remain part of the recipe's
-overall image collection. The optional cooking-log relationship includes the
-household and recipe IDs so it cannot cross either boundary. Confirmed images
-use descending sparse integer sort keys with UUID tie-breakers. New images are
-appended at the bottom. Reordering normally changes only the moved row;
-exhausted gaps cause the recipe's image keys to be rebalanced. Pending images
-are retained during that operation. The first confirmed image in that order is
-the recipe cover.
-
-Object keys are server-controlled, unique, and independent of public
-hostnames. Pending metadata exists before an upload is authorized;
-`confirmed_at` remains null until the API verifies the R2 object, content type,
-and size. Only confirmed images are readable or synchronized. Width and height
-are untrusted layout metadata constrained to
-1–16,384 pixels.
+Cooking-log pictures remain in the recipe's gallery, including after log deletion.
+Composite foreign keys prevent cross-household assets and cross-recipe cooking
+context. The first confirmed, non-deleted image in descending sort order is the
+cover; pending attachments remain in reorder/rebalancing operations. Attachment
+IDs remain stable for API requests, ordering, viewer state and signed-URL caches.
 
 ## Synchronization and authorization
 
 Named Recipes queries constrain results through current household membership,
 an enabled Recipes module setting, and `deleted_at IS NULL`. The Zero publication is only a coarse
-allowlist: it omits recipe-image object keys, and query authorization still
+allowlist: it omits shared-media object keys, and query authorization still
 determines which rows a client may synchronize.
 
 Recipe, ingredient, cooking-log, and confirmed-image metadata changes use
@@ -247,27 +229,30 @@ transformation parameters or obtain the private source object URL.
 
 The upload flow is:
 
-1. The authenticated browser requests permission for a specific recipe, image
-   ID, optional cooking log, content type, and size.
+1. The authenticated browser requests permission for a recipe, optional cooking
+   log, content type, size and layout dimensions.
 2. The API verifies household membership, the enabled Recipes setting, recipe
    ownership, and any cooking-log relationship.
 3. The API constructs
-   `households/{householdId}/recipes/{recipeId}/{imageId}` and creates pending
-   metadata in PostgreSQL.
+   `households/{householdId}/media/{mediaId}` and atomically creates pending
+   asset and recipe-attachment metadata in PostgreSQL. Existing objects retain
+   their legacy recipe-scoped keys.
 4. The API returns a short-lived presigned `PUT` URL bound to an allowed content
    type.
 5. The browser uploads directly to R2.
 6. The browser confirms completion, and the API verifies the object's type and
    size.
 7. The API sends the Worker a five-minute HMAC-authenticated processing request.
-   The Worker generates and stores `thumbnail.webp` and `viewer.webp` at
-   deterministic keys. Retrying safely overwrites those same keys.
+   The Worker verifies bounded source bytes and rejects animated/unsupported
+   uploads before generating `thumbnail.webp` and `viewer.webp` at deterministic
+   keys. Retrying safely overwrites those same keys.
 8. The API confirms the metadata only after both derivative writes succeed.
 
 Only confirmed metadata may synchronize or receive a signed derivative read
 URL.
 Abandoned pending rows and possible objects are cleanup candidates. Support
-JPEG, PNG, and WebP initially, with a 10 MiB maximum. Treat presigned URLs as
+still JPEG, PNG, and WebP initially, with a 10 MiB maximum. Video, GIF, animated
+WebP and APNG uploads are not enabled yet. Treat presigned URLs as
 bearer credentials, never log them, and never expose R2 credentials through a
 `VITE_` environment variable.
 
@@ -285,7 +270,8 @@ The derivative read flow is:
 2. The API verifies the active user, household membership, enabled Recipes
    setting, and confirmed recipe-scoped image under shared locks.
 3. Outside the transaction, the API returns one-hour HMAC-signed Worker URLs
-   containing only the variant and route-scoped IDs.
+   binding the variant, asset, household, authorizing attachment context and
+   storage layout. Storage provenance is independent of the current recipe.
 4. The Worker validates the method, fixed variant, IDs, expiry, and signature
    before consulting the edge cache.
 5. On an edge-cache miss, the Worker reads the pre-generated derivative from
@@ -301,20 +287,11 @@ returns `404`; a transformation or storage failure returns a generic `500` and
 never falls back to exposing the original. Existing confirmed images require
 no eager data migration because missing derivatives are repaired lazily.
 
-Image deletion is idempotent. A short transaction authorizes and reads
-metadata, the original and both derivatives are deleted from R2 without
-database locks held, and a second
-transaction reauthorizes and locks the row before hard-deleting its metadata.
-If R2 deletion fails, metadata remains. If the database step fails after R2
-deletion, retrying can finish cleanup. A transactional outbox may replace this
-recovery policy if background jobs are introduced.
-
-Deleting an image does not synchronously purge its content-addressed edge-cache
-entry. The API stops issuing capabilities as soon as metadata is deleted, an
-already-issued URL stops working after at most one hour because the Worker
-authorizes before reading cache, and image UUIDs are never reused. The orphaned
-cache entry then expires or is evicted without making the deleted image
-reachable.
+Image deletion is idempotent and soft-deletes only the recipe attachment. The
+stored asset, original and derivatives remain, so other attachments are unaffected.
+No physical R2 cleanup job is introduced. The API stops issuing capabilities through
+the removed attachment; already-issued URLs can remain valid for at most one hour.
+The Worker always verifies before cache lookup. Asset UUIDs are never reused.
 
 The R2 bucket permits `PUT` from
 `https://home.achichorro.com` and `http://127.0.0.1:5173`, with

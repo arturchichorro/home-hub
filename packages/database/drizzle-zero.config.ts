@@ -4,6 +4,8 @@ import * as drizzleSchema from "./src/schema";
 
 export default drizzleZeroConfig(drizzleSchema, {
   tables: {
+    exercises: true,
+    exerciseMedia: true,
     workouts: true,
     workoutExercises: true,
     workoutLogs: true,
@@ -90,20 +92,21 @@ export default drizzleZeroConfig(drizzleSchema, {
       createdAt: true,
       updatedAt: true,
     },
-    recipeImages: {
+    media: {
       id: true,
       householdId: true,
-      recipeId: true,
-      cookLogId: true,
+      kind: true,
       contentType: true,
       byteSize: true,
-      sortKey: true,
-      confirmedAt: true,
-      deletedAt: true,
       width: true,
       height: true,
+      durationMs: true,
+      animated: true,
+      confirmedAt: true,
+      deletedAt: true,
       createdAt: true,
       updatedAt: true,
     },
+    recipeMedia: true,
   },
 });

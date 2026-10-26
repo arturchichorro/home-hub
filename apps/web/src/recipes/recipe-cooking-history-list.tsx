@@ -1,5 +1,6 @@
+import type { RecipeImage } from "@home-hub/shared/recipe-images";
 import { mutators } from "@home-hub/shared/zero/mutators";
-import type { RecipeCookLog, RecipeImage } from "@home-hub/shared/zero/schema";
+import type { RecipeCookLog } from "@home-hub/shared/zero/schema";
 import {
   ConfirmationPopover,
   IconButton,

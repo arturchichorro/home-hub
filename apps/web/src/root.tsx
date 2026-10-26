@@ -8,6 +8,7 @@ import {
 } from "./auth/session-bootstrap";
 import { clearRecipeImageUrlCache } from "./recipes/recipe-image-url-cache";
 import { createAppRouter } from "./router";
+import { clearExerciseImageUrlCache } from "./workouts/exercise-image-url";
 
 type RootProps = {
   initialSession: Session | null;
@@ -33,6 +34,7 @@ export function Root({ initialSession }: RootProps) {
   const onLoggedOut = useCallback(() => {
     clearSessionBootstrap();
     clearRecipeImageUrlCache();
+    clearExerciseImageUrlCache();
     setZero(undefined);
     setSession(null);
   }, []);
@@ -46,6 +48,7 @@ export function Root({ initialSession }: RootProps) {
         if (!refreshedSession) {
           clearSessionBootstrap();
           clearRecipeImageUrlCache(expiredSession.user.id);
+          clearExerciseImageUrlCache(expiredSession.user.id);
           setZero(undefined);
         }
         setSession(refreshedSession);

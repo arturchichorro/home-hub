@@ -154,6 +154,7 @@ export function WorkoutDetail({
         </p>
       )}
       <WorkoutExercises
+        householdId={householdId}
         title={
           <WorkoutText
             label="Workout name"

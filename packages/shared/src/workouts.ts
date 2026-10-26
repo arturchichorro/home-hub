@@ -5,12 +5,30 @@ const title = z.string().trim().min(1).max(150);
 export const workoutExerciseSchema = z
   .object({
     id: z.uuid(),
+    catalogExerciseId: z.uuid().optional(),
     name: title,
     sets: z.number().int().min(1).max(10),
     target: z.string().max(100),
     unit: z.enum(["reps", "seconds"]),
     unilateral: z.boolean(),
     load: z.enum(["per-hand", "single", "bodyweight"]),
+  })
+  .strict();
+export const exerciseCatalogSchema = workoutExerciseSchema
+  .pick({ name: true, unit: true, load: true, unilateral: true })
+  .extend({ id: z.uuid() });
+export type CatalogExercise = z.infer<typeof exerciseCatalogSchema>;
+export const normalizeExerciseName = (name: string) =>
+  name.normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
+export const updateCatalogExerciseSchema = z
+  .object({
+    householdId: z.uuid(),
+    exerciseId: z.uuid(),
+    optimisticTimestamp: z.number().int().nonnegative(),
+    changes: workoutExerciseSchema
+      .pick({ name: true, unit: true, load: true, unilateral: true })
+      .partial()
+      .refine((value) => Object.keys(value).length > 0),
   })
   .strict();
 export const workoutExercisesSchema = z
@@ -135,23 +153,53 @@ export function planExerciseEdits(
 }
 // Related database rows include scope/order/timestamps; snapshots and form inputs do not.
 export function workoutExercisesFromRows(
-  rows: readonly (Omit<WorkoutExercise, "load"> & { load: string })[],
+  rows: readonly {
+    id: string;
+    exerciseId: string;
+    sets: number;
+    target: string;
+    exercise:
+      | {
+          id: string;
+          name: string;
+          unit: string;
+          unilateral: boolean;
+          load: string;
+        }
+      | undefined;
+  }[],
 ): WorkoutExercise[] {
   return workoutExercisesSchema.parse(
-    rows.map(({ id, name, sets, target, unit, unilateral, load }) => ({
-      id,
-      name,
-      sets,
-      target,
-      unit,
-      unilateral,
-      load,
-    })),
+    rows.map((row) => {
+      if (!row.exercise) throw new Error("Missing catalog exercise");
+      return {
+        id: row.id,
+        catalogExerciseId: row.exercise.id,
+        name: row.exercise.name,
+        unit: row.exercise.unit,
+        load: row.exercise.load,
+        unilateral: row.exercise.unilateral,
+        sets: row.sets,
+        target: row.target,
+      };
+    }),
   );
+}
+export function workoutSetValuesFromRow(row: {
+  amount: number;
+  rightAmount: number | null;
+  weightKg: number | null;
+}) {
+  return workoutSetValuesSchema.parse({
+    amount: row.amount,
+    rightAmount: row.rightAmount,
+    weightKg: row.weightKg,
+  });
 }
 export const importWorkoutsSchema = z
   .object({
     householdId: z.uuid(),
+    catalogExerciseIds: z.array(z.uuid()).min(1).max(40),
     workoutIds: z
       .tuple([z.uuid(), z.uuid(), z.uuid()])
       .refine((ids) => new Set(ids).size === 3),
@@ -168,7 +216,7 @@ export const workoutSetValuesSchema = z
 export type WorkoutSetValues = z.infer<typeof workoutSetValuesSchema>;
 export const workoutLogSetSchema = z
   .object({
-    exerciseId: z.uuid(),
+    workoutExerciseId: z.uuid(),
     round: z.number().int().min(1).max(10),
     values: workoutSetValuesSchema,
   })
@@ -193,8 +241,8 @@ export const saveWorkoutLogSchema = z
       .max(400)
       .refine(
         (rows) =>
-          new Set(rows.map((row) => `${row.exerciseId}:${row.round}`)).size ===
-          rows.length,
+          new Set(rows.map((row) => `${row.workoutExerciseId}:${row.round}`))
+            .size === rows.length,
         "Set keys must be unique",
       ),
   })

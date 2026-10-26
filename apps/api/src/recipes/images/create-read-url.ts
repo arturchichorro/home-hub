@@ -9,6 +9,8 @@ import { findConfirmedRecipeImageForShare } from "./scoped-entities";
 import { recipeImageReadUrlLifetimeSeconds } from "./sign-read";
 
 export type SignRead = (input: {
+  mediaId: string;
+  objectKey: string;
   householdId: string;
   imageId: string;
   recipeId: string;
@@ -70,14 +72,21 @@ export function createRecipeImageReadUrlService({
       });
       if (!image) return { kind: "not_found" as const };
 
-      return { kind: "image" as const };
+      return { kind: "image" as const, image };
     });
 
     if (authorizedImage.kind !== "image") return authorizedImage;
 
     return {
       kind: "success",
-      url: await signRead({ householdId, imageId, recipeId, variant }),
+      url: await signRead({
+        householdId,
+        imageId,
+        recipeId,
+        variant,
+        mediaId: authorizedImage.image.mediaId,
+        objectKey: authorizedImage.image.objectKey,
+      }),
       expiresInSeconds: recipeImageReadUrlLifetimeSeconds,
     };
   };

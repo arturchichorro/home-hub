@@ -2,7 +2,7 @@ import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
-  recipeImages,
+  recipeMedia as recipeImages,
   recipes,
 } from "@home-hub/database/schema";
 import { describe, expect, it, vi } from "vitest";
@@ -31,7 +31,7 @@ function createFakeDatabase({
   const results = [
     membership ? { id: "membership-id" } : undefined,
     module ? { householdId } : undefined,
-    image ? { objectKey } : undefined,
+    image ? { objectKey, mediaId: imageId } : undefined,
   ];
   const tables: unknown[] = [];
   const lockStrengths: unknown[] = [];
@@ -41,6 +41,7 @@ function createFakeDatabase({
         tables.push(table);
         return builder;
       },
+      innerJoin: () => builder,
       where: () => builder,
       limit: () => builder,
       for: async (strength: unknown) => {

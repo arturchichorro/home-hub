@@ -2,7 +2,7 @@ import {
   type WorkoutExercise,
   type WorkoutSetValues,
   workoutLogSnapshotSchema,
-  workoutSetValuesSchema,
+  workoutSetValuesFromRow,
 } from "@home-hub/shared/workouts";
 import type { WorkoutLog } from "./workout-log";
 
@@ -25,11 +25,11 @@ export function summarizeWorkoutLog(
     .parse(log.snapshot)
     .exercises.flatMap((exercise) => {
       const sets = log.sets
-        .filter((s) => s.exerciseId === exercise.id)
+        .filter((s) => s.workoutExerciseId === exercise.id)
         .sort((a, b) => a.round - b.round);
       if (!sets.length) return [];
       const descriptions = sets.map((s) =>
-        describeSet(exercise, workoutSetValuesSchema.parse(s.values)),
+        describeSet(exercise, workoutSetValuesFromRow(s)),
       );
       const same = descriptions.every((value) => value === descriptions[0]);
       const details = same

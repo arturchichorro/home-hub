@@ -15,6 +15,8 @@ import {
   type CreateRecipeRoutesInput,
   createRecipeRoutes,
 } from "./recipes/routes";
+import type { ExerciseMediaServices } from "./workouts/exercise-media";
+import { createExerciseMediaRoutes } from "./workouts/routes";
 import { type CreateZeroRoutesInput, createZeroRoutes } from "./zero/routes";
 
 type AuthServices = Omit<CreateAuthRoutesInput, "isProduction" | "jwtSecret">;
@@ -25,6 +27,7 @@ export type CreateAppInput = {
   auth: AuthServices;
   households: HouseholdServices;
   recipeImages: RecipeImageServices;
+  exerciseMedia: ExerciseMediaServices;
   infrastructure: {
     isProduction: boolean;
     jwtSecret: string;
@@ -61,6 +64,10 @@ export function createApp(input: CreateAppInput) {
   app.route(
     "/api/households/:householdId/recipes",
     createRecipeRoutes({ ...input.recipeImages, jwtSecret }),
+  );
+  app.route(
+    "/api/households/:householdId/workouts/exercises",
+    createExerciseMediaRoutes({ jwtSecret, services: input.exerciseMedia }),
   );
   app.route(
     "/api/zero",

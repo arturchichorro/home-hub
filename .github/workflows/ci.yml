@@ -110,7 +110,9 @@ jobs:
                   ('recipes', 'deleted_at'),
                   ('recipes', 'sort_key'),
                   ('recipe_cook_logs', 'deleted_at'),
-                  ('recipe_images', 'deleted_at'),
+                  ('recipe_media', 'deleted_at'),
+                  ('recipe_media', 'media_id'),
+                  ('media', 'confirmed_at'),
                   ('recipe_ingredients', 'deleted_at'),
                   ('household_members', 'sort_key')
               ) AS expected(table_name, column_name)
@@ -128,6 +130,11 @@ jobs:
             END IF;
           END $$;
           SQL
+
+      - name: Verify populated shared-media migration and PostgreSQL services
+        env:
+          DATABASE_URL: postgres://home_hub:home_hub@127.0.0.1:5432/home_hub
+        run: scripts/verify-media-migration.sh "${{ job.services.postgres.id }}"
 
       - name: Build production web application
         env:

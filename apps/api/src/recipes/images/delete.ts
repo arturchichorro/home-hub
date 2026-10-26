@@ -1,5 +1,5 @@
 import type { Database } from "@home-hub/database";
-import { recipeImages } from "@home-hub/database/schema";
+import { recipeMedia } from "@home-hub/database/schema";
 import { and, eq } from "drizzle-orm";
 import { findActiveUser } from "../../authorization/active-user";
 import {
@@ -52,17 +52,17 @@ export function createDeleteRecipeImageService({ db }: { db: Database }) {
 
       const deletedAt = new Date();
       const [deletedImage] = await tx
-        .update(recipeImages)
+        .update(recipeMedia)
         .set({ deletedAt, updatedAt: deletedAt })
         .where(
           and(
-            eq(recipeImages.id, imageId),
-            eq(recipeImages.householdId, householdId),
-            eq(recipeImages.recipeId, recipeId),
-            eq(recipeImages.objectKey, image.objectKey),
+            eq(recipeMedia.id, imageId),
+            eq(recipeMedia.householdId, householdId),
+            eq(recipeMedia.recipeId, recipeId),
+            eq(recipeMedia.mediaId, image.mediaId),
           ),
         )
-        .returning({ id: recipeImages.id });
+        .returning({ id: recipeMedia.id });
       if (!deletedImage) {
         throw new Error("Recipe image deletion returned no row");
       }

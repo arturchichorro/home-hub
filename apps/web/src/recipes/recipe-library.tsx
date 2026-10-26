@@ -6,12 +6,15 @@ import {
 } from "@dnd-kit/dom";
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
+import {
+  type RecipeImage,
+  recipeImagesFromRows,
+} from "@home-hub/shared/recipe-images";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import type {
   Recipe,
   RecipeCookLog,
-  RecipeImage,
   RecipeIngredient,
 } from "@home-hub/shared/zero/schema";
 import {
@@ -353,7 +356,10 @@ export function RecipeLibrary({
         householdId={householdId}
         onMove={(from, to) => void move(from, to)}
         onSessionExpired={onSessionExpired}
-        recipes={recipes}
+        recipes={recipes.map((recipe) => ({
+          ...recipe,
+          images: recipeImagesFromRows(recipe.images),
+        }))}
         userId={userId}
       />
 

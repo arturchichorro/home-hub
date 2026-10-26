@@ -42,15 +42,21 @@ describe("normalized workout exercise edits", () => {
   it("keeps database metadata out of snapshots and editor drafts", () => {
     const row = {
       ...first,
+      exerciseId: first.id,
+      exercise: { ...first },
       householdId: scope.householdId,
       workoutId: scope.workoutId,
       sortKey: 1024,
       createdAt: 1,
       updatedAt: 2,
     };
-    expect(workoutExercisesFromRows([row])).toEqual([first]);
+    expect(workoutExercisesFromRows([row])).toEqual([
+      { ...first, catalogExerciseId: first.id },
+    ]);
     expect(() =>
-      workoutExercisesFromRows([{ ...row, load: "invalid" }]),
+      workoutExercisesFromRows([
+        { ...row, exercise: { ...first, load: "invalid" } },
+      ]),
     ).toThrow();
   });
   it("rejects whole-array workout updates and ambiguous/invalid exercise operations", () => {
