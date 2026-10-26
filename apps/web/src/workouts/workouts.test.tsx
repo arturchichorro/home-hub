@@ -39,10 +39,22 @@ const householdId = crypto.randomUUID(),
   workoutId = crypto.randomUUID();
 const starter = starterWorkouts[0];
 if (!starter) throw new Error("seed");
-const workout = { id: workoutId, householdId, ...starter };
+const workout = {
+  id: workoutId,
+  householdId,
+  ...starter,
+  exercises: starter.exercises.map((e) => ({
+    id: e.id,
+    exerciseId: e.id,
+    sets: e.sets,
+    target: e.target,
+    exercise: { ...e },
+  })),
+};
 beforeEach(() => {
   vi.clearAllMocks();
   useQuery.mockReset();
+  useQuery.mockReturnValue([[], { type: "complete" }]);
   enabled.mockReturnValue(true);
   mutate.mockReturnValue({
     client: Promise.resolve({ type: "success" }),
@@ -50,6 +62,35 @@ beforeEach(() => {
   });
 });
 describe("simple workouts", () => {
+  it("shows the shared exercise catalog below the workouts", () => {
+    useQuery
+      .mockReturnValueOnce([[workout], { type: "complete" }])
+      .mockReturnValueOnce([
+        [
+          {
+            id: crypto.randomUUID(),
+            householdId,
+            name: "Push-up",
+            normalizedName: "push-up",
+            unit: "reps",
+            load: "bodyweight",
+            unilateral: false,
+          },
+        ],
+        { type: "complete" },
+      ]);
+    const html = renderToStaticMarkup(
+      <WorkoutsLibrary householdId={householdId} />,
+    );
+    expect(html).toContain('aria-label="Exercise catalog"');
+    expect(html).toContain("Push-up");
+    expect(html.indexOf("Exercise catalog")).toBeGreaterThan(
+      html.indexOf(`/workouts/${workoutId}`),
+    );
+    expect(html).toContain('aria-label="Search exercises"');
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
   it("offers the cooking-log-style message action for a saved entry without a note", () => {
     const entry: WorkoutLog = {
       id: crypto.randomUUID(),
@@ -135,7 +176,7 @@ describe("simple workouts", () => {
   });
 
   it("lists standalone linked workouts, without plans or instruction text", () => {
-    useQuery.mockReturnValue([[workout], { type: "complete" }]);
+    useQuery.mockReturnValueOnce([[workout], { type: "complete" }]);
     const html = renderToStaticMarkup(
       <WorkoutsLibrary householdId={householdId} />,
     );
@@ -223,6 +264,7 @@ describe("simple workouts", () => {
   it("keeps new inputs local until Done, without per-set save buttons", () => {
     const html = renderToStaticMarkup(
       <WorkoutExercises
+        householdId={householdId}
         current={starter.exercises}
         disabled={false}
         onSave={async () => true}
@@ -271,6 +313,7 @@ describe("simple workouts", () => {
     const form = openWorkoutLog(starter, log);
     const html = renderToStaticMarkup(
       <WorkoutExercises
+        householdId={householdId}
         current={starter.exercises}
         disabled={false}
         onSave={async () => true}
@@ -296,8 +339,15 @@ describe("simple workouts", () => {
       sets: [1, 2].map((round) => ({
         logId: "history",
         exerciseId: exercise.id,
+        workoutExerciseId: exercise.id,
+        householdId,
         round,
-        values: { weightKg: 8, amount: 10, rightAmount: null },
+        weightKg: 8,
+        amount: 10,
+        rightAmount: null,
+        unit: exercise.unit,
+        load: exercise.load,
+        unilateral: exercise.unilateral,
       })),
     };
     useQuery

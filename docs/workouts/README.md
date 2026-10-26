@@ -37,7 +37,10 @@ workouts; training logs and set values remain private to their author.
   workout notes. The Notes section always shows the current shared notes, even
   when opening history. Private log notes remain separate. Historical edits
   retain the original title/exercises and completion dates.
-- Add the supplied A/B/C starter workouts.
+- Add the supplied A/B/C starter workouts. **Add exercise** searches the household
+  catalog or creates a new movement. The searchable catalog is listed below the
+  workouts. Name, measure, load convention and sides are shared across workouts;
+  sets and target ranges belong to each workout.
 
 There are no plans, cycles, scheduling, timers, progression suggestions, or
 configured weight increments. Membership, module availability, and private-log
@@ -46,20 +49,43 @@ ownership are enforced in Zero queries and mutations.
 ## Data model
 
 - `workouts`: household-shared title, notes, ordering and timestamps.
-- `workout_exercises`: typed exercise rows with name, sets, target, unit, sides,
-  load convention, ordering and timestamps. A composite household/workout foreign
-  key prevents cross-household references. The primary key is `(workout_id, id)`:
-  existing starter exercise IDs are reused across workouts and remain unchanged.
+- `exercises`: household-shared movement catalog: stable ID, name/normalized name,
+  measure, load convention, sides and timestamps. Names are unique within a
+  household after case/whitespace normalization. Catalog renames/settings edits
+  apply to all linked workouts.
+- `workout_exercises`: catalog references, workout-specific sets/targets, ordering
+  and timestamps. Composite household foreign keys protect both parent links.
+  The primary key remains `(workout_id, id)`; removing a slot does not delete the
+  movement or its history.
 - `workout_logs`: private daily records, notes and immutable title/exercise
   snapshots. Historical definitions remain JSON so later edits/deletions never
   rewrite logged workouts.
-- `workout_log_sets`: recorded values belonging to a log. Its exercise ID refers
-  to the immutable snapshot, deliberately not to the deletable editable row.
+- `workout_log_sets`: numeric `amount`, `right_amount` and `weight_kg` columns,
+  plus the original `unit`, `load` and `unilateral` convention. `exercise_id` is a
+  stable catalog foreign key; `workout_exercise_id` identifies the historical
+  slot and need not reference a current slot. The primary key is
+  `(log_id, workout_exercise_id, round)`. Household-scoped foreign keys protect
+  both the private log and catalog reference.
 
 Exercise autosaves send field-level patches and explicit additions/deletions,
 never a replacement array. Unrelated concurrent edits and unseen additions are
 preserved. Mutations serialize through the parent workout before checking the
-current row count/order and applying changes atomically.
+current row count/order and applying changes atomically. Shared catalog updates
+patch only changed fields; settings edits do not overwrite concurrent renames.
+
+For statistics, join sets to their private log, filter by author and measurement
+unit, and group by catalog ID rather than exercise name:
+
+```sql
+SELECT sum(s.amount) AS reps
+FROM workout_log_sets s
+JOIN workout_logs l ON l.id = s.log_id AND l.household_id = s.household_id
+WHERE s.household_id = $1 AND l.user_id = $2
+  AND s.exercise_id = $3 AND s.unit = 'reps';
+```
+
+Unilateral totals may count both sides using
+`amount + coalesce(right_amount, amount)`; do not mix reps with seconds.
 
 ## Upgrade
 
@@ -104,3 +130,20 @@ including reused IDs across workouts. It verifies the exact copy before dropping
 private notes and recorded sets are untouched. Back up, stop API/Zero, apply the
 migration, deploy matching code, restart and reload clients. Rollback requires
 the backup and previous code; earlier migrations are unchanged.
+
+`0042_dazzling_saracen.sql` merges matching names within each household into the
+catalog and links existing slots to it. When live definitions disagree, the most
+recently edited current definition supplies shared settings; historical settings
+remain unchanged. Original IDs, prescriptions, ordering, notes, timestamps and
+numeric values are preserved. Snapshots gain catalog IDs; set measurements move
+out of JSON into typed columns. Historical-only movements remain hidden from the
+shared catalog, preventing private snapshot names from being exposed.
+
+The migration verifies value copies and aborts on unresolved historical sets.
+It updates publication/replica identity around the primary-key change. Back up
+and stop API/Zero before applying. Rebuild Zero's disposable SQLite replica before
+restarting: an existing replica otherwise replays the intermediate keyless table
+and can crash with “Cannot replicate table without a PRIMARY KEY or UNIQUE INDEX”.
+Back up the replica first; do not remove PostgreSQL/application data or its volumes.
+Then deploy matching code, restart Zero/API, and reload clients. Earlier migrations
+remain unchanged. This change is local-only until explicitly committed/deployed.

@@ -4,6 +4,7 @@ import {
   type WorkoutLogSnapshot,
   type WorkoutSetValues,
   workoutLogSnapshotSchema,
+  workoutSetValuesFromRow,
   workoutSetValuesSchema,
 } from "@home-hub/shared/workouts";
 import type { WorkoutLog } from "./workout-log";
@@ -47,9 +48,9 @@ export function openWorkoutLog(
     completedOn: existing?.completedOn ?? null,
     inputs: Object.fromEntries(
       (existing?.sets ?? []).map((set) => {
-        const values = workoutSetValuesSchema.parse(set.values);
+        const values = workoutSetValuesFromRow(set);
         return [
-          setInputKey(set.exerciseId, set.round),
+          setInputKey(set.workoutExerciseId, set.round),
           {
             weightKg: values.weightKg === null ? "" : String(values.weightKg),
             amount: String(values.amount),
@@ -67,11 +68,15 @@ export function collectWorkoutSets(
 ):
   | {
       success: true;
-      sets: { exerciseId: string; round: number; values: WorkoutSetValues }[];
+      sets: {
+        workoutExerciseId: string;
+        round: number;
+        values: WorkoutSetValues;
+      }[];
     }
   | { success: false; error: string } {
   const sets: {
-    exerciseId: string;
+    workoutExerciseId: string;
     round: number;
     values: WorkoutSetValues;
   }[] = [];
@@ -91,7 +96,7 @@ export function collectWorkoutSets(
           success: false,
           error: `Enter valid weight and ${exercise.unit} for ${exercise.name}, set ${round}.`,
         };
-      sets.push({ exerciseId: exercise.id, round, values: parsed.data });
+      sets.push({ workoutExerciseId: exercise.id, round, values: parsed.data });
     }
   return { success: true, sets };
 }

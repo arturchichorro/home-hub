@@ -7,6 +7,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   primaryKey,
@@ -604,6 +605,46 @@ export const workouts = pgTable(
     ),
   ],
 );
+export const exercises = pgTable(
+  "exercises",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    unit: text("unit").notNull(),
+    load: text("load").notNull(),
+    unilateral: boolean("unilateral").notNull(),
+    archived: boolean("archived").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("exercises_household_id_id").on(t.householdId, t.id),
+    uniqueIndex("exercises_household_name").on(t.householdId, t.normalizedName),
+    check(
+      "exercises_name_length",
+      sql`length(trim(${t.name})) between 1 and 150`,
+    ),
+    check("exercises_unit", sql`${t.unit} in ('reps', 'seconds')`),
+    check(
+      "exercises_load",
+      sql`${t.load} in ('per-hand', 'single', 'bodyweight')`,
+    ),
+  ],
+);
+export const exercisesRelations = relations(exercises, ({ one }) => ({
+  household: one(households, {
+    fields: [exercises.householdId],
+    references: [households.id],
+  }),
+}));
 export const workoutExercises = pgTable(
   "workout_exercises",
   {
@@ -611,14 +652,9 @@ export const workoutExercises = pgTable(
     householdId: uuid("household_id").notNull(),
     workoutId: uuid("workout_id").notNull(),
     sortKey: integer("sort_key").notNull().default(0),
-    name: text("name").notNull(),
+    exerciseId: uuid("exercise_id").notNull(),
     sets: integer("sets").notNull(),
     target: text("target").notNull(),
-    unit: text("unit", { enum: ["reps", "seconds"] }).notNull(),
-    unilateral: boolean("unilateral").notNull(),
-    // The CHECK below and shared Zod schema enforce allowed values. A Drizzle
-    // enum here makes Zero emit a database-config type import into the web build.
-    load: text("load").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -638,17 +674,13 @@ export const workoutExercises = pgTable(
       t.sortKey,
       t.id,
     ),
-    check(
-      "workout_exercises_name_length",
-      sql`length(trim(${t.name})) between 1 and 150`,
-    ),
+    foreignKey({
+      name: "workout_exercises_catalog_fk",
+      columns: [t.householdId, t.exerciseId],
+      foreignColumns: [exercises.householdId, exercises.id],
+    }),
     check("workout_exercises_sets", sql`${t.sets} between 1 and 10`),
     check("workout_exercises_target_length", sql`length(${t.target}) <= 100`),
-    check("workout_exercises_unit", sql`${t.unit} in ('reps', 'seconds')`),
-    check(
-      "workout_exercises_load",
-      sql`${t.load} in ('per-hand', 'single', 'bodyweight')`,
-    ),
   ],
 );
 export const workoutExercisesRelations = relations(
@@ -657,6 +689,10 @@ export const workoutExercisesRelations = relations(
     workout: one(workouts, {
       fields: [workoutExercises.householdId, workoutExercises.workoutId],
       references: [workouts.householdId, workouts.id],
+    }),
+    exercise: one(exercises, {
+      fields: [workoutExercises.householdId, workoutExercises.exerciseId],
+      references: [exercises.householdId, exercises.id],
     }),
   }),
 );
@@ -682,6 +718,7 @@ export const workoutLogs = pgTable(
       columns: [t.householdId, t.workoutId],
       foreignColumns: [workouts.householdId, workouts.id],
     }),
+    unique("workout_logs_household_id_id").on(t.householdId, t.id),
     uniqueIndex("workout_logs_one_per_day").on(
       t.householdId,
       t.userId,
@@ -699,16 +736,46 @@ export const workoutLogs = pgTable(
 export const workoutLogSets = pgTable(
   "workout_log_sets",
   {
-    logId: uuid("log_id")
-      .notNull()
-      .references(() => workoutLogs.id),
+    logId: uuid("log_id").notNull(),
+    householdId: uuid("household_id").notNull(),
+    workoutExerciseId: uuid("workout_exercise_id").notNull(),
     exerciseId: uuid("exercise_id").notNull(),
     round: integer("round").notNull(),
-    values: jsonb("values").notNull(),
+    amount: integer("amount").notNull(),
+    rightAmount: integer("right_amount"),
+    weightKg: numeric("weight_kg", { mode: "number" }),
+    unit: text("unit").notNull(),
+    load: text("load").notNull(),
+    unilateral: boolean("unilateral").notNull(),
   },
   (t) => [
-    primaryKey({ columns: [t.logId, t.exerciseId, t.round] }),
+    primaryKey({ columns: [t.logId, t.workoutExerciseId, t.round] }),
+    foreignKey({
+      name: "workout_log_sets_log_fk",
+      columns: [t.householdId, t.logId],
+      foreignColumns: [workoutLogs.householdId, workoutLogs.id],
+    }),
+    foreignKey({
+      name: "workout_log_sets_catalog_fk",
+      columns: [t.householdId, t.exerciseId],
+      foreignColumns: [exercises.householdId, exercises.id],
+    }),
+    index("workout_log_sets_exercise").on(t.householdId, t.exerciseId, t.logId),
     check("workout_log_sets_round", sql`${t.round} between 1 and 10`),
+    check("workout_log_sets_amount", sql`${t.amount} between 0 and 600`),
+    check(
+      "workout_log_sets_right_amount",
+      sql`${t.rightAmount} is null or (${t.unilateral} and ${t.rightAmount} between 0 and 600)`,
+    ),
+    check(
+      "workout_log_sets_weight",
+      sql`${t.weightKg} is null or (${t.load} <> 'bodyweight' and ${t.weightKg} between 0 and 1000)`,
+    ),
+    check("workout_log_sets_unit", sql`${t.unit} in ('reps', 'seconds')`),
+    check(
+      "workout_log_sets_load",
+      sql`${t.load} in ('per-hand', 'single', 'bodyweight')`,
+    ),
   ],
 );
 export const workoutsRelations = relations(workouts, ({ one, many }) => ({

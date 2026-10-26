@@ -2,6 +2,7 @@ import type { Transaction } from "@rocicorp/zero";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { starterWorkouts } from "../workout-seed";
 import {
+  normalizeExerciseName,
   type WorkoutSetValues,
   workoutContentSchema,
   workoutLogSnapshotSchema,
@@ -77,8 +78,23 @@ function setup(location: "server" | "client" = "server") {
         notes: starter.notes,
       },
     ],
+    exercises: starter.exercises.map((e) => ({
+      id: e.id,
+      householdId,
+      name: e.name,
+      normalizedName: normalizeExerciseName(e.name),
+      unit: e.unit,
+      load: e.load,
+      unilateral: e.unilateral,
+      archived: false,
+      createdAt: now,
+      updatedAt: now,
+    })),
     workoutExercises: starter.exercises.map((exercise, index) => ({
-      ...structuredClone(exercise),
+      id: exercise.id,
+      exerciseId: exercise.id,
+      sets: exercise.sets,
+      target: exercise.target,
       householdId,
       workoutId,
       sortKey: (starter.exercises.length - index) * 1024,
@@ -94,7 +110,7 @@ function setup(location: "server" | "client" = "server") {
       ? a.workoutId === b.workoutId && a.id === b.id
       : table === "workoutLogSets"
         ? a.logId === b.logId &&
-          a.exerciseId === b.exerciseId &&
+          a.workoutExerciseId === b.workoutExerciseId &&
           a.round === b.round
         : a.id === b.id;
   const crud = (table: string) => ({
@@ -123,9 +139,13 @@ function setup(location: "server" | "client" = "server") {
   const tx = {
     location,
     mutate: Object.fromEntries(
-      ["workouts", "workoutExercises", "workoutLogs", "workoutLogSets"].map(
-        (t) => [t, crud(t)],
-      ),
+      [
+        "workouts",
+        "exercises",
+        "workoutExercises",
+        "workoutLogs",
+        "workoutLogSets",
+      ].map((t) => [t, crud(t)]),
     ),
     run: async (query: unknown) => {
       const { ast, format } = query as {
@@ -150,8 +170,16 @@ function setup(location: "server" | "client" = "server") {
                       (e) =>
                         e.workoutId === r.id && e.householdId === r.householdId,
                     )
+                    .map((e) => ({
+                      ...e,
+                      exercise: (data.exercises ?? []).find(
+                        (x) =>
+                          x.id === e.exerciseId &&
+                          x.householdId === e.householdId,
+                      ),
+                    }))
                     .sort(
-                      (a, b) =>
+                      (a: Row, b: Row) =>
                         Number(b.sortKey) - Number(a.sortKey) ||
                         String(a.id).localeCompare(String(b.id)),
                     ),
@@ -191,11 +219,11 @@ function setup(location: "server" | "client" = "server") {
 }
 afterEach(() => vi.restoreAllMocks());
 const recordedSet = {
-  exerciseId: starter.exercises[0]?.id ?? "",
+  workoutExerciseId: starter.exercises[0]?.id ?? "",
   round: 1,
   values: { weightKg: 8, amount: 10, rightAmount: null },
 };
-describe("normalized workout exercises", () => {
+describe("shared exercise catalog", () => {
   const first = starter.exercises[0];
   if (!first) throw new Error("seed");
   const edit = (
@@ -209,171 +237,291 @@ describe("normalized workout exercises", () => {
       ctx,
       args: { ...scope, creates: [], updates: [], deletes: [], ...changes },
     });
-  it("imports starter exercises as scoped rows in their original order", async () => {
+  it("imports one catalog identity per name and links exercises across workouts", async () => {
     const { tx, data } = setup();
     data.workouts = [];
     data.workoutExercises = [];
+    data.exercises = [];
     const workoutIds: [string, string, string] = [
       crypto.randomUUID(),
       crypto.randomUUID(),
       crypto.randomUUID(),
     ];
+    const catalogExerciseIds = [
+      ...new Set(
+        starterWorkouts.flatMap((w) =>
+          w.exercises.map((e) => normalizeExerciseName(e.name)),
+        ),
+      ),
+    ].map(() => crypto.randomUUID());
     await mutators.workouts.importStarters.fn({
       tx,
       ctx,
-      args: { householdId, workoutIds, optimisticTimestamp: 1234 },
+      args: {
+        householdId,
+        workoutIds,
+        catalogExerciseIds,
+        optimisticTimestamp: 1,
+      },
     });
-    expect(data.workouts).toHaveLength(3);
     expect(data.workoutExercises).toHaveLength(18);
-    for (const [i, content] of starterWorkouts.entries()) {
-      expect(
-        data.workouts?.find((w) => w.id === workoutIds[i]),
-      ).not.toHaveProperty("exercises");
-      const detail = await tx.run(
-        queries.workouts.detail.fn({
-          ctx,
-          args: { householdId, workoutId: workoutIds[i] ?? "" },
-        }),
-      );
-      expect(detail?.exercises.map((e) => e.id)).toEqual(
-        content.exercises.map((e) => e.id),
-      );
-    }
+    expect(data.exercises).toHaveLength(catalogExerciseIds.length);
+    const grouped = data.workoutExercises?.filter((row) => row.id === first.id);
+    expect(new Set(grouped?.map((row) => row.exerciseId)).size).toBe(1);
+    const detail = await tx.run(
+      queries.workouts.detail.fn({
+        ctx,
+        args: { householdId, workoutId: workoutIds[0] },
+      }),
+    );
+    expect(detail?.exercises.map((row) => row.exercise?.name)).toEqual(
+      starter.exercises.map((e) => e.name),
+    );
   });
-  it("patches a single field without overwriting concurrent fields or unseen additions", async () => {
-    const { tx, data, writes } = setup();
-    const row = data.workoutExercises?.find((e) => e.id === first.id);
-    if (!row) throw new Error("row");
-    row.target = "Remote target";
-    data.workoutExercises?.push({
-      ...row,
-      id: other,
-      name: "Concurrent addition",
-    });
-    writes.mockClear();
-    await edit(tx, {
-      updates: [{ exerciseId: first.id, changes: { name: "Local name" } }],
-    });
-    expect(row).toMatchObject({ name: "Local name", target: "Remote target" });
-    expect(data.workoutExercises).toHaveLength(7);
-    expect(writes).toHaveBeenCalledTimes(2);
-    expect(
-      writes.mock.calls.find((call) => call[0] === "workoutExercises")?.[2],
-    ).toEqual({
-      workoutId,
-      id: first.id,
-      name: "Local name",
-      updatedAt: now,
-    });
-  });
-  it("appends rows and scopes reused exercise IDs to the owning workout", async () => {
+  it("shares name/measure/load/sides but keeps prescriptions local", async () => {
     const { tx, data } = setup();
-    const original = data.workoutExercises?.[0];
-    if (!original) throw new Error("row");
     data.workouts?.push({
       id: other,
       householdId,
-      title: "Other",
+      title: "Other workout",
       notes: "",
       sortKey: 0,
     });
     data.workoutExercises?.push({
-      ...original,
+      ...data.workoutExercises[0],
       workoutId: other,
-      name: "Other workout exercise",
+      sets: 4,
+      target: "Other target",
     });
     await edit(tx, {
-      updates: [{ exerciseId: first.id, changes: { name: "Changed" } }],
-      creates: [{ ...first, id: crypto.randomUUID(), name: "Appended" }],
+      updates: [
+        {
+          exerciseId: first.id,
+          changes: {
+            name: "Renamed movement",
+            unit: "seconds",
+            load: "bodyweight",
+            unilateral: true,
+            sets: 3,
+            target: "20–30",
+          },
+        },
+      ],
+    });
+    expect(data.exercises?.find((e) => e.id === first.id)).toMatchObject({
+      name: "Renamed movement",
+      unit: "seconds",
+      load: "bodyweight",
+      unilateral: true,
     });
     expect(
-      data.workoutExercises?.find((e) => e.workoutId === other)?.name,
-    ).toBe("Other workout exercise");
+      data.workoutExercises?.find(
+        (e) => e.id === first.id && e.workoutId === workoutId,
+      ),
+    ).toMatchObject({ sets: 3, target: "20–30" });
+    expect(
+      data.workoutExercises?.find((e) => e.workoutId === other),
+    ).toMatchObject({ sets: 4, target: "Other target" });
     const detail = await tx.run(
-      queries.workouts.detail.fn({ ctx, args: { householdId, workoutId } }),
+      queries.workouts.detail.fn({
+        ctx,
+        args: { householdId, workoutId: other },
+      }),
     );
-    expect(detail?.exercises.at(-1)?.name).toBe("Appended");
+    expect(detail?.exercises[0]?.exercise?.name).toBe("Renamed movement");
   });
-  it("deletes editable exercises without modifying recorded snapshots or sets", async () => {
+  it("reuses matching case/whitespace names when adding a new slot", async () => {
+    const { tx, data } = setup();
+    const count = data.exercises?.length;
+    await edit(tx, {
+      creates: [
+        {
+          ...first,
+          id: crypto.randomUUID(),
+          catalogExerciseId: crypto.randomUUID(),
+          name: "  GOBLET   SQUAT  ",
+        },
+      ],
+    });
+    expect(data.exercises).toHaveLength(count ?? 0);
+    expect(data.workoutExercises?.at(-1)?.exerciseId).toBe(first.id);
+  });
+  it("updates settings without rewriting the name or normalized key", async () => {
+    const { tx, writes } = setup();
+    await mutators.workouts.updateExercise.fn({
+      tx,
+      ctx,
+      args: {
+        householdId,
+        exerciseId: first.id,
+        optimisticTimestamp: 1,
+        changes: { unit: "seconds" },
+      },
+    });
+    const payload = writes.mock.calls.find(
+      (call) => call[0] === "exercises",
+    )?.[2];
+    expect(payload).toMatchObject({ unit: "seconds" });
+    expect(payload).not.toHaveProperty("normalizedName");
+    expect(payload).not.toHaveProperty("name");
+  });
+  it("does not let stale linking data overwrite current catalog details", async () => {
+    const { tx, data } = setup();
+    const row = data.exercises?.[0];
+    if (!row) throw new Error("catalog");
+    row.name = "Remote name";
+    row.normalizedName = "remote name";
+    await edit(tx, {
+      creates: [
+        { ...first, id: crypto.randomUUID(), catalogExerciseId: first.id },
+      ],
+    });
+    expect(row.name).toBe("Remote name");
+  });
+  it("deleting a slot preserves the catalog, numeric sets and immutable history", async () => {
     const { tx, data, record } = setup();
     await record({ sets: [recordedSet] });
     const logs = structuredClone(data.workoutLogs),
       sets = structuredClone(data.workoutLogSets);
     await edit(tx, { deletes: [first.id] });
-    expect(
-      data.workoutExercises?.some(
-        (e) => e.workoutId === workoutId && e.id === first.id,
-      ),
-    ).toBe(false);
+    expect(data.exercises?.some((e) => e.id === first.id)).toBe(true);
     expect(data.workoutLogs).toEqual(logs);
     expect(data.workoutLogSets).toEqual(sets);
   });
-  it.each(["update", "delete"])(
-    "rejects an out-of-scope exercise %s before any writes",
-    async (action) => {
-      const { tx, data, writes } = setup();
-      data.workoutExercises?.push({
-        ...data.workoutExercises[0],
-        id: other,
-        workoutId: other,
-      });
-      await expect(
-        edit(
-          tx,
-          action === "update"
-            ? { updates: [{ exerciseId: other, changes: { name: "No" } }] }
-            : { deletes: [other] },
-        ),
-      ).rejects.toThrow("not allowed");
-      expect(writes).not.toHaveBeenCalled();
-    },
-  );
+  it("hides historical-only catalog entries and safely promotes explicitly named creations", async () => {
+    const { tx, data } = setup();
+    data.exercises?.push({
+      ...data.exercises[0],
+      id: other,
+      name: "Private historical movement",
+      normalizedName: "private historical movement",
+      archived: true,
+    });
+    const before = await tx.run(
+      queries.workouts.catalog.fn({ ctx, args: { householdId } }),
+    );
+    expect(before.some((e) => e.id === other)).toBe(false);
+    await edit(tx, {
+      creates: [
+        {
+          ...first,
+          id: crypto.randomUUID(),
+          catalogExerciseId: crypto.randomUUID(),
+          name: "Private historical movement",
+          unit: "seconds",
+        },
+      ],
+    });
+    expect(data.exercises?.find((e) => e.id === other)).toMatchObject({
+      archived: false,
+      unit: "seconds",
+    });
+  });
   it.each(["module", "membership", "household"])(
-    "does not expose related exercises without %s access",
+    "blocks catalog reads and edits without %s access",
     async (reason) => {
-      const { tx, data } = setup();
+      const { tx, data, writes } = setup();
       if (reason === "module") data.householdModuleSettings = [];
       if (reason === "membership") data.householdMembers = [];
       if (reason === "household" && data.households?.[0])
         data.households[0].deletedAt = now;
       expect(
         await tx.run(
-          queries.workouts.detail.fn({ ctx, args: { householdId, workoutId } }),
+          queries.workouts.catalog.fn({ ctx, args: { householdId } }),
         ),
-      ).toBeUndefined();
-    },
-  );
-  it("rejects additions over the workout limit before writing", async () => {
-    const { tx, data, writes } = setup();
-    data.workoutExercises = Array.from({ length: 40 }, (_, i) => ({
-      ...data.workoutExercises?.[0],
-      id: i === 0 ? first.id : crypto.randomUUID(),
-    }));
-    await expect(
-      edit(tx, { creates: [{ ...first, id: crypto.randomUUID() }] }),
-    ).rejects.toThrow("not allowed");
-    expect(writes).not.toHaveBeenCalled();
-  });
-  it.each(["module", "membership", "household", "workout"])(
-    "blocks exercise edits outside available %s scope",
-    async (reason) => {
-      const { tx, data, writes } = setup();
-      if (reason === "module") data.householdModuleSettings = [];
-      if (reason === "membership") data.householdMembers = [];
-      if (reason === "household" && data.households?.[0])
-        data.households[0].deletedAt = now;
-      if (reason === "workout" && data.workouts?.[0])
-        data.workouts[0].householdId = other;
+      ).toHaveLength(0);
       await expect(
         edit(tx, {
-          updates: [{ exerciseId: first.id, changes: { target: "No" } }],
+          updates: [{ exerciseId: first.id, changes: { name: "No" } }],
         }),
       ).rejects.toThrow("not allowed");
       expect(writes).not.toHaveBeenCalled();
     },
   );
+  it("rejects an exercise ID from another workout scope", async () => {
+    const { tx, data, writes } = setup();
+    data.workoutExercises?.push({
+      ...data.workoutExercises[0],
+      id: other,
+      workoutId: other,
+    });
+    await expect(edit(tx, { deletes: [other] })).rejects.toThrow("not allowed");
+    expect(writes).not.toHaveBeenCalled();
+  });
 });
 describe("completed workout logs", () => {
+  it("keeps a stable catalog ID and original measurements after shared edits", async () => {
+    const { tx, data, record } = setup();
+    await record({ sets: [recordedSet] });
+    const first = starter.exercises[0];
+    if (!first) throw new Error("seed");
+    await mutators.workouts.updateExercise.fn({
+      tx,
+      ctx,
+      args: {
+        householdId,
+        exerciseId: first.id,
+        optimisticTimestamp: 1,
+        changes: { name: "Renamed movement", unit: "seconds" },
+      },
+    });
+    data.workouts?.push({
+      id: other,
+      householdId,
+      title: "Another workout",
+      notes: "",
+      sortKey: 0,
+    });
+    data.workoutExercises?.push({
+      id: other,
+      workoutId: other,
+      householdId,
+      exerciseId: first.id,
+      sets: 2,
+      target: "20",
+      sortKey: 0,
+    });
+    await record({
+      workoutId: other,
+      logId: crypto.randomUUID(),
+      snapshot: {
+        title: "Another workout",
+        exercises: [
+          {
+            ...first,
+            id: other,
+            catalogExerciseId: first.id,
+            name: "Renamed movement",
+            unit: "seconds",
+          },
+        ],
+      },
+      sets: [
+        {
+          workoutExerciseId: other,
+          round: 1,
+          values: { amount: 20, weightKg: null, rightAmount: null },
+        },
+      ],
+    });
+    expect(
+      new Set(data.workoutLogSets?.map((row) => row.exerciseId)).size,
+    ).toBe(1);
+    expect(data.workoutLogSets?.map((row) => row.unit)).toEqual([
+      "reps",
+      "seconds",
+    ]);
+    expect(
+      data.workoutLogSets
+        ?.filter((row) => row.unit === "reps")
+        .reduce((sum, row) => sum + Number(row.amount), 0),
+    ).toBe(10);
+    expect(
+      workoutLogSnapshotSchema.parse(data.workoutLogs?.[0]?.snapshot)
+        .exercises[0]?.name,
+    ).toBe(first.name);
+  });
+
   it("creates the log, note and sets in a single explicit save", async () => {
     const { data, record } = setup();
     expect(data.workoutLogs).toHaveLength(0);
@@ -388,6 +536,15 @@ describe("completed workout logs", () => {
     expect(data.workoutLogs?.[0]).not.toHaveProperty("status");
     expect(data.workoutLogs?.[0]?.snapshot).not.toHaveProperty("notes");
     expect(data.workoutLogSets).toHaveLength(1);
+    expect(data.workoutLogSets?.[0]).toMatchObject({
+      amount: 10,
+      weightKg: 8,
+      rightAmount: null,
+      exerciseId: starter.exercises[0]?.id,
+      workoutExerciseId: recordedSet.workoutExerciseId,
+      unit: "reps",
+    });
+    expect(data.workoutLogSets?.[0]).not.toHaveProperty("values");
   });
   it("updates today's log even when another client submits a fresh ID", async () => {
     const { data, record } = setup();
@@ -402,7 +559,7 @@ describe("completed workout logs", () => {
     expect(data.workoutLogSets).toHaveLength(1);
     expect(data.workoutLogSets?.[0]).toMatchObject({
       logId,
-      values: { amount: 12 },
+      amount: 12,
     });
   });
   it("creates a different log on the next local day and keeps historical edits on their original day", async () => {
@@ -459,7 +616,7 @@ describe("completed workout logs", () => {
       sets: [{ ...recordedSet, values: { ...recordedSet.values, amount: 11 } }],
     });
     expect(data.workoutLogSets).toHaveLength(1);
-    expect(data.workoutLogSets?.[0]?.values).toMatchObject({ amount: 11 });
+    expect(data.workoutLogSets?.[0]).toMatchObject({ amount: 11 });
     await record({ note: "Note only", sets: [] });
     expect(data.workoutLogSets).toHaveLength(0);
   });
@@ -496,14 +653,14 @@ describe("completed workout logs", () => {
     const bodyweight = starter.exercises.find((e) => e.load === "bodyweight");
     if (!bodyweight) throw new Error("seed");
     const invalid: {
-      exerciseId: string;
+      workoutExerciseId: string;
       round: number;
       values: WorkoutSetValues;
     } = { ...recordedSet, round: 2, values: { ...recordedSet.values } };
-    if (reason === "unknown exercise") invalid.exerciseId = other;
+    if (reason === "unknown exercise") invalid.workoutExerciseId = other;
     if (reason === "too many sets") invalid.round = 3;
     if (reason === "wrong side") invalid.values.rightAmount = 8;
-    if (reason === "bodyweight load") invalid.exerciseId = bodyweight.id;
+    if (reason === "bodyweight load") invalid.workoutExerciseId = bodyweight.id;
     await expect(record({ sets: [recordedSet, invalid] })).rejects.toThrow(
       "not allowed",
     );
@@ -736,7 +893,18 @@ describe("workout ordering", () => {
     await mutators.workouts.importStarters.fn({
       tx,
       ctx,
-      args: { householdId, workoutIds: ids, optimisticTimestamp: 1 },
+      args: {
+        householdId,
+        workoutIds: ids,
+        catalogExerciseIds: [
+          ...new Set(
+            starterWorkouts.flatMap((w) =>
+              w.exercises.map((e) => normalizeExerciseName(e.name)),
+            ),
+          ),
+        ].map(() => crypto.randomUUID()),
+        optimisticTimestamp: 1,
+      },
     });
     const rows = await tx.run(
       queries.workouts.byHousehold.fn({ args: { householdId }, ctx }),

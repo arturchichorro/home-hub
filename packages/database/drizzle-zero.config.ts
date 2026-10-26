@@ -4,6 +4,7 @@ import * as drizzleSchema from "./src/schema";
 
 export default drizzleZeroConfig(drizzleSchema, {
   tables: {
+    exercises: true,
     workouts: true,
     workoutExercises: true,
     workoutLogs: true,

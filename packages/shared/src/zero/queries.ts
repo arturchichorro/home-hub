@@ -236,9 +236,29 @@ const workoutDetail = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
   authorizedWorkouts(args.householdId, ctx.userId)
     .where("id", args.workoutId)
     .related("exercises", (exercises) =>
-      exercises.orderBy("sortKey", "desc").orderBy("id", "asc"),
+      exercises
+        .related("exercise")
+        .orderBy("sortKey", "desc")
+        .orderBy("id", "asc"),
     )
     .one(),
+);
+const exerciseCatalog = defineHomeHubQuery(
+  householdIdArgsSchema,
+  ({ args, ctx }) =>
+    zql.exercises
+      .where("householdId", args.householdId)
+      .where("archived", false)
+      .whereExists("household", (h) =>
+        h
+          .where("deletedAt", "IS", null)
+          .whereExists("members", (m) => m.where("userId", ctx.userId))
+          .whereExists("moduleSettings", (s) =>
+            s.where("moduleKey", "workouts").where("enabled", true),
+          ),
+      )
+      .orderBy("normalizedName", "asc")
+      .orderBy("id", "asc"),
 );
 const workoutLogs = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
   zql.workoutLogs
@@ -261,6 +281,7 @@ const workoutLogs = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
 export const queries = defineHomeHubQueries({
   workouts: {
     byHousehold: workoutsByHousehold,
+    catalog: exerciseCatalog,
     detail: workoutDetail,
     logs: workoutLogs,
   },

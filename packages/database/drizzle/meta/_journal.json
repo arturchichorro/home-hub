@@ -295,6 +295,13 @@
       "when": 1792998190008,
       "tag": "0041_far_the_fallen",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793018598645,
+      "tag": "0042_dazzling_saracen",
+      "breakpoints": true
     }
   ]
 }

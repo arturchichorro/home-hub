@@ -16,6 +16,14 @@ export {
 } from "./button";
 export { Collapsible, type CollapsibleProps } from "./collapsible";
 export {
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxPopup,
+  ComboboxRoot,
+  ComboboxTrigger,
+} from "./combobox";
+export {
   ConfirmationPopover,
   type ConfirmationPopoverProps,
 } from "./confirmation-popover";
