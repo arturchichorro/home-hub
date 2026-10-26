@@ -12,6 +12,12 @@ keys prohibit cross-household assets and cross-recipe cooking-log references.
 Attachment identity is independent of asset identity. The existing recipe image
 API/view models continue to identify attachments, including ordering and URL caches.
 
+`exercise_media` attaches assets to the shared Workouts exercise catalog, with
+independent attachment IDs, ordering and soft deletion. Its inline strips appear
+in the catalog and linked workouts; pictures remain viewable while logging, but
+are never copied into private logs. `0044_faulty_the_anarchist.sql` adds this table
+and its publication entry without changing existing assets or Worker configuration.
+
 Future features add typed `*_media` attachment tables; there is no polymorphic
 owner-ID field or generic household-wide media library. Multiple attachments can
 reference one asset, but no reuse/linking API or picker is exposed yet. A future
@@ -39,9 +45,10 @@ The historical `RECIPE_IMAGES` Worker binding name remains for compatibility;
 it is not a separate image-only bucket.
 
 The generic API storage/signing helpers live in `apps/api/src/media`. Recipe
-routes remain feature-specific authorization adapters. Authorization requires an
-active user, household membership, enabled Recipes and an active recipe attachment
-and image asset. Storage provenance does not grant access: a legacy asset linked
+and exercise routes remain feature-specific authorization adapters. Authorization
+requires an active user, household membership, the attachment's enabled module,
+and an active parent/attachment/image asset. Exercise media requires a non-archived
+catalog entry and Workouts access; Recipes access alone grants none. Storage provenance does not grant access: a legacy asset linked
 elsewhere is authorized through its current attachment, not its source recipe.
 
 V2 read/processing capabilities authenticate household, asset, module, parent,
@@ -106,7 +113,7 @@ migration must also account for new generic object keys and reused attachments.
 PostgreSQL databases and exercises empty and populated full migration histories,
 all copied metadata/state, foreign-key boundaries, reuse, detachment and publication
 privacy. Set `DATABASE_URL` to that container's host-accessible connection URL to
-also run four real PostgreSQL service tests; they are otherwise opt-in. CI runs both.
+also run the real Recipes and exercise-media PostgreSQL service tests; they are otherwise opt-in. CI runs both.
 The script never migrates the application database. Unit tests cover capability
 binding, animation rejection, stream bounds, cache isolation and legacy delivery.
 Production web/API Docker builds and the Worker dry-run bundle must also pass.

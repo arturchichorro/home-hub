@@ -105,6 +105,7 @@ export function WorkoutText({
 }
 
 import { AddExercisePicker } from "./add-exercise-picker";
+import { ExerciseMedia } from "./exercise-media";
 import { useWorkoutExercisesEditor } from "./use-workout-exercises-editor";
 import {
   WorkoutExerciseSets,
@@ -342,6 +343,15 @@ export function WorkoutExercises({
                 </SelectPopup>
               </SelectRoot>
             </div>
+            {exercise.catalogExerciseId && (
+              <ExerciseMedia
+                householdId={householdId}
+                exerciseId={exercise.catalogExerciseId}
+                name={exercise.name}
+                readOnly={Boolean(logging)}
+                disabled={disabled || starting}
+              />
+            )}
             {logging && (
               <WorkoutExerciseSets
                 exercise={exercise}

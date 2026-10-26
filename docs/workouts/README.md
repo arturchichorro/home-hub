@@ -42,6 +42,14 @@ workouts; training logs and set values remain private to their author.
   workouts. Name, measure, load convention and sides are shared across workouts;
   sets and target ranges belong to each workout.
 
+- Exercise pictures appear as compact inline strips like cooking-log photos, in
+  the catalog and every workout using that movement. Uploads and deletion are
+  shared, not per-slot or private log attachments. The viewer supports navigation;
+  while logging, reference pictures remain viewable but shared media editing is
+  hidden. Opening the viewer never saves or replaces the in-memory log form.
+  Still JPEG/PNG/WebP use the existing shared-media pipeline; video and animation
+  support remains deferred.
+
 There are no plans, cycles, scheduling, timers, progression suggestions, or
 configured weight increments. Membership, module availability, and private-log
 ownership are enforced in Zero queries and mutations.
@@ -53,6 +61,10 @@ ownership are enforced in Zero queries and mutations.
   measure, load convention, sides and timestamps. Names are unique within a
   household after case/whitespace normalization. Catalog renames/settings edits
   apply to all linked workouts.
+- `exercise_media`: catalog-to-`media` attachments, independent UUIDs, ordering,
+  soft deletion and timestamps. Composite foreign keys keep assets/exercises in
+  one household. Removing a slot or renaming a movement retains its pictures;
+  deleting a picture unlinks the shared attachment without deleting asset bytes.
 - `workout_exercises`: catalog references, workout-specific sets/targets, ordering
   and timestamps. Composite household foreign keys protect both parent links.
   The primary key remains `(workout_id, id)`; removing a slot does not delete the
@@ -87,7 +99,27 @@ WHERE s.household_id = $1 AND l.user_id = $2
 Unilateral totals may count both sides using
 `amount + coalesce(right_amount, amount)`; do not mix reps with seconds.
 
+## Exercise-media authorization
+
+`workouts.exerciseMedia` synchronizes confirmed, non-deleted image metadata only
+through an active, non-archived catalog entry and an authorized household with
+Workouts enabled. Historical-only archived entries remain hidden. API routes under
+`/api/households/:householdId/workouts/exercises` authorize upload/confirmation,
+batched derivative reads and soft removal. Confirmation rechecks access after
+external processing; read/processing capabilities bind the Workouts module, catalog
+ID and attachment ID. Object keys stay out of Zero. Media changes never modify
+private log notes, sets or snapshots.
+
 ## Upgrade
+
+`0044_faulty_the_anarchist.sql` adds `exercise_media` and its Zero publication entry.
+It is additive: no existing exercise, asset, recipe or log data is rewritten, and
+no new Worker deployment, bucket or secret is needed. Back up and migrate the local
+DB before loading the matching client; Zero can replicate the new table without
+rebuilding its replica. The existing shared-media/older catalog contract upgrades
+below still need their documented coordinated cutover when upgrading from older
+production revisions.
+
 
 `0034_slimy_darwin.sql` is unchanged. Apply the forward migration
 `0035_thin_runaways.sql` while API and Zero are stopped, then restart on the new

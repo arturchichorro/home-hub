@@ -3,6 +3,7 @@ import { queries } from "@home-hub/shared/zero/queries";
 import { InlineAlert, Input } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { useState } from "react";
+import { ExerciseMedia } from "./exercise-media";
 export function ExerciseCatalog({ householdId }: { householdId: string }) {
   const [rows, result] = useQuery(queries.workouts.catalog({ householdId }));
   const [search, setSearch] = useState("");
@@ -38,6 +39,11 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
                       : "kg"}
                   {e.unilateral ? " · Each side" : ""}
                 </span>
+                <ExerciseMedia
+                  householdId={householdId}
+                  exerciseId={e.id}
+                  name={e.name}
+                />
               </li>
             ))}
           </ul>

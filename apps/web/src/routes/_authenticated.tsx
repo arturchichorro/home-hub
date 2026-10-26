@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { MediaSessionProvider } from "../media/session";
 import { HomeHubZeroProvider } from "../zero/provider";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -16,8 +17,13 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthenticatedLayout() {
-  const { onAccessTokenRefreshed, onLoggedOut, onZeroReady, session } =
-    Route.useRouteContext();
+  const {
+    onAccessTokenRefreshed,
+    onLoggedOut,
+    onZeroReady,
+    onSessionExpired,
+    session,
+  } = Route.useRouteContext();
 
   return (
     <HomeHubZeroProvider
@@ -27,7 +33,15 @@ function AuthenticatedLayout() {
       onSessionExpired={onLoggedOut}
       onReady={onZeroReady}
     >
-      <Outlet />
+      <MediaSessionProvider
+        value={{
+          accessToken: session.accessToken,
+          userId: session.user.id,
+          onSessionExpired,
+        }}
+      >
+        <Outlet />
+      </MediaSessionProvider>
     </HomeHubZeroProvider>
   );
 }
