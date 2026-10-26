@@ -309,6 +309,13 @@
       "when": 1793023284185,
       "tag": "0043_cute_deadpool",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793027642185,
+      "tag": "0044_faulty_the_anarchist",
+      "breakpoints": true
     }
   ]
 }

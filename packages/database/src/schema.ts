@@ -579,6 +579,7 @@ export const mediaRelations = relations(media, ({ one, many }) => ({
     references: [households.id],
   }),
   recipeAttachments: many(recipeMedia),
+  exerciseAttachments: many(exerciseMedia),
 }));
 
 export const recipeMedia = pgTable(
@@ -688,7 +689,51 @@ export const exercises = pgTable(
     ),
   ],
 );
-export const exercisesRelations = relations(exercises, ({ one }) => ({
+export const exerciseMedia = pgTable(
+  "exercise_media",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id").notNull(),
+    exerciseId: uuid("exercise_id").notNull(),
+    mediaId: uuid("media_id").notNull(),
+    sortKey: integer("sort_key").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.householdId, table.exerciseId],
+      foreignColumns: [exercises.householdId, exercises.id],
+      name: "exercise_media_household_exercise_fk",
+    }),
+    foreignKey({
+      columns: [table.householdId, table.mediaId],
+      foreignColumns: [media.householdId, media.id],
+      name: "exercise_media_household_media_fk",
+    }),
+    index("exercise_media_exercise_sort_id")
+      .on(table.householdId, table.exerciseId, table.sortKey, table.id)
+      .where(sql`${table.deletedAt} IS NULL`),
+    index("exercise_media_media_id").on(table.mediaId),
+  ],
+);
+export const exerciseMediaRelations = relations(exerciseMedia, ({ one }) => ({
+  exercise: one(exercises, {
+    fields: [exerciseMedia.householdId, exerciseMedia.exerciseId],
+    references: [exercises.householdId, exercises.id],
+  }),
+  asset: one(media, {
+    fields: [exerciseMedia.householdId, exerciseMedia.mediaId],
+    references: [media.householdId, media.id],
+  }),
+}));
+export const exercisesRelations = relations(exercises, ({ one, many }) => ({
+  images: many(exerciseMedia),
   household: one(households, {
     fields: [exercises.householdId],
     references: [households.id],

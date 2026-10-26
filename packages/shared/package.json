@@ -10,6 +10,7 @@
     "./households": "./src/households.ts",
     "./modules": "./src/modules.ts",
     "./media": "./src/media.ts",
+    "./exercise-media": "./src/exercise-media.ts",
     "./media-delivery": "./src/media-delivery.ts",
     "./lists": "./src/lists.ts",
     "./normalization": "./src/normalization.ts",

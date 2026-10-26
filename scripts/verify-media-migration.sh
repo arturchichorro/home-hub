@@ -38,7 +38,7 @@ for scenario in empty populated; do
   fi
   if [[ "$scenario" == empty && -n "${DATABASE_URL:-}" ]]; then
     runtime_url="$(MEDIA_TEST_DATABASE_NAME="$database" node -e 'const u = new URL(process.env.DATABASE_URL); u.pathname = "/" + process.env.MEDIA_TEST_DATABASE_NAME; process.stdout.write(u.toString());')"
-    MEDIA_TEST_DATABASE_URL="$runtime_url" pnpm exec vitest run apps/api/src/media/recipes.integration.test.ts
+    MEDIA_TEST_DATABASE_URL="$runtime_url" pnpm exec vitest run apps/api/src/media/recipes.integration.test.ts apps/api/src/workouts/exercise-media.integration.test.ts
   fi
   printf 'Shared media migration: %s passed\n' "$scenario"
 done

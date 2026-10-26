@@ -35,6 +35,12 @@ const defaultInput: CreateAppInput = {
     revokeHouseholdInvite: async () => ({ kind: "forbidden" }),
     removeHouseholdMember: async () => ({ kind: "forbidden" }),
   },
+  exerciseMedia: {
+    createUpload: async () => ({ kind: "forbidden" }),
+    confirmUpload: async () => ({ kind: "forbidden" }),
+    deleteAttachment: async () => ({ kind: "forbidden" }),
+    readUrls: async () => ({ kind: "forbidden" }),
+  },
   recipeImages: {
     confirmRecipeImageUpload: async () => ({ kind: "forbidden" }),
     createRecipeImageReadUrl: async () => ({ kind: "forbidden" }),
@@ -60,6 +66,10 @@ function createTestApp(overrides: CreateTestAppOverrides = {}) {
     auth: { ...defaultInput.auth, ...overrides.auth },
     households: { ...defaultInput.households, ...overrides.households },
     recipeImages: { ...defaultInput.recipeImages, ...overrides.recipeImages },
+    exerciseMedia: {
+      ...defaultInput.exerciseMedia,
+      ...overrides.exerciseMedia,
+    },
     infrastructure: {
       ...defaultInput.infrastructure,
       ...overrides.infrastructure,

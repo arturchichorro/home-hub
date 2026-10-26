@@ -36,6 +36,7 @@ import { createRecipeImageUploadService } from "./recipes/images/create-upload";
 import { createDeleteRecipeImageService } from "./recipes/images/delete";
 import { recipeImageMediaIdentity } from "./recipes/images/media-identity";
 import { closeHttpServer, createGracefulShutdown } from "./server-lifecycle";
+import { createExerciseMediaServices } from "./workouts/exercise-media";
 import { createZeroDbProvider } from "./zero/db-provider";
 
 const { db, close: closeDatabase } = createDbClient(config.DATABASE_URL);
@@ -151,10 +152,30 @@ const recipeImages = {
   }),
 };
 
+const exerciseMedia = createExerciseMediaServices({
+  db,
+  signUpload: (input) =>
+    signMediaUpload({ ...input, client: r2Client, bucket: config.R2_BUCKET }),
+  inspectObject: (input) =>
+    inspectR2Object({ ...input, client: r2Client, bucket: config.R2_BUCKET }),
+  processImage: (input) =>
+    processMediaImage({
+      ...input,
+      baseUrl: config.IMAGE_DELIVERY_BASE_URL,
+      secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
+    }),
+  signRead: (input) =>
+    signMediaRead({
+      ...input,
+      baseUrl: config.IMAGE_DELIVERY_BASE_URL,
+      secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
+    }),
+});
 const app = createApp({
   auth,
   households,
   recipeImages,
+  exerciseMedia,
   infrastructure: {
     zeroDbProvider: infrastructure.dbProvider,
     jwtSecret: infrastructure.config.API_JWT_SECRET,
