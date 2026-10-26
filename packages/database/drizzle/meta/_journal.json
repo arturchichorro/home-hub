@@ -288,6 +288,13 @@
       "when": 1792960037231,
       "tag": "0040_remove-workout-log-snapshot-notes",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1792998190008,
+      "tag": "0041_far_the_fallen",
+      "breakpoints": true
     }
   ]
 }

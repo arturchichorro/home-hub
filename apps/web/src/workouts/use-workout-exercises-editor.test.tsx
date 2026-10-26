@@ -43,7 +43,7 @@ describe("exercise autosave", () => {
     const { editor, save } = setup();
     editor.change((rows) => rows.slice(1), true);
     await vi.advanceTimersByTimeAsync(0);
-    expect(save).toHaveBeenCalledWith(current.slice(1));
+    expect(save).toHaveBeenCalledWith(current.slice(1), current);
   });
   it("serializes saves and drains changes typed while a save is pending", async () => {
     let resolve: (value: boolean) => void = () => {};
@@ -78,7 +78,7 @@ describe("exercise autosave", () => {
     editor.change((rows) => rows.slice(1));
     expect(await editor.flush()).toBe(false);
     expect(await editor.flush()).toBe(true);
-    expect(save).toHaveBeenLastCalledWith(current.slice(1));
+    expect(save).toHaveBeenLastCalledWith(current.slice(1), current);
   });
   it("rejects invalid drafts without writing, then saves once corrected", async () => {
     const { editor, save } = setup();

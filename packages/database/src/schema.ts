@@ -588,7 +588,6 @@ export const workouts = pgTable(
       .references(() => households.id),
     title: text("title").notNull(),
     notes: text("notes").notNull().default(""),
-    exercises: jsonb("exercises").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -604,6 +603,62 @@ export const workouts = pgTable(
       sql`length(trim(${t.title})) between 1 and 150`,
     ),
   ],
+);
+export const workoutExercises = pgTable(
+  "workout_exercises",
+  {
+    id: uuid("id").notNull(),
+    householdId: uuid("household_id").notNull(),
+    workoutId: uuid("workout_id").notNull(),
+    sortKey: integer("sort_key").notNull().default(0),
+    name: text("name").notNull(),
+    sets: integer("sets").notNull(),
+    target: text("target").notNull(),
+    unit: text("unit", { enum: ["reps", "seconds"] }).notNull(),
+    unilateral: boolean("unilateral").notNull(),
+    load: text("load", {
+      enum: ["per-hand", "single", "bodyweight"],
+    }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.workoutId, t.id] }),
+    foreignKey({
+      columns: [t.householdId, t.workoutId],
+      foreignColumns: [workouts.householdId, workouts.id],
+    }),
+    index("workout_exercises_workout_order").on(
+      t.householdId,
+      t.workoutId,
+      t.sortKey,
+      t.id,
+    ),
+    check(
+      "workout_exercises_name_length",
+      sql`length(trim(${t.name})) between 1 and 150`,
+    ),
+    check("workout_exercises_sets", sql`${t.sets} between 1 and 10`),
+    check("workout_exercises_target_length", sql`length(${t.target}) <= 100`),
+    check("workout_exercises_unit", sql`${t.unit} in ('reps', 'seconds')`),
+    check(
+      "workout_exercises_load",
+      sql`${t.load} in ('per-hand', 'single', 'bodyweight')`,
+    ),
+  ],
+);
+export const workoutExercisesRelations = relations(
+  workoutExercises,
+  ({ one }) => ({
+    workout: one(workouts, {
+      fields: [workoutExercises.householdId, workoutExercises.workoutId],
+      references: [workouts.householdId, workouts.id],
+    }),
+  }),
 );
 export const workoutLogs = pgTable(
   "workout_logs",
@@ -662,6 +717,7 @@ export const workoutsRelations = relations(workouts, ({ one, many }) => ({
     references: [households.id],
   }),
   logs: many(workoutLogs),
+  exercises: many(workoutExercises),
 }));
 export const workoutLogsRelations = relations(workoutLogs, ({ one, many }) => ({
   household: one(households, {

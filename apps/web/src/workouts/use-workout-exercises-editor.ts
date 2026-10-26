@@ -12,7 +12,10 @@ export function useWorkoutExercisesEditor({
 }: {
   current: readonly WorkoutExercise[];
   enabled: boolean;
-  save: (exercises: WorkoutExercise[]) => Promise<boolean>;
+  save: (
+    exercises: WorkoutExercise[],
+    previous: readonly WorkoutExercise[],
+  ) => Promise<boolean>;
 }) {
   const [exercises, setExercises] = useState<WorkoutExercise[]>([...current]);
   const [error, setError] = useState("");
@@ -48,7 +51,10 @@ export function useWorkoutExercisesEditor({
         }
         let success = false;
         try {
-          success = await saveRef.current(parsed.data);
+          success = await saveRef.current(
+            parsed.data,
+            workoutExercisesSchema.parse(JSON.parse(confirmed.current)),
+          );
         } catch {
           /* Keep the draft for retry. */
         }
@@ -70,13 +76,17 @@ export function useWorkoutExercisesEditor({
   }, [clearTimer]);
   const currentJson = JSON.stringify(current);
   useEffect(() => {
-    if (pending.current || JSON.stringify(draft.current) !== confirmed.current)
+    if (
+      isSaving ||
+      pending.current ||
+      JSON.stringify(draft.current) !== confirmed.current
+    )
       return;
     const next = workoutExercisesSchema.parse(JSON.parse(currentJson));
     draft.current = next;
     confirmed.current = currentJson;
     setExercises(next);
-  }, [currentJson]);
+  }, [currentJson, isSaving]);
   useEffect(() => {
     mounted.current = true;
     return () => {
