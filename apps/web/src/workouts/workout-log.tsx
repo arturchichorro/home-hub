@@ -1,5 +1,5 @@
 import type { WorkoutExercise } from "@home-hub/shared/workouts";
-import { workoutSetValuesSchema } from "@home-hub/shared/workouts";
+import { workoutSetValuesFromRow } from "@home-hub/shared/workouts";
 import type {
   WorkoutLog as LogRow,
   WorkoutLogSet,
@@ -65,7 +65,7 @@ export function WorkoutExerciseSets({
     (log) =>
       log.id !== form.id &&
       log.completedAt < (form.completedAt ?? Date.now()) &&
-      log.sets.some((s) => s.exerciseId === exercise.id),
+      log.sets.some((s) => s.workoutExerciseId === exercise.id),
   );
   return (
     <div className="py-1">
@@ -76,11 +76,9 @@ export function WorkoutExerciseSets({
           rightAmount: "",
         };
         const prior = old?.sets.find(
-          (s) => s.exerciseId === exercise.id && s.round === round,
+          (s) => s.workoutExerciseId === exercise.id && s.round === round,
         );
-        const last = prior
-          ? workoutSetValuesSchema.parse(prior.values)
-          : undefined;
+        const last = prior ? workoutSetValuesFromRow(prior) : undefined;
         const label = `${exercise.name}, set ${round}`;
         return (
           <div key={round}>

@@ -141,9 +141,11 @@ table remains temporarily for the staged migration.
 ### Recipes module tables
 
 Recipes owns `recipes`, `recipe_ingredients`, `recipe_cook_logs`, and
-`recipe_images`. Their columns, constraints, normalization, ordering, and image
-metadata lifecycle are documented in the
-[Recipes module data model](./recipes/#data-model).
+`recipe_media` attachments. Their ordering/context is documented in the
+[Recipes module data model](./recipes/#data-model). Shared `media` owns the
+stored assets independently of any feature; see [Shared media](./media/) for
+identity, validation, lifecycle, authorization and the forward migration.
+Videos and animated-image uploads remain deferred; no separate video table exists.
 
 ### Habits module tables
 

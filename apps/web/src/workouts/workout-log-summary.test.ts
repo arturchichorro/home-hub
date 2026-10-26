@@ -20,7 +20,17 @@ function log(
 ) {
   return {
     snapshot: { title: "Earlier workout", exercises: [exercise] },
-    sets: sets.map((s) => ({ logId: "log", exerciseId: exercise.id, ...s })),
+    sets: sets.map((s) => ({
+      logId: "log",
+      householdId: crypto.randomUUID(),
+      exerciseId: exercise.id,
+      workoutExerciseId: exercise.id,
+      round: s.round,
+      ...s.values,
+      unit: exercise.unit,
+      load: exercise.load,
+      unilateral: exercise.unilateral,
+    })),
   };
 }
 describe("workout history summaries", () => {

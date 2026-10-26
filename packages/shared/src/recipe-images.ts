@@ -1,30 +1,53 @@
 import * as z from "zod";
 import { recipeImageVariants } from "./recipe-image-delivery";
 
-export const recipeImageContentTypes = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-] as const;
+export {
+  maxStillImageByteSize as maxRecipeImageByteSize,
+  maxStillImageDimension as maxRecipeImageDimension,
+  stillImageContentTypeSchema as recipeImageContentTypeSchema,
+  stillImageContentTypes as recipeImageContentTypes,
+} from "./media";
 
-export const maxRecipeImageByteSize = 10_485_760;
-export const maxRecipeImageDimension = 16_384;
-
-export const recipeImageContentTypeSchema = z.enum(recipeImageContentTypes);
+import {
+  stillImageContentTypeSchema as recipeImageContentTypeSchema,
+  stillImageUploadSchema,
+} from "./media";
+import type { Media, RecipeMedia } from "./zero/schema.gen";
 
 export type RecipeImageContentType = z.infer<
   typeof recipeImageContentTypeSchema
 >;
-
 export const createRecipeImageUploadRequestSchema = z
   .object({
     cookLogId: z.uuid().nullable(),
-    contentType: recipeImageContentTypeSchema,
-    byteSize: z.number().int().min(1).max(maxRecipeImageByteSize),
-    width: z.number().int().min(1).max(maxRecipeImageDimension),
-    height: z.number().int().min(1).max(maxRecipeImageDimension),
+    ...stillImageUploadSchema.shape,
   })
   .strict();
+
+// Recipe UI identity is the attachment ID, not the reusable asset ID.
+export type RecipeImage = RecipeMedia &
+  Pick<Media, "contentType" | "byteSize" | "confirmedAt" | "width" | "height">;
+export function recipeImagesFromRows(
+  rows: readonly (RecipeMedia & { asset?: Media | undefined })[],
+): RecipeImage[] {
+  return rows.flatMap(({ asset, ...attachment }) =>
+    asset?.kind === "image" &&
+    asset.confirmedAt !== null &&
+    asset.deletedAt === null &&
+    attachment.deletedAt === null
+      ? [
+          {
+            ...attachment,
+            contentType: asset.contentType,
+            byteSize: asset.byteSize,
+            confirmedAt: asset.confirmedAt,
+            width: asset.width,
+            height: asset.height,
+          },
+        ]
+      : [],
+  );
+}
 
 export type CreateRecipeImageUploadRequest = z.infer<
   typeof createRecipeImageUploadRequestSchema

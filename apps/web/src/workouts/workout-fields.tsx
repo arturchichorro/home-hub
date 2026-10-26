@@ -12,7 +12,6 @@ import {
   MenuSeparator,
   MenuTrigger,
   Play,
-  Plus,
   SelectItem,
   SelectPopup,
   SelectRoot,
@@ -105,6 +104,8 @@ export function WorkoutText({
   );
 }
 
+import { AddExercisePicker } from "./add-exercise-picker";
+import { ExerciseMedia } from "./exercise-media";
 import { useWorkoutExercisesEditor } from "./use-workout-exercises-editor";
 import {
   WorkoutExerciseSets,
@@ -113,6 +114,7 @@ import {
 } from "./workout-log";
 
 export function WorkoutExercises({
+  householdId,
   title,
   current,
   disabled,
@@ -122,6 +124,7 @@ export function WorkoutExercises({
   onCloseLogging,
   onCompleteLogging,
 }: {
+  householdId: string;
   title?: ReactNode;
   current: readonly WorkoutExercise[];
   disabled: boolean;
@@ -146,10 +149,24 @@ export function WorkoutExercises({
     patch: Partial<WorkoutExercise>,
     immediate = false,
   ) {
-    editor.change(
-      (rows) => rows.map((e) => (e.id === id ? { ...e, ...patch } : e)),
-      immediate,
-    );
+    editor.change((rows) => {
+      const catalogId = rows.find((row) => row.id === id)?.catalogExerciseId;
+      const shared = {
+        ...(patch.name === undefined ? {} : { name: patch.name }),
+        ...(patch.unit === undefined ? {} : { unit: patch.unit }),
+        ...(patch.load === undefined ? {} : { load: patch.load }),
+        ...(patch.unilateral === undefined
+          ? {}
+          : { unilateral: patch.unilateral }),
+      };
+      return rows.map((row) =>
+        row.id === id
+          ? { ...row, ...patch }
+          : catalogId && row.catalogExerciseId === catalogId
+            ? { ...row, ...shared }
+            : row,
+      );
+    }, immediate);
   }
   return (
     <section
@@ -207,31 +224,28 @@ export function WorkoutExercises({
                 <Play aria-hidden="true" className="size-4" />
                 Log workout
               </Button>
-              <Button
-                variant="ghost"
-                className="h-7! px-1! text-xs! font-normal text-muted sm:text-sm!"
+              <AddExercisePicker
+                householdId={householdId}
                 disabled={disabled || starting || exercises.length >= 40}
-                onClick={() =>
+                onSelect={(exercise) =>
                   editor.change(
                     (rows) => [
                       ...rows,
                       {
                         id: crypto.randomUUID(),
-                        name: "New exercise",
+                        catalogExerciseId: exercise.id,
+                        name: exercise.name,
+                        unit: exercise.unit,
+                        load: exercise.load,
+                        unilateral: exercise.unilateral,
                         sets: 2,
                         target: "8–12",
-                        unit: "reps",
-                        unilateral: false,
-                        load: "per-hand",
                       },
                     ],
                     true,
                   )
                 }
-              >
-                <Plus aria-hidden="true" className="size-4" />
-                Add exercise
-              </Button>
+              />
             </>
           )}
         </div>
@@ -329,6 +343,15 @@ export function WorkoutExercises({
                 </SelectPopup>
               </SelectRoot>
             </div>
+            {exercise.catalogExerciseId && (
+              <ExerciseMedia
+                householdId={householdId}
+                exerciseId={exercise.catalogExerciseId}
+                name={exercise.name}
+                readOnly={Boolean(logging)}
+                disabled={disabled || starting}
+              />
+            )}
             {logging && (
               <WorkoutExerciseSets
                 exercise={exercise}

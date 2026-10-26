@@ -2,8 +2,9 @@ import type { Database } from "@home-hub/database";
 import {
   householdMembers,
   householdModuleSettings,
+  media,
   recipeCookLogs,
-  recipeImages,
+  recipeMedia as recipeImages,
   recipes,
 } from "@home-hub/database/schema";
 import { describe, expect, it, vi } from "vitest";
@@ -117,7 +118,7 @@ function createFakeDatabase({
 }
 
 describe("createRecipeImageObjectKey", () => {
-  it("builds a server-controlled tenant and recipe scoped key", () => {
+  it("builds a server-controlled household media key", () => {
     expect(
       createRecipeImageObjectKey({
         householdId,
@@ -125,7 +126,7 @@ describe("createRecipeImageObjectKey", () => {
         imageId: "671874b1-df9d-4a91-8f3c-8055473e8aa2",
       }),
     ).toBe(
-      `households/${householdId}/recipes/${recipeId}/671874b1-df9d-4a91-8f3c-8055473e8aa2`,
+      `households/${householdId}/media/671874b1-df9d-4a91-8f3c-8055473e8aa2`,
     );
   });
 });
@@ -150,6 +151,7 @@ describe("create recipe image upload service", () => {
       householdModuleSettings,
       recipes,
       recipeImages,
+      media,
       recipeImages,
     ]);
     expect(lockStrengths).toEqual(["share", "share", "share"]);
@@ -157,20 +159,27 @@ describe("create recipe image upload service", () => {
       {
         id: result.imageId,
         householdId,
-        recipeId,
-        cookLogId: null,
-        objectKey: `households/${householdId}/recipes/${recipeId}/${result.imageId}`,
+        kind: "image",
+        objectKey: `households/${householdId}/media/${result.imageId}`,
         contentType: "image/webp",
         byteSize: 2_048,
         width: 800,
         height: 600,
-        sortKey: 0,
         confirmedAt: null,
+        deletedAt: null,
+      },
+      {
+        id: result.imageId,
+        householdId,
+        recipeId,
+        cookLogId: null,
+        mediaId: result.imageId,
+        sortKey: 0,
         deletedAt: null,
       },
     ]);
     expect(signUpload).toHaveBeenCalledWith({
-      objectKey: `households/${householdId}/recipes/${recipeId}/${result.imageId}`,
+      objectKey: `households/${householdId}/media/${result.imageId}`,
       contentType: "image/webp",
     });
   });
@@ -190,6 +199,7 @@ describe("create recipe image upload service", () => {
       recipes,
       recipeCookLogs,
       recipeImages,
+      media,
       recipeImages,
     ]);
     expect(lockStrengths).toEqual(["share", "share", "share", "share"]);
@@ -207,7 +217,7 @@ describe("create recipe image upload service", () => {
     await expect(createUpload(input)).resolves.toMatchObject({
       kind: "success",
     });
-    expect(insertedValues[0]).toMatchObject({
+    expect(insertedValues[1]).toMatchObject({
       sortKey: -1024,
     });
   });
@@ -263,7 +273,7 @@ describe("create recipe image upload service", () => {
 
     await expect(
       createRecipeImageUploadService({ db, signUpload })(input),
-    ).rejects.toThrow("Pending recipe image insert returned no row");
+    ).rejects.toThrow("Pending media insert returned no row");
     expect(signUpload).not.toHaveBeenCalled();
   });
 
@@ -276,6 +286,6 @@ describe("create recipe image upload service", () => {
     await expect(
       createRecipeImageUploadService({ db, signUpload })(input),
     ).rejects.toThrow("signing failed");
-    expect(insertedValues).toHaveLength(1);
+    expect(insertedValues).toHaveLength(2);
   });
 });

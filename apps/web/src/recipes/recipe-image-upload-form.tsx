@@ -2,7 +2,13 @@ import {
   createRecipeImageUploadRequestSchema,
   recipeImageContentTypeSchema,
 } from "@home-hub/shared/recipe-images";
-import { Button, IconButton, ImagePlus, Plus } from "@home-hub/ui-web";
+import {
+  Button,
+  ErrorPopover,
+  IconButton,
+  ImagePlus,
+  Plus,
+} from "@home-hub/ui-web";
 import { type ChangeEvent, useRef, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
@@ -30,7 +36,9 @@ export function RecipeImageUploadForm({
   onSessionExpired,
 }: RecipeImageUploadFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
   const mutationEnabled = useZeroMutationEnabled();
 
   function chooseImage() {
@@ -50,10 +58,14 @@ export function RecipeImageUploadForm({
     if (!file || busy || !mutationEnabled) return;
 
     setBusy(true);
+    setError(undefined);
 
     try {
       const contentType = recipeImageContentTypeSchema.safeParse(file.type);
-      if (!contentType.success) return;
+      if (!contentType.success) {
+        setError("Choose a still JPEG, PNG or WebP image.");
+        return;
+      }
 
       const dimensions = await readImageDimensions(file);
       const request = createRecipeImageUploadRequestSchema.safeParse({
@@ -64,7 +76,10 @@ export function RecipeImageUploadForm({
         height: dimensions.height,
       });
 
-      if (!request.success) return;
+      if (!request.success) {
+        setError("Choose an image up to 10 MiB and 16,384 pixels per side.");
+        return;
+      }
 
       const pending = await requestRecipeImageUpload({
         accessToken,
@@ -77,7 +92,10 @@ export function RecipeImageUploadForm({
         onSessionExpired();
         return;
       }
-      if (pending.kind !== "success") return;
+      if (pending.kind !== "success") {
+        setError("Unable to upload this picture. Try again.");
+        return;
+      }
 
       await uploadRecipeImageObject({ file, upload: pending.upload });
       const confirmation = await confirmRecipeImageUpload({
@@ -89,9 +107,15 @@ export function RecipeImageUploadForm({
 
       if (confirmation.kind === "unauthorized") {
         onSessionExpired();
+      } else if (confirmation.kind === "invalid_upload") {
+        setError(
+          "This image is invalid or animated. Choose a still JPEG, PNG or WebP image.",
+        );
+      } else if (confirmation.kind !== "success") {
+        setError("Unable to upload this picture. Try again.");
       }
     } catch {
-      // Keep image uploads unobtrusive; the user can choose the image again.
+      setError("Unable to upload this picture. Try again.");
     } finally {
       setBusy(false);
     }
@@ -111,9 +135,17 @@ export function RecipeImageUploadForm({
         tabIndex={-1}
         onChange={(event) => void uploadImage(event)}
       />
+      <ErrorPopover
+        anchor={buttonRef}
+        open={Boolean(error)}
+        onDismiss={() => setError(undefined)}
+      >
+        {error}
+      </ErrorPopover>
       {appearance === "row" ? (
         <div className="p-2.5">
           <Button
+            ref={buttonRef}
             type="button"
             variant="ghost"
             aria-busy={busy || undefined}
@@ -128,6 +160,7 @@ export function RecipeImageUploadForm({
         </div>
       ) : (
         <IconButton
+          ref={buttonRef}
           type="button"
           aria-label={
             cookLogId ? "Add image to cooking log" : "Add recipe image"

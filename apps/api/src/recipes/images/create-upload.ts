@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Database } from "@home-hub/database";
-import { recipeImages } from "@home-hub/database/schema";
+import { media, recipeMedia } from "@home-hub/database/schema";
+import { mediaOriginalObjectKey } from "@home-hub/shared/media-delivery";
 import { appendSortKey } from "@home-hub/shared/ordering";
-import { recipeImageOriginalObjectKey } from "@home-hub/shared/recipe-image-delivery";
 import type {
   CreateRecipeImageUploadRequest,
   RecipeImageContentType,
@@ -41,7 +41,20 @@ export type CreateRecipeImageUploadResult =
       uploadUrlExpiresInSeconds: number;
     };
 
-export const createRecipeImageObjectKey = recipeImageOriginalObjectKey;
+export function createRecipeImageObjectKey({
+  householdId,
+  imageId,
+}: {
+  householdId: string;
+  imageId: string;
+  recipeId?: string;
+}) {
+  return mediaOriginalObjectKey({
+    householdId,
+    mediaId: imageId,
+    storageRecipeId: null,
+  });
+}
 
 export function createRecipeImageUploadService({
   db,
@@ -95,37 +108,48 @@ export function createRecipeImageUploadService({
         imageId,
       });
       const [bottom] = await tx
-        .select({ sortKey: recipeImages.sortKey })
-        .from(recipeImages)
+        .select({ sortKey: recipeMedia.sortKey })
+        .from(recipeMedia)
         .where(
           and(
-            eq(recipeImages.householdId, householdId),
-            eq(recipeImages.recipeId, recipeId),
-            isNull(recipeImages.deletedAt),
+            eq(recipeMedia.householdId, householdId),
+            eq(recipeMedia.recipeId, recipeId),
+            isNull(recipeMedia.deletedAt),
           ),
         )
-        .orderBy(asc(recipeImages.sortKey), recipeImages.id)
+        .orderBy(asc(recipeMedia.sortKey), recipeMedia.id)
         .limit(1)
         .execute();
       const sortKey = appendSortKey(bottom?.sortKey);
 
-      const [image] = await tx
-        .insert(recipeImages)
+      const [asset] = await tx
+        .insert(media)
         .values({
           id: imageId,
           householdId,
-          recipeId,
-          cookLogId,
+          kind: "image",
           objectKey,
           contentType,
           byteSize,
           width,
           height,
-          sortKey,
           confirmedAt: null,
           deletedAt: null,
         })
-        .returning({ id: recipeImages.id });
+        .returning({ id: media.id });
+      if (!asset) throw new Error("Pending media insert returned no row");
+      const [image] = await tx
+        .insert(recipeMedia)
+        .values({
+          id: imageId,
+          householdId,
+          recipeId,
+          cookLogId,
+          mediaId: asset.id,
+          sortKey,
+          deletedAt: null,
+        })
+        .returning({ id: recipeMedia.id });
       if (!image)
         throw new Error("Pending recipe image insert returned no row");
 

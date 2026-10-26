@@ -12,12 +12,20 @@ function createFakeDatabase({ user = true }: { user?: boolean } = {}) {
   const results = [
     [{ id: "membership-id" }],
     [{ householdId }],
-    [{ id: imageId, recipeId }],
+    [
+      {
+        id: imageId,
+        recipeId,
+        mediaId: imageId,
+        objectKey: `households/${householdId}/media/${imageId}`,
+      },
+    ],
   ];
   const select = vi.fn(() => {
     const result = results.shift() ?? [];
     const builder = {
       from: (_table: unknown) => builder,
+      innerJoin: () => builder,
       where: (_condition: unknown) => builder,
       limit: (_limit: unknown) => builder,
       for: async (_strength: unknown) => result,

@@ -110,7 +110,7 @@ describe("workouts", () => {
   });
   it("validates a complete submission and rejects spoofed actors and duplicate sets", () => {
     const set = {
-      exerciseId: crypto.randomUUID(),
+      workoutExerciseId: crypto.randomUUID(),
       round: 1,
       values: { weightKg: 8, amount: 10, rightAmount: null },
     };

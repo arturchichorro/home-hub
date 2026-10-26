@@ -453,7 +453,7 @@ const reorderRecipeImages = defineHomeHubMutator(
     });
 
     const rows = await tx.run(
-      zql.recipeImages
+      zql.recipeMedia
         .where("householdId", args.householdId)
         .where("recipeId", args.recipeId)
         .where("deletedAt", "IS", null)
@@ -465,7 +465,7 @@ const reorderRecipeImages = defineHomeHubMutator(
     const timestamp =
       tx.location === "server" ? Date.now() : args.optimisticUpdatedAt;
     for (const update of updates)
-      await tx.mutate.recipeImages.update({ ...update, updatedAt: timestamp });
+      await tx.mutate.recipeMedia.update({ ...update, updatedAt: timestamp });
   },
 );
 

@@ -1,11 +1,12 @@
 import type { Database } from "@home-hub/database";
-import { recipeImages } from "@home-hub/database/schema";
+import { media } from "@home-hub/database/schema";
 import { and, eq } from "drizzle-orm";
 import { findActiveUser } from "../../authorization/active-user";
 import {
   findEnabledHouseholdModuleForShare,
   findHouseholdMembershipForShare,
 } from "../../authorization/household-access";
+import { InvalidMediaUploadError } from "../../media/process-image";
 import type { InspectR2ObjectResult } from "./inspect-object";
 import {
   findRecipeImageForShare,
@@ -17,6 +18,10 @@ type InspectObject = (input: {
 }) => Promise<InspectR2ObjectResult | null>;
 
 type ProcessDerivatives = (input: {
+  mediaId: string;
+  objectKey: string;
+  contentType: string;
+  byteSize: number;
   householdId: string;
   imageId: string;
   recipeId: string;
@@ -98,7 +103,21 @@ export function createConfirmRecipeImageUploadService({
       return { kind: "invalid_upload" };
     }
 
-    await processDerivatives({ householdId, imageId, recipeId });
+    try {
+      await processDerivatives({
+        householdId,
+        imageId,
+        recipeId,
+        mediaId: initial.image.mediaId,
+        objectKey: initial.image.objectKey,
+        contentType: initial.image.contentType,
+        byteSize: initial.image.byteSize,
+      });
+    } catch (error) {
+      if (error instanceof InvalidMediaUploadError)
+        return { kind: "invalid_upload" };
+      throw error;
+    }
 
     return db.transaction(async (tx) => {
       const user = await findActiveUser(tx, userId);
@@ -132,6 +151,7 @@ export function createConfirmRecipeImageUploadService({
       }
 
       if (
+        image.mediaId !== initial.image.mediaId ||
         image.objectKey !== initial.image.objectKey ||
         image.contentType !== initial.image.contentType ||
         image.byteSize !== initial.image.byteSize
@@ -141,18 +161,14 @@ export function createConfirmRecipeImageUploadService({
 
       const confirmedAt = new Date();
       const [confirmedImage] = await tx
-        .update(recipeImages)
-        .set({ confirmedAt, updatedAt: confirmedAt })
+        .update(media)
+        .set({ confirmedAt, animated: false, updatedAt: confirmedAt })
         .where(
-          and(
-            eq(recipeImages.id, imageId),
-            eq(recipeImages.householdId, householdId),
-            eq(recipeImages.recipeId, recipeId),
-          ),
+          and(eq(media.id, image.mediaId), eq(media.householdId, householdId)),
         )
         .returning({
-          id: recipeImages.id,
-          confirmedAt: recipeImages.confirmedAt,
+          id: media.id,
+          confirmedAt: media.confirmedAt,
         });
       if (!confirmedImage?.confirmedAt) {
         throw new Error("Recipe image confirmation returned no row");
@@ -162,7 +178,7 @@ export function createConfirmRecipeImageUploadService({
 
       return {
         kind: "success",
-        image: { id: confirmedImage.id, confirmedAt: persistedConfirmedAt },
+        image: { id: imageId, confirmedAt: persistedConfirmedAt },
       };
     });
   };

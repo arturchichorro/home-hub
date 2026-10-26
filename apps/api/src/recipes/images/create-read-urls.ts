@@ -77,27 +77,41 @@ export function createRecipeImageReadUrlsService({
       });
       return {
         kind: "images" as const,
-        imageIds: new Set(
-          images.map((image) => `${image.recipeId}:${image.id}`),
+        images: new Map(
+          images.map((image) => [`${image.recipeId}:${image.id}`, image]),
         ),
       };
     });
 
     if (authorizedImageIds.kind !== "images") return authorizedImageIds;
 
-    const readableRequests = uniqueRequests.filter((request) =>
-      authorizedImageIds.imageIds.has(`${request.recipeId}:${request.imageId}`),
-    );
+    const readableRequests = uniqueRequests.flatMap((request) => {
+      const image = authorizedImageIds.images.get(
+        `${request.recipeId}:${request.imageId}`,
+      );
+      return image
+        ? [{ ...request, mediaId: image.mediaId, objectKey: image.objectKey }]
+        : [];
+    });
     return {
       kind: "success",
       reads: await Promise.all(
-        readableRequests.map(async ({ imageId, recipeId, variant }) => ({
-          imageId,
-          recipeId,
-          variant,
-          url: await signRead({ householdId, imageId, recipeId, variant }),
-          expiresInSeconds: recipeImageReadUrlLifetimeSeconds,
-        })),
+        readableRequests.map(
+          async ({ imageId, recipeId, variant, mediaId, objectKey }) => ({
+            imageId,
+            recipeId,
+            variant,
+            url: await signRead({
+              householdId,
+              imageId,
+              recipeId,
+              variant,
+              mediaId,
+              objectKey,
+            }),
+            expiresInSeconds: recipeImageReadUrlLifetimeSeconds,
+          }),
+        ),
       ),
     };
   };

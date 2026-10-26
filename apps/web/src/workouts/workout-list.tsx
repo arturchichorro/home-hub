@@ -36,7 +36,7 @@ const keyboardSensor = KeyboardSensor.configure({
     right: ["ArrowRight"],
   },
 });
-function sensors(defaults: Sensors): Sensors {
+export function workoutOrderingSensors(defaults: Sensors): Sensors {
   return [
     ...defaults.filter(
       (sensor) => sensor !== PointerSensor && sensor !== KeyboardSensor,
@@ -75,7 +75,7 @@ export function WorkoutList({
 }) {
   return (
     <DragDropProvider
-      sensors={sensors}
+      sensors={workoutOrderingSensors}
       onDragEnd={(event) => {
         const source = event.operation.source;
         if (disabled || event.canceled || !isSortable(source)) return;

@@ -1,6 +1,9 @@
+import {
+  type RecipeImage,
+  recipeImagesFromRows,
+} from "@home-hub/shared/recipe-images";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
-import type { RecipeImage } from "@home-hub/shared/zero/schema";
 import {
   ConfirmationPopover,
   CookingPot,
@@ -66,7 +69,8 @@ export function RecipeDetail({
     currentTitle: recipe?.title ?? "",
     currentDescription: recipe?.description ?? null,
   });
-  const firstVisibleImageId = recipe?.images.find(
+  const images = recipeImagesFromRows(recipe?.images ?? []);
+  const firstVisibleImageId = images.find(
     (image) => !hiddenImageIds.has(image.id),
   )?.id;
 
@@ -113,9 +117,7 @@ export function RecipeDetail({
     return deleting ? <p className="text-muted">Deleting recipe…</p> : null;
   }
 
-  const visibleImages = recipe.images.filter(
-    (image) => !hiddenImageIds.has(image.id),
-  );
+  const visibleImages = images.filter((image) => !hiddenImageIds.has(image.id));
   const viewerImages = selectedCookLogIds
     ? visibleImages.filter(
         (image) =>
