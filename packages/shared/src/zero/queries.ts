@@ -238,6 +238,14 @@ const workoutsByHousehold = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
     authorizedWorkouts(args.householdId, ctx.userId)
+      .related("logs", (logs) =>
+        logs
+          .where("householdId", args.householdId)
+          .where("userId", ctx.userId)
+          .orderBy("completedOn", "desc")
+          .orderBy("id", "desc")
+          .limit(1),
+      )
       .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
 );

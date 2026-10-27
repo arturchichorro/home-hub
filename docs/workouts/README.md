@@ -11,6 +11,9 @@ workouts; training logs and set values remain private to their author.
   workout notes sit below the exercises in a collapsed Base UI accordion from
   `ui-web`. A settings-icon menu configures each exercise's
   load convention and sides; the measure uses the shared Base UI select.
+- Workout rows show your latest completed day on the right, including weekday
+  (and year for older logs). Never-logged rows stay blank; other members' logs
+  remain private. The stored local day is shown without timezone conversion.
 - Reorder workouts like Lists: drag with a mouse, hold to drag on touch, or use
   Space and arrow keys. The household-shared order is persisted optimistically.
 - **Log workout** opens an unsaved form. The **checkmark** (Save log) saves the

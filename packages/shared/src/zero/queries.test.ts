@@ -6,6 +6,36 @@ import { queries } from "./queries";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+describe("workout library last completion", () => {
+  it("fetches only the current author's newest local day, bounded to one log per workout", () => {
+    const ast = getAst(
+      queries.workouts.byHousehold.fn({
+        args: { householdId },
+        ctx: { userId },
+      }),
+    );
+    const logs = ast.related?.find(
+      (relation) => relation.subquery.table === "workoutLogs",
+    )?.subquery;
+    expect(logs).toMatchObject({
+      where: {
+        type: "and",
+        conditions: expect.arrayContaining([
+          equalsCondition("householdId", householdId),
+          equalsCondition("userId", userId),
+        ]),
+      },
+      orderBy: [
+        ["completedOn", "desc"],
+        ["id", "desc"],
+      ],
+      limit: 1,
+    });
+    expect(logs?.related).toBeUndefined();
+    expect(JSON.stringify(ast.where)).toContain("householdMembers");
+    expect(JSON.stringify(ast.where)).toContain("householdModuleSettings");
+  });
+});
 
 function getAst(query: unknown): AST {
   return (query as { ast: AST }).ast;

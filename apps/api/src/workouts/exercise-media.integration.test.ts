@@ -75,7 +75,10 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
   beforeEach(async () => {
     vi.resetAllMocks();
     signUpload.mockResolvedValue("https://upload.example/object");
-    inspectObject.mockResolvedValue({ contentType: "image/png", byteSize: 42 });
+    inspectObject.mockResolvedValue({
+      contentType: "image/png",
+      byteSize: 42,
+    });
     signRead.mockResolvedValue("https://images.example/authorized");
     userId = randomUUID();
     householdId = randomUUID();
@@ -137,6 +140,90 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       ],
     });
 
+  it("shows only each workout's latest local completion for the current author", async () => {
+    const provider = createZeroDbProvider({ db: client.db });
+    const workoutId = randomUUID(),
+      emptyId = randomUUID(),
+      otherUser = randomUUID(),
+      latestId = randomUUID();
+    await client.db.insert(workouts).values([
+      { id: workoutId, householdId, title: "Logged", notes: "", sortKey: 2 },
+      {
+        id: emptyId,
+        householdId,
+        title: "Not logged",
+        notes: "",
+        sortKey: 1,
+      },
+    ]);
+    await client.db.insert(users).values({
+      id: otherUser,
+      email: `${otherUser}@example.invalid`,
+      username: otherUser,
+      passwordHash: "test",
+    });
+    await client.db.insert(householdMembers).values({
+      id: randomUUID(),
+      householdId,
+      userId: otherUser,
+      role: "member",
+      sortKey: 0,
+    });
+    const base = {
+      householdId,
+      workoutId,
+      snapshot: { title: "Logged", exercises: [] },
+      completedAt: new Date("2026-06-17T18:00:00Z"),
+    };
+    await client.db.insert(workoutLogs).values([
+      {
+        ...base,
+        id: randomUUID(),
+        userId,
+        completedOn: "2026-06-15",
+        createdAt: new Date("2026-10-27T12:00:00Z"),
+        note: "Backfilled old day",
+      },
+      {
+        ...base,
+        id: latestId,
+        userId,
+        completedOn: "2026-06-17",
+        createdAt: new Date("2026-06-17T18:00:00Z"),
+        note: "Own private note",
+      },
+      {
+        ...base,
+        id: randomUUID(),
+        userId: otherUser,
+        completedOn: "2026-10-27",
+        note: "OTHER AUTHOR SECRET",
+      },
+    ]);
+    const rows = await provider.run(
+      queries.workouts.byHousehold.fn({
+        ctx: { userId },
+        args: { householdId },
+      }),
+    );
+    expect(
+      rows
+        .find((row) => row.id === workoutId)
+        ?.logs.map((log) => ({ id: log.id, day: log.completedOn })),
+    ).toEqual([{ id: latestId, day: "2026-06-17" }]);
+    expect(rows.find((row) => row.id === emptyId)?.logs).toEqual([]);
+    expect(JSON.stringify(rows)).not.toContain("OTHER AUTHOR SECRET");
+    const theirs = await provider.run(
+      queries.workouts.byHousehold.fn({
+        ctx: { userId: otherUser },
+        args: { householdId },
+      }),
+    );
+    expect(
+      theirs.find((row) => row.id === workoutId)?.logs[0]?.completedOn,
+    ).toBe("2026-10-27");
+    expect(JSON.stringify(theirs)).not.toContain("Own private note");
+  });
   it("deletes catalog links atomically, preserves completed logs/media, and recreates names with fresh identities", async () => {
     const workoutId = randomUUID(),
       slotId = randomUUID(),
@@ -655,9 +742,17 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
         attachmentId: result.attachmentId,
         variant: "thumbnail" as const,
       },
-      { exerciseId, attachmentId: randomUUID(), variant: "thumbnail" as const },
+      {
+        exerciseId,
+        attachmentId: randomUUID(),
+        variant: "thumbnail" as const,
+      },
     ];
-    const batch = await services().readUrls({ userId, householdId, requests });
+    const batch = await services().readUrls({
+      userId,
+      householdId,
+      requests,
+    });
     expect(batch).toMatchObject({
       kind: "success",
       reads: [{ attachmentId: result.attachmentId, exerciseId }],
