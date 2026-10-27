@@ -397,6 +397,115 @@ describe("exercise picture ordering", () => {
     },
   );
 });
+describe("standalone exercise creation", () => {
+  const definition = () => ({
+    id: crypto.randomUUID(),
+    name: "Cable row",
+    unit: "reps" as const,
+    load: "single" as const,
+    unilateral: false,
+  });
+  const create = (
+    tx: Transaction<Schema>,
+    exercise = definition(),
+    targetHousehold = householdId,
+  ) =>
+    mutators.workouts.createExercise.fn({
+      tx,
+      ctx,
+      args: {
+        householdId: targetHousehold,
+        exercise,
+        optimisticTimestamp: 1234,
+      },
+    });
+  it.each(["client", "server"] as const)(
+    "creates an exercise without a workout slot: %s",
+    async (location) => {
+      const { tx, data, writes } = setup(location);
+      const exercise = definition();
+      const workoutsBefore = JSON.stringify(data.workouts),
+        slotsBefore = JSON.stringify(data.workoutExercises);
+      await create(tx, exercise);
+      expect(
+        data.exercises?.find((row) => row.id === exercise.id),
+      ).toMatchObject({
+        ...exercise,
+        householdId,
+        normalizedName: "cable row",
+        archived: false,
+        createdAt: location === "server" ? now : 1234,
+      });
+      expect(JSON.stringify(data.workouts)).toBe(workoutsBefore);
+      expect(JSON.stringify(data.workoutExercises)).toBe(slotsBefore);
+      expect(writes.mock.calls.every(([table]) => table === "exercises")).toBe(
+        true,
+      );
+    },
+  );
+  it("rejects normalized duplicates without changing the existing exercise", async () => {
+    const { tx, data, writes } = setup();
+    const existing = data.exercises?.[0];
+    if (!existing) throw Error("fixture");
+    await expect(
+      create(tx, {
+        ...definition(),
+        name: `  ${String(existing.name).toUpperCase()}  `,
+      }),
+    ).rejects.toThrow("already exists");
+    expect(writes).not.toHaveBeenCalled();
+  });
+  it("promotes an archived identity using supplied settings, not historical defaults", async () => {
+    const { tx, data } = setup();
+    const old = definition();
+    data.exercises?.push({
+      ...old,
+      householdId,
+      normalizedName: "cable row",
+      unit: "seconds",
+      load: "bodyweight",
+      unilateral: true,
+      archived: true,
+    });
+    const exercise = definition();
+    await create(tx, exercise);
+    const matching =
+      data.exercises?.filter((row) => row.normalizedName === "cable row") ?? [];
+    expect(matching).toHaveLength(1);
+    expect(matching[0]).toMatchObject({
+      ...exercise,
+      id: old.id,
+      archived: false,
+    });
+  });
+  it("is idempotent and never overwrites settings on retried creation", async () => {
+    const { tx, data, writes } = setup();
+    const exercise = definition();
+    await create(tx, exercise);
+    const row = data.exercises?.find((row) => row.id === exercise.id);
+    if (!row) throw Error("fixture");
+    row.unilateral = true;
+    writes.mockClear();
+    await create(tx, exercise);
+    expect(row.unilateral).toBe(true);
+    expect(writes).not.toHaveBeenCalled();
+    await expect(
+      create(tx, { ...exercise, name: "A different movement" }),
+    ).rejects.toThrow("ID already in use");
+  });
+  it.each(["membership", "module", "foreign"] as const)(
+    "requires active household/module authorization: %s",
+    async (kind) => {
+      const { tx, data, writes } = setup();
+      if (kind === "membership") data.householdMembers = [];
+      if (kind === "module") data.householdModuleSettings = [];
+      await expect(
+        create(tx, definition(), kind === "foreign" ? other : householdId),
+      ).rejects.toThrow();
+      expect(writes).not.toHaveBeenCalled();
+    },
+  );
+});
 describe("shared exercise catalog", () => {
   const first = starter.exercises[0];
   if (!first) throw new Error("seed");

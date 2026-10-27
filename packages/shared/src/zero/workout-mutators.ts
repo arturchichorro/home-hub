@@ -3,6 +3,7 @@ import { reorderExerciseMediaSchema } from "../exercise-media";
 import { calendarDate } from "../habits";
 import { starterWorkouts } from "../workout-seed";
 import {
+  createCatalogExerciseSchema,
   createWorkoutSchema,
   editWorkoutExercisesSchema,
   importWorkoutsSchema,
@@ -34,7 +35,7 @@ const scopedCatalog = (householdId: string) =>
 async function ensureCatalog(
   tx: Transaction<Schema>,
   householdId: string,
-  definition: WorkoutExercise,
+  definition: Pick<WorkoutExercise, "name" | "unit" | "load" | "unilateral">,
   proposedId: string,
   now: number,
 ): Promise<string> {
@@ -223,6 +224,37 @@ export const workoutMutatorDefinitions = {
       updatedAt: timestamp(tx, args.optimisticTimestamp),
     });
   }),
+  createExercise: define(
+    createCatalogExerciseSchema,
+    async ({ tx, ctx, args }) => {
+      await access(tx, args.householdId, ctx.userId);
+      const normalizedName = normalizeExerciseName(args.exercise.name);
+      const byId = await tx.run(
+        scopedCatalog(args.householdId).where("id", args.exercise.id).one(),
+      );
+      if (byId) {
+        if (byId.normalizedName !== normalizedName)
+          throw new Error("Exercise ID already in use");
+        if (!byId.archived) return; // Retrying creation must not overwrite later edits.
+      }
+      const existing = await tx.run(
+        scopedCatalog(args.householdId)
+          .where("normalizedName", normalizedName)
+          .one(),
+      );
+      if (existing && !existing.archived)
+        throw new Error("An exercise with this name already exists");
+      // Explicit creation may promote a historical-only identity, but uses only
+      // the supplied public settings, never private historical defaults.
+      await ensureCatalog(
+        tx,
+        args.householdId,
+        args.exercise,
+        args.exercise.id,
+        timestamp(tx, args.optimisticTimestamp),
+      );
+    },
+  ),
   updateExercise: define(
     updateCatalogExerciseSchema,
     async ({ tx, ctx, args }) => {

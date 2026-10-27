@@ -20,6 +20,13 @@ export const exerciseCatalogSchema = workoutExerciseSchema
 export type CatalogExercise = z.infer<typeof exerciseCatalogSchema>;
 export const normalizeExerciseName = (name: string) =>
   name.normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
+export const createCatalogExerciseSchema = z
+  .object({
+    householdId: z.uuid(),
+    exercise: exerciseCatalogSchema,
+    optimisticTimestamp: z.number().int().nonnegative(),
+  })
+  .strict();
 export const updateCatalogExerciseSchema = z
   .object({
     householdId: z.uuid(),

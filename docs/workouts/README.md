@@ -41,6 +41,12 @@ workouts; training logs and set values remain private to their author.
   catalog or creates a new movement. The searchable catalog is listed below the
   workouts. Name, measure, load convention and sides are shared across workouts;
   sets and target ranges belong to each workout.
+- The catalog's **+** focuses a new inline entry; names autosave on pause, blur,
+  or Enter. Its settings menu edits measure, load and sides, including before
+  naming a new movement. Escape discards unsaved text; blank entries are not
+  stored. Duplicate names are rejected without merging or losing the draft.
+  Standalone creation does not add a workout slot; explicitly creating a hidden
+  historical identity promotes it using the supplied public settings.
 
 - Exercise pictures appear as compact inline strips like cooking-log photos, in
   the catalog and every workout using that movement. Uploads, deletion and picture
