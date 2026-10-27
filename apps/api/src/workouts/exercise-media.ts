@@ -78,7 +78,7 @@ async function authorize(
       and(
         eq(exercises.id, input.exerciseId),
         eq(exercises.householdId, input.householdId),
-        eq(exercises.archived, false),
+        isNull(exercises.deletedAt),
       ),
     )
     .limit(1)
@@ -330,7 +330,7 @@ export function createExerciseMediaServices(
           .where(
             and(
               eq(exercises.householdId, input.householdId),
-              eq(exercises.archived, false),
+              isNull(exercises.deletedAt),
               inArray(
                 exercises.id,
                 unique.map((request) => request.exerciseId),

@@ -86,8 +86,8 @@ describe("catalog autosave", () => {
       undefined,
     );
   });
-  it("serializes saves and drains name/settings edits made during creation using the promoted ID", async () => {
-    const promotedId = crypto.randomUUID();
+  it("serializes saves and drains name/settings edits made during creation", async () => {
+    const promotedId = blank.id;
     let finish: (r: CatalogSaveResult) => void = () => {};
     const first = new Promise<CatalogSaveResult>((resolve) => {
       finish = resolve;

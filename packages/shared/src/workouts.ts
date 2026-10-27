@@ -27,6 +27,24 @@ export const createCatalogExerciseSchema = z
     optimisticTimestamp: z.number().int().nonnegative(),
   })
   .strict();
+export const deleteCatalogExerciseSchema = z
+  .object({
+    householdId: z.uuid(),
+    exerciseId: z.uuid(),
+    optimisticTimestamp: z.number().int().nonnegative(),
+  })
+  .strict();
+export const reorderCatalogExercisesSchema = deleteCatalogExerciseSchema.extend(
+  {
+    orderedExerciseIds: z
+      .array(z.uuid())
+      .min(1)
+      .refine(
+        (ids) => new Set(ids).size === ids.length,
+        "Duplicate exercise IDs",
+      ),
+  },
+);
 export const updateCatalogExerciseSchema = z
   .object({
     householdId: z.uuid(),

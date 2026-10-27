@@ -78,7 +78,7 @@ function setup(location: "server" | "client" = "server") {
         notes: starter.notes,
       },
     ],
-    exercises: starter.exercises.map((e) => ({
+    exercises: starter.exercises.map((e, index) => ({
       id: e.id,
       householdId,
       name: e.name,
@@ -86,7 +86,8 @@ function setup(location: "server" | "client" = "server") {
       unit: e.unit,
       load: e.load,
       unilateral: e.unilateral,
-      archived: false,
+      deletedAt: null,
+      sortKey: (starter.exercises.length - index) * 1024,
       createdAt: now,
       updatedAt: now,
     })),
@@ -123,7 +124,7 @@ function setup(location: "server" | "client" = "server") {
       data[table]?.push(structuredClone(row));
     },
     update: async (row: Row) => {
-      writes(table, "update", row);
+      if (table !== "households") writes(table, "update", row); // Household UPDATE only serializes catalog writes.
       const found = data[table]?.find((r) => sameKey(table, r, row));
       if (found) Object.assign(found, structuredClone(row));
     },
@@ -142,6 +143,7 @@ function setup(location: "server" | "client" = "server") {
     location,
     mutate: Object.fromEntries(
       [
+        "households",
         "workouts",
         "exercises",
         "workoutExercises",
@@ -358,15 +360,15 @@ describe("exercise picture ordering", () => {
       expect(state.writes).not.toHaveBeenCalled();
     },
   );
-  it.each(["membership", "module", "archived"])(
+  it.each(["membership", "module", "deleted-parent"])(
     "rejects unavailable media scope: %s",
     async (kind) => {
       const state = mediaSetup();
       if (kind === "membership") state.data.householdMembers = [];
       if (kind === "module") state.data.householdModuleSettings = [];
-      if (kind === "archived") {
+      if (kind === "deleted-parent") {
         const parent = state.data.exercises?.[0];
-        if (parent) parent.archived = true;
+        if (parent) parent.deletedAt = now;
       }
       await expect(
         state.move([state.ids[1], state.ids[0], state.ids[2]], state.ids[1]),
@@ -374,17 +376,17 @@ describe("exercise picture ordering", () => {
       expect(state.writes).not.toHaveBeenCalled();
     },
   );
-  it.each(["archive", "delete"])(
+  it.each(["delete-parent", "delete"])(
     "rechecks catalog/attachments after acquiring the parent lock: %s",
     async (change) => {
       const state = mediaSetup();
       state.writes.mockImplementationOnce(() => {
         const row =
-          change === "archive"
+          change === "delete-parent"
             ? state.data.exercises?.[0]
             : state.data.exerciseMedia?.[1];
         if (row) {
-          if (change === "archive") row.archived = true;
+          if (change === "delete-parent") row.deletedAt = now;
           else row.deletedAt = now;
         }
       });
@@ -433,7 +435,7 @@ describe("standalone exercise creation", () => {
         ...exercise,
         householdId,
         normalizedName: "cable row",
-        archived: false,
+        deletedAt: null,
         createdAt: location === "server" ? now : 1234,
       });
       expect(JSON.stringify(data.workouts)).toBe(workoutsBefore);
@@ -455,28 +457,32 @@ describe("standalone exercise creation", () => {
     ).rejects.toThrow("already exists");
     expect(writes).not.toHaveBeenCalled();
   });
-  it("promotes an archived identity using supplied settings, not historical defaults", async () => {
+  it("never revives deleted identities and allows a fresh exercise with the same name", async () => {
     const { tx, data } = setup();
     const old = definition();
     data.exercises?.push({
       ...old,
       householdId,
       normalizedName: "cable row",
+      deletedAt: now,
       unit: "seconds",
       load: "bodyweight",
       unilateral: true,
-      archived: true,
+      sortKey: 0,
     });
     const exercise = definition();
     await create(tx, exercise);
-    const matching =
-      data.exercises?.filter((row) => row.normalizedName === "cable row") ?? [];
-    expect(matching).toHaveLength(1);
-    expect(matching[0]).toMatchObject({
-      ...exercise,
-      id: old.id,
-      archived: false,
+    expect(
+      data.exercises?.filter((row) => row.normalizedName === "cable row"),
+    ).toHaveLength(2);
+    expect(data.exercises?.find((row) => row.id === old.id)).toMatchObject({
+      deletedAt: now,
+      unit: "seconds",
     });
+    expect(data.exercises?.find((row) => row.id === exercise.id)).toMatchObject(
+      { ...exercise, deletedAt: null },
+    );
+    await expect(create(tx, old)).rejects.toThrow("no longer available");
   });
   it("is idempotent and never overwrites settings on retried creation", async () => {
     const { tx, data, writes } = setup();
@@ -502,6 +508,194 @@ describe("standalone exercise creation", () => {
       await expect(
         create(tx, definition(), kind === "foreign" ? other : householdId),
       ).rejects.toThrow();
+      expect(writes).not.toHaveBeenCalled();
+    },
+  );
+});
+describe("catalog deletion and ordering", () => {
+  const first = starter.exercises[0];
+  if (!first) throw Error("seed");
+  const remove = (tx: Transaction<Schema>, exerciseId = first.id) =>
+    mutators.workouts.deleteExercise.fn({
+      tx,
+      ctx,
+      args: { householdId, exerciseId, optimisticTimestamp: 1234 },
+    });
+  const move = (
+    tx: Transaction<Schema>,
+    exerciseId: string,
+    orderedExerciseIds: string[],
+  ) =>
+    mutators.workouts.reorderExercises.fn({
+      tx,
+      ctx,
+      args: {
+        householdId,
+        exerciseId,
+        orderedExerciseIds,
+        optimisticTimestamp: 1234,
+      },
+    });
+  it.each(["client", "server"] as const)(
+    "soft-deletes all current links but preserves history and media: %s",
+    async (location) => {
+      const { tx, data, record } = setup(location);
+      await record({ sets: [recordedSet] });
+      const foreignSlot = {
+        ...data.workoutExercises?.[0],
+        id: crypto.randomUUID(),
+        householdId: other,
+      };
+      data.workoutExercises?.push(
+        { ...data.workoutExercises[0], workoutId: crypto.randomUUID() },
+        foreignSlot,
+      );
+      data.exerciseMedia?.push({
+        id: crypto.randomUUID(),
+        householdId,
+        exerciseId: first.id,
+        deletedAt: null,
+      });
+      const logs = structuredClone(data.workoutLogs),
+        sets = structuredClone(data.workoutLogSets),
+        mediaBefore = structuredClone(data.exerciseMedia);
+      await remove(tx);
+      expect(data.exercises?.find((e) => e.id === first.id)?.deletedAt).toBe(
+        location === "server" ? now : 1234,
+      );
+      expect(
+        data.workoutExercises?.filter(
+          (slot) =>
+            slot.householdId === householdId && slot.exerciseId === first.id,
+        ),
+      ).toHaveLength(0);
+      expect(data.workoutExercises).toContainEqual(foreignSlot);
+      expect(data.workoutLogs).toEqual(logs);
+      expect(data.workoutLogSets).toEqual(sets);
+      expect(data.exerciseMedia).toEqual(mediaBefore);
+      const catalog = await tx.run(
+        queries.workouts.catalog.fn({ ctx, args: { householdId } }),
+      );
+      expect(catalog.some((e) => e.id === first.id)).toBe(false);
+    },
+  );
+  it("deletion is idempotent and cannot be undone by stale edits or slot additions", async () => {
+    const { tx, writes } = setup();
+    await remove(tx);
+    writes.mockClear();
+    await remove(tx);
+    expect(writes).not.toHaveBeenCalled();
+    await expect(
+      mutators.workouts.updateExercise.fn({
+        tx,
+        ctx,
+        args: {
+          householdId,
+          exerciseId: first.id,
+          changes: { name: "Stale" },
+          optimisticTimestamp: 1234,
+        },
+      }),
+    ).rejects.toThrow();
+    await expect(
+      mutators.workouts.editExercises.fn({
+        tx,
+        ctx,
+        args: {
+          ...scope,
+          creates: [
+            { ...first, id: crypto.randomUUID(), catalogExerciseId: first.id },
+          ],
+          updates: [],
+          deletes: [],
+        },
+      }),
+    ).rejects.toThrow("no longer available");
+  });
+  it("preserves correction of old logs, but rejects new logs using a deleted exercise", async () => {
+    const state = setup();
+    await state.record({ sets: [recordedSet] });
+    await remove(state.tx);
+    await expect(
+      state.record({ sets: [recordedSet] }),
+    ).resolves.toBeUndefined();
+    const fresh = setup();
+    await remove(fresh.tx);
+    await expect(fresh.record({ sets: [recordedSet] })).rejects.toThrow(
+      "catalog exercise not allowed",
+    );
+  });
+  it.each(["membership", "module", "household"] as const)(
+    "protects delete and order with %s authorization",
+    async (reason) => {
+      const { tx, data, writes } = setup();
+      if (reason === "membership") data.householdMembers = [];
+      if (reason === "module") data.householdModuleSettings = [];
+      if (reason === "household" && data.households?.[0])
+        data.households[0].deletedAt = now;
+      await expect(remove(tx)).rejects.toThrow();
+      await expect(move(tx, first.id, [first.id])).rejects.toThrow();
+      expect(writes).not.toHaveBeenCalled();
+    },
+  );
+  it("persists shared order and preserves omitted/unseen exercises", async () => {
+    const { tx, data } = setup();
+    const ids = data.exercises?.map((row) => String(row.id)) ?? [];
+    const second = ids[1];
+    if (!second) throw Error("seed");
+    const unseen = structuredClone(data.exercises?.slice(2));
+    await move(tx, second, [second, first.id]);
+    expect(data.exercises?.slice(2)).toEqual(unseen);
+    const ordered = await tx.run(
+      queries.workouts.catalog.fn({ ctx, args: { householdId } }),
+    );
+    expect(ordered.slice(0, 2).map((row) => row.id)).toEqual([
+      second,
+      first.id,
+    ]);
+    expect(new Set(ordered.map((row) => row.id))).toEqual(new Set(ids));
+  });
+  it("rebalances all active rows without resurrecting tombstones", async () => {
+    const { tx, data } = setup();
+    const rows = data.exercises ?? [];
+    if (!rows[0] || !rows[1] || !rows[2]) throw Error("seed");
+    rows[0].sortKey = 3;
+    rows[1].sortKey = 0;
+    rows[2].sortKey = 2;
+    const deleted = {
+      ...rows[0],
+      id: crypto.randomUUID(),
+      deletedAt: now,
+      sortKey: 999,
+    };
+    rows.push(deleted);
+    const before = rows.length;
+    await move(tx, String(rows[1].id), [
+      String(rows[0].id),
+      String(rows[1].id),
+      String(rows[2].id),
+    ]);
+    expect(rows).toHaveLength(before);
+    expect(deleted.sortKey).toBe(999);
+    expect(deleted.deletedAt).toBe(now);
+    const active = rows.filter((row) => row.deletedAt == null);
+    expect(new Set(active.map((row) => row.sortKey)).size).toBe(active.length);
+  });
+  it.each(["deleted", "foreign", "missing"] as const)(
+    "rejects ordering unavailable IDs: %s",
+    async (kind) => {
+      const { tx, data, writes } = setup();
+      const target = crypto.randomUUID();
+      if (kind !== "missing")
+        data.exercises?.push({
+          ...data.exercises[0],
+          id: target,
+          householdId: kind === "foreign" ? other : householdId,
+          deletedAt: kind === "deleted" ? now : null,
+        });
+      await expect(move(tx, target, [target, first.id])).rejects.toThrow(
+        "Reorder not allowed",
+      );
       expect(writes).not.toHaveBeenCalled();
     },
   );
@@ -671,34 +865,37 @@ describe("shared exercise catalog", () => {
     expect(data.workoutLogs).toEqual(logs);
     expect(data.workoutLogSets).toEqual(sets);
   });
-  it("hides historical-only catalog entries and safely promotes explicitly named creations", async () => {
+  it("keeps historical-only tombstones hidden when a new movement uses the same name", async () => {
     const { tx, data } = setup();
     data.exercises?.push({
       ...data.exercises[0],
       id: other,
       name: "Private historical movement",
       normalizedName: "private historical movement",
-      archived: true,
+      deletedAt: now,
     });
     const before = await tx.run(
       queries.workouts.catalog.fn({ ctx, args: { householdId } }),
     );
     expect(before.some((e) => e.id === other)).toBe(false);
+    const catalogExerciseId = crypto.randomUUID();
     await edit(tx, {
       creates: [
         {
           ...first,
           id: crypto.randomUUID(),
-          catalogExerciseId: crypto.randomUUID(),
+          catalogExerciseId,
           name: "Private historical movement",
           unit: "seconds",
         },
       ],
     });
     expect(data.exercises?.find((e) => e.id === other)).toMatchObject({
-      archived: false,
-      unit: "seconds",
+      deletedAt: now,
     });
+    expect(
+      data.exercises?.find((e) => e.id === catalogExerciseId),
+    ).toMatchObject({ deletedAt: null, unit: "seconds" });
   });
   it.each(["module", "membership", "household"])(
     "blocks catalog reads and edits without %s access",

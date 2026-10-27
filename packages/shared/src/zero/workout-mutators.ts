@@ -5,9 +5,11 @@ import { starterWorkouts } from "../workout-seed";
 import {
   createCatalogExerciseSchema,
   createWorkoutSchema,
+  deleteCatalogExerciseSchema,
   editWorkoutExercisesSchema,
   importWorkoutsSchema,
   normalizeExerciseName,
+  reorderCatalogExercisesSchema,
   reorderWorkoutsSchema,
   saveWorkoutLogSchema,
   updateCatalogExerciseSchema,
@@ -32,6 +34,17 @@ const scopedExercises = (householdId: string, workoutId: string) =>
     .where("workoutId", workoutId);
 const scopedCatalog = (householdId: string) =>
   zql.exercises.where("householdId", householdId);
+const activeCatalog = (householdId: string) =>
+  scopedCatalog(householdId).where("deletedAt", "IS", null);
+async function lockCatalog(
+  tx: Transaction<Schema>,
+  householdId: string,
+  now: number,
+) {
+  // Serialize catalog creation/deletion/ordering before any workout or exercise
+  // locks. Re-read after this UPDATE; stale clients must not revive deletions.
+  await tx.mutate.households.update({ id: householdId, updatedAt: now });
+}
 async function ensureCatalog(
   tx: Transaction<Schema>,
   householdId: string,
@@ -39,33 +52,36 @@ async function ensureCatalog(
   proposedId: string,
   now: number,
 ): Promise<string> {
-  const normalizedName = normalizeExerciseName(definition.name);
   const byId = await tx.run(
     scopedCatalog(householdId).where("id", proposedId).one(),
   );
-  if (byId && !byId.archived) return byId.id;
+  if (byId) {
+    if (byId.deletedAt != null) throw new Error("Exercise no longer available");
+    return byId.id;
+  }
+  const normalizedName = normalizeExerciseName(definition.name);
   const existing = await tx.run(
-    scopedCatalog(householdId).where("normalizedName", normalizedName).one(),
+    activeCatalog(householdId).where("normalizedName", normalizedName).one(),
   );
-  const fields = {
+  if (existing) return existing.id;
+  const top = await tx.run(
+    activeCatalog(householdId)
+      .orderBy("sortKey", "desc")
+      .orderBy("id", "asc")
+      .one(),
+  );
+  await tx.mutate.exercises.insert({
+    id: proposedId,
+    householdId,
     name: definition.name,
     normalizedName,
     unit: definition.unit,
     load: definition.load,
     unilateral: definition.unilateral,
-    archived: false,
-    updatedAt: now,
-  };
-  if (existing) {
-    if (existing.archived)
-      await tx.mutate.exercises.update({ id: existing.id, ...fields });
-    return existing.id;
-  }
-  await tx.mutate.exercises.insert({
-    id: proposedId,
-    householdId,
-    ...fields,
+    deletedAt: null,
+    sortKey: nextSortKey(top?.sortKey ?? 0),
     createdAt: now,
+    updatedAt: now,
   });
   return proposedId;
 }
@@ -86,7 +102,7 @@ async function patchCatalog(
       : normalizeExerciseName(changes.name);
   if (normalizedName !== undefined) {
     const duplicate = await tx.run(
-      scopedCatalog(householdId).where("normalizedName", normalizedName).one(),
+      activeCatalog(householdId).where("normalizedName", normalizedName).one(),
     );
     if (duplicate && duplicate.id !== id)
       throw new Error("An exercise with this name already exists");
@@ -133,7 +149,7 @@ export const workoutMutatorDefinitions = {
         tx.run(
           scopedCatalog(args.householdId)
             .where("id", args.exerciseId)
-            .where("archived", false)
+            .where("deletedAt", "IS", null)
             .one(),
         );
       if (!(await parent()))
@@ -166,7 +182,7 @@ export const workoutMutatorDefinitions = {
       validate(await readRows());
       const now = timestamp(tx, args.optimisticTimestamp);
       // Match upload's parent lock, then re-read: pending/concurrent additions must
-      // survive gap rebalancing, and deleted/archived records must not be reordered.
+      // survive gap rebalancing, and deleted records must not be reordered.
       await tx.mutate.exercises.update({ id: args.exerciseId, updatedAt: now });
       if (!(await parent()))
         throw new Error("Exercise media reorder not allowed");
@@ -228,41 +244,91 @@ export const workoutMutatorDefinitions = {
     createCatalogExerciseSchema,
     async ({ tx, ctx, args }) => {
       await access(tx, args.householdId, ctx.userId);
-      const normalizedName = normalizeExerciseName(args.exercise.name);
+      const now = timestamp(tx, args.optimisticTimestamp);
+      await lockCatalog(tx, args.householdId, now);
       const byId = await tx.run(
         scopedCatalog(args.householdId).where("id", args.exercise.id).one(),
       );
       if (byId) {
-        if (byId.normalizedName !== normalizedName)
+        if (byId.deletedAt != null)
+          throw new Error("Exercise no longer available");
+        if (byId.normalizedName !== normalizeExerciseName(args.exercise.name))
           throw new Error("Exercise ID already in use");
-        if (!byId.archived) return; // Retrying creation must not overwrite later edits.
+        return;
       }
-      const existing = await tx.run(
-        scopedCatalog(args.householdId)
-          .where("normalizedName", normalizedName)
+      const duplicate = await tx.run(
+        activeCatalog(args.householdId)
+          .where("normalizedName", normalizeExerciseName(args.exercise.name))
           .one(),
       );
-      if (existing && !existing.archived)
+      if (duplicate)
         throw new Error("An exercise with this name already exists");
-      // Explicit creation may promote a historical-only identity, but uses only
-      // the supplied public settings, never private historical defaults.
       await ensureCatalog(
         tx,
         args.householdId,
         args.exercise,
         args.exercise.id,
-        timestamp(tx, args.optimisticTimestamp),
+        now,
       );
+    },
+  ),
+  deleteExercise: define(
+    deleteCatalogExerciseSchema,
+    async ({ tx, ctx, args }) => {
+      await access(tx, args.householdId, ctx.userId);
+      const now = timestamp(tx, args.optimisticTimestamp);
+      await lockCatalog(tx, args.householdId, now);
+      const row = await tx.run(
+        scopedCatalog(args.householdId).where("id", args.exerciseId).one(),
+      );
+      if (!row) throw new Error("Exercise deletion not allowed");
+      if (row.deletedAt != null) return;
+      await tx.mutate.exercises.update({
+        id: row.id,
+        deletedAt: now,
+        updatedAt: now,
+      });
+      const slots = await tx.run(
+        zql.workoutExercises
+          .where("householdId", args.householdId)
+          .where("exerciseId", row.id),
+      );
+      for (const slot of slots)
+        await tx.mutate.workoutExercises.delete({
+          workoutId: slot.workoutId,
+          id: slot.id,
+        });
+      // Keep historical FKs, snapshots, sets, notes and stored media intact.
+    },
+  ),
+  reorderExercises: define(
+    reorderCatalogExercisesSchema,
+    async ({ tx, ctx, args }) => {
+      await access(tx, args.householdId, ctx.userId);
+      const now = timestamp(tx, args.optimisticTimestamp);
+      await lockCatalog(tx, args.householdId, now);
+      const rows = await tx.run(activeCatalog(args.householdId));
+      for (const update of planReorder(
+        rows.map((row) => ({ id: row.id, sortKey: row.sortKey ?? 0 })),
+        args.orderedExerciseIds,
+        args.exerciseId,
+      ))
+        await tx.mutate.exercises.update({ ...update, updatedAt: now });
     },
   ),
   updateExercise: define(
     updateCatalogExerciseSchema,
     async ({ tx, ctx, args }) => {
       await access(tx, args.householdId, ctx.userId);
+      await lockCatalog(
+        tx,
+        args.householdId,
+        timestamp(tx, args.optimisticTimestamp),
+      );
       const row = await tx.run(
         scopedCatalog(args.householdId)
           .where("id", args.exerciseId)
-          .where("archived", false)
+          .where("deletedAt", "IS", null)
           .one(),
       );
       if (!row) throw new Error("Exercise update not allowed");
@@ -279,6 +345,11 @@ export const workoutMutatorDefinitions = {
     editWorkoutExercisesSchema,
     async ({ tx, ctx, args }) => {
       await access(tx, args.householdId, ctx.userId);
+      await lockCatalog(
+        tx,
+        args.householdId,
+        timestamp(tx, args.optimisticTimestamp),
+      );
       if (!(await tx.run(scopedWorkout(args.householdId, args.workoutId))))
         throw new Error("Exercise update not allowed");
       const validate = (rows: readonly { id: string }[]) => {
@@ -315,7 +386,7 @@ export const workoutMutatorDefinitions = {
         const catalog = await tx.run(
           scopedCatalog(args.householdId)
             .where("id", exerciseId)
-            .where("archived", false)
+            .where("deletedAt", "IS", null)
             .one(),
         );
         if (!catalog) throw new Error("Exercise update not allowed");
@@ -361,6 +432,11 @@ export const workoutMutatorDefinitions = {
   ),
   importStarters: define(importWorkoutsSchema, async ({ tx, ctx, args }) => {
     await access(tx, args.householdId, ctx.userId);
+    await lockCatalog(
+      tx,
+      args.householdId,
+      timestamp(tx, args.optimisticTimestamp),
+    );
     const now = timestamp(tx, args.optimisticTimestamp);
     const unique = [
       ...new Map(
@@ -465,7 +541,7 @@ export const workoutMutatorDefinitions = {
             (row) =>
               row.normalizedName === normalizeExerciseName(definition.name),
           ));
-      if (!entry || (!existing && entry.archived))
+      if (!entry || (!existing && entry.deletedAt != null))
         throw new Error("Workout catalog exercise not allowed");
       return { ...definition, catalogExerciseId: entry.id };
     });

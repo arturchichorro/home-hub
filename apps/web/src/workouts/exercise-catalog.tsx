@@ -1,3 +1,5 @@
+import { DragDropProvider } from "@dnd-kit/react";
+import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import {
   type CatalogExercise,
   exerciseCatalogSchema,
@@ -6,11 +8,14 @@ import {
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import {
+  ConfirmationPopover,
   ErrorPopover,
+  GripVertical,
   IconButton,
   InlineAlert,
   Input,
   Plus,
+  Trash2,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { type Ref, useId, useImperativeHandle, useRef, useState } from "react";
@@ -21,9 +26,9 @@ import {
   type CatalogSaveResult,
   useCatalogExerciseEditor,
 } from "./use-catalog-exercise-editor";
-import { waitForCreatedExercise } from "./wait-for-created-exercise";
+import { workoutOrderingSensors } from "./workout-list";
 
-type Draft = { id: string; resolvedId?: string };
+type Draft = { id: string; saved?: boolean };
 type RowControls = { flush: () => Promise<boolean>; focus: () => void };
 const catalogFields = (
   row: Pick<CatalogExercise, "id" | "name" | "unilateral"> & {
@@ -56,35 +61,61 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
   const [pinnedId, setPinnedId] = useState<string>();
   const [adding, setAdding] = useState(false);
   const draftControl = useRef<RowControls>(null);
-  const acknowledgedCreations = useRef(new Map<string, CatalogExercise>());
   const latestRows = useRef(rows);
   latestRows.current = rows;
-  const activeDraftId = draft?.resolvedId ?? draft?.id;
+  const activeDraftId = draft?.id;
   const draftRow = rows.find((row) => row.id === activeDraftId);
+  const [actionError, setActionError] = useState<string>();
   const normalized = normalizeExerciseName(search);
-  const filtered = rows.filter(
-    (row) =>
-      row.id !== activeDraftId &&
-      (row.normalizedName.includes(normalized) || row.id === pinnedId),
-  );
+  const entries: { id: string; row: CatalogExercise | undefined }[] = rows
+    .filter(
+      (row) =>
+        row.normalizedName.includes(normalized) ||
+        row.id === pinnedId ||
+        (row.id === activeDraftId && !draft?.saved),
+    )
+    .map((row) => ({ id: row.id, row: catalogFields(row) }));
+  if (draft && !draft.saved && !draftRow)
+    entries.unshift({
+      id: draft.id,
+      row: undefined,
+    });
+  const canOrder = enabled && (!draft || Boolean(draft.saved));
+  function observeAction(
+    mutation: {
+      client: PromiseLike<{ type: string }>;
+      server: PromiseLike<{ type: string }>;
+    },
+    message: string,
+  ) {
+    setActionError(undefined);
+    void Promise.all([mutation.client, mutation.server])
+      .then((outcomes) => {
+        if (outcomes.some((outcome) => outcome.type === "error"))
+          setActionError(message);
+      })
+      .catch(() => setActionError(message));
+  }
+  function remove(exerciseId: string) {
+    if (!enabled) return;
+    if (draft?.id === exerciseId) setDraft(undefined);
+    observeAction(
+      zero.mutate(
+        mutators.workouts.deleteExercise({
+          householdId,
+          exerciseId,
+          optimisticTimestamp: Date.now(),
+        }),
+      ),
+      "Unable to delete exercise.",
+    );
+  }
   async function save(
     next: CatalogExercise,
     previous: CatalogExercise | undefined,
   ): Promise<CatalogSaveResult> {
     if (!enabled)
       return { error: "Unable to save exercise while disconnected." };
-    const acknowledged = acknowledgedCreations.current.get(next.id);
-    if (!previous && acknowledged) {
-      const id = await waitForCreatedExercise(
-        zero,
-        householdId,
-        next.id,
-        acknowledged.name,
-      );
-      if (!id) return { error: "Exercise added; waiting for sync. Try again." };
-      acknowledgedCreations.current.delete(next.id);
-      return { exercise: { ...acknowledged, id } };
-    }
     const duplicate = latestRows.current.find(
       (row) =>
         row.id !== next.id &&
@@ -113,7 +144,7 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
             mutators.workouts.createExercise({
               householdId,
               exercise: next,
-              optimisticTimestamp: 0,
+              optimisticTimestamp: Date.now(),
             }),
           );
       const client = await mutation.client;
@@ -123,16 +154,7 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
           error: "Unable to save exercise. Your changes are still here.",
         };
       if (previous) return { exercise: next };
-      acknowledgedCreations.current.set(next.id, next);
-      const id = await waitForCreatedExercise(
-        zero,
-        householdId,
-        next.id,
-        next.name,
-      );
-      if (!id) return { error: "Exercise added; waiting for sync. Try again." };
-      acknowledgedCreations.current.delete(next.id);
-      return { exercise: { ...next, id } };
+      return { exercise: next };
     } catch {
       return { error: "Unable to save exercise. Your changes are still here." };
     }
@@ -185,43 +207,75 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
               setPinnedId(undefined);
             }}
           />
-          <ul className="divide-y divide-border">
-            {draft && (
-              <CatalogRow
-                key={draft.id}
-                controls={draftControl}
-                householdId={householdId}
-                initial={defaultExercise(draft.id)}
-                current={draftRow ? catalogFields(draftRow) : undefined}
-                enabled={enabled}
-                autofocus
-                save={save}
-                onFocus={() => {}}
-                onCancel={() => setDraft(undefined)}
-                onSaved={(id) =>
-                  setDraft((current) =>
-                    current?.id === draft.id && current.resolvedId !== id
-                      ? { ...current, resolvedId: id }
-                      : current,
-                  )
-                }
-              />
-            )}
-            {filtered.map((row) => (
-              <CatalogRow
-                key={row.id}
-                householdId={householdId}
-                initial={catalogFields(row)}
-                current={catalogFields(row)}
-                enabled={enabled}
-                save={save}
-                onFocus={() => setPinnedId(row.id)}
-                onCancel={() => {}}
-                onSaved={() => {}}
-              />
-            ))}
-          </ul>
-          {result.type === "complete" && !filtered.length && !draft && (
+          {actionError && (
+            <InlineAlert role="alert" variant="danger">
+              {actionError}
+            </InlineAlert>
+          )}
+          <DragDropProvider
+            sensors={workoutOrderingSensors}
+            onDragEnd={(event) => {
+              const source = event.operation.source;
+              if (!canOrder || event.canceled || !isSortable(source)) return;
+              const ids = entries.map((entry) => entry.id),
+                from = ids.indexOf(String(source.id));
+              if (
+                from < 0 ||
+                source.index < 0 ||
+                source.index >= ids.length ||
+                from === source.index
+              )
+                return;
+              const [id] = ids.splice(from, 1);
+              if (!id) return;
+              ids.splice(source.index, 0, id);
+              observeAction(
+                zero.mutate(
+                  mutators.workouts.reorderExercises({
+                    householdId,
+                    exerciseId: id,
+                    orderedExerciseIds: ids,
+                    optimisticTimestamp: Date.now(),
+                  }),
+                ),
+                "Unable to reorder exercises.",
+              );
+            }}
+          >
+            <ul className="divide-y divide-border">
+              {entries.map((entry, index) => {
+                const isDraft = entry.id === draft?.id;
+                return (
+                  <CatalogRow
+                    key={entry.id}
+                    controls={isDraft ? draftControl : undefined}
+                    householdId={householdId}
+                    initial={entry.row ?? defaultExercise(entry.id)}
+                    current={entry.row}
+                    enabled={enabled}
+                    autofocus={isDraft && !draft?.saved}
+                    save={save}
+                    index={index}
+                    canOrder={canOrder}
+                    onFocus={() => setPinnedId(entry.id)}
+                    onCancel={() => {
+                      if (isDraft) setDraft(undefined);
+                    }}
+                    onDelete={() => remove(entry.id)}
+                    onSaved={() => {
+                      if (isDraft)
+                        setDraft((current) =>
+                          current?.id === entry.id && !current.saved
+                            ? { ...current, saved: true }
+                            : current,
+                        );
+                    }}
+                  />
+                );
+              })}
+            </ul>
+          </DragDropProvider>
+          {result.type === "complete" && !entries.length && (
             <p className="text-sm text-muted">
               {search ? "No matching exercises." : "No exercises yet."}
             </p>
@@ -243,13 +297,19 @@ function CatalogRow({
   onSaved,
   onCancel,
   onFocus,
+  index,
+  canOrder,
+  onDelete,
 }: {
   householdId: string;
   initial: CatalogExercise;
   current: CatalogExercise | undefined;
   enabled: boolean;
   autofocus?: boolean;
-  controls?: Ref<RowControls>;
+  controls?: Ref<RowControls> | undefined;
+  index: number;
+  canOrder: boolean;
+  onDelete: () => void;
   save: (
     next: CatalogExercise,
     previous: CatalogExercise | undefined,
@@ -272,13 +332,30 @@ function CatalogRow({
     focus: () => input.current?.focus(),
   }));
   const value = editor.value;
+  const sortable = useSortable({
+    id: initial.id,
+    index,
+    type: "catalog-exercise",
+    accept: "catalog-exercise",
+    disabled: !canOrder || !editor.persistedId,
+  });
   return (
     <li
+      ref={sortable.ref}
       data-catalog-exercise-id={editor.persistedId ?? initial.id}
-      className="grid min-w-0 gap-1 py-2 text-sm"
+      className={`grid min-w-0 gap-1 py-2 text-sm ${sortable.isDragging ? "opacity-60" : ""}`}
       onFocusCapture={onFocus}
     >
       <div className="flex min-w-0 items-center gap-2">
+        <IconButton
+          ref={sortable.handleRef}
+          aria-label={`Reorder ${value.name || "new exercise"}`}
+          title="Reorder exercise"
+          className="size-7! shrink-0 touch-pan-y cursor-grab"
+          disabled={!canOrder || !editor.persistedId}
+        >
+          <GripVertical aria-hidden="true" className="size-4" />
+        </IconButton>
         <Input
           ref={input}
           appearance="seamless"
@@ -317,6 +394,25 @@ function CatalogRow({
           includeMeasure
           onChange={(patch) => editor.change(patch, true)}
         />
+        {editor.persistedId && (
+          <ConfirmationPopover
+            message="Delete this exercise from all workouts?"
+            trigger={
+              <IconButton
+                aria-label={`Delete ${value.name}`}
+                title="Delete exercise"
+                className="size-7! shrink-0"
+                disabled={!enabled}
+              >
+                <Trash2 aria-hidden="true" className="size-4" />
+              </IconButton>
+            }
+            onConfirm={() => {
+              editor.revert();
+              onDelete();
+            }}
+          />
+        )}
       </div>
       <span className="px-1 text-xs text-muted">
         {value.unit === "seconds" ? "Seconds" : "Reps"} ·{" "}

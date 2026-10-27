@@ -71,7 +71,6 @@ describe("shared exercise media", () => {
       exerciseId,
       userId,
       "confirmedAt",
-      "archived",
       "deletedAt",
     ]) {
       expect(json).toContain(required);
