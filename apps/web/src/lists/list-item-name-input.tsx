@@ -14,6 +14,8 @@ import {
   draftMatchesSaveSnapshot,
   shouldCanonicalizeVisibleDraft,
 } from "../seamless-text-editing";
+import { useBlockAppUpdate } from "../updates/activity";
+import { appUpdates } from "../updates/state";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 const autosaveDelayMs = 600;
@@ -59,6 +61,7 @@ export function ListItemNameInput({
   const [error, setError] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
   const errorId = useId();
+  useBlockAppUpdate(isSaving || draftName !== confirmedNameRef.current);
 
   useEffect(() => {
     if (focusRequest !== undefined) inputRef.current?.focus();
@@ -83,6 +86,7 @@ export function ListItemNameInput({
   const saveDraft = useCallback(
     async (showEmptyNameError: boolean, canonicalizeVisibleDraft: boolean) => {
       clearScheduledSave();
+      if (appUpdates.getState().required) return;
 
       if (saveInFlightRef.current) {
         queuedSaveRef.current = true;
@@ -152,6 +156,7 @@ export function ListItemNameInput({
           replaceDraft(submittedName);
         }
       } else if (
+        !appUpdates.getState().required &&
         draftMatchesSaveSnapshot(draftNameRef.current, submittedDraftName)
       ) {
         revertDraft();

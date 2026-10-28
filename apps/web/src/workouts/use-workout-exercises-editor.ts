@@ -4,6 +4,7 @@ import {
 } from "@home-hub/shared/workouts";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useBlockAppUpdate } from "../updates/activity";
 // Keep focused drafts intact, serialize saves, and drain edits made during a save.
 export function useWorkoutExercisesEditor({
   current,
@@ -22,6 +23,9 @@ export function useWorkoutExercisesEditor({
   const [isSaving, setIsSaving] = useState(false);
   const draft = useRef<readonly WorkoutExercise[]>(current);
   const confirmed = useRef(JSON.stringify(current));
+  useBlockAppUpdate(
+    isSaving || JSON.stringify(exercises) !== confirmed.current,
+  );
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pending = useRef<Promise<boolean> | undefined>(undefined);
   const mounted = useRef(true);

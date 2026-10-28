@@ -70,6 +70,17 @@ new application shell without retaining stale entry points. The generated
 service worker precaches the complete static build and does not runtime-cache
 API, Zero, or recipe-image traffic.
 
+The client checks for a new service worker on launch/resume, reconnect and every
+five visible, online minutes. It applies a downloaded update after ten idle
+seconds, deferring for editor drafts, active workout logs, uploads, dialogs and
+explicit-submit forms. Each tab guards its own reload; an explicit Update action
+asks before discarding unsaved work. Zero's update-needed signal and obsolete
+lazy chunks show an update-required notice and disable normal Zero writes,
+without repeatedly reloading the same cached build. No new version API or
+database migration is involved. Existing older installs may need one close/reopen
+to pick up this handler. Breaking API/schema migrations still require the
+coordinated deployment procedure; a client reload cannot repair a server replica.
+
 ## Shared ingress migration and operations
 
 The initial networking handover must follow `vps-infra/docs/MIGRATION.md`:

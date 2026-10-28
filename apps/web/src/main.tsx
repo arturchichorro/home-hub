@@ -9,6 +9,8 @@ import {
 } from "./auth/session-bootstrap.ts";
 import { restoreStartupSession } from "./auth/startup-session.ts";
 import { Root } from "./root.tsx";
+import { AppUpdates } from "./updates/app-updates";
+import { startAppUpdates } from "./updates/register";
 
 const rootElement = document.getElementById("root");
 
@@ -23,6 +25,7 @@ function renderApplication(
 ) {
   root.render(
     <StrictMode>
+      <AppUpdates />
       <Root initialSession={initialSession} />
     </StrictMode>,
   );
@@ -31,6 +34,7 @@ function renderApplication(
 function renderUnavailable(title: string, description: string) {
   root.render(
     <StrictMode>
+      <AppUpdates />
       <ApplicationState
         title={title}
         description={description}
@@ -83,4 +87,5 @@ async function start() {
   );
 }
 
+startAppUpdates();
 void start();

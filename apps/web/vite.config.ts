@@ -14,7 +14,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      injectRegister: "script-defer",
+      injectRegister: null,
       includeManifestIcons: false,
       registerType: "prompt",
       manifest: {
