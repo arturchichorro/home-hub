@@ -4,6 +4,8 @@ import { schema } from "@home-hub/shared/zero/schema";
 import type { Zero } from "@rocicorp/zero";
 import { ZeroProvider } from "@rocicorp/zero/react";
 import { type ReactNode, useMemo } from "react";
+import { requireAppUpdate } from "../updates/state";
+import { ZeroUpdateGuard } from "../updates/zero-update-guard";
 import { ZeroAuthRefresh } from "./zero-auth-refresh";
 
 const cacheURL = import.meta.env.VITE_ZERO_CACHE_URL;
@@ -40,11 +42,13 @@ export function HomeHubZeroProvider({
       context={context}
       mutators={mutators}
       init={onReady}
+      onUpdateNeeded={requireAppUpdate}
     >
       <ZeroAuthRefresh
         onAccessTokenRefreshed={onAccessTokenRefreshed}
         onSessionExpired={onSessionExpired}
       />
+      <ZeroUpdateGuard />
       {children}
     </ZeroProvider>
   );

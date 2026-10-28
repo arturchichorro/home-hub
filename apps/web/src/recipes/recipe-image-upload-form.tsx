@@ -10,6 +10,7 @@ import {
   Plus,
 } from "@home-hub/ui-web";
 import { type ChangeEvent, useRef, useState } from "react";
+import { blockAppUpdate } from "../updates/activity";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
   confirmRecipeImageUpload,
@@ -57,6 +58,7 @@ export function RecipeImageUploadForm({
     event.target.value = "";
     if (!file || busy || !mutationEnabled) return;
 
+    const allowUpdate = blockAppUpdate();
     setBusy(true);
     setError(undefined);
 
@@ -117,6 +119,7 @@ export function RecipeImageUploadForm({
     } catch {
       setError("Unable to upload this picture. Try again.");
     } finally {
+      allowUpdate();
       setBusy(false);
     }
   }

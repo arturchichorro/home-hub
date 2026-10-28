@@ -17,6 +17,7 @@ import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { ImageViewer } from "../media/image-viewer";
 import { type MediaSession, useMediaSession } from "../media/session";
 import { readImageDimensions } from "../recipes/read-image-dimensions";
+import { blockAppUpdate } from "../updates/activity";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
   invalidateExerciseImageUrl,
@@ -200,6 +201,7 @@ function ExerciseMediaGallery({
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || busy || !writable) return;
+    const allowUpdate = blockAppUpdate();
     setBusy(true);
     setError(undefined);
     try {
@@ -255,6 +257,7 @@ function ExerciseMediaGallery({
     } catch {
       setError("Unable to upload this picture. Try again.");
     } finally {
+      allowUpdate();
       setBusy(false);
     }
   }

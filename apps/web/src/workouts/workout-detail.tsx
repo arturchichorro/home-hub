@@ -17,6 +17,7 @@ import {
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useRef, useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
+import { useBlockAppUpdate } from "../updates/activity";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { WorkoutExercises, WorkoutText } from "./workout-fields";
 import { WorkoutHistoryEntry } from "./workout-history-entry";
@@ -53,6 +54,7 @@ export function WorkoutDetail({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
+  useBlockAppUpdate(Boolean(form) || busy);
   const [done, setDone] = useState(false);
   const loaded = result.type === "complete" && logResult.type === "complete";
   const disabled = !enabled || !loaded;
