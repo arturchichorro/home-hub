@@ -238,6 +238,14 @@ const workoutsByHousehold = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
     authorizedWorkouts(args.householdId, ctx.userId)
+      .related("logs", (logs) =>
+        logs
+          .where("householdId", args.householdId)
+          .where("userId", ctx.userId)
+          .orderBy("completedOn", "desc")
+          .orderBy("id", "desc")
+          .limit(1),
+      )
       .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
 );
@@ -260,7 +268,7 @@ const exerciseCatalog = defineHomeHubQuery(
   ({ args, ctx }) =>
     zql.exercises
       .where("householdId", args.householdId)
-      .where("archived", false)
+      .where("deletedAt", "IS", null)
       .whereExists("household", (h) =>
         h
           .where("deletedAt", "IS", null)
@@ -269,7 +277,7 @@ const exerciseCatalog = defineHomeHubQuery(
             s.where("moduleKey", "workouts").where("enabled", true),
           ),
       )
-      .orderBy("normalizedName", "asc")
+      .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
 );
 const exerciseMediaQuery = defineHomeHubQuery(
@@ -280,7 +288,7 @@ const exerciseMediaQuery = defineHomeHubQuery(
       .where("exerciseId", args.exerciseId)
       .where("deletedAt", "IS", null)
       .whereExists("exercise", (exercise) =>
-        exercise.where("archived", false).whereExists("household", (h) =>
+        exercise.where("deletedAt", "IS", null).whereExists("household", (h) =>
           h
             .where("deletedAt", "IS", null)
             .whereExists("members", (m) => m.where("userId", ctx.userId))

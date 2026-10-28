@@ -667,7 +667,8 @@ export const exercises = pgTable(
     unit: text("unit").notNull(),
     load: text("load").notNull(),
     unilateral: boolean("unilateral").notNull(),
-    archived: boolean("archived").notNull().default(false),
+    sortKey: integer("sort_key").notNull().default(0),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -677,7 +678,10 @@ export const exercises = pgTable(
   },
   (t) => [
     unique("exercises_household_id_id").on(t.householdId, t.id),
-    uniqueIndex("exercises_household_name").on(t.householdId, t.normalizedName),
+    uniqueIndex("exercises_household_name")
+      .on(t.householdId, t.normalizedName)
+      .where(sql`${t.deletedAt} IS NULL`),
+    index("exercises_household_sort_key_id").on(t.householdId, t.sortKey, t.id),
     check(
       "exercises_name_length",
       sql`length(trim(${t.name})) between 1 and 150`,
