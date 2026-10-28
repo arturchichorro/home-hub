@@ -1,6 +1,6 @@
 import { defineQueriesWithType, defineQueryWithType } from "@rocicorp/zero";
 import * as z from "zod";
-import { habitsQuerySchema } from "../habits";
+import { habitsQuerySchema, shiftCalendarDate } from "../habits";
 import { listDetailArgsSchema } from "../lists";
 import type { ZeroAuthContext } from "./context";
 import { type Schema, zql } from "./schema.gen";
@@ -225,6 +225,71 @@ const habitsByHousehold = defineHomeHubQuery(
       .orderBy("id", "asc"),
 );
 
+// New contracts leave byHousehold available to already-open clients.
+const personHabitArgs = z
+  .object({
+    householdId: z.uuid(),
+    personId: z.uuid(),
+    startOn: z.iso.date(),
+    endOn: z.iso.date(),
+    archived: z.boolean(),
+  })
+  .strict()
+  .refine(
+    (args) =>
+      args.endOn >= args.startOn &&
+      args.endOn <= shiftCalendarDate(args.startOn, 30),
+    "Invalid calendar period",
+  );
+const authorizedPersonHabits = (
+  householdId: string,
+  userId: string,
+  personId: string,
+) =>
+  zql.habits.where("householdId", householdId).whereExists("household", (h) =>
+    h
+      .where("deletedAt", "IS", null)
+      .whereExists("members", (m) => m.where("userId", userId))
+      .whereExists("members", (m) => m.where("userId", personId))
+      .whereExists("moduleSettings", (s) =>
+        s.where("moduleKey", "habits").where("enabled", true),
+      ),
+  );
+const recentPersonHabits = defineHomeHubQuery(
+  personHabitArgs.refine(
+    (args) => args.endOn <= shiftCalendarDate(args.startOn, 6),
+    "Invalid recent window",
+  ),
+  ({ args, ctx }) =>
+    authorizedPersonHabits(args.householdId, ctx.userId, args.personId)
+      .where("status", args.archived ? "archived" : "active")
+      .related("entries", (e) =>
+        e
+          .where("userId", args.personId)
+          .where("entryOn", ">=", args.startOn)
+          .where("entryOn", "<=", args.endOn)
+          .whereExists("membership")
+          .orderBy("entryOn", "asc"),
+      )
+      .orderBy("sortKey", "desc")
+      .orderBy("id", "asc"),
+);
+const personHabitHistory = defineHomeHubQuery(
+  personHabitArgs.safeExtend({ habitId: z.uuid() }),
+  ({ args, ctx }) =>
+    authorizedPersonHabits(args.householdId, ctx.userId, args.personId)
+      .where("id", args.habitId)
+      .where("status", args.archived ? "archived" : "active")
+      .related("entries", (e) =>
+        e
+          .where("userId", args.personId)
+          .where("entryOn", ">=", args.startOn)
+          .where("entryOn", "<=", args.endOn)
+          .whereExists("membership")
+          .orderBy("entryOn", "asc"),
+      ),
+);
+
 const authorizedWorkouts = (householdId: string, userId: string) =>
   zql.workouts.where("householdId", householdId).whereExists("household", (h) =>
     h
@@ -333,7 +398,11 @@ export const queries = defineHomeHubQueries({
     detail: workoutDetail,
     logs: workoutLogs,
   },
-  habits: { byHousehold: habitsByHousehold },
+  habits: {
+    byHousehold: habitsByHousehold,
+    recentForPerson: recentPersonHabits,
+    historyForPerson: personHabitHistory,
+  },
   householdMemberships: {
     byHousehold: householdMembersByHousehold,
     mine: myHouseholdMemberships,

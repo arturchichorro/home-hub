@@ -6,6 +6,66 @@ import { queries } from "./queries";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+describe("person-scoped habits", () => {
+  const personId = "0b994d6f-691a-4e3b-beca-978db54fbe69";
+  it.each([false, true])(
+    "keeps recent data bounded and checks viewer, selected member and module (archived=%s)",
+    (archived) => {
+      const ast = getAst(
+        queries.habits.recentForPerson.fn({
+          args: {
+            householdId,
+            personId,
+            startOn: "2026-10-10",
+            endOn: "2026-10-16",
+            archived,
+          },
+          ctx: { userId },
+        }),
+      );
+      const scope = JSON.stringify(ast.where);
+      for (const required of [
+        householdId,
+        userId,
+        personId,
+        "householdMembers",
+        "householdModuleSettings",
+        "deletedAt",
+        archived ? "archived" : "active",
+      ])
+        expect(scope).toContain(required);
+      const entries = ast.related?.find(
+        (r) => r.subquery.table === "habitEntries",
+      )?.subquery;
+      expect(JSON.stringify(entries?.where)).toContain(personId);
+      expect(JSON.stringify(entries?.where)).toContain("2026-10-10");
+      expect(JSON.stringify(entries?.where)).toContain("2026-10-16");
+      expect(JSON.stringify(entries?.where)).toContain("householdMembers");
+      expect(entries?.related).toBeUndefined();
+    },
+  );
+  it("loads one selected habit's history, never every habit's month", () => {
+    const habitId = "cf8e0455-182d-4c35-aab0-7c45d9009852";
+    const ast = getAst(
+      queries.habits.historyForPerson.fn({
+        args: {
+          householdId,
+          personId,
+          habitId,
+          startOn: "2026-10-01",
+          endOn: "2026-10-31",
+          archived: false,
+        },
+        ctx: { userId },
+      }),
+    );
+    expect(JSON.stringify(ast.where)).toContain(habitId);
+    expect(JSON.stringify(ast.where)).toContain(userId);
+    expect(JSON.stringify(ast.where)).toContain(personId);
+    expect(JSON.stringify(ast.related)).toContain("2026-10-31");
+  });
+});
+
 describe("workout library last completion", () => {
   it("fetches only the current author's newest local day, bounded to one log per workout", () => {
     const ast = getAst(

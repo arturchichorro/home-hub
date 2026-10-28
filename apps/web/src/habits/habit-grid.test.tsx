@@ -61,9 +61,10 @@ function drag(canceled = false, from = 0, to = 2) {
 beforeEach(() => vi.clearAllMocks());
 
 describe("habit reordering", () => {
-  it("fits more columns and lets calendars fill the available track width", () => {
+  it("uses compact full-width rows rather than a calendar-card grid", () => {
     const html = render();
-    expect(html).toContain("repeat(auto-fill,minmax(min(100%,20rem),1fr))");
+    expect(html).toContain("border-b border-border");
+    expect(html).not.toContain("repeat(auto-fill");
     expect(html).not.toContain("24rem");
     expect(html).not.toContain("max-w-sm");
   });

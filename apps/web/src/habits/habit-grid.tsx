@@ -1,10 +1,12 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { GripVertical, IconButton } from "@home-hub/ui-web";
-import type { ReactNode } from "react";
-import type { HabitCalendarProps } from "./habit-calendar-shared";
+import { type ReactNode, useState } from "react";
+import { useBlockAppUpdate } from "../updates/activity";
+import { workoutOrderingSensors } from "../workouts/workout-list";
+import type { HabitRow } from "./habit-days";
 
-type Habit = HabitCalendarProps["habit"];
+type Habit = HabitRow;
 export function reorderedHabitIds(
   habits: readonly { id: string }[],
   from: number,
@@ -49,7 +51,7 @@ function SortableHabit({
     <section
       ref={sortable.ref}
       aria-label={habit.name}
-      className={`grid w-full min-w-0 gap-3 ${sortable.isDragging ? "opacity-60" : ""}`}
+      className={`grid w-full min-w-0 gap-0 border-b border-border py-1 ${sortable.isDragging ? "opacity-60" : ""}`}
     >
       {children(
         showHandle ? (
@@ -57,7 +59,7 @@ function SortableHabit({
             ref={sortable.handleRef}
             aria-label={`Reorder ${habit.name}`}
             disabled={disabled}
-            className="size-7! touch-none cursor-grab active:cursor-grabbing"
+            className="size-11! shrink-0 touch-none cursor-grab active:cursor-grabbing"
           >
             <GripVertical aria-hidden="true" className="size-4" />
           </IconButton>
@@ -82,9 +84,14 @@ export function HabitGrid({
   onMove: (habitId: string, orderedHabitIds: string[]) => void;
   children: (habit: Habit, handle: ReactNode) => ReactNode;
 }) {
+  const [dragging, setDragging] = useState(false);
+  useBlockAppUpdate(dragging);
   return (
     <DragDropProvider
+      sensors={workoutOrderingSensors}
+      onDragStart={() => setDragging(true)}
       onDragEnd={(event) => {
+        setDragging(false);
         const source = event.operation.source;
         if (disabled || event.canceled || !isSortable(source)) return;
         const move = reorderedHabitIds(
@@ -95,10 +102,7 @@ export function HabitGrid({
         if (move) onMove(move.habitId, move.orderedHabitIds);
       }}
     >
-      <div
-        className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] items-start gap-6"
-        aria-busy={loading}
-      >
+      <div className="grid min-w-0 items-start" aria-busy={loading}>
         {habits.map((habit, index) => (
           <SortableHabit
             key={habit.id}

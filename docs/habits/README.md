@@ -4,62 +4,51 @@ Habits (`habits`) is an opt-in household module. Any current member may create,
 rename, annotate or archive shared habits. Each person records their own daily completions and notes;
 every current member can see progress. No joining, targets or streaks are required.
 
-## Interface and calendar
+## Interface
 
-Keep visible copy minimal. Do not add explanatory prompts or duplicate connection
-status unless explicitly requested. Keep labels, concise states and actual errors. Add/archive navigation uses the
-same compact ghost actions in the application header as Lists and Recipes.
+Habits is a phone-first, today-first list. It defaults to **Me**; a person selector
+shows another current member's activity read-only. Definitions and ordering remain
+shared. No targets, schedules, amounts, streaks or scores are introduced: each
+person decides when a daily completion makes sense.
 
-- Quick add asks only for a name (Unicode NFKC, folded whitespace, 1–100 characters).
-  Active names are seamless inline inputs using the existing shared editor:
-  debounced saves, blur/Enter canonicalization, Escape reversion and anchored
-  error feedback on rejection. Archived names stay read-only text.
-- Habit-level notes are shared. Each daily-input tile also has a personal note for
-  that habit/person/day, household-readable but author-editable. Both reuse the
-  ingredient StickyNote affordance and seamless debounced textarea, with no new
-  dialogs or explanatory copy. Notes are optional (NFKC, trimmed, up to 500 characters).
-  Daily notes do not require completion and survive unchecking; archived notes are read-only.
-- Above month navigation, a horizontally scrolling daily-input strip shows each
-  active habit name above one today square, in the shared habit order. Clicking
-  toggles your completion using the same pending state and neutral fill as the
-  calendar. The strip stays on today even while browsing older months and is
-  hidden in the archive view. No heading or explanatory copy is displayed.
-- Show the current month, navigate months or return to today. Week view has been
-  removed. Month navigation stops at the current device-local month, including
-  after clock/timezone changes. Each day box is shared by all household members, with colored vector
-  completion marks. There is no summary text below each calendar.
-- The shared seven-column Monday–Sunday calendar
-  per habit, arranged in a responsive grid with flexible columns (20rem minimum
-  where space permits). Calendars fill their column width while retaining compact
-  3.5rem day heights, centered top-line dates and blank padding
-  outside the selected month. Each day's cell
-  contains a crisp vector X for each completing member in a fixed-height,
-  horizontally scrollable line without a visible scrollbar, using a muted palette.
-  Tightly spaced marks let the next X peek in. A subtle fade marks only the edges
-  with more content beyond them; it updates on scrolling/resizing. No count badge.
-  Colors are assigned
-  consistently across habits and periods (palette collisions are resolved per roster).
-  Hover or focus a day with completions or notes to see names and notes (200 ms
-  hover delay); truly empty days have no tooltip. Note-only entries never show an X
-  or completion fill. Selecting a day toggles only your completion. Read-only days
-  remain focusable so their details are available to keyboard users.
-- Drag a habit using its dedicated grip to reorder it; keyboard dragging is also
-  supported. The order is shared across household members and persists across
-  month navigation. Archived habits retain their order but cannot be reordered.
-  New habits appear first. Reordering is unavailable offline or while another reorder is pending. Saving a
-  day never disables or dims the reorder handles.
-- Today uses bold foreground text, without a colored circle. Days completed by
-  the current user also have a subtle neutral fill, without a border or change in cell size.
-- A square sets or clears your completion. Any past date can be checked or corrected,
-  including dates before the habit was created. Future dates and archived habits are not editable.
-- Use the current device timezone with no setup or stored timezone. Completion
-  dates are stable calendar labels, not timestamps. Travel never moves existing
-  Xs; members may disagree about today near midnight. Refresh today on focus
-  and periodically while the screen remains open.
-- Archive stops tracking for everyone immediately and retains read-only history
-  in the archive view. No restore or permanent deletion in v1.
-- Follow the existing connected-write/read-only-offline policy. Preserve drafts
-  and show server rejection rather than silently discarding errors.
+- Each compact row contains a seamless name, today's neutral filled/unfilled
+  toggle, a daily-note action, history disclosure and six previous dates.
+  Completions never move rows. Narrow screens use a second line for recent dates
+  rather than shrinking touch targets or forcing horizontal page scrolling.
+- Today's completion is one tap. Its optional note opens inline and autosaves.
+  Note-bearing dates have a subtle marker, including note-only dates.
+- History starts collapsed. Expand one habit at a time to mount one monthly
+  calendar, with previous/next/current-month navigation. No future months.
+- Hover/focus previews a historical note. Selecting a historical date inspects
+  it first, without toggling completion. The selected day's details offer explicit
+  completion and note editing for the author; other members' records are read-only.
+  Touch does not require hover. All actual past dates, even before creation, remain
+  editable; future dates and archived records are read-only.
+- Daily notes survive unchecking. Rejected/pending drafts remain mounted and block
+  person, history/date/month and archive-view changes until saved or explicitly
+  reverted with Escape. Existing PWA update guards protect these drafts too.
+  Today refreshes on focus and periodically, but does not change editor identity
+  while a draft is pending.
+- Keep name-only quick add, seamless debounced naming, optional shared habit notes,
+  and confirmation before archiving. Shared notes and archive live in the expanded
+  habit's secondary actions. Archive stops tracking for everyone and retains
+  read-only history; no restore or permanent-delete UI.
+- Ordering is shared and supports mouse drag, touch hold and Space/arrow keys;
+  Escape cancels. Daily saves do not disable ordering. Archived ordering is fixed.
+- Use stable calendar-date labels and the current device timezone, not timestamps
+  that shift recorded days during travel. Authoritative server validation still
+  rejects future writes.
+- Offline cached data stays inspectable, with writes disabled and no duplicate
+  connection copy. Keep loading, authorization and rejected-save states explicit.
+
+Only the selected person's seven-day window is queried for the list. An expanded
+habit additionally loads its own selected month. No calendar is mounted per row,
+no day subscribes independently, and there are no per-cell ResizeObservers or
+member-overflow marks. Date formatters are reused.
+
+The new named queries are `habits.recentForPerson` and
+`habits.historyForPerson`. The old `habits.byHousehold` contract remains available
+for already-open clients. This redesign requires no database migration.
 
 ## Data and authorization
 
@@ -78,11 +67,12 @@ through Zero. The entry's composite household/habit foreign key prevents
 cross-household references. The user reference remains valid after leaving a
 household, so records are retained without preventing membership removal.
 
-`habits.byHousehold` checks current household membership, a non-deleted household,
-and enabled Habits settings. It separates active/archived habits and loads only
-entries in the requested month, restricted to current members. The daily strip
-queries the current month independently of the browsed calendar. Profile
-names come from the existing safe member query.
+All habit queries require current viewer membership, a non-deleted household and
+enabled Habits settings. Person-scoped queries also require the selected person
+to be a current member, filter entries to that person, and retain the entry
+membership check. Recent queries allow at most seven dates; history queries allow
+at most 31 dates and constrain the root to one habit. Active/archive status is
+explicit. Profile names come from the existing safe member query.
 
 Custom mutators are `habits.create`, `rename`, `updateNote`, `archive`, `reorder`,
 `setCompleted` and `updateEntryNote`.

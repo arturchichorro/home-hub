@@ -5,23 +5,29 @@ import { useZero } from "@rocicorp/zero/react";
 import { useRef } from "react";
 import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import { useHabitDraftStatus } from "./use-habit-draft-status";
 
 export function HabitNameInput({
   currentName,
   householdId,
   habitId,
   disabled = false,
+  compact = false,
+  onDirtyChange,
 }: {
   currentName: string;
   householdId: string;
   habitId: string;
   disabled?: boolean;
+  compact?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled() && !disabled;
   const inputRef = useRef<HTMLInputElement>(null);
   const editor = useDebouncedTextEditor({
     currentValue: currentName,
+    preserveOnFailure: true,
     emptyError: "The habit name cannot be empty.",
     failureError: "The habit name could not be saved.",
     mutationEnabled,
@@ -45,6 +51,7 @@ export function HabitNameInput({
       }
     },
   });
+  useHabitDraftStatus(editor.hasChanges || editor.isSaving, onDirtyChange);
   return (
     <>
       <Input
@@ -54,7 +61,11 @@ export function HabitNameInput({
         aria-busy={editor.isSaving || undefined}
         aria-invalid={editor.error ? true : undefined}
         aria-errormessage={editor.error ? editor.errorId : undefined}
-        className="field-sizing-content min-w-0 max-w-1/2 flex-initial! text-lg font-medium text-primary"
+        className={
+          compact
+            ? "min-w-0 w-full flex-1! text-sm font-medium"
+            : "field-sizing-content min-w-0 max-w-1/2 flex-initial! text-lg font-medium text-primary"
+        }
         disabled={!mutationEnabled}
         maxLength={100}
         value={editor.value}
