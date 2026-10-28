@@ -17,6 +17,8 @@ import {
   draftMatchesSaveSnapshot,
   shouldCanonicalizeVisibleDraft,
 } from "../seamless-text-editing";
+import { useBlockAppUpdate } from "../updates/activity";
+import { appUpdates } from "../updates/state";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 const autosaveDelayMs = 600;
@@ -74,6 +76,11 @@ export function useRecipeDetailsEditor({
   const [errorField, setErrorField] = useState<keyof RecipeDraft>("title");
   const [isSaving, setIsSaving] = useState(false);
   const errorId = useId();
+  useBlockAppUpdate(
+    isSaving ||
+      draft.title !== confirmedDraftRef.current.title ||
+      draft.description !== confirmedDraftRef.current.description,
+  );
 
   const clearScheduledSave = useCallback(() => {
     if (timeoutRef.current !== undefined) {
@@ -94,6 +101,7 @@ export function useRecipeDetailsEditor({
   const saveDraft = useCallback(
     async (validateTitle: boolean, canonicalizeVisibleDraft: boolean) => {
       clearScheduledSave();
+      if (appUpdates.getState().required) return;
 
       if (saveInFlightRef.current) {
         queuedSaveRef.current = true;
@@ -164,6 +172,7 @@ export function useRecipeDetailsEditor({
           replaceDraft(submittedDraft);
         }
       } else if (
+        !appUpdates.getState().required &&
         draftMatchesSaveSnapshot(
           draftRef.current,
           rawSubmittedDraft,

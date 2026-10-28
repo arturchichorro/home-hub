@@ -10,6 +10,8 @@ import {
   draftMatchesSaveSnapshot,
   shouldCanonicalizeVisibleDraft,
 } from "../seamless-text-editing";
+import { useBlockAppUpdate } from "../updates/activity";
+import { appUpdates } from "../updates/state";
 
 const autosaveDelayMs = 600;
 
@@ -52,6 +54,7 @@ export function useDebouncedTextEditor({
   const [error, setError] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
   const errorId = useId();
+  useBlockAppUpdate(isSaving || draftValue !== confirmedValueRef.current);
 
   normalizeRef.current = normalize;
   saveMutationRef.current = save;
@@ -75,6 +78,7 @@ export function useDebouncedTextEditor({
   const saveDraft = useCallback(
     async (validateRequired: boolean, canonicalizeVisibleDraft: boolean) => {
       clearScheduledSave();
+      if (appUpdates.getState().required) return;
 
       if (saveInFlightRef.current) {
         queuedSaveRef.current = true;
@@ -129,6 +133,7 @@ export function useDebouncedTextEditor({
           replaceDraft(submittedValue);
         }
       } else if (
+        !appUpdates.getState().required &&
         draftMatchesSaveSnapshot(draftValueRef.current, submittedDraft)
       ) {
         revertDraft();

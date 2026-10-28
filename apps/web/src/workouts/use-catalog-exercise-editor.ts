@@ -4,6 +4,7 @@ import {
 } from "@home-hub/shared/workouts";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useBlockAppUpdate } from "../updates/activity";
 export type CatalogSaveResult =
   | { exercise: CatalogExercise }
   | { error: string };
@@ -34,6 +35,12 @@ export function useCatalogExerciseEditor({
   const mounted = useRef(true),
     canonicalize = useRef(false);
   const options = useRef({ enabled, save, onSaved });
+  useBlockAppUpdate(
+    isSaving ||
+      fields.some(
+        (field) => value[field] !== (confirmed.current ?? initial)[field],
+      ),
+  );
   options.current = { enabled, save, onSaved };
   const publish = useCallback((next: CatalogExercise) => {
     draft.current = next;
