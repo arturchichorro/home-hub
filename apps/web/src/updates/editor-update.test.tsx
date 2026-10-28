@@ -7,6 +7,34 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.useRealTimers();
 });
+it.each([true, false])(
+  "preserveOnFailure=%s controls retrying rejected drafts without changing legacy editors",
+  async (preserveOnFailure) => {
+    vi.useFakeTimers();
+    const save = vi.fn(async (_value: string) => false);
+    let editor: ReturnType<typeof useDebouncedTextEditor> | undefined;
+    function Capture() {
+      editor = useDebouncedTextEditor({
+        currentValue: "Old",
+        failureError: "Failed",
+        mutationEnabled: true,
+        normalize: (v) => v.trim(),
+        save,
+        preserveOnFailure,
+      });
+      return null;
+    }
+    renderToStaticMarkup(<Capture />);
+    if (!editor) throw Error("editor");
+    editor.changeValue("Keep draft");
+    await vi.advanceTimersByTimeAsync(600);
+    editor.handleBlur();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(preserveOnFailure ? 2 : 1);
+    expect(save).toHaveBeenLastCalledWith("Keep draft");
+  },
+);
+
 it("does not revert an unsaved text draft when a schema update rejects an in-flight save", async () => {
   vi.useFakeTimers();
   let required = false;

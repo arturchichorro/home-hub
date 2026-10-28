@@ -23,6 +23,7 @@ type UseDebouncedTextEditorOptions = {
   normalize: (value: string) => string;
   required?: boolean;
   save: (value: string) => Promise<boolean>;
+  preserveOnFailure?: boolean;
 };
 
 export function useDebouncedTextEditor({
@@ -32,6 +33,7 @@ export function useDebouncedTextEditor({
   mutationEnabled,
   normalize,
   required = false,
+  preserveOnFailure = false,
   save,
 }: UseDebouncedTextEditorOptions) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -88,7 +90,7 @@ export function useDebouncedTextEditor({
       }
 
       if (!mutationEnabled) {
-        revertDraft();
+        if (!preserveOnFailure) revertDraft();
         setError(failureError);
         return;
       }
@@ -136,7 +138,7 @@ export function useDebouncedTextEditor({
         !appUpdates.getState().required &&
         draftMatchesSaveSnapshot(draftValueRef.current, submittedDraft)
       ) {
-        revertDraft();
+        if (!preserveOnFailure) revertDraft();
         if (mountedRef.current) setError(failureError);
       }
 
@@ -159,6 +161,7 @@ export function useDebouncedTextEditor({
       emptyError,
       failureError,
       mutationEnabled,
+      preserveOnFailure,
       replaceDraft,
       required,
       revertDraft,
@@ -217,6 +220,7 @@ export function useDebouncedTextEditor({
     handleBlur: () => void saveDraft(true, true),
     handleKeyDown,
     isSaving,
+    hasChanges: draftValue !== confirmedValueRef.current,
     dismissError: () => setError(undefined),
     value: draftValue,
   };

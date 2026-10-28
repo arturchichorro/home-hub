@@ -1,80 +1,128 @@
-import {
-  adjacentHabitMonth,
-  calendarDate,
-  clampHabitMonth,
-  habitMonth,
-} from "@home-hub/shared/habits";
+import { calendarDate, shiftCalendarDate } from "@home-hub/shared/habits";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import {
   Archive,
-  Calendar,
-  ChevronLeft,
+  ChevronDown,
   ChevronRight,
   ConfirmationPopover,
   IconButton,
   InlineAlert,
+  StickyNote,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
+import { useBlockAppUpdate } from "../updates/activity";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { HabitActions } from "./habit-actions";
-import { HabitDailyInput } from "./habit-daily-input";
+import { HabitDayPreview, type HabitRow, HabitTodayToggle } from "./habit-days";
+import { HabitEntryNote } from "./habit-entry-note";
 import { HabitGrid } from "./habit-grid";
-import { HabitMonthCalendar } from "./habit-month-calendar";
+import { HabitHistory } from "./habit-history";
 import { HabitNameDialog } from "./habit-name-dialog";
 import { HabitNameInput } from "./habit-name-input";
 import { HabitNoteInput } from "./habit-note-input";
 
+const localToday = () =>
+  calendarDate(Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone);
+type Expanded = { habitId: string; anchor: string; date?: string | undefined };
+
 export function HabitsPage({ householdId }: { householdId: string }) {
+  const { userID } = useZero();
+  return userID ? (
+    <HabitsContent
+      key={householdId}
+      householdId={householdId}
+      currentUserId={userID}
+    />
+  ) : null;
+}
+function HabitsContent({
+  householdId,
+  currentUserId,
+}: {
+  householdId: string;
+  currentUserId: string;
+}) {
   const zero = useZero();
   const enabled = useZeroMutationEnabled();
-  const [now, setNow] = useState(Date.now);
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const today = calendarDate(now, timeZone);
-  const [anchor, setAnchor] = useState<string>();
+  const [today, setToday] = useState(localToday);
   const [archived, setArchived] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [person, setPerson] = useState<string>();
+  const [expanded, setExpanded] = useState<Expanded>();
+  const [error, setError] = useState<string>();
+  const [dirty, setDirty] = useState(new Set<string>());
+  const locked = dirty.size > 0;
+  const dirtyChanged = useCallback(
+    (key: string, value: boolean) =>
+      setDirty((previous) => {
+        if (previous.has(key) === value) return previous;
+        const next = new Set(previous);
+        if (value) next.add(key);
+        else next.delete(key);
+        return next;
+      }),
+    [],
+  );
+  const pendingRef = useRef(new Set<string>());
+  const [pending, setPending] = useState(new Set<string>());
+  useBlockAppUpdate(pending.size > 0);
+  const [members, memberResult] = useQuery(
+    queries.householdMemberships.byHousehold({ householdId }),
+  );
+  const personId =
+    person && members.some((m) => m.userId === person) ? person : currentUserId;
+  const own = personId === zero.userID;
+  const [habits, result] = useQuery(
+    queries.habits.recentForPerson({
+      householdId,
+      personId,
+      startOn: shiftCalendarDate(today, -6),
+      endOn: today,
+      archived,
+    }),
+  );
+  const loading =
+    result.type !== "complete" || memberResult.type !== "complete";
   const headerActions = useMemo(
     () => (
       <HabitActions
         archived={archived}
-        disabled={!enabled}
-        onToggleArchive={() => setArchived((value) => !value)}
+        navigationDisabled={locked}
+        disabled={!enabled || locked}
+        onToggleArchive={() => {
+          if (!locked) {
+            setArchived((v) => !v);
+            setExpanded(undefined);
+          }
+        }}
         onCreate={() => setCreating(true)}
       />
     ),
-    [archived, enabled],
+    [archived, enabled, locked],
   );
   useAppHeaderRightComponent(headerActions);
-  const [error, setError] = useState<string>();
-  const pendingRef = useRef(new Set<string>());
-  const [pending, setPending] = useState(new Set<string>());
-  const period = habitMonth(clampHabitMonth(anchor ?? today, today));
-  const canGoNext = period.startOn < `${today.slice(0, 7)}-01`;
-  const [habits, result] = useQuery(
-    queries.habits.byHousehold({
-      householdId,
-      startOn: period.startOn,
-      endOn: period.endOn,
-      archived,
-    }),
-  );
-  const [members, memberResult] = useQuery(
-    queries.householdMemberships.byHousehold({ householdId }),
-  );
-
   useEffect(() => {
-    const update = () => setNow(Date.now());
-    const interval = setInterval(update, 60_000);
+    const update = () => {
+      if (!locked) setToday(localToday());
+    };
+    update();
+    const timer = setInterval(update, 60_000);
     window.addEventListener("focus", update);
     return () => {
-      clearInterval(interval);
+      clearInterval(timer);
       window.removeEventListener("focus", update);
     };
-  }, []);
-
+  }, [locked]);
   async function change(
     key: string,
     request: Parameters<typeof zero.mutate>[0],
@@ -84,8 +132,8 @@ export function HabitsPage({ householdId }: { householdId: string }) {
     setPending(new Set(pendingRef.current));
     setError(undefined);
     try {
-      const mutation = zero.mutate(request);
-      const client = await mutation.client;
+      const mutation = zero.mutate(request),
+        client = await mutation.client;
       const outcome = client.type === "error" ? client : await mutation.server;
       if (outcome.type === "error") setError("Unable to save.");
     } catch {
@@ -95,74 +143,47 @@ export function HabitsPage({ householdId }: { householdId: string }) {
       setPending(new Set(pendingRef.current));
     }
   }
-
-  function setCompleted(habitId: string, date: string, completed: boolean) {
+  function completed(habitId: string, date: string, value: boolean) {
+    if (!own || archived || loading || date > today) return;
     void change(
       `${habitId}:${date}`,
       mutators.habits.setCompleted({
         householdId,
         habitId,
         entryOn: date,
-        completed,
-        timeZone,
+        completed: value,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         optimisticTimestamp: Date.now(),
       }),
     );
   }
-
-  const label = new Intl.DateTimeFormat(undefined, {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${period.startOn}T12:00:00Z`));
-  const loading =
-    result.type !== "complete" || memberResult.type !== "complete";
+  function inspect(habitId: string, date?: string) {
+    if (!locked) setExpanded({ habitId, anchor: date ?? today, date });
+  }
   return (
-    <div className="grid min-w-0 gap-6">
-      {archived ? (
-        <h1 className="text-sm font-medium text-muted">Archived habits</h1>
-      ) : null}
-      {!archived && result.type !== "error" && memberResult.type !== "error" ? (
-        <HabitDailyInput
-          householdId={householdId}
-          members={members}
-          currentUserId={zero.userID}
-          today={today}
-          enabled={enabled && memberResult.type === "complete"}
-          pending={pending}
-          onSetCompleted={(habitId, completed) =>
-            setCompleted(habitId, today, completed)
-          }
-        />
-      ) : null}
-      <div className="flex flex-wrap items-center gap-2">
-        <IconButton
-          aria-label="Previous month"
-          onClick={() => setAnchor(adjacentHabitMonth(period.startOn, -1))}
-        >
-          <ChevronLeft aria-hidden="true" className="size-4" />
-        </IconButton>
-        <span className="text-sm font-medium" aria-live="polite">
-          {label}
-        </span>
-        <IconButton
-          aria-label="Next month"
-          disabled={!canGoNext}
-          onClick={() => {
-            if (canGoNext)
-              setAnchor(
-                clampHabitMonth(adjacentHabitMonth(period.startOn, 1), today),
-              );
+    <div className="grid min-w-0 gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <select
+          aria-label="View activity for"
+          className="h-11 max-w-full rounded-md bg-canvas text-sm outline-offset-2"
+          value={personId}
+          disabled={locked || memberResult.type !== "complete"}
+          onChange={(e) => {
+            if (!locked) {
+              setPerson(e.target.value);
+              setExpanded(undefined);
+            }
           }}
         >
-          <ChevronRight aria-hidden="true" className="size-4" />
-        </IconButton>
-        <IconButton
-          aria-label="Current month"
-          onClick={() => setAnchor(undefined)}
-        >
-          <Calendar aria-hidden="true" className="size-4" />
-        </IconButton>
+          {members.map((m) => (
+            <option key={m.userId} value={m.userId}>
+              {m.userId === zero.userID ? "Me" : (m.user?.username ?? "Member")}
+            </option>
+          ))}
+        </select>
+        <span className="text-xs text-muted">
+          {archived ? "Archived habits" : "Today"}
+        </span>
       </div>
       {error ? (
         <InlineAlert role="alert" variant="danger">
@@ -176,7 +197,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
       ) : null}
       <HabitGrid
         habits={habits}
-        disabled={!enabled || archived || pending.has("habit-order")}
+        disabled={!enabled || loading || archived || pending.has("habit-order")}
         archived={archived}
         loading={loading}
         onMove={(habitId, orderedHabitIds) =>
@@ -192,72 +213,48 @@ export function HabitsPage({ householdId }: { householdId: string }) {
         }
       >
         {(habit, handle) => (
-          <>
-            <div className="flex items-center gap-2">
-              {handle}
-              {archived ? (
-                <h2 className="min-w-0 max-w-1/2 break-words text-lg font-medium text-primary">
-                  {habit.name}
-                </h2>
-              ) : (
-                <HabitNameInput
-                  currentName={habit.name}
-                  householdId={householdId}
-                  habitId={habit.id}
-                  disabled={pending.has(habit.id)}
-                />
-              )}
-              <HabitNoteInput
-                householdId={householdId}
-                habitId={habit.id}
-                habitName={habit.name}
-                currentNote={habit.note ?? null}
-                disabled={pending.has(habit.id)}
-                readOnly={archived}
-              />
-              {!archived ? (
-                <ConfirmationPopover
-                  message={`Archive “${habit.name}”?`}
-                  trigger={
-                    <IconButton
-                      aria-label={`Archive ${habit.name}`}
-                      className="ml-auto"
-                      disabled={!enabled || pending.has(habit.id)}
-                    >
-                      <Archive aria-hidden="true" className="size-4" />
-                    </IconButton>
-                  }
-                  onConfirm={() =>
-                    void change(
-                      habit.id,
-                      mutators.habits.archive({
-                        householdId,
-                        habitId: habit.id,
-                        optimisticTimestamp: Date.now(),
-                      }),
-                    )
-                  }
-                />
-              ) : null}
-            </div>
-            <HabitMonthCalendar
-              habit={habit}
-              members={members}
-              currentUserId={zero.userID}
-              dates={period.dates}
-              today={today}
-              label={label}
-              archived={archived}
-              enabled={enabled}
-              pending={pending}
-              onSetCompleted={(date, completed) =>
-                setCompleted(habit.id, date, completed)
-              }
-            />
-          </>
+          <HabitListRow
+            habit={habit}
+            handle={handle}
+            householdId={householdId}
+            personId={personId}
+            own={own}
+            archived={archived}
+            today={today}
+            enabled={enabled && !loading}
+            pending={pending}
+            locked={locked}
+            expanded={expanded?.habitId === habit.id ? expanded : undefined}
+            onInspect={(date) => inspect(habit.id, date)}
+            onDisclosure={() => {
+              if (!locked)
+                setExpanded((current) =>
+                  current?.habitId === habit.id
+                    ? undefined
+                    : { habitId: habit.id, anchor: today },
+                );
+            }}
+            onMonth={(anchor) => {
+              if (!locked) setExpanded({ habitId: habit.id, anchor });
+            }}
+            onCompleted={(date, value) => completed(habit.id, date, value)}
+            dirtyChanged={(key, value) =>
+              dirtyChanged(`${habit.id}:${key}`, value)
+            }
+            onArchive={() =>
+              change(
+                habit.id,
+                mutators.habits.archive({
+                  householdId,
+                  habitId: habit.id,
+                  optimisticTimestamp: Date.now(),
+                }),
+              )
+            }
+          />
         )}
       </HabitGrid>
-      {habits.length === 0 && result.type !== "error" ? (
+      {!habits.length && result.type !== "error" ? (
         <p className="text-muted">
           {loading
             ? "Loading habits…"
@@ -273,5 +270,191 @@ export function HabitsPage({ householdId }: { householdId: string }) {
         />
       ) : null}
     </div>
+  );
+}
+
+function HabitListRow({
+  habit,
+  handle,
+  householdId,
+  personId,
+  own,
+  archived,
+  today,
+  enabled,
+  pending,
+  locked,
+  expanded,
+  onInspect,
+  onDisclosure,
+  onMonth,
+  onCompleted,
+  dirtyChanged,
+  onArchive,
+}: {
+  habit: HabitRow;
+  handle: ReactNode;
+  householdId: string;
+  personId: string;
+  own: boolean;
+  archived: boolean;
+  today: string;
+  enabled: boolean;
+  pending: ReadonlySet<string>;
+  locked: boolean;
+  expanded?: Expanded | undefined;
+  onInspect: (date: string) => void;
+  onDisclosure: () => void;
+  onMonth: (date: string) => void;
+  onCompleted: (date: string, value: boolean) => void;
+  dirtyChanged: (key: string, value: boolean) => void;
+  onArchive: () => Promise<void>;
+}) {
+  const [noteOpen, setNoteOpen] = useState(false);
+  const entries = new Map(
+    habit.entries
+      .filter((e) => e.userId === personId)
+      .map((e) => [e.entryOn, e]),
+  );
+  const current = entries.get(today);
+  return (
+    <>
+      <div className="flex min-w-0 items-center">
+        {handle}
+        {archived ? (
+          <span className="min-w-0 flex-1 break-words text-sm font-medium">
+            {habit.name}
+          </span>
+        ) : (
+          <HabitNameInput
+            compact
+            currentName={habit.name}
+            householdId={householdId}
+            habitId={habit.id}
+            disabled={!enabled}
+            onDirtyChange={(v) => dirtyChanged("name", v)}
+          />
+        )}
+        {!archived ? (
+          <HabitTodayToggle
+            name={habit.name}
+            date={today}
+            completed={!!current?.completed}
+            disabled={!own || !enabled || pending.has(`${habit.id}:${today}`)}
+            onToggle={() => onCompleted(today, !current?.completed)}
+          />
+        ) : null}
+        <IconButton
+          className="size-11! shrink-0"
+          aria-label={`Show today's note for ${habit.name}`}
+          aria-expanded={noteOpen && expanded?.date !== today}
+          disabled={locked}
+          onClick={() => {
+            setNoteOpen((v) => expanded?.date === today || !v);
+            if (expanded?.date === today) onMonth(expanded.anchor);
+          }}
+        >
+          <StickyNote
+            className={`size-4 ${current?.note ? "text-foreground" : "text-muted"}`}
+            aria-hidden="true"
+          />
+        </IconButton>
+        <IconButton
+          className="size-11! shrink-0"
+          aria-label={`History for ${habit.name}`}
+          aria-expanded={!!expanded}
+          disabled={locked}
+          onClick={onDisclosure}
+        >
+          {expanded ? (
+            <ChevronDown className="size-4" aria-hidden="true" />
+          ) : (
+            <ChevronRight className="size-4" aria-hidden="true" />
+          )}
+        </IconButton>
+      </div>
+      <fieldset
+        className="flex min-w-0 justify-between sm:justify-start"
+        aria-label={`Recent days for ${habit.name}`}
+      >
+        {Array.from({ length: 6 }, (_, i) =>
+          shiftCalendarDate(today, i - 6),
+        ).map((date) => (
+          <HabitDayPreview
+            key={date}
+            name={habit.name}
+            date={date}
+            entry={entries.get(date)}
+            today={today}
+            disabled={locked}
+            selected={expanded?.date === date}
+            onInspect={() => onInspect(date)}
+          />
+        ))}
+      </fieldset>
+      {noteOpen && expanded?.date !== today ? (
+        <HabitEntryNote
+          key={`${personId}:${today}`}
+          householdId={householdId}
+          habitId={habit.id}
+          name={habit.name}
+          date={today}
+          note={current?.note ?? null}
+          readOnly={!own || archived}
+          initiallyOpen
+          hideTrigger
+          onDirtyChange={(v) => dirtyChanged("today-note", v)}
+        />
+      ) : null}
+      {expanded ? (
+        <>
+          <HabitHistory
+            key={`${personId}:${expanded.anchor.slice(0, 7)}`}
+            householdId={householdId}
+            habitId={habit.id}
+            name={habit.name}
+            personId={personId}
+            own={own}
+            archived={archived}
+            today={today}
+            anchor={expanded.anchor}
+            selectedDate={expanded.date}
+            enabled={enabled}
+            locked={locked}
+            pending={pending}
+            onMonth={onMonth}
+            onDate={onInspect}
+            onCompleted={onCompleted}
+            onDirtyChange={(v) => dirtyChanged("history-note", v)}
+          />
+          <div className="flex min-w-0 items-center gap-2">
+            <HabitNoteInput
+              householdId={householdId}
+              habitId={habit.id}
+              habitName={habit.name}
+              currentNote={habit.note ?? null}
+              readOnly={archived}
+              onDirtyChange={(v) => dirtyChanged("shared-note", v)}
+            />
+            {!archived ? (
+              <ConfirmationPopover
+                confirmLabel="Archive"
+                message={`Archive “${habit.name}”?`}
+                trigger={
+                  <IconButton
+                    aria-label={`Archive ${habit.name}`}
+                    className="ml-auto"
+                    disabled={!enabled || locked || pending.has(habit.id)}
+                  >
+                    <Archive className="size-4" aria-hidden="true" />
+                  </IconButton>
+                }
+                onConfirm={onArchive}
+              />
+            ) : null}
+          </div>
+        </>
+      ) : null}
+    </>
   );
 }

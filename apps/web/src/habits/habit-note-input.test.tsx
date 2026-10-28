@@ -40,6 +40,7 @@ beforeEach(() => {
     error: undefined,
     errorId: "note-error",
     isSaving: false,
+    hasChanges: false,
     changeValue: vi.fn(),
     handleBlur: vi.fn(),
     handleKeyDown: vi.fn(),
