@@ -350,7 +350,7 @@ function HabitListRow({
           aria-expanded={noteOpen && expanded?.date !== today}
           disabled={locked}
           onClick={() => {
-            setNoteOpen((v) => !v);
+            setNoteOpen((v) => expanded?.date === today || !v);
             if (expanded?.date === today) onMonth(expanded.anchor);
           }}
         >
