@@ -8,19 +8,39 @@ import {
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import {
+  Button,
   ConfirmationPopover,
   ErrorPopover,
   GripVertical,
   IconButton,
   InlineAlert,
   Input,
+  MenuItem,
   Plus,
   Trash2,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { type Ref, useId, useImperativeHandle, useRef, useState } from "react";
+import {
+  type ReactNode,
+  type Ref,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
+import {
+  blockAppUpdate,
+  hasUpdateBlockers,
+  useBlockAppUpdate,
+} from "../updates/activity";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
-import { ExerciseMedia } from "./exercise-media";
+import {
+  catalogPageSize,
+  catalogWindow,
+  moveCatalogEntry,
+} from "./catalog-window";
+import { ExerciseMedia, ExerciseMediaBatch } from "./exercise-media";
 import { ExerciseSettings } from "./exercise-settings";
 import {
   type CatalogSaveResult,
@@ -52,11 +72,41 @@ const defaultExercise = (id: string): CatalogExercise => ({
 });
 
 export function ExerciseCatalog({ householdId }: { householdId: string }) {
+  const zero = useZero();
+  return (
+    <CatalogContent
+      key={`${zero.userID}:${householdId}`}
+      householdId={householdId}
+    />
+  );
+}
+function CatalogContent({ householdId }: { householdId: string }) {
+  const section = useRef<HTMLElement>(null);
   const [rows, result] = useQuery(queries.workouts.catalog({ householdId }));
   const zero = useZero(),
     connected = useZeroMutationEnabled();
   const enabled = connected && result.type === "complete";
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [dirty, setDirty] = useState(new Set<string>());
+  const [dragging, setDragging] = useState(false);
+  useBlockAppUpdate(dragging);
+  function dirtyChanged(id: string, value: boolean) {
+    setDirty((previous) => {
+      if (previous.has(id) === value) return previous;
+      const next = new Set(previous);
+      if (value) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+  function canLeave() {
+    if (hasUpdateBlockers() || (draft && !draft.saved)) {
+      setActionError("Finish the current edit or upload first.");
+      return false;
+    }
+    return true;
+  }
   const [draft, setDraft] = useState<Draft>();
   const [pinnedId, setPinnedId] = useState<string>();
   const [adding, setAdding] = useState(false);
@@ -80,7 +130,39 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
       id: draft.id,
       row: undefined,
     });
-  const canOrder = enabled && (!draft || Boolean(draft.saved));
+  const pinned = new Set(dirty);
+  if (pinnedId) pinned.add(pinnedId);
+  if (draft && !draft.saved) pinned.add(draft.id);
+  const window = catalogWindow(entries, page, pinned);
+  const canOrder =
+    enabled && dirty.size === 0 && (!draft || Boolean(draft.saved));
+  function reorder(id: string, to: number) {
+    const ids = moveCatalogEntry(
+      entries.map((e) => e.id),
+      id,
+      to,
+    );
+    if (!canOrder || !ids) return;
+    observeAction(
+      zero.mutate(
+        mutators.workouts.reorderExercises({
+          householdId,
+          exerciseId: id,
+          orderedExerciseIds: ids,
+          optimisticTimestamp: Date.now(),
+        }),
+      ),
+      "Unable to reorder exercises.",
+    );
+  }
+  function changePage(next: number) {
+    if (!canLeave()) return;
+    setPinnedId(undefined);
+    setPage(next);
+    requestAnimationFrame(() =>
+      section.current?.scrollIntoView({ block: "start" }),
+    );
+  }
   function observeAction(
     mutation: {
       client: PromiseLike<{ type: string }>;
@@ -89,12 +171,14 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
     message: string,
   ) {
     setActionError(undefined);
+    const release = blockAppUpdate();
     void Promise.all([mutation.client, mutation.server])
       .then((outcomes) => {
         if (outcomes.some((outcome) => outcome.type === "error"))
           setActionError(message);
       })
-      .catch(() => setActionError(message));
+      .catch(() => setActionError(message))
+      .finally(release);
   }
   function remove(exerciseId: string) {
     if (!enabled) return;
@@ -167,6 +251,11 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
         draftControl.current.focus();
         return;
       }
+      if (hasUpdateBlockers()) {
+        setActionError("Finish the current edit or upload first.");
+        return;
+      }
+      setPage(0);
       setSearch("");
       setPinnedId(undefined);
       setDraft({ id: crypto.randomUUID() });
@@ -175,7 +264,11 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
     }
   }
   return (
-    <section aria-label="Exercise catalog" className="grid min-w-0 gap-2">
+    <section
+      ref={section}
+      aria-label="Exercise catalog"
+      className="grid min-w-0 gap-2"
+    >
       <div className="flex items-center justify-between gap-2 pt-3">
         <h2 className="font-semibold">Exercise catalog</h2>
         <IconButton
@@ -203,7 +296,9 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
             placeholder="Search exercises…"
             value={search}
             onValueChange={(value) => {
+              if (!canLeave()) return;
               setSearch(value);
+              setPage(0);
               setPinnedId(undefined);
             }}
           />
@@ -212,69 +307,142 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
               {actionError}
             </InlineAlert>
           )}
-          <DragDropProvider
-            sensors={workoutOrderingSensors}
-            onDragEnd={(event) => {
-              const source = event.operation.source;
-              if (!canOrder || event.canceled || !isSortable(source)) return;
-              const ids = entries.map((entry) => entry.id),
-                from = ids.indexOf(String(source.id));
-              if (
-                from < 0 ||
-                source.index < 0 ||
-                source.index >= ids.length ||
-                from === source.index
-              )
-                return;
-              const [id] = ids.splice(from, 1);
-              if (!id) return;
-              ids.splice(source.index, 0, id);
-              observeAction(
-                zero.mutate(
-                  mutators.workouts.reorderExercises({
-                    householdId,
-                    exerciseId: id,
-                    orderedExerciseIds: ids,
-                    optimisticTimestamp: Date.now(),
-                  }),
-                ),
-                "Unable to reorder exercises.",
-              );
-            }}
+          <ExerciseMediaBatch
+            householdId={householdId}
+            exerciseIds={window.entries.map((e) => e.id).sort()}
           >
-            <ul className="divide-y divide-border">
-              {entries.map((entry, index) => {
-                const isDraft = entry.id === draft?.id;
-                return (
-                  <CatalogRow
-                    key={entry.id}
-                    controls={isDraft ? draftControl : undefined}
-                    householdId={householdId}
-                    initial={entry.row ?? defaultExercise(entry.id)}
-                    current={entry.row}
-                    enabled={enabled}
-                    autofocus={isDraft && !draft?.saved}
-                    save={save}
-                    index={index}
-                    canOrder={canOrder}
-                    onFocus={() => setPinnedId(entry.id)}
-                    onCancel={() => {
-                      if (isDraft) setDraft(undefined);
-                    }}
-                    onDelete={() => remove(entry.id)}
-                    onSaved={() => {
-                      if (isDraft)
-                        setDraft((current) =>
-                          current?.id === entry.id && !current.saved
-                            ? { ...current, saved: true }
-                            : current,
-                        );
-                    }}
-                  />
-                );
-              })}
-            </ul>
-          </DragDropProvider>
+            <DragDropProvider
+              onDragStart={() => setDragging(true)}
+              sensors={workoutOrderingSensors}
+              onDragEnd={(event) => {
+                setDragging(false);
+                const source = event.operation.source;
+                if (!canOrder || event.canceled || !isSortable(source)) return;
+                const ids = window.entries.map((entry) => entry.id),
+                  from = ids.indexOf(String(source.id));
+                if (
+                  from < 0 ||
+                  source.index < 0 ||
+                  source.index >= ids.length ||
+                  from === source.index
+                )
+                  return;
+                const [id] = ids.splice(from, 1);
+                if (!id) return;
+                ids.splice(source.index, 0, id);
+                const targetId = window.entries[source.index]?.id;
+                if (targetId)
+                  reorder(
+                    id,
+                    entries.findIndex((e) => e.id === targetId),
+                  );
+              }}
+            >
+              <ul className="divide-y divide-border">
+                {window.entries.map((entry, index) => {
+                  const isDraft = entry.id === draft?.id;
+                  return (
+                    <CatalogRow
+                      key={entry.id}
+                      controls={isDraft ? draftControl : undefined}
+                      householdId={householdId}
+                      initial={entry.row ?? defaultExercise(entry.id)}
+                      current={entry.row}
+                      enabled={enabled}
+                      autofocus={isDraft && !draft?.saved}
+                      save={save}
+                      index={index}
+                      canOrder={canOrder}
+                      onDirtyChange={(value) => dirtyChanged(entry.id, value)}
+                      orderActions={
+                        <>
+                          {window.page > 0 ? (
+                            <MenuItem
+                              disabled={!canOrder}
+                              onClick={() => {
+                                const to = Math.max(
+                                  0,
+                                  entries.findIndex((e) => e.id === entry.id) -
+                                    catalogPageSize,
+                                );
+                                reorder(entry.id, to);
+                                setPinnedId(entry.id);
+                                setPage(window.page - 1);
+                              }}
+                            >
+                              Move to previous page
+                            </MenuItem>
+                          ) : null}
+                          {window.page < window.pages - 1 ? (
+                            <MenuItem
+                              disabled={!canOrder}
+                              onClick={() => {
+                                const to = Math.min(
+                                  entries.length - 1,
+                                  entries.findIndex((e) => e.id === entry.id) +
+                                    catalogPageSize,
+                                );
+                                reorder(entry.id, to);
+                                setPinnedId(entry.id);
+                                setPage(window.page + 1);
+                              }}
+                            >
+                              Move to next page
+                            </MenuItem>
+                          ) : null}
+                        </>
+                      }
+                      onFocus={() => setPinnedId(entry.id)}
+                      onCancel={() => {
+                        if (isDraft) setDraft(undefined);
+                      }}
+                      onDelete={() => remove(entry.id)}
+                      onSaved={() => {
+                        if (isDraft)
+                          setDraft((current) =>
+                            current?.id === entry.id && !current.saved
+                              ? { ...current, saved: true }
+                              : current,
+                          );
+                      }}
+                    />
+                  );
+                })}
+              </ul>
+            </DragDropProvider>
+          </ExerciseMediaBatch>
+          {window.pages > 1 ? (
+            <nav
+              aria-label="Catalog pages"
+              className="flex items-center justify-between gap-2"
+            >
+              <Button
+                variant="ghost"
+                disabled={
+                  window.page === 0 ||
+                  dirty.size > 0 ||
+                  !!(draft && !draft.saved)
+                }
+                onClick={() => changePage(window.page - 1)}
+              >
+                Previous
+              </Button>
+              <span className="text-xs text-muted">
+                {window.page + 1} / {window.pages}
+              </span>
+              <Button
+                variant="ghost"
+                disabled={
+                  window.page >= window.pages - 1 ||
+                  dirty.size > 0 ||
+                  !!(draft && !draft.saved)
+                }
+                onClick={() => changePage(window.page + 1)}
+              >
+                Next
+              </Button>
+            </nav>
+          ) : null}
           {result.type === "complete" && !entries.length && (
             <p className="text-sm text-muted">
               {search ? "No matching exercises." : "No exercises yet."}
@@ -300,6 +468,8 @@ function CatalogRow({
   index,
   canOrder,
   onDelete,
+  onDirtyChange,
+  orderActions,
 }: {
   householdId: string;
   initial: CatalogExercise;
@@ -309,6 +479,8 @@ function CatalogRow({
   controls?: Ref<RowControls> | undefined;
   index: number;
   canOrder: boolean;
+  orderActions: ReactNode;
+  onDirtyChange: (dirty: boolean) => void;
   onDelete: () => void;
   save: (
     next: CatalogExercise,
@@ -331,6 +503,14 @@ function CatalogRow({
     flush: () => editor.flush(),
     focus: () => input.current?.focus(),
   }));
+  const dirtyCallback = useRef(onDirtyChange);
+  dirtyCallback.current = onDirtyChange;
+  const [mediaActive, setMediaActive] = useState(false);
+  const dirty = editor.hasChanges || editor.isSaving || mediaActive;
+  useEffect(() => {
+    dirtyCallback.current(dirty);
+  }, [dirty]);
+  useEffect(() => () => dirtyCallback.current(false), []);
   const value = editor.value;
   const sortable = useSortable({
     id: initial.id,
@@ -392,6 +572,7 @@ function CatalogRow({
           exercise={value}
           disabled={!enabled}
           includeMeasure
+          orderActions={orderActions}
           onChange={(patch) => editor.change(patch, true)}
         />
         {editor.persistedId && (
@@ -428,6 +609,7 @@ function CatalogRow({
           householdId={householdId}
           exerciseId={editor.persistedId}
           name={value.name}
+          onActivityChange={setMediaActive}
         />
       )}
       <ErrorPopover

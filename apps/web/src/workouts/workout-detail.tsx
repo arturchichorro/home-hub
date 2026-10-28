@@ -1,3 +1,4 @@
+import { calendarDate } from "@home-hub/shared/habits";
 import {
   planExerciseEdits,
   workoutExercisesFromRows,
@@ -11,6 +12,7 @@ import {
   AccordionPanel,
   AccordionRoot,
   AccordionTrigger,
+  Button,
   History,
   InlineAlert,
 } from "@home-hub/ui-web";
@@ -19,18 +21,30 @@ import { useRef, useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { useBlockAppUpdate } from "../updates/activity";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import { PreviousWorkoutLog } from "./previous-workout-log";
 import { WorkoutExercises, WorkoutText } from "./workout-fields";
 import { WorkoutHistoryEntry } from "./workout-history-entry";
 import { type WorkoutLog, WorkoutLogActions } from "./workout-log";
 import {
   collectWorkoutSets,
-  findDailyWorkoutLog,
   openWorkoutLog,
   setInputKey,
   type WorkoutLogForm,
 } from "./workout-log-form";
 
-export function WorkoutDetail({
+export function WorkoutDetail(props: {
+  householdId: string;
+  workoutId: string;
+}) {
+  const zero = useZero();
+  return (
+    <WorkoutDetailContent
+      key={`${zero.userID}:${props.householdId}:${props.workoutId}`}
+      {...props}
+    />
+  );
+}
+function WorkoutDetailContent({
   householdId,
   workoutId,
 }: {
@@ -42,13 +56,32 @@ export function WorkoutDetail({
   const [workout, result] = useQuery(
     queries.workouts.detail({ householdId, workoutId }),
   );
-  const [logs, logResult] = useQuery(
-    queries.workouts.logs({ householdId, workoutId }),
+  const [historyCount, setHistoryCount] = useState(20);
+  const [windowLogs, logResult] = useQuery(
+    queries.workouts.historyWindow({
+      householdId,
+      workoutId,
+      count: historyCount,
+    }),
   );
+  const lastComplete = useRef<readonly WorkoutLog[]>([]);
+  const initiallyLoaded = useRef(false);
+  const lastCount = useRef(historyCount);
+  if (logResult.type === "complete") {
+    lastComplete.current = windowLogs;
+    lastCount.current = historyCount;
+    initiallyLoaded.current = true;
+  }
+  const logs =
+    logResult.type === "complete" ? windowLogs : lastComplete.current;
+  const visibleCount =
+    logResult.type === "complete" ? historyCount : lastCount.current;
+  const [previousLogs, setPreviousLogs] = useState(
+    new Map<string, WorkoutLog>(),
+  );
+  const [referenceBefore, setReferenceBefore] = useState(0);
   const latestWorkout = useRef(workout);
   latestWorkout.current = workout;
-  const latestLogs = useRef(logs);
-  latestLogs.current = logs;
   // This form exists only in component memory. Closing or navigating away drops it.
   const [form, setForm] = useState<WorkoutLogForm>();
   const [error, setError] = useState("");
@@ -56,7 +89,7 @@ export function WorkoutDetail({
   const pending = useRef(false);
   useBlockAppUpdate(Boolean(form) || busy);
   const [done, setDone] = useState(false);
-  const loaded = result.type === "complete" && logResult.type === "complete";
+  const loaded = result.type === "complete" && initiallyLoaded.current;
   const disabled = !enabled || !loaded;
   const scope = () => ({
     householdId,
@@ -77,25 +110,44 @@ export function WorkoutDetail({
       return false;
     }
   }
-  function startLog(existing?: WorkoutLog) {
-    const current = latestWorkout.current;
-    if (!current || disabled || busy) return;
-    setForm(
-      openWorkoutLog(
-        workoutLogSnapshotSchema.parse({
-          title: current.title,
-          exercises: workoutExercisesFromRows(current.exercises),
-        }),
-        existing ??
-          findDailyWorkoutLog(
-            latestLogs.current,
-            Date.now(),
-            Intl.DateTimeFormat().resolvedOptions().timeZone,
-          ),
-      ),
-    );
-    setDone(false);
-    setError("");
+  async function startLog(existing?: WorkoutLog) {
+    if (!latestWorkout.current || disabled || busy || pending.current) return;
+    pending.current = true;
+    setBusy(true);
+    try {
+      const day = calendarDate(
+        Date.now(),
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+      );
+      // Today's record need not be in the newest-created history window.
+      const daily = existing
+        ? undefined
+        : await zero.run(
+            queries.workouts.dailyLog({ householdId, workoutId, day }),
+            { type: "complete" },
+          );
+      const selected = existing ?? daily?.[0];
+      const current = latestWorkout.current;
+      if (!current) return;
+      setPreviousLogs(new Map());
+      setReferenceBefore(selected?.completedAt ?? Date.now());
+      setForm(
+        openWorkoutLog(
+          workoutLogSnapshotSchema.parse({
+            title: current.title,
+            exercises: workoutExercisesFromRows(current.exercises),
+          }),
+          selected,
+        ),
+      );
+      setDone(false);
+      setError("");
+    } catch {
+      setError("Unable to load workout log.");
+    } finally {
+      pending.current = false;
+      setBusy(false);
+    }
   }
   function closeLog() {
     if (!pending.current) {
@@ -133,7 +185,7 @@ export function WorkoutDetail({
     }
   }
   useAppHeaderRightComponent(null);
-  if (result.type === "error" || logResult.type === "error")
+  if (result.type === "error" && !workout)
     return (
       <InlineAlert role="alert" variant="danger">
         Unable to load workout.
@@ -145,6 +197,26 @@ export function WorkoutDetail({
     ) : null;
   return (
     <article className="grid min-w-0 gap-2">
+      {form?.snapshot.exercises.map((exercise) => (
+        <PreviousWorkoutLog
+          key={`${form.id}:${exercise.id}`}
+          householdId={householdId}
+          workoutId={workoutId}
+          exerciseId={exercise.id}
+          excludeId={form.id}
+          before={referenceBefore}
+          onResult={(id, log, failed) => {
+            if (failed) setError("Unable to load previous workout values.");
+            setPreviousLogs((previous) => {
+              if (previous.get(id) === log) return previous;
+              const next = new Map(previous);
+              if (log) next.set(id, log);
+              else next.delete(id);
+              return next;
+            });
+          }}
+        />
+      ))}
       {error && (
         <InlineAlert role="alert" variant="danger">
           {error}
@@ -192,7 +264,18 @@ export function WorkoutDetail({
           form
             ? {
                 form,
-                previous: logs,
+                previous: [
+                  ...new Map(
+                    [...logs, ...previousLogs.values()].map((log) => [
+                      log.id,
+                      log,
+                    ]),
+                  ).values(),
+                ].sort(
+                  (a, b) =>
+                    (b.createdAt ?? 0) - (a.createdAt ?? 0) ||
+                    b.id.localeCompare(a.id),
+                ),
                 onChange: (exerciseId, round, patch) =>
                   setForm((current) => {
                     if (!current) return current;
@@ -254,7 +337,7 @@ export function WorkoutDetail({
           History
         </h2>
         <ul className="divide-y divide-border">
-          {logs.map((entry) => (
+          {logs.slice(0, visibleCount).map((entry) => (
             <WorkoutHistoryEntry
               key={entry.id}
               entry={entry}
@@ -268,6 +351,28 @@ export function WorkoutDetail({
             />
           ))}
         </ul>
+        {logResult.type === "error" ? (
+          <InlineAlert role="alert" variant="danger">
+            Unable to load history.{" "}
+            <Button variant="ghost" onClick={() => logResult.retry()}>
+              Retry
+            </Button>
+          </InlineAlert>
+        ) : null}
+        {logs.length > visibleCount ? (
+          <Button
+            variant="ghost"
+            busy={logResult.type === "unknown"}
+            disabled={
+              logResult.type !== "complete" || historyCount >= 1_000_000
+            }
+            onClick={() =>
+              setHistoryCount((count) => Math.min(1_000_000, count + 20))
+            }
+          >
+            Load older workouts
+          </Button>
+        ) : null}
       </section>
     </article>
   );

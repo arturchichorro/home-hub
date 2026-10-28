@@ -66,6 +66,94 @@ describe("person-scoped habits", () => {
   });
 });
 
+describe("bounded workout loading", () => {
+  const workoutId = "cf8e0455-182d-4c35-aab0-7c45d9009852";
+  const args = { householdId, workoutId };
+  it("bounds initial history plus one has-more sentinel, retaining author/module checks and sets", () => {
+    const ast = getAst(
+      queries.workouts.historyWindow.fn({
+        args: { ...args, count: 20 },
+        ctx: { userId },
+      }),
+    );
+    expect(ast.limit).toBe(21);
+    expect(ast.orderBy).toEqual([
+      ["createdAt", "desc"],
+      ["id", "desc"],
+    ]);
+    for (const v of [
+      householdId,
+      workoutId,
+      userId,
+      "householdMembers",
+      "householdModuleSettings",
+    ])
+      expect(JSON.stringify(ast.where)).toContain(v);
+    expect(
+      ast.related?.some((r) => r.subquery.table === "workoutLogSets"),
+    ).toBe(true);
+  });
+  it("finds today's full record independently of when it was created", () => {
+    const ast = getAst(
+      queries.workouts.dailyLog.fn({
+        args: { ...args, day: "2026-10-28" },
+        ctx: { userId },
+      }),
+    );
+    expect(ast.limit).toBe(1);
+    expect(JSON.stringify(ast.where)).toContain("completedOn");
+    expect(JSON.stringify(ast.where)).toContain("2026-10-28");
+    expect(JSON.stringify(ast.where)).toContain(userId);
+  });
+  it("finds the exact previous matching slot even outside loaded history", () => {
+    const ast = getAst(
+      queries.workouts.previousLog.fn({
+        args: {
+          ...args,
+          exerciseId: workoutId,
+          excludeId: recipeId,
+          before: 12345,
+        },
+        ctx: { userId },
+      }),
+    );
+    expect(ast.limit).toBe(1);
+    for (const v of [
+      userId,
+      "completedAt",
+      "12345",
+      "workoutExerciseId",
+      recipeId,
+    ])
+      expect(JSON.stringify(ast.where)).toContain(v);
+    expect(ast.orderBy).toEqual([
+      ["createdAt", "desc"],
+      ["id", "desc"],
+    ]);
+  });
+  it("batches only requested media with the same scoped parent/asset authorization", () => {
+    const ast = getAst(
+      queries.workouts.exerciseMediaBatch.fn({
+        args: { householdId, exerciseIds: [workoutId, recipeId] },
+        ctx: { userId },
+      }),
+    );
+    for (const v of [
+      householdId,
+      workoutId,
+      recipeId,
+      userId,
+      "exercises",
+      "householdMembers",
+      "householdModuleSettings",
+      "confirmedAt",
+      "deletedAt",
+    ])
+      expect(JSON.stringify(ast.where)).toContain(v);
+    expect(ast.related?.some((r) => r.subquery.table === "media")).toBe(true);
+  });
+});
+
 describe("workout library last completion", () => {
   it("fetches only the current author's newest local day, bounded to one log per workout", () => {
     const ast = getAst(

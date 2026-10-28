@@ -372,6 +372,88 @@ const exerciseMediaQuery = defineHomeHubQuery(
       .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
 );
+const exerciseMediaBatchQuery = defineHomeHubQuery(
+  z
+    .object({ householdId: z.uuid(), exerciseIds: z.array(z.uuid()).max(40) })
+    .strict(),
+  ({ args, ctx }) =>
+    zql.exerciseMedia
+      .where("householdId", args.householdId)
+      .where("exerciseId", "IN", args.exerciseIds)
+      .where("deletedAt", "IS", null)
+      .whereExists("exercise", (exercise) =>
+        exercise.where("deletedAt", "IS", null).whereExists("household", (h) =>
+          h
+            .where("deletedAt", "IS", null)
+            .whereExists("members", (m) => m.where("userId", ctx.userId))
+            .whereExists("moduleSettings", (s) =>
+              s.where("moduleKey", "workouts").where("enabled", true),
+            ),
+        ),
+      )
+      .whereExists("asset", (asset) =>
+        asset
+          .where("kind", "image")
+          .where("confirmedAt", "IS NOT", null)
+          .where("deletedAt", "IS", null),
+      )
+      .related("asset")
+      .orderBy("sortKey", "desc")
+      .orderBy("id", "asc"),
+);
+
+const authorizedWorkoutLogs = (
+  args: { householdId: string; workoutId: string },
+  userId: string,
+) =>
+  zql.workoutLogs
+    .where("householdId", args.householdId)
+    .where("workoutId", args.workoutId)
+    .where("userId", userId)
+    .whereExists("household", (h) =>
+      h
+        .where("deletedAt", "IS", null)
+        .whereExists("members", (m) => m.where("userId", userId))
+        .whereExists("moduleSettings", (s) =>
+          s.where("moduleKey", "workouts").where("enabled", true),
+        ),
+    );
+const historyWindow = defineHomeHubQuery(
+  workoutDetailArgs.safeExtend({
+    count: z.number().int().min(1).max(1_000_000),
+  }),
+  ({ args, ctx }) =>
+    authorizedWorkoutLogs(args, ctx.userId)
+      .related("sets")
+      .orderBy("createdAt", "desc")
+      .orderBy("id", "desc")
+      .limit(args.count + 1),
+);
+const dailyWorkoutLog = defineHomeHubQuery(
+  workoutDetailArgs.safeExtend({ day: z.iso.date() }),
+  ({ args, ctx }) =>
+    authorizedWorkoutLogs(args, ctx.userId)
+      .where("completedOn", args.day)
+      .related("sets")
+      .limit(1),
+);
+const previousWorkoutLog = defineHomeHubQuery(
+  workoutDetailArgs.safeExtend({
+    exerciseId: z.uuid(),
+    excludeId: z.uuid(),
+    before: z.number().nonnegative(),
+  }),
+  ({ args, ctx }) =>
+    authorizedWorkoutLogs(args, ctx.userId)
+      .where("id", "!=", args.excludeId)
+      .where("completedAt", "<", args.before)
+      .whereExists("sets", (s) => s.where("workoutExerciseId", args.exerciseId))
+      .related("sets")
+      .orderBy("createdAt", "desc")
+      .orderBy("id", "desc")
+      .limit(1),
+);
+
 const workoutLogs = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
   zql.workoutLogs
     .where("householdId", args.householdId)
@@ -395,6 +477,10 @@ export const queries = defineHomeHubQueries({
     byHousehold: workoutsByHousehold,
     catalog: exerciseCatalog,
     exerciseMedia: exerciseMediaQuery,
+    exerciseMediaBatch: exerciseMediaBatchQuery,
+    historyWindow,
+    dailyLog: dailyWorkoutLog,
+    previousLog: previousWorkoutLog,
     detail: workoutDetail,
     logs: workoutLogs,
   },

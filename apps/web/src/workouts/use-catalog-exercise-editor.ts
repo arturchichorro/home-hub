@@ -35,12 +35,10 @@ export function useCatalogExerciseEditor({
   const mounted = useRef(true),
     canonicalize = useRef(false);
   const options = useRef({ enabled, save, onSaved });
-  useBlockAppUpdate(
-    isSaving ||
-      fields.some(
-        (field) => value[field] !== (confirmed.current ?? initial)[field],
-      ),
+  const hasChanges = fields.some(
+    (field) => value[field] !== (confirmed.current ?? initial)[field],
   );
+  useBlockAppUpdate(isSaving || hasChanges);
   options.current = { enabled, save, onSaved };
   const publish = useCallback((next: CatalogExercise) => {
     draft.current = next;
@@ -161,6 +159,7 @@ export function useCatalogExerciseEditor({
     value,
     error,
     isSaving,
+    hasChanges,
     persistedId: confirmed.current?.id,
     change,
     flush,

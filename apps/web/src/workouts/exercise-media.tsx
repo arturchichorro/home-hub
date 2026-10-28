@@ -11,9 +11,22 @@ import {
 } from "@home-hub/shared/media";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
+import type {
+  Media,
+  ExerciseMedia as MediaLink,
+} from "@home-hub/shared/zero/schema";
 import { ErrorPopover, IconButton, ImagePlus } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ImageViewer } from "../media/image-viewer";
 import { type MediaSession, useMediaSession } from "../media/session";
 import { readImageDimensions } from "../recipes/read-image-dimensions";
@@ -37,10 +50,98 @@ type Props = {
   name: string;
   readOnly?: boolean;
   disabled?: boolean;
+  onActivityChange?: ((active: boolean) => void) | undefined;
 };
-export function ExerciseMedia(props: Props) {
+type MediaRow = MediaLink & { asset?: Media | undefined };
+type MediaData = { rows: readonly MediaRow[]; result: { type: string } };
+const BatchContext = createContext<{
+  householdId: string;
+  ids: readonly string[];
+  byId: ReadonlyMap<string, readonly MediaRow[]>;
+  result: { type: string };
+} | null>(null);
+export function ExerciseMediaBatch({
+  householdId,
+  exerciseIds,
+  children,
+}: {
+  householdId: string;
+  exerciseIds: string[];
+  children: ReactNode;
+}) {
   const session = useMediaSession();
-  return session ? <ExerciseMediaGallery {...props} session={session} /> : null;
+  return session ? (
+    <SubscribedBatch householdId={householdId} exerciseIds={exerciseIds}>
+      {children}
+    </SubscribedBatch>
+  ) : (
+    children
+  );
+}
+function SubscribedBatch({
+  householdId,
+  exerciseIds,
+  children,
+}: {
+  householdId: string;
+  exerciseIds: string[];
+  children: ReactNode;
+}) {
+  const [rows, result] = useQuery(
+    queries.workouts.exerciseMediaBatch({ householdId, exerciseIds }),
+    { enabled: exerciseIds.length > 0 },
+  );
+  const previous = useRef<readonly MediaRow[]>([]);
+  if (result.type === "complete") previous.current = rows;
+  const displayed =
+    result.type === "unknown"
+      ? previous.current.filter(
+          (row) =>
+            row.householdId === householdId &&
+            exerciseIds.includes(row.exerciseId),
+        )
+      : rows;
+  const byId = useMemo(() => {
+    const grouped = new Map<string, MediaRow[]>();
+    for (const row of displayed) {
+      const group = grouped.get(row.exerciseId) ?? [];
+      group.push(row);
+      grouped.set(row.exerciseId, group);
+    }
+    return grouped;
+  }, [displayed]);
+  return (
+    <BatchContext.Provider
+      value={{ householdId, ids: exerciseIds, byId, result }}
+    >
+      {children}
+    </BatchContext.Provider>
+  );
+}
+export function ExerciseMedia(props: Props) {
+  const session = useMediaSession(),
+    batch = useContext(BatchContext);
+  if (!session) return null;
+  return batch?.householdId === props.householdId &&
+    batch.ids.includes(props.exerciseId) ? (
+    <ExerciseMediaGallery
+      {...props}
+      session={session}
+      rows={batch.byId.get(props.exerciseId) ?? []}
+      result={batch.result}
+    />
+  ) : (
+    <SubscribedGallery {...props} session={session} />
+  );
+}
+function SubscribedGallery(props: Props & { session: MediaSession }) {
+  const [rows, result] = useQuery(
+    queries.workouts.exerciseMedia({
+      householdId: props.householdId,
+      exerciseId: props.exerciseId,
+    }),
+  );
+  return <ExerciseMediaGallery {...props} rows={rows} result={result} />;
 }
 function ExerciseThumbnail({
   image,
@@ -121,12 +222,12 @@ function ExerciseMediaGallery({
   readOnly = false,
   disabled = false,
   session,
-}: Props & { session: MediaSession }) {
+  rows,
+  result,
+  onActivityChange,
+}: Props & { session: MediaSession } & MediaData) {
   const enabled = useZeroMutationEnabled();
   const zero = useZero();
-  const [rows, result] = useQuery(
-    queries.workouts.exerciseMedia({ householdId, exerciseId }),
-  );
   const [selectedId, setSelectedId] = useState<string>();
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState(false);
@@ -134,6 +235,13 @@ function ExerciseMediaGallery({
   const [reordering, setReordering] = useState(false);
   const [error, setError] = useState<string>();
   const [deleteError, setDeleteError] = useState<string>();
+  const notify = useRef(onActivityChange);
+  notify.current = onActivityChange;
+  const active = busy || deleting || reordering || !!selectedId;
+  useEffect(() => {
+    notify.current?.(active);
+  }, [active]);
+  useEffect(() => () => notify.current?.(false), []);
   const button = useRef<HTMLButtonElement>(null),
     input = useRef<HTMLInputElement>(null);
   const images = exerciseImagesFromRows(rows).filter(

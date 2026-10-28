@@ -9,15 +9,18 @@ import {
   MenuTrigger,
   Settings,
 } from "@home-hub/ui-web";
+import type { ReactNode } from "react";
 export function ExerciseSettings({
   exercise,
   disabled,
   onChange,
   includeMeasure = false,
+  orderActions,
 }: {
   exercise: Pick<CatalogExercise, "name" | "unit" | "load" | "unilateral">;
   disabled: boolean;
   includeMeasure?: boolean;
+  orderActions?: ReactNode;
   onChange: (
     patch: Partial<Pick<CatalogExercise, "unit" | "load" | "unilateral">>,
   ) => void;
@@ -94,6 +97,12 @@ export function ExerciseSettings({
             Each side
           </MenuRadioItem>
         </MenuRadioGroup>
+        {orderActions ? (
+          <>
+            <MenuSeparator />
+            {orderActions}
+          </>
+        ) : null}
       </MenuPopup>
     </MenuRoot>
   );
