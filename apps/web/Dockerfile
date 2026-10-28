@@ -1,6 +1,6 @@
-FROM node:26-bookworm-slim AS build
+FROM node:26.12.1-bookworm-slim AS build
 
-RUN npm install --global pnpm@11.10.0
+RUN npm install --global pnpm@11.28.9
 
 WORKDIR /app
 
@@ -32,7 +32,7 @@ ENV VITE_ZERO_CACHE_URL=$VITE_ZERO_CACHE_URL
 
 RUN pnpm --filter @home-hub/web build
 
-FROM caddy:2.11.4-alpine AS runtime
+FROM caddy:2.11.7-alpine AS runtime
 
 COPY apps/web/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/apps/web/dist /srv

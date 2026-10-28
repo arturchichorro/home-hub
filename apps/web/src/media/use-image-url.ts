@@ -5,6 +5,7 @@ export function createUseImageUrl<Identity>(options: {
   read: (identity: Identity) => { url: string; refreshAt: number } | undefined;
   resolve: (identity: Identity) => Promise<ImageReadResult>;
 }) {
+  // biome-ignore lint/correctness/noComponentHookFactories: Feature hooks create this once at module scope, never during render.
   return function useImageUrl(
     identity: Identity | undefined,
     onSessionExpired: () => void,

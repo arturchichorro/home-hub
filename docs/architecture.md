@@ -8,7 +8,6 @@ the reasoning behind the major choices.
 
 ## Chosen stack
 
-
 | Responsibility                 | Choice                                            |
 | ------------------------------ | ------------------------------------------------- |
 | Monorepo                       | pnpm workspaces                                   |
