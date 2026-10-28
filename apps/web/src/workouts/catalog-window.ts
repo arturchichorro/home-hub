@@ -8,7 +8,7 @@ export function catalogWindow<T extends { id: string }>(
   pinned: ReadonlySet<string>,
 ) {
   const pages = Math.max(1, Math.ceil(entries.length / catalogPageSize));
-  const page = Math.min(requestedPage, pages - 1);
+  const page = Math.max(0, Math.min(requestedPage, pages - 1));
   const keep = entries.filter((e) => pinned.has(e.id));
   const candidates = entries
     .slice(page * catalogPageSize, (page + 1) * catalogPageSize)

@@ -69,6 +69,34 @@ There are no plans, cycles, scheduling, timers, progression suggestions, or
 configured weight increments. Membership, module availability, and private-log
 ownership are enforced in Zero queries and mutations.
 
+## Loading and lifecycle
+
+- The catalog searches all active definitions but mounts at most 40 editors and
+  their media controls at once. Previous/Next browse pages; the settings menu can
+  move an exercise to the preceding/following page, then normal drag/touch/keyboard
+  ordering positions it within that page. Other records retain their order.
+  Dirty/focused editors and active media rows stay mounted across live insertions
+  or reorders. Pending edits/uploads/viewers prevent paging or filtering them away.
+- Visible catalog rows share one authorized `workouts.exerciseMediaBatch`
+  subscription (at most 40 IDs), rather than one subscription per movement.
+  Overlapping media remains visible while an updated batch loads. Standalone
+  workout galleries continue using `workouts.exerciseMedia`.
+- History initially loads 20 complete private logs plus one has-more sentinel.
+  **Load older workouts** expands the requested window in steps of 20. Existing
+  rows and the active logging form remain mounted while the next window loads.
+  Today's saved record is looked up independently by local day, so an old creation
+  timestamp never causes a duplicate or blank daily form. While logging, targeted
+  author-scoped queries find the exact previous matching slot even outside the
+  visible history window, including historical/deleted slots.
+- New contracts are `historyWindow`, `dailyLog`, `previousLog` and
+  `exerciseMediaBatch` under `workouts`. Legacy `logs`/`exerciseMedia` contracts
+  remain available for already-open clients. No schema migration or replica reset
+  is needed. Last-done labels reuse date formatters rather than allocating per row.
+- A narrow pnpm patch releases Zero 1.8.0 memory-source index references on query
+  disposal. It changes no protocol or index data; see [dependency patches](../../patches/README.md)
+  and its installed-package GC/live-update regression test. This fixes retained
+  query pipelines across navigation without upgrading Zero/cache versions.
+
 ## Data model
 
 - `workouts`: household-shared title, notes, ordering and timestamps.

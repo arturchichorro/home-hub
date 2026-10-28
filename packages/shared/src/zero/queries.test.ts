@@ -112,7 +112,7 @@ describe("bounded workout loading", () => {
           ...args,
           exerciseId: workoutId,
           excludeId: recipeId,
-          before: 12345,
+          before: 12345.125,
         },
         ctx: { userId },
       }),
@@ -121,7 +121,7 @@ describe("bounded workout loading", () => {
     for (const v of [
       userId,
       "completedAt",
-      "12345",
+      "12345.125",
       "workoutExerciseId",
       recipeId,
     ])

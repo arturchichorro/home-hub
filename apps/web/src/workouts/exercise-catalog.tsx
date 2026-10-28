@@ -134,6 +134,9 @@ function CatalogContent({ householdId }: { householdId: string }) {
   if (pinnedId) pinned.add(pinnedId);
   if (draft && !draft.saved) pinned.add(draft.id);
   const window = catalogWindow(entries, page, pinned);
+  useEffect(() => {
+    if (page !== window.page) setPage(window.page);
+  }, [page, window.page]);
   const canOrder =
     enabled && dirty.size === 0 && (!draft || Boolean(draft.saved));
   function reorder(id: string, to: number) {
@@ -294,6 +297,7 @@ function CatalogContent({ householdId }: { householdId: string }) {
             appearance="seamless"
             aria-label="Search exercises"
             placeholder="Search exercises…"
+            disabled={dirty.size > 0 || !!(draft && !draft.saved)}
             value={search}
             onValueChange={(value) => {
               if (!canLeave()) return;
@@ -531,7 +535,7 @@ function CatalogRow({
           ref={sortable.handleRef}
           aria-label={`Reorder ${value.name || "new exercise"}`}
           title="Reorder exercise"
-          className="size-7! shrink-0 touch-pan-y cursor-grab"
+          className="size-7! shrink-0 touch-none cursor-grab"
           disabled={!canOrder || !editor.persistedId}
         >
           <GripVertical aria-hidden="true" className="size-4" />
