@@ -11,6 +11,9 @@ workouts; training logs and set values remain private to their author.
   workout notes sit below the exercises in a collapsed Base UI accordion from
   `ui-web`. A settings-icon menu configures each exercise's
   load convention and sides; the measure uses the shared Base UI select.
+- Workout rows show your latest completed day on the right, including weekday
+  (and year for older logs). Never-logged rows stay blank; other members' logs
+  remain private. The stored local day is shown without timezone conversion.
 - Reorder workouts like Lists: drag with a mouse, hold to drag on touch, or use
   Space and arrow keys. The household-shared order is persisted optimistically.
 - **Log workout** opens an unsaved form. The **checkmark** (Save log) saves the
@@ -41,6 +44,17 @@ workouts; training logs and set values remain private to their author.
   catalog or creates a new movement. The searchable catalog is listed below the
   workouts. Name, measure, load convention and sides are shared across workouts;
   sets and target ranges belong to each workout.
+- The catalog's **+** focuses a new inline entry; names autosave on pause, blur,
+  or Enter. Its settings menu edits measure, load and sides, including before
+  naming a new movement. Escape discards unsaved text; blank entries are not
+  stored. Duplicate names are rejected without merging or losing the draft.
+  Standalone creation does not add a workout slot. Drag catalog handles with a
+  mouse, hold on touch, or use Space and arrow keys to set a shared order;
+  ordering within each workout remains independent.
+- Delete a catalog exercise with its trash button and small confirmation popover.
+  It disappears from the catalog/picker and all current workout slots. Completed
+  logs, measurements, private notes and stored media remain intact. There is no
+  archive or restore flow; reusing its name creates a fresh ID without old photos.
 
 - Exercise pictures appear as compact inline strips like cooking-log photos, in
   the catalog and every workout using that movement. Uploads, deletion and picture
@@ -59,8 +73,8 @@ ownership are enforced in Zero queries and mutations.
 
 - `workouts`: household-shared title, notes, ordering and timestamps.
 - `exercises`: household-shared movement catalog: stable ID, name/normalized name,
-  measure, load convention, sides and timestamps. Names are unique within a
-  household after case/whitespace normalization. Catalog renames/settings edits
+  measure, load convention, sides, ordering, deletion and timestamps. Active names
+  are unique within a household after case/whitespace normalization. Catalog renames/settings edits
   apply to all linked workouts.
 - `exercise_media`: catalog-to-`media` attachments, independent UUIDs, ordering,
   soft deletion and timestamps. Composite foreign keys keep assets/exercises in
@@ -103,8 +117,8 @@ Unilateral totals may count both sides using
 ## Exercise-media authorization
 
 `workouts.exerciseMedia` synchronizes confirmed, non-deleted image metadata only
-through an active, non-archived catalog entry and an authorized household with
-Workouts enabled. Historical-only archived entries remain hidden. API routes under
+through a non-deleted catalog entry and an authorized household with
+Workouts enabled. Historical-only tombstones remain hidden. API routes under
 `/api/households/:householdId/workouts/exercises` authorize upload/confirmation,
 batched derivative reads and soft removal. Confirmation rechecks access after
 external processing; read/processing capabilities bind the Workouts module, catalog
@@ -112,6 +126,18 @@ ID and attachment ID. Object keys stay out of Zero. Media changes never modify
 private log notes, sets or snapshots.
 
 ## Upgrade
+
+`0045_fearless_absorbing_man.sql` adds catalog `sort_key` and `deleted_at`, maps
+legacy historical-only flags to tombstones, then removes `archived`. Initial
+ordering preserves the existing alphabetical order. Active-only name uniqueness
+allows fresh IDs to reuse deleted names; no snapshots, sets, links or media are
+rewritten by the migration. Catalog mutations serialize through the household
+before updating exercises/slots, preserving concurrent additions and deletions.
+Back up PostgreSQL and Zero, stop API/Zero, apply this forward migration, restart
+matching services and reload clients. Primary keys remain intact throughout;
+local verification required no replica rebuild. Production is not migrated by
+this local change. Run `scripts/verify-exercise-catalog-migration.sh <container>`
+for disposable migration/history/uniqueness checks.
 
 `0044_faulty_the_anarchist.sql` adds `exercise_media` and its Zero publication entry.
 It is additive: no existing exercise, asset, recipe or log data is rewritten, and

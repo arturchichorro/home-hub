@@ -9,7 +9,34 @@ import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { Dumbbell } from "@home-hub/ui-web";
 import { Link } from "@tanstack/react-router";
 
-type Workout = { id: string; householdId: string; title: string };
+type Workout = {
+  id: string;
+  householdId: string;
+  title: string;
+  logs?: readonly { completedOn: string }[];
+};
+export function formatLastDoneDate(
+  day: string,
+  now = new Date(),
+): string | undefined {
+  // completedOn is the logged local calendar day, not a UTC instant to convert.
+  const date = new Date(`${day}T00:00:00Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== day)
+    return undefined;
+  const weekday = new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    timeZone: "UTC",
+  }).format(date);
+  const label = new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+    ...(date.getUTCFullYear() !== now.getFullYear()
+      ? { year: "numeric" as const }
+      : {}),
+  }).format(date);
+  return `${weekday}, ${label}`;
+}
 // Same gestures as Lists: mouse movement, touch hold, Space/arrow keys.
 const pointerSensor = PointerSensor.configure({
   activationConstraints(event) {
@@ -116,6 +143,8 @@ export function WorkoutRow({
     accept: "household-workout",
     disabled,
   });
+  const lastDone = workout.logs?.[0]?.completedOn;
+  const lastDoneLabel = lastDone ? formatLastDoneDate(lastDone) : undefined;
   return (
     <li
       ref={sortable.ref}
@@ -130,7 +159,15 @@ export function WorkoutRow({
         className="flex min-h-10 min-w-0 touch-pan-y select-none items-center gap-3 py-2 font-medium outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-focus-ring"
       >
         <Dumbbell aria-hidden="true" className="size-4 shrink-0 text-muted" />
-        <span className="min-w-0 break-words">{workout.title}</span>
+        <span className="min-w-0 flex-1 break-words">{workout.title}</span>
+        {lastDoneLabel && (
+          <time
+            dateTime={lastDone}
+            className="ml-auto max-w-[55%] shrink-0 text-right text-xs font-normal text-muted"
+          >
+            Last done {lastDoneLabel}
+          </time>
+        )}
       </Link>
     </li>
   );

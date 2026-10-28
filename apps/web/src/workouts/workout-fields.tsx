@@ -5,18 +5,11 @@ import {
   IconButton,
   InlineAlert,
   Input,
-  MenuPopup,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuRoot,
-  MenuSeparator,
-  MenuTrigger,
   Play,
   SelectItem,
   SelectPopup,
   SelectRoot,
   SelectTrigger,
-  Settings,
   Textarea,
   Trash2,
 } from "@home-hub/ui-web";
@@ -106,6 +99,7 @@ export function WorkoutText({
 
 import { AddExercisePicker } from "./add-exercise-picker";
 import { ExerciseMedia } from "./exercise-media";
+import { ExerciseSettings } from "./exercise-settings";
 import { useWorkoutExercisesEditor } from "./use-workout-exercises-editor";
 import {
   WorkoutExerciseSets,
@@ -376,70 +370,5 @@ export function WorkoutExercises({
         </InlineAlert>
       )}
     </section>
-  );
-}
-function ExerciseSettings({
-  exercise,
-  disabled,
-  onChange,
-}: {
-  exercise: WorkoutExercise;
-  disabled: boolean;
-  onChange: (patch: Partial<WorkoutExercise>) => void;
-}) {
-  return (
-    <MenuRoot>
-      <MenuTrigger
-        aria-label={`Settings for ${exercise.name}`}
-        title="Exercise settings"
-        disabled={disabled}
-        render={
-          <IconButton
-            aria-label={`Settings for ${exercise.name}`}
-            className="size-7!"
-          >
-            <Settings aria-hidden="true" className="size-4" />
-          </IconButton>
-        }
-      />
-      <MenuPopup align="end">
-        <div className="px-3 py-1 text-xs text-muted">Load</div>
-        <MenuRadioGroup
-          aria-label="Load"
-          value={exercise.load}
-          onValueChange={(load) => {
-            if (
-              load === "per-hand" ||
-              load === "single" ||
-              load === "bodyweight"
-            )
-              onChange({ load });
-          }}
-        >
-          <MenuRadioItem closeOnClick={false} value="per-hand">
-            kg per hand
-          </MenuRadioItem>
-          <MenuRadioItem closeOnClick={false} value="single">
-            kg single dumbbell
-          </MenuRadioItem>
-          <MenuRadioItem closeOnClick={false} value="bodyweight">
-            Bodyweight
-          </MenuRadioItem>
-        </MenuRadioGroup>
-        <MenuSeparator />
-        <MenuRadioGroup
-          aria-label="Sides"
-          value={exercise.unilateral ? "each" : "together"}
-          onValueChange={(side) => onChange({ unilateral: side === "each" })}
-        >
-          <MenuRadioItem closeOnClick={false} value="together">
-            Both sides together
-          </MenuRadioItem>
-          <MenuRadioItem closeOnClick={false} value="each">
-            Each side
-          </MenuRadioItem>
-        </MenuRadioGroup>
-      </MenuPopup>
-    </MenuRoot>
   );
 }
