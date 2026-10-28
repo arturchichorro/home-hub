@@ -41,6 +41,7 @@ beforeEach(() => {
     error: undefined,
     errorId: "habit-name-error",
     isSaving: false,
+    hasChanges: false,
     changeValue: vi.fn(),
     handleBlur: vi.fn(),
     handleKeyDown: vi.fn(),

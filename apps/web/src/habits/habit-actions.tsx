@@ -3,11 +3,13 @@ import { Archive, ArrowLeft, Button, Plus } from "@home-hub/ui-web";
 export function HabitActions({
   archived,
   disabled,
+  navigationDisabled = false,
   onToggleArchive,
   onCreate,
 }: {
   archived: boolean;
   disabled: boolean;
+  navigationDisabled?: boolean;
   onToggleArchive: () => void;
   onCreate: () => void;
 }) {
@@ -27,6 +29,7 @@ export function HabitActions({
       <Button
         variant="ghost"
         className="h-7! px-1.5! font-normal text-muted"
+        disabled={navigationDisabled}
         onClick={onToggleArchive}
       >
         {archived ? (

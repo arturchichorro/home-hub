@@ -11,7 +11,10 @@ import { useEffect, useRef, useState } from "react";
 import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
+import { useHabitDraftStatus } from "./use-habit-draft-status";
+
 type Props = {
+  onDirtyChange?: (dirty: boolean) => void;
   householdId: string;
   habitId: string;
   habitName: string;
@@ -27,6 +30,7 @@ export function HabitNoteInput({
   currentNote,
   entryOn,
   disabled = false,
+  onDirtyChange,
   readOnly = false,
 }: Props) {
   const zero = useZero();
@@ -35,6 +39,7 @@ export function HabitNoteInput({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const editor = useDebouncedTextEditor({
     currentValue: currentNote ?? "",
+    preserveOnFailure: true,
     mutationEnabled: enabled,
     normalize: (value) => cleanHabitNote(value) ?? "",
     failureError: "Unable to save note.",
@@ -64,6 +69,7 @@ export function HabitNoteInput({
       }
     },
   });
+  useHabitDraftStatus(editor.hasChanges || editor.isSaving, onDirtyChange);
   useEffect(() => {
     if (editing) inputRef.current?.focus();
   }, [editing]);
