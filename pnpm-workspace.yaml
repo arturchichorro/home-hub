@@ -7,3 +7,5 @@ allowBuilds:
   esbuild: true
   protobufjs: false
   workerd: true
+patchedDependencies:
+  '@rocicorp/zero@1.8.0': patches/@rocicorp__zero@1.8.0.patch

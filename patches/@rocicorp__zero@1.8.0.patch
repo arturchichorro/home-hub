@@ -1,0 +1,13 @@
+diff --git a/out/zql/src/ivm/memory-source.js b/out/zql/src/ivm/memory-source.js
+index c18a6e77e5f9afa20f6bf0172d05f5570f2c8aae..44585f45a25dcdfa7bf2e73d86a2c25deb656bca 100644
+--- a/out/zql/src/ivm/memory-source.js
++++ b/out/zql/src/ivm/memory-source.js
+@@ -101,6 +101,8 @@ var MemorySource = class MemorySource {
+ 	#disconnect(input) {
+ 		const idx = this.#connections.findIndex((c) => c.input === input);
+ 		assert(idx !== -1, "Connection not found");
++		// Index users must not keep a disposed connection's output pipeline alive.
++		for (const index of this.#indexes.values()) index.usedBy.delete(this.#connections[idx]);
+ 		this.#connections.splice(idx, 1);
+ 	}
+ 	#getPrimaryIndex() {
