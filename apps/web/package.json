@@ -16,7 +16,7 @@
     "@dnd-kit/react": "^0.5.1",
     "@home-hub/shared": "workspace:*",
     "@home-hub/ui-web": "workspace:*",
-    "@rocicorp/zero": "1.8.0",
+    "@rocicorp/zero": "1.11.3",
     "@tanstack/react-router": "^1.170.46",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
