@@ -1,6 +1,6 @@
 FROM node:26.12.1-bookworm-slim AS dependencies
 
-RUN npm install --global pnpm@11.28.9
+RUN npm install --global pnpm@12.16.1
 
 WORKDIR /app
 
