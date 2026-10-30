@@ -1,10 +1,36 @@
 import {
   type WorkoutExercise,
   type WorkoutSetValues,
+  workoutExerciseSchema,
   workoutLogSnapshotSchema,
   workoutSetValuesFromRow,
 } from "@home-hub/shared/workouts";
 import type { WorkoutLog } from "./workout-log";
+import type { ExercisePerformance } from "./workout-log-projection";
+
+export function summarizeExercisePerformance(
+  performance: Pick<ExercisePerformance, "snapshot" | "sets">,
+) {
+  const definition = workoutExerciseSchema.parse(performance.snapshot);
+  const sets = [...performance.sets].sort((a, b) => a.round - b.round);
+  const descriptions = sets.map((set) =>
+    describeSet(
+      workoutExerciseSchema.parse({
+        ...definition,
+        unit: set.unit,
+        load: set.load,
+        unilateral: set.unilateral,
+      }),
+      workoutSetValuesFromRow(set),
+    ),
+  );
+  if (!descriptions.length) return "";
+  return descriptions.every((value) => value === descriptions[0])
+    ? `${sets.length > 1 ? `${sets.length} × ` : ""}${descriptions[0]}`
+    : descriptions
+        .map((value, index) => `Set ${sets[index]?.round}: ${value}`)
+        .join("; ");
+}
 
 function describeSet(exercise: WorkoutExercise, values: WorkoutSetValues) {
   const amount = exercise.unilateral

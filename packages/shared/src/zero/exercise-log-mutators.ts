@@ -75,6 +75,18 @@ export const exerciseLogMutators = {
     const historical = workoutExerciseSchema.parse(
       occurrence?.snapshot ?? definition,
     );
+    const submitted = args.snapshot.exercises.find(
+      (e) => e.id === args.workoutExerciseId,
+    );
+    if (
+      !submitted ||
+      submitted.unit !== historical.unit ||
+      submitted.load !== historical.load ||
+      submitted.unilateral !== historical.unilateral
+    )
+      throw Error(
+        "Exercise logging settings changed; reopen logging before continuing",
+      );
     if (!isCompleteExerciseSet(historical, args.values))
       throw Error("Complete every required set value");
     const slot = await tx.run(

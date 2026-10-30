@@ -286,6 +286,7 @@ export class WorkoutLogEditor {
         exercise &&
         next &&
         current &&
+        completeSetValues(exercise, next) !== undefined &&
         JSON.stringify(completeSetValues(exercise, next)) ===
           JSON.stringify(completeSetValues(exercise, current))
       )

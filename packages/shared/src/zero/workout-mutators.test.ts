@@ -1076,6 +1076,35 @@ describe("exercise-first row logging", () => {
   });
 });
 
+it("rejects a stale device's differing measurement convention before writing a canonical row", async () => {
+  const { tx, data, record, writes } = setup();
+  await record({ sets: [recordedSet] });
+  writes.mockClear();
+  const exercise = snapshot.exercises[0];
+  if (!exercise) throw Error("fixture");
+  await expect(
+    mutators.workouts.saveSet.fn({
+      tx,
+      ctx,
+      args: {
+        ...scope,
+        logId,
+        exerciseLogId: crypto.randomUUID(),
+        workoutExerciseId: exercise.id,
+        round: 1,
+        snapshot: {
+          title: snapshot.title,
+          exercises: [{ ...exercise, unit: "seconds" }],
+        },
+        completedOn: String(data.workoutLogs?.[0]?.completedOn),
+        optimisticTimestamp: Number(data.workoutLogs?.[0]?.completedAt),
+        timeZone: "Europe/Brussels",
+        values: { weightKg: 8, amount: 10, rightAmount: null },
+      },
+    }),
+  ).rejects.toThrow("settings changed");
+  expect(writes).not.toHaveBeenCalled();
+});
 describe("completed workout logs", () => {
   it("keeps a stable catalog ID and original measurements after shared edits", async () => {
     const { tx, data, record } = setup();

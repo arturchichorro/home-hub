@@ -26,7 +26,9 @@ import {
   type CatalogSaveResult,
   useCatalogExerciseEditor,
 } from "./use-catalog-exercise-editor";
-import { workoutOrderingSensors } from "./workout-list";
+import { formatLastDoneDate, workoutOrderingSensors } from "./workout-list";
+import type { ExercisePerformance } from "./workout-log-projection";
+import { summarizeExercisePerformance } from "./workout-log-summary";
 
 type Draft = { id: string; saved?: boolean };
 type RowControls = { flush: () => Promise<boolean>; focus: () => void };
@@ -67,14 +69,22 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
   const draftRow = rows.find((row) => row.id === activeDraftId);
   const [actionError, setActionError] = useState<string>();
   const normalized = normalizeExerciseName(search);
-  const entries: { id: string; row: CatalogExercise | undefined }[] = rows
+  const entries: {
+    id: string;
+    row: CatalogExercise | undefined;
+    performance?: ExercisePerformance | undefined;
+  }[] = rows
     .filter(
       (row) =>
         row.normalizedName.includes(normalized) ||
         row.id === pinnedId ||
         (row.id === activeDraftId && !draft?.saved),
     )
-    .map((row) => ({ id: row.id, row: catalogFields(row) }));
+    .map((row) => ({
+      id: row.id,
+      row: catalogFields(row),
+      performance: row.performances?.[0],
+    }));
   if (draft && !draft.saved && !draftRow)
     entries.unshift({
       id: draft.id,
@@ -252,6 +262,7 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
                     householdId={householdId}
                     initial={entry.row ?? defaultExercise(entry.id)}
                     current={entry.row}
+                    performance={entry.performance}
                     enabled={enabled}
                     autofocus={isDraft && !draft?.saved}
                     save={save}
@@ -290,6 +301,7 @@ function CatalogRow({
   householdId,
   initial,
   current,
+  performance,
   enabled,
   autofocus = false,
   controls,
@@ -304,6 +316,7 @@ function CatalogRow({
   householdId: string;
   initial: CatalogExercise;
   current: CatalogExercise | undefined;
+  performance?: ExercisePerformance | undefined;
   enabled: boolean;
   autofocus?: boolean;
   controls?: Ref<RowControls> | undefined;
@@ -423,6 +436,17 @@ function CatalogRow({
             : "kg"}
         {value.unilateral ? " · Each side" : ""}
       </span>
+      {performance && (
+        <p
+          className="break-words px-1 text-xs text-muted"
+          data-exercise-performance
+        >
+          Your last:{" "}
+          {formatLastDoneDate(performance.performedOn) ??
+            performance.performedOn}{" "}
+          · {summarizeExercisePerformance(performance)}
+        </p>
+      )}
       {editor.persistedId && (
         <ExerciseMedia
           householdId={householdId}

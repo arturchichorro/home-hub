@@ -147,6 +147,7 @@ export function WorkoutExerciseSets({
                     min="0"
                     max="1000"
                     step="0.01"
+                    required
                     value={input.weightKg}
                     placeholder={last?.weightKg?.toString() ?? "—"}
                     onValueChange={(weightKg) =>
@@ -165,6 +166,7 @@ export function WorkoutExerciseSets({
                   type="number"
                   min="0"
                   max="600"
+                  required
                   value={input.amount}
                   placeholder={last?.amount.toString() ?? "—"}
                   onValueChange={(amount) =>
@@ -251,6 +253,7 @@ export function WorkoutExerciseSets({
           variant="ghost"
           size="compact"
           className="font-normal text-muted"
+          aria-label={`Add set for ${exercise.name}`}
           disabled={disabled}
           onClick={() => {
             logging.onAddSet(exercise.id);

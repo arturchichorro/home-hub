@@ -35,8 +35,10 @@ function createMutationTestProvider({
       : [{ id: "membership-id" }, undefined];
   const run = vi.fn(async () => results.shift());
   const update = vi.fn(async () => undefined);
+  const execute = vi.fn(async () => undefined);
   const serverTransaction = {
     clientID: "test-client",
+    dbTransaction: { wrappedTransaction: { execute } },
     location: "server",
     mutate: {
       listItems: { update },
@@ -63,6 +65,8 @@ function createMutationTestProvider({
     dbProvider: { transaction } as unknown as ZeroDbProvider,
     transaction,
     update,
+    execute,
+    run,
   };
 }
 
@@ -139,6 +143,83 @@ function postQuery(input: {
 }
 
 describe("Zero routes", () => {
+  it("rejects the retired bulk log writer before touching archived measurements", async () => {
+    const provider = createMutationTestProvider(),
+      app = createZeroRoutes({ dbProvider: provider.dbProvider, jwtSecret }),
+      request = createMutationRequest();
+    const body = {
+      ...request,
+      mutations: request.mutations.map((m) => ({
+        ...m,
+        name: "workouts.saveLog",
+      })),
+    };
+    const response = await app.request("/mutate?schema=zero_0&appID=home-hub", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${createAccessToken()}`,
+      },
+      body: JSON.stringify(body),
+    });
+    expect(response.status).toBe(200);
+    expect(JSON.stringify(await response.json())).toContain("Reload Home Hub");
+    expect(provider.run).not.toHaveBeenCalled();
+    expect(provider.update).not.toHaveBeenCalled();
+  });
+  it("acquires the author/workout transaction lock before reading a new set's scope", async () => {
+    const provider = createMutationTestProvider(),
+      app = createZeroRoutes({ dbProvider: provider.dbProvider, jwtSecret }),
+      request = createMutationRequest();
+    const args = {
+      householdId,
+      workoutId: listId,
+      logId: itemId,
+      workoutExerciseId: itemId,
+      exerciseLogId: crypto.randomUUID(),
+      round: 1,
+      snapshot: {
+        title: "Test",
+        exercises: [
+          {
+            id: itemId,
+            catalogExerciseId: itemId,
+            name: "Row",
+            sets: 2,
+            target: "",
+            unit: "reps",
+            load: "single",
+            unilateral: false,
+          },
+        ],
+      },
+      completedOn: "1970-01-01",
+      optimisticTimestamp: 0,
+      timeZone: "UTC",
+      values: { weightKg: 8, amount: 12, rightAmount: null },
+    };
+    const body = {
+      ...request,
+      mutations: request.mutations.map((m) => ({
+        ...m,
+        name: "workouts.saveSet",
+        args: [args],
+      })),
+    };
+    await app.request("/mutate?schema=zero_0&appID=home-hub", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${createAccessToken()}`,
+      },
+      body: JSON.stringify(body),
+    });
+    expect(provider.execute).toHaveBeenCalledOnce();
+    expect(provider.execute.mock.invocationCallOrder[0]).toBeLessThan(
+      provider.run.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
   it("rejects an unauthenticated request", async () => {
     const app = createZeroRoutes({ dbProvider, jwtSecret });
 

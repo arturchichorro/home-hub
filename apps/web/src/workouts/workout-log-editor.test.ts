@@ -96,6 +96,28 @@ const fill = (editor: WorkoutLogEditor, round = 1, patch = {}) =>
     rightAmount: "",
     ...patch,
   });
+it("preserves typed numeric formatting when the acknowledged row synchronizes", async () => {
+  const log = savedLog(),
+    { editor } = setup({ existing: log });
+  fill(editor, 1, { weightKg: "8.000" });
+  await editor.flush();
+  editor.sync(log);
+  expect(
+    editor.getSnapshot().form.inputs[setInputKey(exercise.id, 1)]?.weightKg,
+  ).toBe("8.000");
+  expect(editor.getSnapshot().hasChanges).toBe(false);
+});
+it("does not suppress remote legacy corrections when both rows have a missing weight", () => {
+  const log = savedLog(),
+    set = log.sets[0];
+  if (!set) throw Error("fixture");
+  const old = { ...log, sets: [{ ...set, weightKg: null }] },
+    { editor } = setup({ existing: old });
+  editor.sync({ ...old, sets: [{ ...set, weightKg: null, amount: 13 }] });
+  expect(
+    editor.getSnapshot().form.inputs[setInputKey(exercise.id, 1)]?.amount,
+  ).toBe("13");
+});
 it("saves a complete row after the pause without resetting its text or closing the form", async () => {
   const { editor, save } = setup();
   fill(editor);

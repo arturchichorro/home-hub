@@ -307,6 +307,11 @@ const workoutsByHousehold = defineHomeHubQuery(
         logs
           .where("householdId", args.householdId)
           .where("userId", ctx.userId)
+          .whereExists("loggedExercises", (links) =>
+            links.whereExists("occurrence", (occurrence) =>
+              occurrence.whereExists("sets"),
+            ),
+          )
           .orderBy("completedOn", "desc")
           .orderBy("id", "desc")
           .limit(1),
@@ -457,7 +462,8 @@ const workoutLogsV2 = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
             .related("sets", (s) => s.orderBy("round", "asc")),
         ),
     )
-    .orderBy("createdAt", "desc")
+    .orderBy("completedOn", "desc")
+    .orderBy("completedAt", "desc")
     .orderBy("id", "desc"),
 );
 
