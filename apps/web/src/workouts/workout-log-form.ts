@@ -47,6 +47,17 @@ export function completeSetValues(
     ? parsed.data
     : undefined;
 }
+export function nextExerciseRound(
+  exercise: WorkoutExercise,
+  inputs: WorkoutSetInputs,
+): number | undefined {
+  const last = exerciseRoundCount(exercise, inputs);
+  if (last < 10) return last + 1;
+  return Array.from({ length: 10 }, (_, i) => i + 1).find(
+    (round) =>
+      round > exercise.sets && !(setInputKey(exercise.id, round) in inputs),
+  );
+}
 export function exerciseRounds(
   exercise: WorkoutExercise,
   inputs: WorkoutSetInputs,

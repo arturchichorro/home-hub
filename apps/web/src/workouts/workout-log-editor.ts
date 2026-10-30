@@ -9,6 +9,7 @@ import {
   completeSetValues,
   exerciseRoundCount,
   exerciseRounds,
+  nextExerciseRound,
   openWorkoutLog,
   setInputKey,
   type WorkoutLogForm,
@@ -203,9 +204,9 @@ export class WorkoutLogEditor {
   addSet = (id: string) => {
     const exercise = this.form.snapshot.exercises.find((e) => e.id === id);
     if (!exercise) return;
-    const count = exerciseRoundCount(exercise, this.form.inputs);
+    const nextRound = nextExerciseRound(exercise, this.form.inputs);
     if (
-      count >= 10 ||
+      nextRound === undefined ||
       !exerciseRounds(exercise, this.form.inputs)
         .map((round) =>
           completeSetValues(exercise, this.form.inputs[setInputKey(id, round)]),
@@ -215,7 +216,7 @@ export class WorkoutLogEditor {
       return;
     this.form = {
       ...this.form,
-      inputs: { ...this.form.inputs, [setInputKey(id, count + 1)]: blank() },
+      inputs: { ...this.form.inputs, [setInputKey(id, nextRound)]: blank() },
     };
     this.emit();
   };

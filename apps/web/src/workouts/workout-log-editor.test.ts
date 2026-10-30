@@ -319,6 +319,28 @@ it("adds extra sets only after the displayed rows are complete and never changes
   await editor.flush();
   expect(save.mock.calls.map((c) => c[0].round)).toEqual([1, 2, 3]);
 });
+it("can reuse a removed optional round at the ten-round limit without renumbering other sets", async () => {
+  const { editor } = setup();
+  for (let round = 1; round <= 10; round++) {
+    fill(editor, round);
+    if (round >= 2 && round < 10) editor.addSet(exercise.id);
+  }
+  await editor.flush();
+  expect(editor.getSnapshot().recorded.size).toBe(10);
+  await editor.removeSet(exercise.id, 3);
+  expect(editor.getSnapshot().recorded.size).toBe(9);
+  editor.addSet(exercise.id);
+  expect(
+    editor.getSnapshot().form.inputs[setInputKey(exercise.id, 3)]?.amount,
+  ).toBe("");
+  fill(editor, 3, { amount: "7" });
+  await editor.flush();
+  expect(editor.getSnapshot().recorded.size).toBe(10);
+  expect(
+    editor.getSnapshot().form.inputs[setInputKey(exercise.id, 10)]?.amount,
+  ).toBe("12");
+  expect(editor.getSnapshot().form.snapshot.exercises[0]?.sets).toBe(2);
+});
 it("removes a recorded set explicitly without removing any other set or changing its date", async () => {
   const { editor, remove } = setup({ existing: savedLog() });
   await editor.removeSet(exercise.id, 1);

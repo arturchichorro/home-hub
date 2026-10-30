@@ -17,8 +17,8 @@ import { useRef } from "react";
 import type { WorkoutEditorState } from "./workout-log-editor";
 import {
   completeSetValues,
-  exerciseRoundCount,
   exerciseRounds,
+  nextExerciseRound,
   setInputKey,
   type WorkoutLogForm,
   type WorkoutSetInput,
@@ -65,7 +65,7 @@ export function WorkoutExerciseSets({
 }) {
   const container = useRef<HTMLDivElement>(null);
   const { form, state, onChange, onFlush } = logging;
-  const count = exerciseRoundCount(exercise, form.inputs);
+  const nextRound = nextExerciseRound(exercise, form.inputs);
   const rounds = exerciseRounds(exercise, form.inputs);
   const old = exercise.catalogExerciseId
     ? logging.previous.get(exercise.catalogExerciseId)
@@ -248,7 +248,7 @@ export function WorkoutExerciseSets({
           </div>
         );
       })}
-      {complete && count < 10 && (
+      {complete && nextRound !== undefined && (
         <Button
           variant="ghost"
           size="compact"
@@ -260,7 +260,7 @@ export function WorkoutExerciseSets({
             requestAnimationFrame(() =>
               container.current
                 ?.querySelector<HTMLInputElement>(
-                  `[data-round="${count + 1}"] input`,
+                  `[data-round="${nextRound}"] input`,
                 )
                 ?.focus(),
             );
