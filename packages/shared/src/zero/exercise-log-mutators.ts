@@ -165,14 +165,28 @@ export const exerciseLogMutators = {
       userId: ctx.userId,
       moduleKey: "workouts",
     });
-    const log = await tx.run(
-      zql.workoutLogs
-        .where("id", args.logId)
-        .where("householdId", args.householdId)
-        .where("workoutId", args.workoutId)
-        .where("userId", ctx.userId)
-        .one(),
+    const proposed = await tx.run(
+      zql.workoutLogs.where("id", args.logId).one(),
     );
+    if (
+      proposed &&
+      (proposed.householdId !== args.householdId ||
+        proposed.workoutId !== args.workoutId ||
+        proposed.userId !== ctx.userId)
+    )
+      throw Error("Workout log not allowed");
+    const log =
+      proposed ??
+      (args.completedOn
+        ? await tx.run(
+            zql.workoutLogs
+              .where("householdId", args.householdId)
+              .where("workoutId", args.workoutId)
+              .where("userId", ctx.userId)
+              .where("completedOn", args.completedOn)
+              .one(),
+          )
+        : undefined);
     if (!log) throw Error("Workout log not allowed");
     const link = await tx.run(
       zql.workoutLogExercises

@@ -1,3 +1,4 @@
+import { isCompleteExerciseSet } from "@home-hub/shared/exercise-logs";
 import { calendarDate } from "@home-hub/shared/habits";
 import {
   type WorkoutExercise,
@@ -21,9 +22,57 @@ export type WorkoutLogForm = {
   inputs: WorkoutSetInputs;
   completedAt: number | null;
   completedOn: string | null;
+  startedAt?: number;
+  exerciseLogIds?: Record<string, string>;
 };
 export const setInputKey = (exerciseId: string, round: number) =>
   `${exerciseId}:${round}`;
+export function completeSetValues(
+  exercise: WorkoutExercise,
+  input: WorkoutSetInput | undefined,
+): WorkoutSetValues | undefined {
+  if (!input) return;
+  const parsed = workoutSetValuesSchema.safeParse({
+    amount: input.amount.trim() === "" ? null : Number(input.amount),
+    weightKg:
+      exercise.load === "bodyweight" || input.weightKg.trim() === ""
+        ? null
+        : Number(input.weightKg),
+    rightAmount:
+      !exercise.unilateral || input.rightAmount.trim() === ""
+        ? null
+        : Number(input.rightAmount),
+  });
+  return parsed.success && isCompleteExerciseSet(exercise, parsed.data)
+    ? parsed.data
+    : undefined;
+}
+export function exerciseRounds(
+  exercise: WorkoutExercise,
+  inputs: WorkoutSetInputs,
+) {
+  return Array.from(
+    { length: exerciseRoundCount(exercise, inputs) },
+    (_, i) => i + 1,
+  ).filter(
+    (round) =>
+      round <= exercise.sets || setInputKey(exercise.id, round) in inputs,
+  );
+}
+export function exerciseRoundCount(
+  exercise: WorkoutExercise,
+  inputs: WorkoutSetInputs,
+) {
+  return Math.min(
+    10,
+    Math.max(
+      exercise.sets,
+      ...Object.keys(inputs)
+        .filter((key) => key.startsWith(`${exercise.id}:`))
+        .map((key) => Number(key.slice(exercise.id.length + 1)) || 0),
+    ),
+  );
+}
 export function findDailyWorkoutLog(
   logs: readonly WorkoutLog[],
   now: number,
@@ -46,6 +95,13 @@ export function openWorkoutLog(
         }),
     completedAt: existing?.completedAt ?? null,
     completedOn: existing?.completedOn ?? null,
+    startedAt: Date.now(),
+    exerciseLogIds: Object.fromEntries(
+      workout.exercises.map((exercise) => [
+        exercise.id,
+        existing?.exerciseLogIds?.[exercise.id] ?? crypto.randomUUID(),
+      ]),
+    ),
     inputs: Object.fromEntries(
       (existing?.sets ?? []).map((set) => {
         const values = workoutSetValuesFromRow(set);
@@ -55,48 +111,14 @@ export function openWorkoutLog(
             weightKg: values.weightKg === null ? "" : String(values.weightKg),
             amount: String(values.amount),
             rightAmount:
-              values.rightAmount === null ? "" : String(values.rightAmount),
+              values.rightAmount === null
+                ? set.unilateral
+                  ? String(values.amount)
+                  : ""
+                : String(values.rightAmount),
           },
         ];
       }),
     ),
   };
-}
-export function collectWorkoutSets(
-  exercises: readonly WorkoutExercise[],
-  inputs: WorkoutSetInputs,
-):
-  | {
-      success: true;
-      sets: {
-        workoutExerciseId: string;
-        round: number;
-        values: WorkoutSetValues;
-      }[];
-    }
-  | { success: false; error: string } {
-  const sets: {
-    workoutExerciseId: string;
-    round: number;
-    values: WorkoutSetValues;
-  }[] = [];
-  for (const exercise of exercises)
-    for (let round = 1; round <= exercise.sets; round++) {
-      const input = inputs[setInputKey(exercise.id, round)];
-      if (!input || Object.values(input).every((value) => value.trim() === ""))
-        continue;
-      const parsed = workoutSetValuesSchema.safeParse({
-        weightKg: input.weightKg.trim() === "" ? null : Number(input.weightKg),
-        amount: input.amount.trim() === "" ? null : Number(input.amount),
-        rightAmount:
-          input.rightAmount.trim() === "" ? null : Number(input.rightAmount),
-      });
-      if (!parsed.success)
-        return {
-          success: false,
-          error: `Enter valid weight and ${exercise.unit} for ${exercise.name}, set ${round}.`,
-        };
-      sets.push({ workoutExerciseId: exercise.id, round, values: parsed.data });
-    }
-  return { success: true, sets };
 }

@@ -26,6 +26,11 @@ export function createZeroMutateRoute({
       userID: userId,
       handler: (transact) =>
         transact(async (tx, name, args) => {
+          if (name === "workouts.saveLog") {
+            throw new Error(
+              "Workout logging has changed. Reload Home Hub before logging.",
+            );
+          }
           const mutator = mustGetMutator(mutators, name);
           if (name === "workouts.saveSet" || name === "workouts.removeSet") {
             const scope = (

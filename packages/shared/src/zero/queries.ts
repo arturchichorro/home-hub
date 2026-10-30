@@ -328,22 +328,64 @@ const workoutDetail = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
     )
     .one(),
 );
+const authorizedExerciseCatalog = (householdId: string, userId: string) =>
+  zql.exercises
+    .where("householdId", householdId)
+    .whereExists("household", (h) =>
+      h
+        .where("deletedAt", "IS", null)
+        .whereExists("members", (m) => m.where("userId", userId))
+        .whereExists("moduleSettings", (s) =>
+          s.where("moduleKey", "workouts").where("enabled", true),
+        ),
+    );
 const exerciseCatalog = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
-    zql.exercises
-      .where("householdId", args.householdId)
+    authorizedExerciseCatalog(args.householdId, ctx.userId)
       .where("deletedAt", "IS", null)
-      .whereExists("household", (h) =>
-        h
-          .where("deletedAt", "IS", null)
-          .whereExists("members", (m) => m.where("userId", ctx.userId))
-          .whereExists("moduleSettings", (s) =>
-            s.where("moduleKey", "workouts").where("enabled", true),
-          ),
+      .related("performances", (p) =>
+        p
+          .where("householdId", args.householdId)
+          .where("userId", ctx.userId)
+          .whereExists("sets")
+          .orderBy("performedOn", "desc")
+          .orderBy("performedAt", "desc")
+          .orderBy("id", "desc")
+          .limit(1)
+          .related("sets", (s) => s.orderBy("round", "asc")),
       )
       .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
+);
+const previousExercisePerformances = defineHomeHubQuery(
+  z
+    .object({
+      householdId: z.uuid(),
+      exerciseIds: z.array(z.uuid()).max(40),
+      beforeAt: z.number().nonnegative(),
+    })
+    .strict(),
+  ({ args, ctx }) =>
+    authorizedExerciseCatalog(args.householdId, ctx.userId)
+      .where("id", "IN", args.exerciseIds)
+      .whereExists("performances", (p) =>
+        p
+          .where("userId", ctx.userId)
+          .where("performedAt", "<", args.beforeAt)
+          .whereExists("sets"),
+      )
+      .related("performances", (p) =>
+        p
+          .where("householdId", args.householdId)
+          .where("userId", ctx.userId)
+          .where("performedAt", "<", args.beforeAt)
+          .whereExists("sets")
+          .orderBy("performedAt", "desc")
+          .orderBy("id", "desc")
+          .limit(1)
+          .related("sets", (s) => s.orderBy("round", "asc")),
+      ),
 );
 const exerciseMediaQuery = defineHomeHubQuery(
   z.object({ householdId: z.uuid(), exerciseId: z.uuid() }).strict(),
@@ -390,6 +432,35 @@ const workoutLogs = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
     .orderBy("id", "desc"),
 );
 
+const workoutLogsV2 = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
+  zql.workoutLogs
+    .where("householdId", args.householdId)
+    .where("workoutId", args.workoutId)
+    .where("userId", ctx.userId)
+    .whereExists("household", (h) =>
+      h
+        .where("deletedAt", "IS", null)
+        .whereExists("members", (m) => m.where("userId", ctx.userId))
+        .whereExists("moduleSettings", (s) =>
+          s.where("moduleKey", "workouts").where("enabled", true),
+        ),
+    )
+    .related("loggedExercises", (links) =>
+      links
+        .where("householdId", args.householdId)
+        .where("userId", ctx.userId)
+        .orderBy("position", "asc")
+        .related("occurrence", (p) =>
+          p
+            .where("householdId", args.householdId)
+            .where("userId", ctx.userId)
+            .related("sets", (s) => s.orderBy("round", "asc")),
+        ),
+    )
+    .orderBy("createdAt", "desc")
+    .orderBy("id", "desc"),
+);
+
 export const queries = defineHomeHubQueries({
   workouts: {
     byHousehold: workoutsByHousehold,
@@ -397,6 +468,8 @@ export const queries = defineHomeHubQueries({
     exerciseMedia: exerciseMediaQuery,
     detail: workoutDetail,
     logs: workoutLogs,
+    logsV2: workoutLogsV2,
+    previousExercises: previousExercisePerformances,
   },
   habits: {
     byHousehold: habitsByHousehold,

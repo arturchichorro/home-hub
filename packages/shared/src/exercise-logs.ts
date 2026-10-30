@@ -25,7 +25,11 @@ export const saveExerciseSetSchema = z
     values: workoutSetValuesSchema,
   })
   .strict();
-export const removeExerciseSetSchema = z.object(logScope).strict();
+export const removeExerciseSetSchema = z
+  .object({ ...logScope, completedOn: calendarDateSchema.optional() })
+  .strict();
+export type SaveExerciseSet = z.infer<typeof saveExerciseSetSchema>;
+export type RemoveExerciseSet = z.infer<typeof removeExerciseSetSchema>;
 export function isCompleteExerciseSet(
   exercise: Pick<WorkoutExercise, "load" | "unilateral">,
   values: WorkoutSetValues,
