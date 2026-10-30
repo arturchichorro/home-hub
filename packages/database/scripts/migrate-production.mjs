@@ -34,8 +34,13 @@ async function checkPending(env) {
 export async function runProductionMigrations({
   env = process.env,
   pending = () => checkPending(env),
+  // Dependencies are frozen into the image at build time, not reinstalled by
+  // pnpm 12 under the non-root runtime user.
   migrate = () =>
-    spawnSync("pnpm", ["migrate"], { stdio: "inherit", env }).status ?? 1,
+    spawnSync("pnpm", ["--config.verifyDepsBeforeRun=false", "migrate"], {
+      stdio: "inherit",
+      env,
+    }).status ?? 1,
   report = (message) => console.error(message),
 } = {}) {
   if (
