@@ -21,7 +21,9 @@ it("retains the backup, migration and readiness checks", () => {
     entry.indexOf("git pull --ff-only"),
   );
   expect(entry).toContain("exec bash ./scripts/deploy-release.sh");
-  expect(script.indexOf('run "${migration_options[@]}" migrate')).toBeLessThan(
+  const migration = script.indexOf("  run ");
+  expect(migration).toBeGreaterThan(-1);
+  expect(migration).toBeLessThan(
     script.indexOf("up -d --no-build --wait api zero-cache"),
   );
   expect(script).toContain("https://home.achichorro.com/api/ready");

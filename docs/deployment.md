@@ -128,8 +128,9 @@ No new production secret or environment-file edit is required.
 
 The migration preserves all original history and backfills author-private
 exercise occurrences/sets/links. The old set table remains an archive; the new
-API rejects the retired bulk writer. This release keeps PostgreSQL 17 and official
-Zero 1.8. An isolated warm-replica replay passed without a reset. Preserve the
+API rejects the retired bulk writer. PostgreSQL remains on 17. The original
+0046 rollout was rehearsed with official Zero 1.8 without a replica reset;
+upgrading Zero itself follows the separate coordinated cutover below. Preserve the
 existing replica volume; never remove PostgreSQL data to apply this upgrade.
 
 Reload every profile, then smoke-test old history/notes/images, cross-workout
