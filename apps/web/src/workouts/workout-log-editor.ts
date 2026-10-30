@@ -165,6 +165,8 @@ export class WorkoutLogEditor {
           [exercise.id]: exerciseLogId,
         },
       };
+      // Publish the chosen day before Zero can emit an optimistic/remote header.
+      this.emit();
       const performedAt = this.form.completedAt ?? Date.now();
       let success = false;
       try {
@@ -269,6 +271,12 @@ export class WorkoutLogEditor {
   sync(log: WorkoutLog) {
     let changed =
       this.form.id !== log.id || this.form.completedAt !== log.completedAt;
+    if (!this.headerConfirmed && !this.queued.size) {
+      this.headerConfirmed = true;
+      changed = true;
+    }
+    for (const [id, value] of Object.entries(log.exerciseLogIds ?? {}))
+      if (this.form.exerciseLogIds?.[id] !== value) changed = true;
     const remote = openWorkoutLog(this.form.snapshot, log),
       inputs = { ...this.form.inputs };
     for (const key of new Set([
@@ -291,7 +299,8 @@ export class WorkoutLogEditor {
           JSON.stringify(completeSetValues(exercise, current))
       )
         continue;
-      inputs[key] = next ?? blank();
+      if (next) inputs[key] = next;
+      else delete inputs[key];
       if (next) this.saved.set(key, { ...next });
       else this.saved.delete(key);
       changed = true;

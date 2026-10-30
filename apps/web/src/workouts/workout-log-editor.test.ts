@@ -96,6 +96,59 @@ const fill = (editor: WorkoutLogEditor, round = 1, patch = {}) =>
     rightAmount: "",
     ...patch,
   });
+it("publishes its day while saving so a concurrent device's canonical header can reconcile", async () => {
+  let finish: (ok: boolean) => void = () => {};
+  const { editor } = setup({
+    onSave: () =>
+      new Promise<boolean>((resolve) => {
+        finish = resolve;
+      }),
+  });
+  fill(editor);
+  const pending = editor.flush();
+  await vi.advanceTimersByTimeAsync(0);
+  const form = editor.getSnapshot().form;
+  expect(form.completedOn).not.toBeNull();
+  const old = savedLog(),
+    set = old.sets[0];
+  if (!set) throw Error("fixture");
+  const canonical = savedLog({
+    id: crypto.randomUUID(),
+    completedOn: form.completedOn ?? "",
+    completedAt: form.completedAt ?? 0,
+    sets: [{ ...set, round: 2, amount: 7 }],
+  });
+  editor.sync(canonical);
+  expect(editor.getSnapshot().form.id).toBe(canonical.id);
+  expect(
+    editor.getSnapshot().form.inputs[setInputKey(exercise.id, 2)]?.amount,
+  ).toBe("7");
+  expect(
+    editor.getSnapshot().form.inputs[setInputKey(exercise.id, 1)]?.amount,
+  ).toBe("12");
+  finish(true);
+  await pending;
+  expect(editor.getSnapshot().hasChanges).toBe(false);
+});
+it("reconciles canonical occurrence IDs even if the measurements did not change", () => {
+  const log = savedLog(),
+    id = crypto.randomUUID(),
+    { editor } = setup({ existing: log });
+  editor.sync({ ...log, exerciseLogIds: { [exercise.id]: id } });
+  expect(editor.getSnapshot().form.exerciseLogIds?.[exercise.id]).toBe(id);
+});
+it("removes a clean optional row when another device removes that recorded set", () => {
+  const log = savedLog(),
+    set = log.sets[0];
+  if (!set) throw Error("fixture");
+  const { editor } = setup({
+    existing: { ...log, sets: [set, { ...set, round: 3 }] },
+  });
+  editor.sync(log);
+  expect(exerciseRoundCount(exercise, editor.getSnapshot().form.inputs)).toBe(
+    2,
+  );
+});
 it("preserves typed numeric formatting when the acknowledged row synchronizes", async () => {
   const log = savedLog(),
     { editor } = setup({ existing: log });

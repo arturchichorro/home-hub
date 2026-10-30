@@ -78,6 +78,9 @@ function WorkoutDetailPage({
     emptySnapshot,
   );
   const form = state?.form;
+  const activeLogId = form?.id,
+    activeLogDay = form?.completedOn,
+    startedAt = form?.startedAt;
   const loaded = result.type === "complete" && logResult.type === "complete",
     disabled = !enabled || !loaded;
   const enabledRef = useRef(false);
@@ -93,14 +96,17 @@ function WorkoutDetailPage({
   useEffect(() => () => editor?.dispose(), [editor]);
   useEffect(() => {
     if (!editor) return;
-    const current = editor.getSnapshot().form;
-    const log = logs.find(
-      (entry) =>
-        entry.id === current.id ||
-        (current.completedOn && entry.completedOn === current.completedOn),
-    );
+    const log =
+      logs.find((entry) => entry.id === activeLogId) ??
+      (activeLogDay
+        ? logs.find((entry) => entry.completedOn === activeLogDay)
+        : findDailyWorkoutLog(
+            logs,
+            startedAt ?? Date.now(),
+            Intl.DateTimeFormat().resolvedOptions().timeZone,
+          ));
     if (log) editor.sync(log);
-  }, [editor, logs]);
+  }, [editor, logs, activeLogId, activeLogDay, startedAt]);
   const blocker = useBlocker({
     shouldBlockFn: () => {
       if (!editor?.getSnapshot().hasChanges) return false;
