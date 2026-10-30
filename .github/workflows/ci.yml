@@ -136,6 +136,9 @@ jobs:
           DATABASE_URL: postgres://home_hub:home_hub@127.0.0.1:5432/home_hub
         run: scripts/verify-media-migration.sh "${{ job.services.postgres.id }}"
 
+      - name: Verify populated exercise logging migration
+        run: scripts/verify-exercise-logging-migration.sh "${{ job.services.postgres.id }}"
+
       - name: Build production web application
         env:
           VITE_ZERO_CACHE_URL: https://home.achichorro.com/zero

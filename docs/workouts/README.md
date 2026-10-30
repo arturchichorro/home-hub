@@ -11,31 +11,37 @@ workouts; training logs and set values remain private to their author.
   workout notes sit below the exercises in a collapsed Base UI accordion from
   `ui-web`. A settings-icon menu configures each exercise's
   load convention and sides; the measure uses the shared Base UI select.
-- Workout rows show your latest completed day on the right, including weekday
+- Workout rows show your latest day with saved sets on the right, including weekday
   (and year for older logs). Never-logged rows stay blank; other members' logs
   remain private. The stored local day is shown without timezone conversion.
 - Reorder workouts like Lists: drag with a mouse, hold to drag on touch, or use
   Space and arrow keys. The household-shared order is persisted optimistically.
-- **Log workout** opens an unsaved form. The **checkmark** (Save log) saves the
-  log and entered sets; **X** cancels. Both are matching neutral icon buttons,
-  right-aligned beside the title and below the sets.
-  Navigating away or refreshing before saving also discards the form. Nothing
-  is stored as a draft, and browsing a workout has no completion shortcut.
-- Each user has at most one log per workout per local calendar day. Logging again
-  opens today's saved entry; saving updates that same record. Other workouts and
-  other authors have independent daily logs. The database enforces uniqueness.
+- **Log workout** opens inline logging. Complete sets autosave after a 600 ms
+  typing pause, on leaving the row, or on Enter. There is no Save/Done/checkmark:
+  **X** closes logging, and saving never closes it or replaces focused inputs.
+  Incomplete/failed edits stay local with clear status and retry. Close/navigation
+  asks before discarding them; unload and PWA updates are guarded.
+- Each author has at most one grouping per workout/local day; logging again opens
+  it. Separate workouts on the same day have separate exercise occurrences.
+  A grouping is created with the first complete set, not merely by browsing.
+- **Add set** appears after the displayed sets are complete, up to ten rounds.
+  Extra sets belong only to that day's occurrence, persist when reopened, and do
+  not change the workout prescription. Remove recorded sets explicitly with
+  confirmation; clearing one input never deletes the stored set.
 - Logging expands weight/reps/seconds inputs beneath the existing exercise rows
   without replacing the page. Unsaved exercise edits are saved first.
-- Unilateral sets explicitly label **Left** and **Right** counts; an empty right
-  count uses the left value. These are side counts, not repetitions in reserve.
+- New unilateral entries require both **Left** and **Right** counts explicitly.
+  Loaded exercises also require weight; zero is valid. Bodyweight needs no weight.
+  Previous values are hints, never recorded defaults. Historical blank-right
+  entries still display their original left-equals-right meaning.
 - Private log notes display inline beside the history date, like cooking-log
   comments, with seamless editing and autosave on pause, blur, or Enter. When
   absent, the same right-hand message icon adds and focuses the note input.
   Private notes are not accordions and update independently of set corrections.
-- History contains finished logs only, showing actual exercises, sets,
-  reps/seconds, side counts, and weights; matching sets are condensed. Deliberate
-  note-only logs say “No sets logged.” Targets and previous values are not
-  recorded automatically. Invalid partial rows block saving without losing input.
+- History appears as actual sets save; there is no finish-workout step. It shows
+  recorded exercises, sets, reps/seconds, sides and weights, condensing matching
+  sets. Existing note-only groupings remain visible as “No sets logged.” A partial
+  row does not prevent complete rows from saving.
 - Logs capture only the workout title and exercise definitions, never shared
   workout notes. The Notes section always shows the current shared notes, even
   when opening history. Private log notes remain separate. Historical edits
@@ -44,6 +50,10 @@ workouts; training logs and set values remain private to their author.
   catalog or creates a new movement. The searchable catalog is listed below the
   workouts. Name, measure, load convention and sides are shared across workouts;
   sets and target ranges belong to each workout.
+- Catalog rows show **Your last**: the latest nonempty, author-private exercise
+  occurrence across workouts, with date and actual sets/counts/weights. Historical
+  corrections retain their original date and measurement conventions; they do
+  not become today's latest activity.
 - The catalog's **+** focuses a new inline entry; names autosave on pause, blur,
   or Enter. Its settings menu edits measure, load and sides, including before
   naming a new movement. Escape discards unsaved text; blank entries are not
@@ -84,15 +94,19 @@ ownership are enforced in Zero queries and mutations.
   and timestamps. Composite household foreign keys protect both parent links.
   The primary key remains `(workout_id, id)`; removing a slot does not delete the
   movement or its history.
-- `workout_logs`: private daily records, notes and immutable title/exercise
-  snapshots. Historical definitions remain JSON so later edits/deletions never
-  rewrite logged workouts.
-- `workout_log_sets`: numeric `amount`, `right_amount` and `weight_kg` columns,
-  plus the original `unit`, `load` and `unilateral` convention. `exercise_id` is a
-  stable catalog foreign key; `workout_exercise_id` identifies the historical
-  slot and need not reference a current slot. The primary key is
-  `(log_id, workout_exercise_id, round)`. Household-scoped foreign keys protect
-  both the private log and catalog reference.
+- `workout_logs`: author-private daily grouping, notes and immutable title/exercise
+  snapshot. One grouping per household/author/workout/local day.
+- `exercise_logs`: independent author-private occurrences, catalog identity,
+  original local day/time and historical exercise definition. No workout FK.
+- `exercise_log_sets`: numeric amount/right amount/weight and original unit/load/
+  sides, keyed by `(exercise_log_id, round)`. Their single occurrence FK determines
+  author and household; access always goes through that authorized parent.
+- `workout_log_exercises`: ordered links from a daily grouping and historical slot
+  to its occurrence. Composite foreign keys prohibit cross-household/author links;
+  deleting a current slot does not delete its occurrence.
+- `workout_log_sets`: untouched pre-cutover archive, not the current source of truth.
+  The API rejects the retired bulk writer. New writes target one occurrence/round;
+  they never replace all sets or modify the prescription.
 
 Exercise autosaves send field-level patches and explicit additions/deletions,
 never a replacement array. Unrelated concurrent edits and unseen additions are
@@ -100,15 +114,19 @@ preserved. Mutations serialize through the parent workout before checking the
 current row count/order and applying changes atomically. Shared catalog updates
 patch only changed fields; settings edits do not overwrite concurrent renames.
 
-For statistics, join sets to their private log, filter by author and measurement
-unit, and group by catalog ID rather than exercise name:
+Set mutations serialize per household/author/workout before resolving the daily
+group and occurrence. Concurrent devices converge on one grouping without
+overwriting other rows; historical corrections retain original snapshots/dates.
+
+For statistics, join measurements to occurrences (no workout join), filter by
+author and measurement unit, and group by catalog ID rather than name:
 
 ```sql
 SELECT sum(s.amount) AS reps
-FROM workout_log_sets s
-JOIN workout_logs l ON l.id = s.log_id AND l.household_id = s.household_id
-WHERE s.household_id = $1 AND l.user_id = $2
-  AND s.exercise_id = $3 AND s.unit = 'reps';
+FROM exercise_log_sets s
+JOIN exercise_logs l ON l.id = s.exercise_log_id
+WHERE l.household_id = $1 AND l.user_id = $2
+  AND l.exercise_id = $3 AND s.unit = 'reps';
 ```
 
 Unilateral totals may count both sides using
@@ -126,6 +144,18 @@ ID and attachment ID. Object keys stay out of Zero. Media changes never modify
 private log notes, sets or snapshots.
 
 ## Upgrade
+
+`0046_tense_miss_america.sql` backfills stable RFC-compliant occurrence IDs and
+links from every historical slot with sets. It checks the exact measurement copy,
+preserves log IDs, dates, notes, snapshots, deleted slots and note-only entries,
+and retains the old set table. New tables have primary keys before publication.
+Follow the [coordinated autosave cutover](../deployment.md#exercise-log-autosave-cutover-0046);
+old bulk writes must stop before the backfill. Official Zero 1.8 resumed its
+existing replica and backfilled the new tables in an isolated rehearsal: no
+replica reset, PostgreSQL reset, dependency patch or Zero upgrade is required.
+Run `scripts/verify-exercise-logging-migration.sh <postgres-container>` for
+disposable fidelity, publication, UUID and author-FK checks.
+
 
 `0045_fearless_absorbing_man.sql` adds catalog `sort_key` and `deleted_at`, maps
 legacy historical-only flags to tombstones, then removes `archived`. Initial

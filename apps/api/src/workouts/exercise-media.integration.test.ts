@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { createDbClient } from "@home-hub/database/client";
 import {
+  exerciseLogSets,
+  exerciseLogs,
   exerciseMedia,
   exercises,
   householdMembers,
@@ -9,10 +11,12 @@ import {
   media,
   users,
   workoutExercises,
+  workoutLogExercises,
   workoutLogSets,
   workoutLogs,
   workouts,
 } from "@home-hub/database/schema";
+import { workoutLogSnapshotSchema } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import { and, eq } from "drizzle-orm";
@@ -140,12 +144,67 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       ],
     });
 
-  it("shows only each workout's latest local completion for the current author", async () => {
+  const definition = (slotId: string) => ({
+    id: slotId,
+    catalogExerciseId: exerciseId,
+    name: "Push-up",
+    sets: 3,
+    target: "8",
+    unit: "reps",
+    load: "bodyweight",
+    unilateral: false,
+  });
+  async function seedPerformance(
+    log: typeof workoutLogs.$inferSelect,
+    slotId: string,
+    amounts: number[] = [8],
+  ) {
+    const id = randomUUID();
+    await client.db
+      .insert(exerciseLogs)
+      .values({
+        id,
+        householdId,
+        userId: log.userId,
+        exerciseId,
+        performedOn: log.completedOn,
+        performedAt: log.completedAt,
+        snapshot: definition(slotId),
+      });
+    await client.db
+      .insert(workoutLogExercises)
+      .values({
+        householdId,
+        userId: log.userId,
+        workoutLogId: log.id,
+        workoutExerciseId: slotId,
+        exerciseLogId: id,
+        position: 0,
+      });
+    if (amounts.length)
+      await client.db
+        .insert(exerciseLogSets)
+        .values(
+          amounts.map((amount, index) => ({
+            exerciseLogId: id,
+            round: index + 1,
+            amount,
+            rightAmount: null,
+            weightKg: null,
+            unit: "reps",
+            load: "bodyweight",
+            unilateral: false,
+          })),
+        );
+    return id;
+  }
+  it("shows only each author's latest nonempty exercise performance and local workout activity", async () => {
     const provider = createZeroDbProvider({ db: client.db });
     const workoutId = randomUUID(),
       emptyId = randomUUID(),
       otherUser = randomUUID(),
-      latestId = randomUUID();
+      latestId = randomUUID(),
+      slotId = randomUUID();
     await client.db.insert(workouts).values([
       { id: workoutId, householdId, title: "Logged", notes: "", sortKey: 2 },
       {
@@ -172,34 +231,70 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
     const base = {
       householdId,
       workoutId,
-      snapshot: { title: "Logged", exercises: [] },
+      snapshot: { title: "Logged", exercises: [definition(slotId)] },
       completedAt: new Date("2026-06-17T18:00:00Z"),
     };
-    await client.db.insert(workoutLogs).values([
-      {
+    const recorded = await client.db
+      .insert(workoutLogs)
+      .values([
+        {
+          ...base,
+          id: randomUUID(),
+          userId,
+          completedOn: "2026-06-15",
+          createdAt: new Date("2026-10-27T12:00:00Z"),
+          note: "Backfilled old day",
+        },
+        {
+          ...base,
+          id: latestId,
+          userId,
+          completedOn: "2026-06-17",
+          createdAt: new Date("2026-06-17T18:00:00Z"),
+          note: "Own private note",
+        },
+        {
+          ...base,
+          id: randomUUID(),
+          userId: otherUser,
+          completedOn: "2026-10-27",
+          note: "OTHER AUTHOR SECRET",
+        },
+      ])
+      .returning();
+    for (const log of recorded)
+      await seedPerformance(log, slotId, log.userId === userId ? [8] : [99]);
+    const [empty] = await client.db
+      .insert(workoutLogs)
+      .values({
         ...base,
         id: randomUUID(),
         userId,
-        completedOn: "2026-06-15",
-        createdAt: new Date("2026-10-27T12:00:00Z"),
-        note: "Backfilled old day",
-      },
-      {
-        ...base,
-        id: latestId,
-        userId,
-        completedOn: "2026-06-17",
-        createdAt: new Date("2026-06-17T18:00:00Z"),
-        note: "Own private note",
-      },
-      {
+        completedOn: "2026-11-03",
+        note: "Removed all sets",
+      })
+      .returning();
+    if (!empty) throw Error("fixture");
+    await seedPerformance(empty, slotId, []);
+    await client.db
+      .insert(workoutLogs)
+      .values({
         ...base,
         id: randomUUID(),
-        userId: otherUser,
-        completedOn: "2026-10-27",
-        note: "OTHER AUTHOR SECRET",
-      },
-    ]);
+        userId,
+        completedOn: "2026-11-04",
+        note: "Note only",
+      });
+    const catalog = await provider.run(
+      queries.workouts.catalog.fn({ ctx: { userId }, args: { householdId } }),
+    );
+    expect(catalog[0]?.performances).toHaveLength(1);
+    expect(catalog[0]?.performances[0]).toMatchObject({
+      userId,
+      performedOn: "2026-06-17",
+      sets: [{ amount: 8 }],
+    });
+    expect(JSON.stringify(catalog)).not.toContain("OTHER AUTHOR SECRET");
     const rows = await provider.run(
       queries.workouts.byHousehold.fn({
         ctx: { userId },
@@ -281,6 +376,20 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       load: "bodyweight",
       unilateral: false,
     });
+    const [storedLog] = await client.db
+      .select()
+      .from(workoutLogs)
+      .where(eq(workoutLogs.id, logId));
+    if (!storedLog) throw Error("fixture");
+    const occurrenceId = await seedPerformance(storedLog, slotId);
+    const beforeOccurrence = await client.db
+      .select()
+      .from(exerciseLogs)
+      .where(eq(exerciseLogs.id, occurrenceId));
+    const beforeMeasurements = await client.db
+      .select()
+      .from(exerciseLogSets)
+      .where(eq(exerciseLogSets.exerciseLogId, occurrenceId));
     const image = await pending();
     await services().confirmUpload({
       ...scope(),
@@ -354,6 +463,60 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
     );
     expect(visible.map((row) => row.id)).toEqual([replacement]);
     expect(visible[0]?.load).toBe("single");
+    expect(visible[0]?.performances).toEqual([]);
+    expect(
+      await client.db
+        .select()
+        .from(exerciseLogs)
+        .where(eq(exerciseLogs.id, occurrenceId)),
+    ).toEqual(beforeOccurrence);
+    expect(
+      await client.db
+        .select()
+        .from(exerciseLogSets)
+        .where(eq(exerciseLogSets.exerciseLogId, occurrenceId)),
+    ).toEqual(beforeMeasurements);
+    await provider.transaction((tx) =>
+      mutators.workouts.saveSet.fn({
+        tx,
+        ctx: { userId },
+        args: {
+          householdId,
+          workoutId,
+          logId,
+          workoutExerciseId: slotId,
+          exerciseLogId: occurrenceId,
+          round: 1,
+          snapshot: workoutLogSnapshotSchema.parse(storedLog.snapshot),
+          completedOn: storedLog.completedOn,
+          optimisticTimestamp: storedLog.completedAt.getTime(),
+          timeZone: "UTC",
+          values: { amount: 9, weightKg: null, rightAmount: null },
+        },
+      }),
+    );
+    expect(
+      await client.db
+        .select()
+        .from(workoutLogSets)
+        .where(eq(workoutLogSets.logId, logId)),
+    ).toEqual(beforeSets);
+    expect(
+      (
+        await client.db
+          .select()
+          .from(exerciseLogSets)
+          .where(eq(exerciseLogSets.exerciseLogId, occurrenceId))
+      )[0]?.amount,
+    ).toBe(9);
+    const history = await provider.run(
+      queries.workouts.logsV2.fn({
+        ctx: { userId },
+        args: { householdId, workoutId },
+      }),
+    );
+    expect(history[0]?.note).toBe("Private note");
+    expect(history[0]?.loggedExercises[0]?.occurrence?.sets[0]?.amount).toBe(9);
     expect(
       await provider.run(
         queries.workouts.exerciseMedia.fn({

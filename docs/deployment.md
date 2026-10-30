@@ -107,6 +107,34 @@ API/Zero maintenance and a backed-up disposable replica rebuild. Routine deploym
 does not perform that one-time cutover. Follow [Shared media rollout](./media/#migration-and-rollout)
 before releasing these migrations; deploy the backward-compatible Worker first.
 
+## Exercise-log autosave cutover (0046)
+
+Before promoting this release to `main`, bring every device/profile online,
+submit any old explicit-save workout forms, wait for all mutations to be
+acknowledged, and pause edits. Automatic PWA updates do not perform this check.
+
+On the first deployment of `0046`, the deployment script builds images, stops
+old API/Zero writers, takes a fresh PostgreSQL backup, then runs the forward
+migration. It waits for matching API/cache health before publishing web. Later
+deployments skip the one-time stop. Do not bypass this ordering or run the
+migration while the old API still accepts bulk log writes.
+
+The migration preserves all original history and backfills author-private
+exercise occurrences/sets/links. The old set table remains an archive; the new
+API rejects the retired bulk writer. This release keeps PostgreSQL 17 and official
+Zero 1.8. An isolated warm-replica replay passed without a reset. Preserve the
+existing replica volume; never remove PostgreSQL data to apply this upgrade.
+
+Reload every profile, then smoke-test old history/notes/images, cross-workout
+catalog performance and a new autosaved set. Verify with
+`scripts/verify-exercise-logging-migration.sh <postgres-container>` on disposable
+data before release.
+
+After new writes, an old API/client is **not** a safe rollback: the archive does
+not contain post-cutover sets or corrections. Prefer fixing forward. Any restore
+requires pausing writes, backing up current data and reconciling the canonical
+delta first; do not silently discard post-cutover activity.
+
 ## Cloudflare image delivery Worker
 
 `apps/image-delivery` owns the independently deployed Worker that generates
