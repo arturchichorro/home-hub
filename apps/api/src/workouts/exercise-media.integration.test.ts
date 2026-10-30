@@ -160,42 +160,36 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
     amounts: number[] = [8],
   ) {
     const id = randomUUID();
-    await client.db
-      .insert(exerciseLogs)
-      .values({
-        id,
-        householdId,
-        userId: log.userId,
-        exerciseId,
-        performedOn: log.completedOn,
-        performedAt: log.completedAt,
-        snapshot: definition(slotId),
-      });
-    await client.db
-      .insert(workoutLogExercises)
-      .values({
-        householdId,
-        userId: log.userId,
-        workoutLogId: log.id,
-        workoutExerciseId: slotId,
-        exerciseLogId: id,
-        position: 0,
-      });
+    await client.db.insert(exerciseLogs).values({
+      id,
+      householdId,
+      userId: log.userId,
+      exerciseId,
+      performedOn: log.completedOn,
+      performedAt: log.completedAt,
+      snapshot: definition(slotId),
+    });
+    await client.db.insert(workoutLogExercises).values({
+      householdId,
+      userId: log.userId,
+      workoutLogId: log.id,
+      workoutExerciseId: slotId,
+      exerciseLogId: id,
+      position: 0,
+    });
     if (amounts.length)
-      await client.db
-        .insert(exerciseLogSets)
-        .values(
-          amounts.map((amount, index) => ({
-            exerciseLogId: id,
-            round: index + 1,
-            amount,
-            rightAmount: null,
-            weightKg: null,
-            unit: "reps",
-            load: "bodyweight",
-            unilateral: false,
-          })),
-        );
+      await client.db.insert(exerciseLogSets).values(
+        amounts.map((amount, index) => ({
+          exerciseLogId: id,
+          round: index + 1,
+          amount,
+          rightAmount: null,
+          weightKg: null,
+          unit: "reps",
+          load: "bodyweight",
+          unilateral: false,
+        })),
+      );
     return id;
   }
   it("shows only each author's latest nonempty exercise performance and local workout activity", async () => {
@@ -276,15 +270,13 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       .returning();
     if (!empty) throw Error("fixture");
     await seedPerformance(empty, slotId, []);
-    await client.db
-      .insert(workoutLogs)
-      .values({
-        ...base,
-        id: randomUUID(),
-        userId,
-        completedOn: "2026-11-04",
-        note: "Note only",
-      });
+    await client.db.insert(workoutLogs).values({
+      ...base,
+      id: randomUUID(),
+      userId,
+      completedOn: "2026-11-04",
+      note: "Note only",
+    });
     const catalog = await provider.run(
       queries.workouts.catalog.fn({ ctx: { userId }, args: { householdId } }),
     );
