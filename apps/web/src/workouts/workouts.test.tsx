@@ -6,7 +6,8 @@ import { WorkoutDetail } from "./workout-detail";
 import { WorkoutExercises } from "./workout-fields";
 import { WorkoutHistoryEntry } from "./workout-history-entry";
 import { type WorkoutLog, WorkoutLogActions } from "./workout-log";
-import { openWorkoutLog } from "./workout-log-form";
+import { WorkoutLogEditor } from "./workout-log-editor";
+import { openWorkoutLog, type WorkoutLogForm } from "./workout-log-form";
 import { WorkoutsLibrary } from "./workouts-library";
 
 const { useQuery, enabled, header, mutate } = vi.hoisted(() => ({
@@ -27,6 +28,7 @@ vi.mock("../app-header-right-component", () => ({
 }));
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
+  useBlocker: () => ({ status: "idle", reset: vi.fn(), proceed: vi.fn() }),
   Link: ({
     children,
     params,
@@ -61,6 +63,25 @@ beforeEach(() => {
     server: Promise.resolve({ type: "success" }),
   });
 });
+function loggingFixture(form: WorkoutLogForm) {
+  const editor = new WorkoutLogEditor(form, {
+    householdId,
+    workoutId,
+    timeZone: "UTC",
+    enabled: () => true,
+    save: async () => true,
+    remove: async () => true,
+  });
+  return {
+    form,
+    state: editor.getSnapshot(),
+    previous: new Map(),
+    onChange: editor.change,
+    onFlush: () => {},
+    onAddSet: editor.addSet,
+    onRemoveSet: () => {},
+  };
+}
 describe("simple workouts", () => {
   it("shows the shared exercise catalog below the workouts", () => {
     useQuery
@@ -153,26 +174,13 @@ describe("simple workouts", () => {
     expect(mutate).not.toHaveBeenCalled();
   });
 
-  it("uses matching neutral checkmark and cancel icon buttons", () => {
-    const html = renderToStaticMarkup(
-      <WorkoutLogActions
-        disabled={false}
-        onComplete={() => {}}
-        onCancel={() => {}}
-      />,
-    );
-    const buttons = html.match(/<button[^>]*>/g) ?? [];
-    expect(buttons).toHaveLength(2);
-    expect(buttons[0]).toContain('aria-label="Save log"');
-    expect(buttons[1]).toContain('aria-label="Cancel log"');
-    expect(buttons[0]?.match(/class="([^"]+)"/)?.[1]).toBe(
-      buttons[1]?.match(/class="([^"]+)"/)?.[1],
-    );
-    expect(html).toContain("lucide-check");
+  it("offers close logging without a manual save/checkmark", () => {
+    const html = renderToStaticMarkup(<WorkoutLogActions onClose={() => {}} />);
+    expect(html.match(/<button[^>]*>/g)).toHaveLength(1);
+    expect(html).toContain('aria-label="Close logging"');
     expect(html).toContain("lucide-x");
-    expect(html).toContain("justify-end");
-    expect(html).not.toContain("Done");
-    expect(html).not.toContain("bg-primary text-on-primary");
+    expect(html).not.toContain("Save log");
+    expect(html).not.toContain("lucide-check");
   });
 
   it("lists standalone linked workouts, without plans or instruction text", () => {
@@ -261,7 +269,7 @@ describe("simple workouts", () => {
     expect(start).toContain('disabled=""');
     expect(header.mock.calls.at(-1)?.[0]).toBeNull();
   });
-  it("keeps new inputs local until Done, without per-set save buttons", () => {
+  it("renders autosaving rows without manual save buttons and requires both sides", () => {
     const html = renderToStaticMarkup(
       <WorkoutExercises
         householdId={householdId}
@@ -270,12 +278,7 @@ describe("simple workouts", () => {
         onSave={async () => true}
         onStartLogging={async () => {}}
         onCloseLogging={() => {}}
-        onCompleteLogging={() => {}}
-        logging={{
-          form: openWorkoutLog(starter),
-          previous: [],
-          onChange: () => {},
-        }}
+        logging={loggingFixture(openWorkoutLog(starter))}
       />,
     );
     expect(html.match(/aria-label="Log [^"]+, set [0-9]+"/g)).toHaveLength(12);
@@ -283,8 +286,8 @@ describe("simple workouts", () => {
     expect(html).not.toMatch(/aria-label="Save [^"]+, set /);
     expect(html).not.toContain("Rest timer");
     expect(html).not.toContain("Reps in reserve");
-    expect(html).toContain('aria-label="Cancel log"');
-    expect(html).toContain('aria-label="Save log"');
+    expect(html).toContain('aria-label="Close logging"');
+    expect(html).not.toContain('aria-label="Save log"');
     expect(html).not.toContain("Done</span>");
     expect(html).not.toContain("bg-primary text-on-primary");
     expect(html).toContain(
@@ -293,11 +296,11 @@ describe("simple workouts", () => {
     expect(html).toContain(
       'aria-label="Right reps for Bench-supported one-arm row, set 1"',
     );
-    expect(html).toContain("Blank uses the left-side value");
+    expect(html).not.toContain("Blank uses the left-side value");
     expect(html).not.toContain("reps left");
     expect(mutate).not.toHaveBeenCalled();
   });
-  it("commits history edits to the same log with Done", () => {
+  it("opens historical row corrections in the same log without a Done action", () => {
     const log: WorkoutLog = {
       id: crypto.randomUUID(),
       householdId,
@@ -319,12 +322,11 @@ describe("simple workouts", () => {
         onSave={async () => true}
         onStartLogging={async () => {}}
         onCloseLogging={() => {}}
-        onCompleteLogging={() => {}}
-        logging={{ form, previous: [], onChange: () => {} }}
+        logging={loggingFixture(form)}
       />,
     );
     expect(form.id).toBe(log.id);
-    expect(html).toContain('aria-label="Save log"');
+    expect(html).not.toContain('aria-label="Save log"');
     expect(html).toContain("2026-10-25");
     expect(mutate).not.toHaveBeenCalled();
   });
@@ -353,7 +355,19 @@ describe("simple workouts", () => {
     useQuery
       .mockReturnValueOnce([workout, { type: "complete" }])
       .mockReturnValueOnce([
-        [entry, { ...entry, id: "empty", sets: [] }],
+        [
+          {
+            ...entry,
+            loggedExercises: [
+              {
+                workoutExerciseId: exercise.id,
+                exerciseLogId: "occurrence",
+                occurrence: { exerciseId: exercise.id, sets: entry.sets },
+              },
+            ],
+          },
+          { ...entry, id: "empty", sets: [], loggedExercises: [] },
+        ],
         { type: "complete" },
       ]);
     const html = renderToStaticMarkup(

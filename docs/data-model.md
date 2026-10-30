@@ -15,9 +15,11 @@ synchronization rules are defined in
   library solely for time ordering; explicit timestamps determine display
   order.
 - Store timestamps in UTC using PostgreSQL `timestamptz`.
-- Give every synchronized household-owned row a direct `household_id`, even when it is reachable through another foreign key.
+- Give independently addressable household-owned records a direct `household_id`.
+  Dependent exercise measurements inherit household/author from their single
+  occurrence FK and are accessed through that scoped parent.
 - Enforce invariants in PostgreSQL as well as in application code.
-- Do not migrate legacy data; this is a fresh data model.
+- Use forward migrations, preserving existing data and applied migration files.
 
 ## Entity relationships
 
@@ -151,6 +153,15 @@ Videos and animated-image uploads remain deferred; no separate video table exist
 
 Habits owns `habits` and `habit_entries`; their fields, natural daily-entry
 key and calendar-date constraints are documented in the [Habits module](./habits/).
+
+### Workouts module tables
+
+Shared definitions live in `workouts`, `exercises` and `workout_exercises`.
+Private measurements live in `exercise_logs` and `exercise_log_sets`, independently
+of workouts. `workout_logs` groups occurrences by author/workout/local day and owns
+private notes; `workout_log_exercises` enforces same-household/author links.
+The pre-cutover `workout_log_sets` table is retained as an archive, not a write target.
+See the [Workouts data model](./workouts/#data-model) and its forward migration.
 
 ## Schema invariants
 

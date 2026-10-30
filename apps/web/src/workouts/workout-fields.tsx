@@ -116,7 +116,6 @@ export function WorkoutExercises({
   logging,
   onStartLogging,
   onCloseLogging,
-  onCompleteLogging,
 }: {
   householdId: string;
   title?: ReactNode;
@@ -129,7 +128,6 @@ export function WorkoutExercises({
   logging?: WorkoutLogging | undefined;
   onStartLogging: () => Promise<void>;
   onCloseLogging: () => void;
-  onCompleteLogging: () => void;
 }) {
   const [starting, setStarting] = useState(false);
   const editor = useWorkoutExercisesEditor({
@@ -194,11 +192,7 @@ export function WorkoutExercises({
                   {logging.form.completedOn}
                 </span>
               )}
-              <WorkoutLogActions
-                disabled={disabled}
-                onComplete={onCompleteLogging}
-                onCancel={onCloseLogging}
-              />
+              <WorkoutLogActions onClose={onCloseLogging} />
             </>
           ) : (
             <>

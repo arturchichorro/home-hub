@@ -2,88 +2,70 @@ import { starterWorkouts } from "@home-hub/shared/workout-seed";
 import { describe, expect, it } from "vitest";
 import type { WorkoutLog } from "./workout-log";
 import {
-  collectWorkoutSets,
+  completeSetValues,
   findDailyWorkoutLog,
   openWorkoutLog,
   setInputKey,
 } from "./workout-log-form";
 
 const workout = starterWorkouts[0];
-if (!workout) throw new Error("seed");
+if (!workout) throw Error("seed");
 const exercise = workout.exercises[0];
-if (!exercise) throw new Error("seed");
-describe("unsaved workout form", () => {
-  it("starts empty without copying shared notes or prescribed target values", () => {
+if (!exercise) throw Error("seed");
+describe("workout logging inputs", () => {
+  it("starts empty without copying shared notes, targets or previous values", () => {
     const form = openWorkoutLog(workout);
     expect(form.snapshot).not.toHaveProperty("notes");
     expect(form).not.toHaveProperty("note");
     expect(form.inputs).toEqual({});
     expect(form.completedAt).toBeNull();
-    expect(collectWorkoutSets(form.snapshot.exercises, form.inputs)).toEqual({
-      success: true,
-      sets: [],
-    });
+    expect(form.completedOn).toBeNull();
   });
-  it("records only entered rows, preserving blank-right semantics", () => {
-    const form = openWorkoutLog(workout),
-      unilateral = workout.exercises.find((e) => e.unilateral);
-    if (!unilateral) throw new Error("seed");
-    form.inputs[setInputKey(unilateral.id, 1)] = {
-      weightKg: "8",
-      amount: "10",
-      rightAmount: "",
-    };
-    expect(collectWorkoutSets(form.snapshot.exercises, form.inputs)).toEqual({
-      success: true,
-      sets: [
-        {
-          workoutExerciseId: unilateral.id,
-          round: 1,
-          values: { weightKg: 8, amount: 10, rightAmount: null },
-        },
-      ],
-    });
-  });
-  it("keeps incomplete rows and rejects saving rather than silently dropping them", () => {
-    const form = openWorkoutLog(workout);
-    form.inputs[setInputKey(exercise.id, 1)] = {
-      weightKg: "8",
-      amount: "",
-      rightAmount: "",
-    };
+  it("requires both unilateral counts rather than interpreting a new blank as left", () => {
+    const unilateral = workout.exercises.find((e) => e.unilateral);
+    if (!unilateral) throw Error("seed");
     expect(
-      collectWorkoutSets(form.snapshot.exercises, form.inputs).success,
-    ).toBe(false);
-    expect(form.inputs[setInputKey(exercise.id, 1)]?.weightKg).toBe("8");
-    form.inputs[setInputKey(exercise.id, 1)] = {
-      weightKg: "",
-      amount: "",
-      rightAmount: "",
-    };
-    expect(collectWorkoutSets(form.snapshot.exercises, form.inputs)).toEqual({
-      success: true,
-      sets: [],
-    });
+      completeSetValues(unilateral, {
+        weightKg: "8",
+        amount: "10",
+        rightAmount: "",
+      }),
+    ).toBeUndefined();
+    expect(
+      completeSetValues(unilateral, {
+        weightKg: "8",
+        amount: "10",
+        rightAmount: "9",
+      }),
+    ).toEqual({ weightKg: 8, amount: 10, rightAmount: 9 });
   });
-  it("does not restore anything after a form is discarded", () => {
-    const discarded = openWorkoutLog(workout);
-    discarded.inputs[setInputKey(exercise.id, 1)] = {
+  it("retains incomplete text without treating it as a saved row", () => {
+    const form = openWorkoutLog(workout),
+      input = { weightKg: "8", amount: "", rightAmount: "" };
+    form.inputs[setInputKey(exercise.id, 1)] = input;
+    expect(completeSetValues(exercise, input)).toBeUndefined();
+    expect(input.weightKg).toBe("8");
+    expect(form.completedAt).toBeNull();
+  });
+  it("does not restore discarded, incomplete text into a new form", () => {
+    const old = openWorkoutLog(workout);
+    old.inputs[setInputKey(exercise.id, 1)] = {
       weightKg: "8",
-      amount: "10",
+      amount: "",
       rightAmount: "",
     };
     const next = openWorkoutLog(workout);
-    expect(next.id).not.toBe(discarded.id);
+    expect(next.id).not.toBe(old.id);
     expect(next.inputs).toEqual({});
   });
-  it("opens numeric saved sets without mutating history or private notes", () => {
+  it("opens original snapshots and numeric values without mutating history or private notes", () => {
     const existing: WorkoutLog = {
       id: crypto.randomUUID(),
       householdId: crypto.randomUUID(),
       workoutId: crypto.randomUUID(),
       userId: crypto.randomUUID(),
       snapshot: { ...workout, notes: "Legacy copied notes" },
-      note: "Original",
+      note: "Private",
       createdAt: 1,
       completedAt: 2,
       completedOn: "2026-10-25",
@@ -92,7 +74,7 @@ describe("unsaved workout form", () => {
           logId: "log",
           householdId: crypto.randomUUID(),
           workoutExerciseId: exercise.id,
-          exerciseId: crypto.randomUUID(),
+          exerciseId: exercise.catalogExerciseId ?? exercise.id,
           round: 1,
           amount: 10,
           weightKg: 8,
@@ -118,24 +100,18 @@ describe("unsaved workout form", () => {
       ),
     ).toBeUndefined();
     const form = openWorkoutLog({ ...workout, title: "Changed" }, existing);
+    expect(form.id).toBe(existing.id);
     expect(form.snapshot.title).toBe(workout.title);
     expect(form.snapshot).not.toHaveProperty("notes");
-    expect(collectWorkoutSets(form.snapshot.exercises, form.inputs)).toEqual({
-      success: true,
-      sets: [
-        {
-          workoutExerciseId: exercise.id,
-          round: 1,
-          values: { weightKg: 8, amount: 10, rightAmount: null },
-        },
-      ],
-    });
+    expect(
+      completeSetValues(exercise, form.inputs[setInputKey(exercise.id, 1)]),
+    ).toEqual({ weightKg: 8, amount: 10, rightAmount: null });
     form.inputs[setInputKey(exercise.id, 1)] = {
       weightKg: "9",
       amount: "11",
       rightAmount: "",
     };
-    expect(existing.note).toBe("Original");
+    expect(existing.note).toBe("Private");
     expect(existing.sets[0]).toMatchObject({ amount: 10, weightKg: 8 });
   });
 });
