@@ -11,6 +11,7 @@ import {
   ConfirmationPopover,
   ErrorPopover,
   GripVertical,
+  History,
   IconButton,
   InlineAlert,
   Input,
@@ -441,7 +442,13 @@ function CatalogRow({
           className="break-words px-1 text-xs text-muted"
           data-exercise-performance
         >
-          Your last:{" "}
+          <span title="Your last performance">
+            <History
+              aria-hidden="true"
+              className="mr-1 inline size-3 align-[-1px]"
+            />
+            <span className="sr-only">Your last: </span>
+          </span>
           {formatLastDoneDate(performance.performedOn) ??
             performance.performedOn}{" "}
           · {summarizeExercisePerformance(performance)}

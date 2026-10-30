@@ -7,6 +7,7 @@ import type {
 import {
   Button,
   ConfirmationPopover,
+  History,
   IconButton,
   Input,
   Plus,
@@ -222,7 +223,14 @@ export function WorkoutExerciseSets({
             </fieldset>
             {last && (
               <p className="pb-1 text-xs text-muted">
-                Previous: {last.amount}
+                <span title="Previous performance">
+                  <History
+                    aria-hidden="true"
+                    className="mr-1 inline size-3 align-[-1px]"
+                  />
+                  <span className="sr-only">Previous: </span>
+                </span>
+                {last.amount}
                 {last.rightAmount !== null
                   ? ` / ${last.rightAmount}`
                   : exercise.unilateral
