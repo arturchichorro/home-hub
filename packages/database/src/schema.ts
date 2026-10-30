@@ -738,6 +738,7 @@ export const exerciseMediaRelations = relations(exerciseMedia, ({ one }) => ({
 }));
 export const exercisesRelations = relations(exercises, ({ one, many }) => ({
   images: many(exerciseMedia),
+  performances: many(exerciseLogs),
   household: one(households, {
     fields: [exercises.householdId],
     references: [households.id],
@@ -817,6 +818,7 @@ export const workoutLogs = pgTable(
       foreignColumns: [workouts.householdId, workouts.id],
     }),
     unique("workout_logs_household_id_id").on(t.householdId, t.id),
+    unique("workout_logs_author_id").on(t.householdId, t.userId, t.id),
     uniqueIndex("workout_logs_one_per_day").on(
       t.householdId,
       t.userId,
@@ -876,6 +878,150 @@ export const workoutLogSets = pgTable(
     ),
   ],
 );
+// Exercise occurrences are independent of their optional workout grouping.
+export const exerciseLogs = pgTable(
+  "exercise_logs",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    exerciseId: uuid("exercise_id").notNull(),
+    performedOn: text("performed_on").notNull(),
+    performedAt: timestamp("performed_at", { withTimezone: true }).notNull(),
+    snapshot: jsonb("snapshot").notNull(),
+  },
+  (t) => [
+    unique("exercise_logs_author_id").on(t.householdId, t.userId, t.id),
+    foreignKey({
+      columns: [t.householdId, t.exerciseId],
+      foreignColumns: [exercises.householdId, exercises.id],
+    }),
+    index("exercise_logs_latest").on(
+      t.householdId,
+      t.userId,
+      t.exerciseId,
+      t.performedOn,
+      t.performedAt,
+      t.id,
+    ),
+  ],
+);
+export const exerciseLogSets = pgTable(
+  "exercise_log_sets",
+  {
+    exerciseLogId: uuid("exercise_log_id").notNull(),
+    round: integer("round").notNull(),
+    amount: integer("amount").notNull(),
+    rightAmount: integer("right_amount"),
+    weightKg: numeric("weight_kg", { mode: "number" }),
+    unit: text("unit").notNull(),
+    load: text("load").notNull(),
+    unilateral: boolean("unilateral").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.exerciseLogId, t.round] }),
+    foreignKey({
+      columns: [t.exerciseLogId],
+      foreignColumns: [exerciseLogs.id],
+    }),
+    check("exercise_log_sets_round", sql`${t.round} between 1 and 10`),
+    check("exercise_log_sets_amount", sql`${t.amount} between 0 and 600`),
+    check(
+      "exercise_log_sets_right",
+      sql`${t.rightAmount} is null or (${t.unilateral} and ${t.rightAmount} between 0 and 600)`,
+    ),
+    check(
+      "exercise_log_sets_weight",
+      sql`${t.weightKg} is null or (${t.load} <> 'bodyweight' and ${t.weightKg} between 0 and 1000)`,
+    ),
+    check("exercise_log_sets_unit", sql`${t.unit} in ('reps', 'seconds')`),
+    check(
+      "exercise_log_sets_load",
+      sql`${t.load} in ('per-hand', 'single', 'bodyweight')`,
+    ),
+  ],
+);
+export const workoutLogExercises = pgTable(
+  "workout_log_exercises",
+  {
+    workoutLogId: uuid("workout_log_id").notNull(),
+    workoutExerciseId: uuid("workout_exercise_id").notNull(),
+    exerciseLogId: uuid("exercise_log_id").notNull().unique(),
+    householdId: uuid("household_id").notNull(),
+    userId: uuid("user_id").notNull(),
+    position: integer("position").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.workoutLogId, t.workoutExerciseId] }),
+    foreignKey({
+      columns: [t.householdId, t.userId, t.workoutLogId],
+      foreignColumns: [
+        workoutLogs.householdId,
+        workoutLogs.userId,
+        workoutLogs.id,
+      ],
+    }),
+    foreignKey({
+      columns: [t.householdId, t.userId, t.exerciseLogId],
+      foreignColumns: [
+        exerciseLogs.householdId,
+        exerciseLogs.userId,
+        exerciseLogs.id,
+      ],
+    }),
+  ],
+);
+export const exerciseLogsRelations = relations(
+  exerciseLogs,
+  ({ one, many }) => ({
+    exercise: one(exercises, {
+      fields: [exerciseLogs.householdId, exerciseLogs.exerciseId],
+      references: [exercises.householdId, exercises.id],
+    }),
+    household: one(households, {
+      fields: [exerciseLogs.householdId],
+      references: [households.id],
+    }),
+    sets: many(exerciseLogSets),
+  }),
+);
+export const exerciseLogSetsRelations = relations(
+  exerciseLogSets,
+  ({ one }) => ({
+    occurrence: one(exerciseLogs, {
+      fields: [exerciseLogSets.exerciseLogId],
+      references: [exerciseLogs.id],
+    }),
+  }),
+);
+export const workoutLogExercisesRelations = relations(
+  workoutLogExercises,
+  ({ one }) => ({
+    log: one(workoutLogs, {
+      fields: [
+        workoutLogExercises.householdId,
+        workoutLogExercises.userId,
+        workoutLogExercises.workoutLogId,
+      ],
+      references: [workoutLogs.householdId, workoutLogs.userId, workoutLogs.id],
+    }),
+    occurrence: one(exerciseLogs, {
+      fields: [
+        workoutLogExercises.householdId,
+        workoutLogExercises.userId,
+        workoutLogExercises.exerciseLogId,
+      ],
+      references: [
+        exerciseLogs.householdId,
+        exerciseLogs.userId,
+        exerciseLogs.id,
+      ],
+    }),
+  }),
+);
+
 export const workoutsRelations = relations(workouts, ({ one, many }) => ({
   household: one(households, {
     fields: [workouts.householdId],
@@ -894,6 +1040,7 @@ export const workoutLogsRelations = relations(workoutLogs, ({ one, many }) => ({
     references: [workouts.householdId, workouts.id],
   }),
   sets: many(workoutLogSets),
+  loggedExercises: many(workoutLogExercises),
 }));
 export const workoutLogSetsRelations = relations(workoutLogSets, ({ one }) => ({
   log: one(workoutLogs, {

@@ -19,6 +19,7 @@ import {
   workoutLogSnapshotSchema,
 } from "../workouts";
 import type { ZeroAuthContext } from "./context";
+import { exerciseLogMutators } from "./exercise-log-mutators";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
 import { appendSortKey, nextSortKey, planReorder } from "./ordering";
 import { type Schema, zql } from "./schema.gen";
@@ -141,6 +142,7 @@ async function access(
 const timestamp = (tx: Transaction<Schema>, optimistic: number) =>
   tx.location === "server" ? Date.now() : optimistic;
 export const workoutMutatorDefinitions = {
+  ...exerciseLogMutators,
   reorderExerciseMedia: define(
     reorderExerciseMediaSchema,
     async ({ tx, ctx, args }) => {

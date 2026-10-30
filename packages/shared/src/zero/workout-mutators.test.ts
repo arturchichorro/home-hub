@@ -104,6 +104,9 @@ function setup(location: "server" | "client" = "server") {
     })),
     workoutLogs: [],
     workoutLogSets: [],
+    exerciseLogs: [],
+    exerciseLogSets: [],
+    workoutLogExercises: [],
     exerciseMedia: [],
     media: [],
   };
@@ -111,11 +114,16 @@ function setup(location: "server" | "client" = "server") {
   const sameKey = (table: string, a: Row, b: Row) =>
     table === "workoutExercises"
       ? a.workoutId === b.workoutId && a.id === b.id
-      : table === "workoutLogSets"
-        ? a.logId === b.logId &&
-          a.workoutExerciseId === b.workoutExerciseId &&
-          a.round === b.round
-        : a.id === b.id;
+      : table === "exerciseLogSets"
+        ? a.exerciseLogId === b.exerciseLogId && a.round === b.round
+        : table === "workoutLogExercises"
+          ? a.workoutLogId === b.workoutLogId &&
+            a.workoutExerciseId === b.workoutExerciseId
+          : table === "workoutLogSets"
+            ? a.logId === b.logId &&
+              a.workoutExerciseId === b.workoutExerciseId &&
+              a.round === b.round
+            : a.id === b.id;
   const crud = (table: string) => ({
     insert: async (row: Row) => {
       if (data[table]?.some((r) => sameKey(table, r, row)))
@@ -149,6 +157,9 @@ function setup(location: "server" | "client" = "server") {
         "workoutExercises",
         "workoutLogs",
         "workoutLogSets",
+        "exerciseLogs",
+        "exerciseLogSets",
+        "workoutLogExercises",
         "exerciseMedia",
       ].map((t) => [t, crud(t)]),
     ),
@@ -233,6 +244,11 @@ function setup(location: "server" | "client" = "server") {
   return { tx, data, writes, record };
 }
 afterEach(() => vi.restoreAllMocks());
+function fixtureRow(rows: Row[] | undefined) {
+  const row = rows?.[0];
+  if (!row) throw Error("Missing fixture row");
+  return row;
+}
 const recordedSet = {
   workoutExerciseId: starter.exercises[0]?.id ?? "",
   round: 1,
@@ -929,6 +945,132 @@ describe("shared exercise catalog", () => {
     expect(writes).not.toHaveBeenCalled();
   });
 });
+describe("exercise-first row logging", () => {
+  const payload = {
+    ...scope,
+    optimisticTimestamp: now,
+    logId,
+    snapshot,
+    completedOn: "2026-10-26",
+    timeZone: "Europe/Brussels",
+    workoutExerciseId: starter.exercises[0]?.id ?? "",
+    exerciseLogId: "30000000-0000-4000-8000-000000000001",
+    round: 1,
+    values: { amount: 12, weightKg: 8, rightAmount: null },
+  };
+  it("upserts individual rows without replacing other sets or touching the archive", async () => {
+    const { tx, data } = setup();
+    const save = (args: typeof payload) =>
+      mutators.workouts.saveSet.fn({ tx, ctx, args });
+    await save(payload);
+    await save({ ...payload, round: 2, exerciseLogId: crypto.randomUUID() });
+    await save({ ...payload, values: { ...payload.values, amount: 9 } });
+    expect(data.workoutLogs).toHaveLength(1);
+    expect(data.exerciseLogs).toHaveLength(1);
+    expect(data.workoutLogExercises).toHaveLength(1);
+    expect(data.exerciseLogSets).toHaveLength(2);
+    expect(data.exerciseLogSets?.find((s) => s.round === 2)?.amount).toBe(12);
+    expect(data.exerciseLogSets?.find((s) => s.round === 1)?.amount).toBe(9);
+    expect(data.workoutLogSets).toEqual([]);
+  });
+  it("allows extra sets without changing the prescribed count", async () => {
+    const { tx, data } = setup();
+    await mutators.workouts.saveSet.fn({
+      tx,
+      ctx,
+      args: { ...payload, round: 3 },
+    });
+    expect(data.exerciseLogSets?.[0]?.round).toBe(3);
+    expect(
+      workoutLogSnapshotSchema.parse(fixtureRow(data.workoutLogs).snapshot)
+        .exercises[0]?.sets,
+    ).toBe(starter.exercises[0]?.sets);
+  });
+  it("rejects incomplete weighted/unilateral inputs before inserting anything", async () => {
+    const { tx, data, writes } = setup();
+    await expect(
+      mutators.workouts.saveSet.fn({
+        tx,
+        ctx,
+        args: { ...payload, values: { ...payload.values, weightKg: null } },
+      }),
+    ).rejects.toThrow("Complete");
+    const unilateral = {
+      ...snapshot,
+      exercises: snapshot.exercises.map((e, i) =>
+        i ? e : { ...e, unilateral: true },
+      ),
+    };
+    await expect(
+      mutators.workouts.saveSet.fn({
+        tx,
+        ctx,
+        args: { ...payload, snapshot: unilateral },
+      }),
+    ).rejects.toThrow("Complete");
+    expect(data.workoutLogs).toEqual([]);
+    expect(writes).not.toHaveBeenCalled();
+  });
+  it("keeps the original date, snapshot, note and measurements during corrections", async () => {
+    const { tx, data } = setup();
+    await mutators.workouts.saveSet.fn({ tx, ctx, args: payload });
+    const original = structuredClone(data.exerciseLogs);
+    fixtureRow(data.workoutLogs).note = "Keep note";
+    fixtureRow(data.exercises).unit = "seconds";
+    await mutators.workouts.saveSet.fn({
+      tx,
+      ctx,
+      args: {
+        ...payload,
+        completedOn: "2026-10-27",
+        optimisticTimestamp: now + 86400000,
+        values: { ...payload.values, amount: 14 },
+      },
+    });
+    expect(data.exerciseLogs).toEqual(original);
+    expect(fixtureRow(data.workoutLogs).note).toBe("Keep note");
+    expect(fixtureRow(data.exerciseLogSets).unit).toBe("reps");
+    expect(fixtureRow(data.workoutLogs).completedOn).toBe("2026-10-26");
+  });
+  it("removes only the selected row, preserving other rows and the private note", async () => {
+    const { tx, data } = setup();
+    for (const round of [1, 2])
+      await mutators.workouts.saveSet.fn({
+        tx,
+        ctx,
+        args: { ...payload, round },
+      });
+    fixtureRow(data.workoutLogs).note = "Keep";
+    await mutators.workouts.removeSet.fn({
+      tx,
+      ctx,
+      args: {
+        householdId,
+        workoutId,
+        logId,
+        workoutExerciseId: payload.workoutExerciseId,
+        round: 1,
+      },
+    });
+    expect(data.exerciseLogSets).toHaveLength(1);
+    expect(fixtureRow(data.exerciseLogSets).round).toBe(2);
+    expect(fixtureRow(data.workoutLogs).note).toBe("Keep");
+  });
+  it("rejects missing membership, disabled modules and foreign log IDs", async () => {
+    const { tx, data } = setup();
+    fixtureRow(data.householdModuleSettings).enabled = false;
+    await expect(
+      mutators.workouts.saveSet.fn({ tx, ctx, args: payload }),
+    ).rejects.toThrow();
+    fixtureRow(data.householdModuleSettings).enabled = true;
+    data.workoutLogs?.push({ id: logId, householdId, workoutId, userId: other });
+    await expect(
+      mutators.workouts.saveSet.fn({ tx, ctx, args: payload }),
+    ).rejects.toThrow("not allowed");
+    expect(data.exerciseLogSets).toEqual([]);
+  });
+});
+
 describe("completed workout logs", () => {
   it("keeps a stable catalog ID and original measurements after shared edits", async () => {
     const { tx, data, record } = setup();

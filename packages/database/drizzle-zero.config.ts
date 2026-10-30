@@ -10,6 +10,9 @@ export default drizzleZeroConfig(drizzleSchema, {
     workoutExercises: true,
     workoutLogs: true,
     workoutLogSets: true,
+    exerciseLogs: true,
+    exerciseLogSets: true,
+    workoutLogExercises: true,
     habits: true,
     habitEntries: true,
     users: {
