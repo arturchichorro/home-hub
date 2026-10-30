@@ -66,22 +66,22 @@ than permanent branding commitments.
 
 ### Color
 
-| Shared intent | Web variable | Initial web value |
-| --- | --- | --- |
-| `color.background.canvas` | `--color-canvas` | `oklch(0.16 0.006 40)` |
-| `color.background.surface` | `--color-surface` | `oklch(0.20 0.007 40)` |
-| `color.background.raised` | `--color-raised` | `oklch(0.24 0.008 40)` |
-| `color.text.primary` | `--color-foreground` | `oklch(0.94 0.01 70)` |
-| `color.text.muted` | `--color-muted` | `oklch(0.72 0.01 70)` |
-| `color.text.subtle` | `--color-subtle` | `oklch(0.58 0.01 70)` |
-| `color.border.default` | `--color-border` | `oklch(0.30 0.008 40)` |
-| `color.action.primary` | `--color-primary` | `oklch(0.68 0.20 38)` |
-| `color.action.primary-hover` | `--color-primary-hover` | `oklch(0.73 0.18 38)` |
-| `color.action.on-primary` | `--color-on-primary` | `oklch(0.98 0.01 70)` |
-| `color.status.success` | `--color-success` | `oklch(0.76 0.13 130)` |
-| `color.status.warning` | `--color-warning` | `oklch(0.80 0.14 85)` |
-| `color.status.danger` | `--color-danger` | `oklch(0.68 0.19 28)` |
-| `color.focus.ring` | `--color-focus-ring` | `oklch(0.78 0.15 65)` |
+| Shared intent                | Web variable            | Initial web value      |
+| ---------------------------- | ----------------------- | ---------------------- |
+| `color.background.canvas`    | `--color-canvas`        | `oklch(0.16 0.006 40)` |
+| `color.background.surface`   | `--color-surface`       | `oklch(0.20 0.007 40)` |
+| `color.background.raised`    | `--color-raised`        | `oklch(0.24 0.008 40)` |
+| `color.text.primary`         | `--color-foreground`    | `oklch(0.94 0.01 70)`  |
+| `color.text.muted`           | `--color-muted`         | `oklch(0.72 0.01 70)`  |
+| `color.text.subtle`          | `--color-subtle`        | `oklch(0.58 0.01 70)`  |
+| `color.border.default`       | `--color-border`        | `oklch(0.30 0.008 40)` |
+| `color.action.primary`       | `--color-primary`       | `oklch(0.68 0.20 38)`  |
+| `color.action.primary-hover` | `--color-primary-hover` | `oklch(0.73 0.18 38)`  |
+| `color.action.on-primary`    | `--color-on-primary`    | `oklch(0.98 0.01 70)`  |
+| `color.status.success`       | `--color-success`       | `oklch(0.76 0.13 130)` |
+| `color.status.warning`       | `--color-warning`       | `oklch(0.80 0.14 85)`  |
+| `color.status.danger`        | `--color-danger`        | `oklch(0.68 0.19 28)`  |
+| `color.focus.ring`           | `--color-focus-ring`    | `oklch(0.78 0.15 65)`  |
 
 Use opacity derived from these roles for subtle state backgrounds only when
 contrast remains sufficient. Do not create module-specific colors initially.
@@ -90,14 +90,14 @@ contrast remains sufficient. Do not create module-specific colors initially.
 
 Use a four-pixel base and the deliberately sparse shared scale:
 
-| Token | Value |
-| --- | --- |
-| `space.1` | `4px` |
-| `space.2` | `8px` |
-| `space.3` | `12px` |
-| `space.4` | `16px` |
-| `space.6` | `24px` |
-| `space.8` | `32px` |
+| Token      | Value  |
+| ---------- | ------ |
+| `space.1`  | `4px`  |
+| `space.2`  | `8px`  |
+| `space.3`  | `12px` |
+| `space.4`  | `16px` |
+| `space.6`  | `24px` |
+| `space.8`  | `32px` |
 | `space.12` | `48px` |
 | `space.16` | `64px` |
 
@@ -110,30 +110,30 @@ responsive shell sizing are defined separately.
 Use the platform system sans-serif stack for the working version. Reserve a
 monospace stack for technical identifiers only.
 
-| Token | Size / line height |
-| --- | --- |
-| `font.size.xs` | `12px / 16px` |
-| `font.size.sm` | `14px / 20px` |
-| `font.size.base` | `16px / 24px` |
-| `font.size.lg` | `18px / 26px` |
-| `font.size.xl` | `22px / 30px` |
-| `font.size.2xl` | `28px / 36px` |
+| Token            | Size / line height |
+| ---------------- | ------------------ |
+| `font.size.xs`   | `12px / 16px`      |
+| `font.size.sm`   | `14px / 20px`      |
+| `font.size.base` | `16px / 24px`      |
+| `font.size.lg`   | `18px / 26px`      |
+| `font.size.xl`   | `22px / 30px`      |
+| `font.size.2xl`  | `28px / 36px`      |
 
 Use weights 400, 500, and 600. Body text uses 400, controls and small headings
 use 500, and major headings use 600.
 
 ### Shape, elevation, and motion
 
-| Token | Value |
-| --- | --- |
-| `radius.sm` | `6px` |
-| `radius.md` | `10px` |
-| `radius.lg` | `14px` |
-| `radius.full` | `9999px` |
-| `shadow.raised` | `0 12px 32px rgb(0 0 0 / 0.28)` |
-| `motion.duration.fast` | `120ms` |
-| `motion.duration.normal` | `180ms` |
-| `motion.easing.standard` | `cubic-bezier(0.2, 0, 0, 1)` |
+| Token                    | Value                           |
+| ------------------------ | ------------------------------- |
+| `radius.sm`              | `6px`                           |
+| `radius.md`              | `10px`                          |
+| `radius.lg`              | `14px`                          |
+| `radius.full`            | `9999px`                        |
+| `shadow.raised`          | `0 12px 32px rgb(0 0 0 / 0.28)` |
+| `motion.duration.fast`   | `120ms`                         |
+| `motion.duration.normal` | `180ms`                         |
+| `motion.easing.standard` | `cubic-bezier(0.2, 0, 0, 1)`    |
 
 Use borders and surface changes before shadows. Menus, dialogs, and sheets may
 use `shadow.raised`; ordinary content panels do not. Reduced-motion mode removes
@@ -169,21 +169,21 @@ native component styling. A platform may choose a different raw value when its
 rendering, accessibility, or interaction conventions require it, but it keeps
 the documented semantic meaning.
 
-| Shared token | Web implementation | Tailwind use | Future native implementation |
-| --- | --- | --- | --- |
-| `color.background.canvas` | `--color-canvas` | `bg-canvas` | `colors.backgroundCanvas` |
-| `color.background.surface` | `--color-surface` | `bg-surface` | `colors.backgroundSurface` |
-| `color.text.primary` | `--color-foreground` | `text-foreground` | `colors.textPrimary` |
-| `color.text.muted` | `--color-muted` | `text-muted` | `colors.textMuted` |
-| `color.border.default` | `--color-border` | `border-border` | `colors.borderDefault` |
-| `color.action.primary` | `--color-primary` | `bg-primary` or `text-primary` | `colors.actionPrimary` |
-| `color.status.danger` | `--color-danger` | `text-danger` or `border-danger` | `colors.statusDanger` |
-| `space.4` | four units of the 4px spacing base | `p-4`, `gap-4` | `spacing[4]` |
-| `font.size.base` | `--text-base` and its line height | `text-base` | `typography.size.base` |
-| `radius.md` | `--radius-md` | `rounded-md` | `radii.md` |
-| `shadow.raised` | `--shadow-raised` | `shadow-raised` | `shadows.raised` |
-| `motion.duration.fast` | `--motion-duration-fast` | referenced by web component transitions | `motion.duration.fast` |
-| `motion.easing.standard` | `--ease-standard` | referenced by web component transitions | `motion.easing.standard` |
+| Shared token               | Web implementation                 | Tailwind use                            | Future native implementation |
+| -------------------------- | ---------------------------------- | --------------------------------------- | ---------------------------- |
+| `color.background.canvas`  | `--color-canvas`                   | `bg-canvas`                             | `colors.backgroundCanvas`    |
+| `color.background.surface` | `--color-surface`                  | `bg-surface`                            | `colors.backgroundSurface`   |
+| `color.text.primary`       | `--color-foreground`               | `text-foreground`                       | `colors.textPrimary`         |
+| `color.text.muted`         | `--color-muted`                    | `text-muted`                            | `colors.textMuted`           |
+| `color.border.default`     | `--color-border`                   | `border-border`                         | `colors.borderDefault`       |
+| `color.action.primary`     | `--color-primary`                  | `bg-primary` or `text-primary`          | `colors.actionPrimary`       |
+| `color.status.danger`      | `--color-danger`                   | `text-danger` or `border-danger`        | `colors.statusDanger`        |
+| `space.4`                  | four units of the 4px spacing base | `p-4`, `gap-4`                          | `spacing[4]`                 |
+| `font.size.base`           | `--text-base` and its line height  | `text-base`                             | `typography.size.base`       |
+| `radius.md`                | `--radius-md`                      | `rounded-md`                            | `radii.md`                   |
+| `shadow.raised`            | `--shadow-raised`                  | `shadow-raised`                         | `shadows.raised`             |
+| `motion.duration.fast`     | `--motion-duration-fast`           | referenced by web component transitions | `motion.duration.fast`       |
+| `motion.easing.standard`   | `--ease-standard`                  | referenced by web component transitions | `motion.easing.standard`     |
 
 Color, type, radius, and shadow values that should generate Tailwind utilities
 are registered in `@theme`. Runtime-only values may remain ordinary `:root`

@@ -51,6 +51,7 @@ it("does not revert an unsaved text draft when a schema update rejects an in-fli
     .fn(async (_value: string) => true)
     .mockImplementationOnce(() => pending);
   let editor: ReturnType<typeof useDebouncedTextEditor> | undefined;
+  // biome-ignore lint/correctness/noComponentHookFactories: One-off SSR harness; no mounted subtree is recreated.
   function Capture() {
     editor = useDebouncedTextEditor({
       currentValue: "Old",

@@ -81,9 +81,9 @@ confirmation popover.
 Ingredients form one divided, reorderable list. Every saved ingredient occupies
 one row with a drag handle, editable name, optional free-text amount, optional
 muted note, and compact actions. A non-editable Scale icon precedes a saved
-amount, and a non-editable ` - ` separator precedes a saved note. Clearing an
-amount or note stores `null`. Note editors remain constrained by their row and
-scroll internally rather than expanding the list or page.
+amount, and a non-editable `-` separator with surrounding spaces precedes a saved
+note. Clearing an amount or note stores `null`. Note editors remain constrained by
+their row and scroll internally rather than expanding the list or page.
 
 The row ends with conditional add-amount, add-note, and delete actions. Each add
 action is hidden while its value exists; otherwise it reveals and focuses the
