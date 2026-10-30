@@ -48,7 +48,7 @@ ALTER TABLE "workout_log_exercises" ADD CONSTRAINT "workout_log_exercises_househ
 CREATE INDEX "exercise_logs_latest" ON "exercise_logs" USING btree ("household_id","user_id","exercise_id","performed_on","performed_at","id");--> statement-breakpoint
 -- Stable mapping preserves every historical slot, including removed slots.
 INSERT INTO exercise_logs (id, household_id, user_id, exercise_id, performed_on, performed_at, snapshot)
-SELECT DISTINCT md5(s.log_id::text || ':' || s.workout_exercise_id::text)::uuid,
+SELECT DISTINCT overlay(overlay(md5(s.log_id::text || ':' || s.workout_exercise_id::text) placing '5' from 13 for 1) placing 'a' from 17 for 1)::uuid,
  l.household_id, l.user_id, s.exercise_id, l.completed_on, l.completed_at, e.value
 FROM workout_log_sets s JOIN workout_logs l ON l.id=s.log_id AND l.household_id=s.household_id
 CROSS JOIN LATERAL jsonb_array_elements(l.snapshot->'exercises') WITH ORDINALITY e(value, position)
@@ -56,13 +56,13 @@ WHERE e.value->>'id'=s.workout_exercise_id::text;
 --> statement-breakpoint
 INSERT INTO workout_log_exercises (workout_log_id, workout_exercise_id, exercise_log_id, household_id, user_id, position)
 SELECT DISTINCT s.log_id, s.workout_exercise_id,
- md5(s.log_id::text || ':' || s.workout_exercise_id::text)::uuid, l.household_id, l.user_id, (e.position-1)::integer
+ overlay(overlay(md5(s.log_id::text || ':' || s.workout_exercise_id::text) placing '5' from 13 for 1) placing 'a' from 17 for 1)::uuid, l.household_id, l.user_id, (e.position-1)::integer
 FROM workout_log_sets s JOIN workout_logs l ON l.id=s.log_id AND l.household_id=s.household_id
 CROSS JOIN LATERAL jsonb_array_elements(l.snapshot->'exercises') WITH ORDINALITY e(value, position)
 WHERE e.value->>'id'=s.workout_exercise_id::text;
 --> statement-breakpoint
 INSERT INTO exercise_log_sets (exercise_log_id, round, amount, right_amount, weight_kg, unit, load, unilateral)
-SELECT md5(log_id::text || ':' || workout_exercise_id::text)::uuid, round, amount, right_amount, weight_kg, unit, load, unilateral
+SELECT overlay(overlay(md5(log_id::text || ':' || workout_exercise_id::text) placing '5' from 13 for 1) placing 'a' from 17 for 1)::uuid, round, amount, right_amount, weight_kg, unit, load, unilateral
 FROM workout_log_sets;
 --> statement-breakpoint
 DO $$ BEGIN

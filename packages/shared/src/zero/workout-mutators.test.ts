@@ -1063,7 +1063,12 @@ describe("exercise-first row logging", () => {
       mutators.workouts.saveSet.fn({ tx, ctx, args: payload }),
     ).rejects.toThrow();
     fixtureRow(data.householdModuleSettings).enabled = true;
-    data.workoutLogs?.push({ id: logId, householdId, workoutId, userId: other });
+    data.workoutLogs?.push({
+      id: logId,
+      householdId,
+      workoutId,
+      userId: other,
+    });
     await expect(
       mutators.workouts.saveSet.fn({ tx, ctx, args: payload }),
     ).rejects.toThrow("not allowed");
