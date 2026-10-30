@@ -128,8 +128,9 @@ No new production secret or environment-file edit is required.
 
 The migration preserves all original history and backfills author-private
 exercise occurrences/sets/links. The old set table remains an archive; the new
-API rejects the retired bulk writer. This release keeps PostgreSQL 17 and official
-Zero 1.8. An isolated warm-replica replay passed without a reset. Preserve the
+API rejects the retired bulk writer. PostgreSQL remains on 17. The original
+0046 rollout was rehearsed with official Zero 1.8 without a replica reset;
+upgrading Zero itself follows the separate coordinated cutover below. Preserve the
 existing replica volume; never remove PostgreSQL data to apply this upgrade.
 
 Reload every profile, then smoke-test old history/notes/images, cross-workout
@@ -278,6 +279,27 @@ is a separate disaster-recovery decision. It requires a maintenance window and
 explicit acceptance that writes made after the selected backup may be lost.
 Never perform or automate a production database restore as part of an ordinary
 application rollback.
+
+### Zero 1.8 → 1.11 cutover
+
+This release requires an operator-coordinated client cutover. Before promoting
+it to `main`, open **every device/browser profile** on the old app while online
+and wait for all saves to be acknowledged. Do not proceed while any device has
+unsent/offline mutations: Zero 1.11 starts a new local database for clients older
+than 1.10 and does not preserve their unsent mutations. An inactive device must
+be brought online and synced before this release, not merely after it. Pause
+household edits during the cutover; resume after the new app has connected.
+
+The deployment script makes the new API/cache healthy **before** publishing the
+new web bundle. PostgreSQL remains on 17; no application migration or manual
+replica reset is required. Expect one-time query rehydration. Do not delete
+PostgreSQL data or the replica as a routine upgrade step.
+
+Prefer retaining the upgraded cache when rolling back compatible app code. If
+the cache must also be downgraded, sync all devices and restore compatible **web
+clients first**, then API and cache; a generic cache-first deploy is not a
+supported downgrade procedure. Retain backups and review client/server
+compatibility before any rollback.
 
 ### Automatic code deployment
 

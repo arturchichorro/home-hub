@@ -72,7 +72,7 @@ services:
       retries: 10
 
   zero-cache:
-    image: rocicorp/zero:1.8.0
+    image: rocicorp/zero:1.11.3
     restart: unless-stopped
     stop_grace_period: 10m
     environment:

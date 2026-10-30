@@ -20,8 +20,8 @@
   "devDependencies": {
     "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",
-    "dotenv": "^17.4.2",
+    "dotenv": "^18.0.9",
     "drizzle-kit": "^0.31.11",
-    "drizzle-zero": "^0.20.0"
+    "drizzle-zero": "^0.21.0"
   }
 }
