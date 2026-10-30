@@ -80,7 +80,7 @@ describe("workout library last completion", () => {
     expect(logs).toMatchObject({
       where: {
         type: "and",
-        conditions: expect.arrayContaining([
+        conditions: conditionsContaining([
           equalsCondition("householdId", householdId),
           equalsCondition("userId", userId),
         ]),
@@ -96,6 +96,33 @@ describe("workout library last completion", () => {
     expect(JSON.stringify(ast.where)).toContain("householdModuleSettings");
   });
 });
+
+// Zero canonicalizes conjunction order. Keep partial structural assertions
+// for every authorization clause without depending on construction order.
+function conditionsContaining(conditions: unknown[]) {
+  function partial(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(partial);
+    if (!value || typeof value !== "object" || "asymmetricMatch" in value) {
+      return value;
+    }
+    return expect.objectContaining(
+      Object.fromEntries(
+        Object.entries(value).map(([key, entry]) => [key, partial(entry)]),
+      ),
+    );
+  }
+  return expect.arrayContaining(conditions.map(partial));
+}
+
+function relationsByAlias<
+  T extends { subquery: { alias?: string; table: string } },
+>(relations: T[]): T[] {
+  return [...relations].sort((a, b) =>
+    (a.subquery.alias ?? a.subquery.table).localeCompare(
+      b.subquery.alias ?? b.subquery.table,
+    ),
+  );
+}
 
 function getAst(query: unknown): AST {
   return (query as { ast: AST }).ast;
@@ -128,7 +155,7 @@ function moduleAccessCondition(moduleKey: "recipes" | "lists" | "habits") {
         table: "households",
         where: {
           type: "and",
-          conditions: [
+          conditions: conditionsContaining([
             activeHouseholdCondition(),
             directMembershipCondition(),
             {
@@ -139,15 +166,15 @@ function moduleAccessCondition(moduleKey: "recipes" | "lists" | "habits") {
                   table: "householdModuleSettings",
                   where: {
                     type: "and",
-                    conditions: [
+                    conditions: conditionsContaining([
                       equalsCondition("moduleKey", moduleKey),
                       equalsCondition("enabled", true),
-                    ],
+                    ]),
                   },
                 },
               },
             },
-          ],
+          ]),
         },
       },
     },
@@ -163,7 +190,10 @@ function membershipCondition() {
         table: "households",
         where: {
           type: "and",
-          conditions: [activeHouseholdCondition(), directMembershipCondition()],
+          conditions: conditionsContaining([
+            activeHouseholdCondition(),
+            directMembershipCondition(),
+          ]),
         },
       },
     },
@@ -219,13 +249,13 @@ describe("Habits queries", () => {
         ],
         where: {
           type: "and",
-          conditions: [
+          conditions: conditionsContaining([
             equalsCondition("householdId", householdId),
             equalsCondition("status", archived ? "archived" : "active"),
             moduleAccessCondition("habits"),
-          ],
+          ]),
         },
-        related: [
+        related: relationsByAlias([
           {
             correlation: {
               parentField: ["householdId", "id"],
@@ -235,7 +265,7 @@ describe("Habits queries", () => {
               table: "habitEntries",
               where: {
                 type: "and",
-                conditions: [
+                conditions: conditionsContaining([
                   {
                     type: "simple",
                     left: { name: "entryOn" },
@@ -259,11 +289,11 @@ describe("Habits queries", () => {
                       subquery: { table: "householdMembers" },
                     },
                   },
-                ],
+                ]),
               },
             },
           },
-        ],
+        ]),
       });
     },
   );
@@ -316,7 +346,7 @@ describe("Lists queries", () => {
       ],
       where: {
         type: "and",
-        conditions: [
+        conditions: conditionsContaining([
           equalsCondition("householdId", householdId),
           {
             type: "simple",
@@ -325,7 +355,7 @@ describe("Lists queries", () => {
             right: { type: "literal", value: null },
           },
           moduleAccessCondition("lists"),
-        ],
+        ]),
       },
     });
   });
@@ -343,7 +373,7 @@ describe("Lists queries", () => {
       limit: 1,
       where: {
         type: "and",
-        conditions: [
+        conditions: conditionsContaining([
           equalsCondition("householdId", householdId),
           {
             type: "simple",
@@ -353,9 +383,9 @@ describe("Lists queries", () => {
           },
           moduleAccessCondition("lists"),
           equalsCondition("id", recipeId),
-        ],
+        ]),
       },
-      related: [
+      related: relationsByAlias([
         {
           correlation: {
             parentField: ["householdId", "id"],
@@ -376,7 +406,7 @@ describe("Lists queries", () => {
             ],
           },
         },
-      ],
+      ]),
     });
   });
 });
@@ -404,23 +434,23 @@ describe("household queries", () => {
       table: "householdMembers",
       where: {
         type: "and",
-        conditions: [
+        conditions: conditionsContaining([
           equalsCondition("householdId", householdId),
           membershipCondition(),
-        ],
+        ]),
       },
       orderBy: [
         ["createdAt", "asc"],
         ["id", "asc"],
       ],
-      related: [
+      related: relationsByAlias([
         {
           subquery: {
             table: "users",
             alias: "user",
           },
         },
-      ],
+      ]),
     });
   });
 
@@ -433,23 +463,23 @@ describe("household queries", () => {
       table: "householdMembers",
       where: {
         type: "and",
-        conditions: [
+        conditions: conditionsContaining([
           equalsCondition("userId", userId),
           activeHouseholdRelation(),
-        ],
+        ]),
       },
       orderBy: [
         ["sortKey", "desc"],
         ["id", "asc"],
       ],
-      related: [
+      related: relationsByAlias([
         {
           subquery: {
             table: "households",
             alias: "household",
           },
         },
-      ],
+      ]),
     });
   });
 
@@ -467,9 +497,12 @@ describe("household queries", () => {
       ],
       where: {
         type: "and",
-        conditions: [activeHouseholdCondition(), directMembershipCondition()],
+        conditions: conditionsContaining([
+          activeHouseholdCondition(),
+          directMembershipCondition(),
+        ]),
       },
-      related: [
+      related: relationsByAlias([
         {
           subquery: {
             alias: "members",
@@ -477,7 +510,7 @@ describe("household queries", () => {
             where: equalsCondition("userId", userId),
           },
         },
-      ],
+      ]),
     });
   });
 });
@@ -502,7 +535,7 @@ describe("recipe queries", () => {
       ],
       where: {
         type: "and",
-        conditions: [
+        conditions: conditionsContaining([
           equalsCondition("householdId", householdId),
           {
             type: "simple",
@@ -511,9 +544,9 @@ describe("recipe queries", () => {
             right: { type: "literal", value: null },
           },
           moduleAccessCondition("recipes"),
-        ],
+        ]),
       },
-      related: [
+      related: relationsByAlias([
         {
           correlation: {
             childField: ["householdId", "recipeId"],
@@ -525,7 +558,7 @@ describe("recipe queries", () => {
             limit: 1,
             where: {
               type: "and",
-              conditions: [
+              conditions: conditionsContaining([
                 activeHouseholdCondition(),
                 {
                   type: "correlatedSubquery",
@@ -539,7 +572,7 @@ describe("recipe queries", () => {
                       table: "media",
                       where: {
                         type: "and",
-                        conditions: [
+                        conditions: conditionsContaining([
                           equalsCondition("kind", "image"),
                           {
                             type: "simple",
@@ -548,14 +581,16 @@ describe("recipe queries", () => {
                             right: { type: "literal", value: null },
                           },
                           activeHouseholdCondition(),
-                        ],
+                        ]),
                       },
                     },
                   },
                 },
-              ],
+              ]),
             },
-            related: [{ subquery: { table: "media", alias: "asset" } }],
+            related: relationsByAlias([
+              { subquery: { table: "media", alias: "asset" } },
+            ]),
             orderBy: [
               ["sortKey", "desc"],
               ["id", "asc"],
@@ -583,7 +618,7 @@ describe("recipe queries", () => {
             ],
           },
         },
-      ],
+      ]),
     });
   });
 
@@ -598,7 +633,7 @@ describe("recipe queries", () => {
       limit: 1,
       where: {
         type: "and",
-        conditions: [
+        conditions: conditionsContaining([
           equalsCondition("householdId", householdId),
           {
             type: "simple",
@@ -608,9 +643,9 @@ describe("recipe queries", () => {
           },
           moduleAccessCondition("recipes"),
           equalsCondition("id", recipeId),
-        ],
+        ]),
       },
-      related: [
+      related: relationsByAlias([
         {
           correlation: {
             childField: ["householdId", "recipeId"],
@@ -649,7 +684,7 @@ describe("recipe queries", () => {
             table: "recipeMedia",
             where: {
               type: "and",
-              conditions: [
+              conditions: conditionsContaining([
                 activeHouseholdCondition(),
                 {
                   type: "correlatedSubquery",
@@ -663,7 +698,7 @@ describe("recipe queries", () => {
                       table: "media",
                       where: {
                         type: "and",
-                        conditions: [
+                        conditions: conditionsContaining([
                           equalsCondition("kind", "image"),
                           {
                             type: "simple",
@@ -672,21 +707,23 @@ describe("recipe queries", () => {
                             right: { type: "literal", value: null },
                           },
                           activeHouseholdCondition(),
-                        ],
+                        ]),
                       },
                     },
                   },
                 },
-              ],
+              ]),
             },
-            related: [{ subquery: { table: "media", alias: "asset" } }],
+            related: relationsByAlias([
+              { subquery: { table: "media", alias: "asset" } },
+            ]),
             orderBy: [
               ["sortKey", "desc"],
               ["id", "asc"],
             ],
           },
         },
-      ],
+      ]),
     });
   });
 });
@@ -703,10 +740,10 @@ describe("module settings queries", () => {
       orderBy: [["moduleKey", "asc"]],
       where: {
         type: "and",
-        conditions: [
+        conditions: conditionsContaining([
           equalsCondition("householdId", householdId),
           membershipCondition(),
-        ],
+        ]),
       },
     });
   });

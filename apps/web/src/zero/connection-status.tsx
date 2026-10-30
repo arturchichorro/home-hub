@@ -9,6 +9,8 @@ function getConnectionPresentation(connectionState: ConnectionState): {
   switch (connectionState.name) {
     case "connected":
       return { label: "Connected", variant: "success" };
+    case "initializing":
+      return { label: "Loading local data…", variant: "warning" };
     case "connecting":
       return { label: "Connecting…", variant: "warning" };
     case "disconnected":
