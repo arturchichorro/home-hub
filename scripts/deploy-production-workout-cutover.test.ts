@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 const source = readFileSync(
-  new URL("./deploy-production.sh", import.meta.url),
+  new URL("./deploy-release.sh", import.meta.url),
   "utf8",
 );
 const directories: string[] = [];
@@ -54,6 +54,7 @@ function rehearse(hasTable: boolean, applied: boolean) {
       JSON.stringify(join(directory, "deploy.lock")),
     );
   execFileSync("bash", ["-c", script], {
+    cwd: directory,
     env: {
       ...process.env,
       PATH: `${bin}:${process.env.PATH}`,
@@ -88,7 +89,9 @@ it.each([
 ])("orders the real deployment script safely: %j", ({ hasTable, applied }) => {
   const commands = rehearse(hasTable, applied),
     stop = commands.findIndex((line) => line.endsWith("stop api zero-cache")),
-    migrate = commands.findIndex((line) => line.endsWith("run --rm migrate")),
+    migrate = commands.findIndex((line) =>
+      /run --rm(?: -e HOME_HUB_LOGGING_CUTOVER_READY=1)? migrate$/.test(line),
+    ),
     backend = commands.findIndex((line) =>
       line.endsWith("up -d --no-build --wait api zero-cache"),
     ),
@@ -98,9 +101,13 @@ it.each([
   expect(migrate).toBeGreaterThan(-1);
   expect(backend).toBeGreaterThan(migrate);
   expect(web).toBeGreaterThan(backend);
+  expect(commands[migrate]?.includes("HOME_HUB_LOGGING_CUTOVER_READY=1")).toBe(
+    !applied,
+  );
   if (applied) {
     expect(stop).toBe(-1);
-    expect(commands.filter((line) => line === "backup")).toHaveLength(1);
+    // The locked bootstrap takes the routine pre-update backup.
+    expect(commands.filter((line) => line === "backup")).toHaveLength(0);
   } else {
     expect(stop).toBeGreaterThan(-1);
     expect(stop).toBeLessThan(migrate);

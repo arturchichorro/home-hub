@@ -119,6 +119,13 @@ migration. It waits for matching API/cache health before publishing web. Later
 deployments skip the one-time stop. Do not bypass this ordering or run the
 migration while the old API still accepts bulk log writes.
 
+The production migrator refuses a pending `0046` with exit code **78**, before
+applying any migrations, unless the updated release procedure has stopped writers
+and completed its fresh backup. This protects the first rollout from an older
+installed deployment script. CI reconnects once on that specific exit code to
+run the now-updated entrypoint; other failures are not automatically retried.
+No new production secret or environment-file edit is required.
+
 The migration preserves all original history and backfills author-private
 exercise occurrences/sets/links. The old set table remains an archive; the new
 API rejects the retired bulk writer. This release keeps PostgreSQL 17 and official
@@ -281,12 +288,20 @@ the narrowly scoped Cloudflare deployment credential; the VPS does not.
 `scripts/deploy-production.sh` is the sole command authorized for the
 dedicated GitHub Actions VPS deployment key. It serializes deployments with a
 host lock, requires a clean `main` checkout and a fast-forward update, creates
-an off-host PostgreSQL backup, pulls the verified revision, builds all release
-images, applies pending forward migrations with the one-shot `migrate` service,
-starts the new services, waits for container health, and verifies the public
-web, API readiness, and Zero keepalive routes. A migration failure stops the
-deployment before the new application containers are started. The script never
-reverses a migration or restores a database backup automatically.
+an off-host PostgreSQL backup, and pulls the verified revision. It then executes
+`deploy-release.sh` from that freshly checked-out revision while retaining the
+lock, rather than continuing a potentially stale in-memory deployment procedure.
+The release procedure builds images, performs any required writer cutover,
+applies forward migrations, waits for API/cache health before publishing web,
+and verifies public web/readiness/keepalive routes. A migration failure prevents
+the new application containers from starting. Neither script reverses migrations
+or restores database backups automatically.
+
+The CI-side `deploy-via-ssh.sh` keeps the same restricted SSH command and host-key
+verification. Its single reconnect is limited to the migrator's safe bootstrap
+refusal (78); build, backup, authentication and actual migration errors fail
+without a retry. If 78 repeats, inspect the installed entrypoint and migrator
+image rather than disabling the guard.
 
 Destructive or backward-incompatible migrations are not routine deployments.
 They require an explicit staged compatibility plan, a reviewed rollback and

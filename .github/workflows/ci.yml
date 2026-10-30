@@ -201,14 +201,4 @@ jobs:
         env:
           VPS_HOST: ${{ vars.VPS_HOST }}
           VPS_USER: ${{ vars.VPS_USER }}
-        run: |
-          ssh -T \
-            -i ~/.ssh/home_hub_deploy \
-            -o BatchMode=yes \
-            -o ConnectTimeout=15 \
-            -o IdentitiesOnly=yes \
-            -o ServerAliveCountMax=10 \
-            -o ServerAliveInterval=30 \
-            -o StrictHostKeyChecking=yes \
-            -o UserKnownHostsFile=~/.ssh/known_hosts \
-            "$VPS_USER@$VPS_HOST"
+        run: bash scripts/deploy-via-ssh.sh
