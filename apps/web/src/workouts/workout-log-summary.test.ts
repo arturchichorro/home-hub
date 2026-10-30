@@ -5,7 +5,10 @@ import {
   workoutContentSchema,
 } from "@home-hub/shared/workouts";
 import { describe, expect, it } from "vitest";
-import { summarizeWorkoutLog } from "./workout-log-summary";
+import {
+  summarizeExercisePerformance,
+  summarizeWorkoutLog,
+} from "./workout-log-summary";
 
 const snapshot = workoutContentSchema.parse(starterWorkouts[0]);
 const bench = snapshot.exercises.find((e) => e.name === "Dumbbell bench press");
@@ -33,6 +36,37 @@ function log(
     })),
   };
 }
+describe("exercise occurrence summaries", () => {
+  it("counts actual extra sets, not the two-set prescription", () => {
+    const sets = log(
+      { ...bench, sets: 2 },
+      [1, 2, 3].map((round) => ({ round, values })),
+    ).sets.map((set) => ({ ...set, exerciseLogId: "occurrence" }));
+    expect(summarizeExercisePerformance({ snapshot: bench, sets })).toBe(
+      "3 × 10 reps · 8 kg/hand",
+    );
+  });
+  it("uses stored measurement conventions, not subsequently changed catalog settings", () => {
+    const sets = log(bench, [
+      { round: 1, values: { amount: 9, rightAmount: null, weightKg: 12.5 } },
+    ]).sets.map((set) => ({ ...set, exerciseLogId: "occurrence" }));
+    expect(
+      summarizeExercisePerformance({
+        snapshot: { ...bench, unit: "seconds", load: "bodyweight" },
+        sets,
+      }),
+    ).toBe("9 reps · 12.5 kg/hand");
+  });
+  it("preserves unequal unilateral counts and legacy blank-right semantics", () => {
+    const sets = log(row, [
+      { round: 1, values: { amount: 12, rightAmount: 10, weightKg: 8 } },
+      { round: 2, values: { amount: 9, rightAmount: null, weightKg: 8 } },
+    ]).sets.map((set) => ({ ...set, exerciseLogId: "occurrence" }));
+    expect(summarizeExercisePerformance({ snapshot: row, sets })).toBe(
+      "Set 1: Left 12 / Right 10 reps · 8 kg; Set 2: Left 9 / Right 9 reps · 8 kg",
+    );
+  });
+});
 describe("workout history summaries", () => {
   it("does not invent sets or repetitions from workout targets", () => {
     expect(summarizeWorkoutLog(log(bench, []))).toEqual([]);

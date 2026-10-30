@@ -13,6 +13,6 @@
     "@home-hub/shared": "workspace:*"
   },
   "devDependencies": {
-    "wrangler": "^4.125.0"
+    "wrangler": "^4.153.0"
   }
 }

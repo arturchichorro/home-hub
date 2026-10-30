@@ -36,7 +36,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 26
+          node-version: 26.12.1
           cache: pnpm
 
       - name: Install dependencies
@@ -136,6 +136,9 @@ jobs:
           DATABASE_URL: postgres://home_hub:home_hub@127.0.0.1:5432/home_hub
         run: scripts/verify-media-migration.sh "${{ job.services.postgres.id }}"
 
+      - name: Verify populated exercise logging migration
+        run: scripts/verify-exercise-logging-migration.sh "${{ job.services.postgres.id }}"
+
       - name: Build production web application
         env:
           VITE_ZERO_CACHE_URL: https://home.achichorro.com/zero
@@ -172,7 +175,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 26
+          node-version: 26.12.1
           cache: pnpm
 
       - name: Install dependencies
@@ -198,14 +201,4 @@ jobs:
         env:
           VPS_HOST: ${{ vars.VPS_HOST }}
           VPS_USER: ${{ vars.VPS_USER }}
-        run: |
-          ssh -T \
-            -i ~/.ssh/home_hub_deploy \
-            -o BatchMode=yes \
-            -o ConnectTimeout=15 \
-            -o IdentitiesOnly=yes \
-            -o ServerAliveCountMax=10 \
-            -o ServerAliveInterval=30 \
-            -o StrictHostKeyChecking=yes \
-            -o UserKnownHostsFile=~/.ssh/known_hosts \
-            "$VPS_USER@$VPS_HOST"
+        run: bash scripts/deploy-via-ssh.sh

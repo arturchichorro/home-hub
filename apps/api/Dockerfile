@@ -1,6 +1,6 @@
-FROM node:26-bookworm-slim AS dependencies
+FROM node:26.12.1-bookworm-slim AS dependencies
 
-RUN npm install --global pnpm@11.10.0
+RUN npm install --global pnpm@11.28.9
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ COPY packages/database/src packages/database/src
 COPY packages/shared/tsconfig.json packages/shared/tsconfig.json
 COPY packages/shared/src packages/shared/src
 
-FROM node:26-bookworm-slim AS runtime
+FROM node:26.12.1-bookworm-slim AS runtime
 
 ENV NODE_ENV=production
 ENV API_PORT=3000

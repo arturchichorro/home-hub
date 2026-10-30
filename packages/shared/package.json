@@ -6,6 +6,7 @@
     "./auth": "./src/auth.ts",
     "./habits": "./src/habits.ts",
     "./workouts": "./src/workouts.ts",
+    "./exercise-logs": "./src/exercise-logs.ts",
     "./workout-seed": "./src/workout-seed.ts",
     "./households": "./src/households.ts",
     "./modules": "./src/modules.ts",
@@ -29,6 +30,6 @@
   },
   "dependencies": {
     "@rocicorp/zero": "1.8.0",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   }
 }

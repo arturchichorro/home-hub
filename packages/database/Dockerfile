@@ -1,6 +1,6 @@
-FROM node:26-bookworm-slim
+FROM node:26.12.1-bookworm-slim
 
-RUN npm install --global pnpm@11.10.0
+RUN npm install --global pnpm@11.28.9
 
 WORKDIR /app
 
@@ -15,9 +15,10 @@ RUN pnpm install --frozen-lockfile --filter @home-hub/database
 
 COPY packages/database/drizzle.config.ts packages/database/drizzle.config.ts
 COPY packages/database/src/connection-url.ts packages/database/src/connection-url.ts
+COPY packages/database/scripts packages/database/scripts
 COPY packages/database/drizzle packages/database/drizzle
 
 USER node
 WORKDIR /app/packages/database
 
-CMD ["pnpm", "migrate"]
+CMD ["node", "scripts/migrate-production.mjs"]

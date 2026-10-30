@@ -10,6 +10,7 @@ function setup(
   enabled = true,
 ) {
   let editor: ReturnType<typeof useWorkoutExercisesEditor> | undefined;
+  // biome-ignore lint/correctness/noComponentHookFactories: One-off SSR harness; no mounted subtree is recreated.
   function Capture() {
     editor = useWorkoutExercisesEditor({ current, enabled, save });
     return null;

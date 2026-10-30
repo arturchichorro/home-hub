@@ -33,6 +33,7 @@ services:
       dockerfile: packages/database/Dockerfile
     environment:
       DATABASE_URL: postgres://home_hub:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/home_hub
+      HOME_HUB_REQUIRE_LOGGING_CUTOVER: "1"
     depends_on:
       postgres:
         condition: service_healthy

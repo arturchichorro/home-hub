@@ -4,9 +4,6 @@ set -euo pipefail
 
 readonly repository_directory="/opt/home-hub"
 readonly lock_file="/tmp/home-hub-production-deploy.lock"
-readonly compose_file="compose.production.yml"
-readonly environment_file=".env.production"
-
 cd "$repository_directory"
 
 exec 9>"$lock_file"
@@ -37,28 +34,6 @@ fi
 
 git pull --ff-only origin main
 
-docker compose \
-  --env-file "$environment_file" \
-  -f "$compose_file" \
-  --profile tools \
-  build api web migrate
-
-docker compose \
-  --env-file "$environment_file" \
-  -f "$compose_file" \
-  --profile tools \
-  run --rm migrate
-
-docker compose \
-  --env-file "$environment_file" \
-  -f "$compose_file" \
-  up -d --no-build --wait
-
-curl --fail --silent --show-error \
-  https://home.achichorro.com/api/ready >/dev/null
-curl --fail --silent --show-error \
-  https://home.achichorro.com/zero/keepalive >/dev/null
-curl --fail --silent --show-error \
-  https://home.achichorro.com/ >/dev/null
-
-printf 'Deployment completed successfully: %s\n' "$(git rev-parse HEAD)"
+# Read the release procedure from the freshly checked-out revision, not the
+# potentially old script image already being executed by Bash.
+exec bash ./scripts/deploy-release.sh

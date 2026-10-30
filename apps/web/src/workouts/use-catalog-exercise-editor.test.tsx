@@ -31,6 +31,7 @@ function setup({
 } = {}) {
   let editor: ReturnType<typeof useCatalogExerciseEditor> | undefined;
   const onSaved = vi.fn();
+  // biome-ignore lint/correctness/noComponentHookFactories: One-off SSR harness; no mounted subtree is recreated.
   function Capture() {
     editor = useCatalogExerciseEditor({
       initial,
