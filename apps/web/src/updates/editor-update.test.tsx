@@ -13,6 +13,7 @@ it.each([true, false])(
     vi.useFakeTimers();
     const save = vi.fn(async (_value: string) => false);
     let editor: ReturnType<typeof useDebouncedTextEditor> | undefined;
+    // biome-ignore lint/correctness/noComponentHookFactories: One-off SSR harness; no mounted subtree is recreated.
     function Capture() {
       editor = useDebouncedTextEditor({
         currentValue: "Old",
