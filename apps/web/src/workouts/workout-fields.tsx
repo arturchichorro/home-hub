@@ -22,7 +22,7 @@ import {
   TextDraftActions,
   TextDraftGuard,
 } from "../editing/text-draft-actions";
-import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
+import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
 
 export function WorkoutText({
   label,

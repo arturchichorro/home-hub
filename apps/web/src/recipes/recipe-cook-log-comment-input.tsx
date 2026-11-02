@@ -7,8 +7,9 @@ import {
   TextDraftActions,
   TextDraftGuard,
 } from "../editing/text-draft-actions";
+import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
-import { useDebouncedTextEditor } from "./use-debounced-text-editor";
 
 type RecipeCookLogCommentInputProps = {
   cookLogId: string;
@@ -48,9 +49,7 @@ export function RecipeCookLogCommentInput({
           optimisticUpdatedAt: Date.now(),
         }),
       );
-      const clientResult = await mutation.client;
-      const result =
-        clientResult.type === "error" ? clientResult : await mutation.server;
+      const result = await acknowledgeMutation(mutation);
       return result.type === "success";
     },
   });

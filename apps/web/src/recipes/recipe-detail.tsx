@@ -19,6 +19,7 @@ import {
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { AddRecipeCookLogForm } from "./add-recipe-cook-log-form";
 import { deleteRecipeImage } from "./image-api";
@@ -156,8 +157,7 @@ export function RecipeDetail({
           optimisticDeletedAt: Date.now(),
         }),
       );
-      const client = await mutation.client;
-      const outcome = client.type === "error" ? client : await mutation.server;
+      const outcome = await acknowledgeMutation(mutation);
       if (outcome.type === "error") {
         setDeleteError("The recipe could not be deleted.");
         return;

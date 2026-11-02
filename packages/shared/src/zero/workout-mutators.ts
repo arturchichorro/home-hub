@@ -1,6 +1,5 @@
 import { defineMutatorWithType, type Transaction } from "@rocicorp/zero";
 import { reorderExerciseMediaSchema } from "../exercise-media";
-import { calendarDate } from "../habits";
 import { starterWorkouts } from "../workout-seed";
 import {
   createCatalogExerciseSchema,
@@ -16,7 +15,6 @@ import {
   updateWorkoutLogNoteSchema,
   updateWorkoutSchema,
   type WorkoutExercise,
-  workoutLogSnapshotSchema,
 } from "../workouts";
 import type { ZeroAuthContext } from "./context";
 import { exerciseLogMutators } from "./exercise-log-mutators";
@@ -513,102 +511,10 @@ export const workoutMutatorDefinitions = {
       await tx.mutate.workoutLogs.update({ id: log.id, note: args.note });
     },
   ),
-  saveLog: define(saveWorkoutLogSchema, async ({ tx, ctx, args }) => {
-    await access(tx, args.householdId, ctx.userId);
-    if (!(await tx.run(scopedWorkout(args.householdId, args.workoutId))))
-      throw new Error("Workout logging not allowed");
-    const now = timestamp(tx, args.optimisticTimestamp),
-      completedOn = calendarDate(now, args.timeZone);
-    const existing =
-      (await tx.run(
-        ownLog(args.householdId, args.workoutId, ctx.userId, args.logId),
-      )) ??
-      (await tx.run(
-        zql.workoutLogs
-          .where("householdId", args.householdId)
-          .where("workoutId", args.workoutId)
-          .where("userId", ctx.userId)
-          .where("completedOn", completedOn)
-          .one(),
-      ));
-    const logId = existing?.id ?? args.logId;
-    const snapshot = workoutLogSnapshotSchema.parse(
-      existing?.snapshot ?? args.snapshot,
+  // Preserve the protocol name for stale clients, never write the archive.
+  saveLog: define(saveWorkoutLogSchema, async () => {
+    throw new Error(
+      "Workout logging has changed. Reload Home Hub before logging.",
     );
-    const catalog = await tx.run(scopedCatalog(args.householdId));
-    const links = await tx.run(
-      scopedExercises(args.householdId, args.workoutId),
-    );
-    snapshot.exercises = snapshot.exercises.map((definition) => {
-      const link = links.find((row) => row.id === definition.id);
-      const entry = definition.catalogExerciseId
-        ? catalog.find((row) => row.id === definition.catalogExerciseId)
-        : (catalog.find((row) => row.id === link?.exerciseId) ??
-          catalog.find(
-            (row) =>
-              row.normalizedName === normalizeExerciseName(definition.name),
-          ));
-      if (!entry || (!existing && entry.deletedAt != null))
-        throw new Error("Workout catalog exercise not allowed");
-      return { ...definition, catalogExerciseId: entry.id };
-    });
-    for (const set of args.sets) {
-      const exercise = snapshot.exercises.find(
-        (e) => e.id === set.workoutExerciseId,
-      );
-      if (
-        !exercise ||
-        set.round > exercise.sets ||
-        (!exercise.unilateral && set.values.rightAmount !== null) ||
-        (exercise.load === "bodyweight" && set.values.weightKg !== null)
-      )
-        throw new Error("Workout set update not allowed");
-    }
-    if (existing) {
-      if (args.note !== undefined)
-        await tx.mutate.workoutLogs.update({
-          id: existing.id,
-          note: args.note,
-        });
-      const oldSets = await tx.run(
-        zql.workoutLogSets.where("logId", existing.id),
-      );
-      for (const set of oldSets)
-        await tx.mutate.workoutLogSets.delete({
-          logId: set.logId,
-          workoutExerciseId: set.workoutExerciseId,
-          round: set.round,
-        });
-    } else {
-      await tx.mutate.workoutLogs.insert({
-        id: logId,
-        householdId: args.householdId,
-        workoutId: args.workoutId,
-        userId: ctx.userId,
-        note: args.note ?? "",
-        snapshot,
-        createdAt: now,
-        completedAt: now,
-        completedOn,
-      });
-    }
-    for (const set of args.sets) {
-      const exercise = snapshot.exercises.find(
-        (e) => e.id === set.workoutExerciseId,
-      );
-      if (!exercise?.catalogExerciseId)
-        throw new Error("Missing catalog exercise");
-      await tx.mutate.workoutLogSets.insert({
-        logId,
-        householdId: args.householdId,
-        workoutExerciseId: set.workoutExerciseId,
-        exerciseId: exercise.catalogExerciseId,
-        round: set.round,
-        ...set.values,
-        unit: exercise.unit,
-        load: exercise.load,
-        unilateral: exercise.unilateral,
-      });
-    }
   }),
 };

@@ -19,6 +19,7 @@ import {
 } from "../seamless-text-editing";
 import { useBlockAppUpdate } from "../updates/activity";
 import { appUpdates } from "../updates/state";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 const autosaveDelayMs = 600;
@@ -155,9 +156,7 @@ export function useRecipeDetailsEditor({
           optimisticUpdatedAt: Date.now(),
         }),
       );
-      const clientResult = await mutation.client;
-      const result =
-        clientResult.type === "error" ? clientResult : await mutation.server;
+      const result = await acknowledgeMutation(mutation);
 
       if (result.type === "success") {
         confirmedDraftRef.current = submittedDraft;

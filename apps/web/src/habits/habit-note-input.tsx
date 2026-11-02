@@ -9,7 +9,8 @@ import {
 import { useZero } from "@rocicorp/zero/react";
 import { useEffect, useRef, useState } from "react";
 import { TextDraftActions } from "../editing/text-draft-actions";
-import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
+import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 import { useHabitDraftStatus } from "./use-habit-draft-status";
@@ -61,9 +62,7 @@ export function HabitNoteInput({
               }),
             )
           : zero.mutate(mutators.habits.updateNote(scope));
-        const client = await mutation.client;
-        const outcome =
-          client.type === "error" ? client : await mutation.server;
+        const outcome = await acknowledgeMutation(mutation);
         return outcome.type === "success";
       } catch {
         return false;

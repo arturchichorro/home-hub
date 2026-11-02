@@ -21,6 +21,7 @@ import {
 } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { useBlockAppUpdate } from "../updates/activity";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { HabitActions } from "./habit-actions";
 import { HabitDayPreview, type HabitRow, HabitTodayToggle } from "./habit-days";
@@ -132,9 +133,8 @@ function HabitsContent({
     setPending(new Set(pendingRef.current));
     setError(undefined);
     try {
-      const mutation = zero.mutate(request),
-        client = await mutation.client;
-      const outcome = client.type === "error" ? client : await mutation.server;
+      const mutation = zero.mutate(request);
+      const outcome = await acknowledgeMutation(mutation);
       if (outcome.type === "error") setError("Unable to save.");
     } catch {
       setError("Unable to save.");

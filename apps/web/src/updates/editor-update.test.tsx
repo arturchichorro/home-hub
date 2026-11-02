@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
-import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
+import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
 import { appUpdates } from "./state";
 
 afterEach(() => {
