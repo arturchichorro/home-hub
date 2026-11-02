@@ -15,6 +15,22 @@ type Workout = {
   title: string;
   logs?: readonly { completedOn: string }[];
 };
+const weekdayFormatter = new Intl.DateTimeFormat("en-GB", {
+  weekday: "short",
+  timeZone: "UTC",
+});
+const dayFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "long",
+  timeZone: "UTC",
+});
+const yearFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
 export function formatLastDoneDate(
   day: string,
   now = new Date(),
@@ -23,18 +39,10 @@ export function formatLastDoneDate(
   const date = new Date(`${day}T00:00:00Z`);
   if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== day)
     return undefined;
-  const weekday = new Intl.DateTimeFormat("en-GB", {
-    weekday: "short",
-    timeZone: "UTC",
-  }).format(date);
-  const label = new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-    ...(date.getUTCFullYear() !== now.getFullYear()
-      ? { year: "numeric" as const }
-      : {}),
-  }).format(date);
+  const weekday = weekdayFormatter.format(date);
+  const label = (
+    date.getUTCFullYear() !== now.getFullYear() ? yearFormatter : dayFormatter
+  ).format(date);
   return `${weekday}, ${label}`;
 }
 // Same gestures as Lists: mouse movement, touch hold, Space/arrow keys.

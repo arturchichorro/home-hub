@@ -66,6 +66,34 @@ describe("person-scoped habits", () => {
   });
 });
 
+describe("catalog media subscription", () => {
+  it("shares gallery metadata without widening household, module or deletion boundaries", () => {
+    const ast = getAst(
+      queries.workouts.catalogMedia.fn({
+        args: { householdId },
+        ctx: { userId },
+      }),
+    );
+    expect(ast.table).toBe("exerciseMedia");
+    const scope = JSON.stringify(ast.where);
+    for (const required of [
+      householdId,
+      userId,
+      "householdMembers",
+      "householdModuleSettings",
+      "workouts",
+      "deletedAt",
+      "confirmedAt",
+      "image",
+    ])
+      expect(scope).toContain(required);
+    expect(
+      ast.related?.some((relation) => relation.subquery.table === "media"),
+    ).toBe(true);
+    expect(scope).not.toContain("exerciseLogs");
+  });
+});
+
 describe("workout library last completion", () => {
   it("fetches only the current author's newest local day, bounded to one log per workout", () => {
     const ast = getAst(

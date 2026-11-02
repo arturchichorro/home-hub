@@ -11,9 +11,23 @@ import {
 } from "@home-hub/shared/media";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
+import type {
+  Media,
+  ExerciseMedia as MediaLink,
+} from "@home-hub/shared/zero/schema";
 import { ErrorPopover, IconButton, ImagePlus } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  createContext,
+  memo,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ImageViewer } from "../media/image-viewer";
 import { type MediaSession, useMediaSession } from "../media/session";
 import { readImageDimensions } from "../recipes/read-image-dimensions";
@@ -31,6 +45,40 @@ import {
 } from "./exercise-media-api";
 import { workoutOrderingSensors } from "./workout-list";
 
+type MediaRow = MediaLink & { asset?: Media | undefined };
+const CatalogMediaContext = createContext<
+  | {
+      householdId: string;
+      complete: boolean;
+      rows: ReadonlyMap<string, readonly MediaRow[]>;
+    }
+  | undefined
+>(undefined);
+const emptyMediaRows: readonly MediaRow[] = [];
+
+// Same authorized rows as the individual galleries, one subscription per catalog.
+export function CatalogMediaProvider({
+  householdId,
+  children,
+}: {
+  householdId: string;
+  children: ReactNode;
+}) {
+  const [rows, result] = useQuery(
+    queries.workouts.catalogMedia({ householdId }),
+  );
+  const value = useMemo(() => {
+    const grouped = new Map<string, MediaRow[]>();
+    for (const row of rows) {
+      const group = grouped.get(row.exerciseId) ?? [];
+      group.push(row);
+      grouped.set(row.exerciseId, group);
+    }
+    return { householdId, rows: grouped, complete: result.type === "complete" };
+  }, [householdId, rows, result.type]);
+  return <CatalogMediaContext value={value}>{children}</CatalogMediaContext>;
+}
+
 type Props = {
   householdId: string;
   exerciseId: string;
@@ -38,10 +86,10 @@ type Props = {
   readOnly?: boolean;
   disabled?: boolean;
 };
-export function ExerciseMedia(props: Props) {
+export const ExerciseMedia = memo(function ExerciseMedia(props: Props) {
   const session = useMediaSession();
   return session ? <ExerciseMediaGallery {...props} session={session} /> : null;
-}
+});
 function ExerciseThumbnail({
   image,
   session,
@@ -124,9 +172,19 @@ function ExerciseMediaGallery({
 }: Props & { session: MediaSession }) {
   const enabled = useZeroMutationEnabled();
   const zero = useZero();
-  const [rows, result] = useQuery(
-    queries.workouts.exerciseMedia({ householdId, exerciseId }),
+  const context = useContext(CatalogMediaContext);
+  const provided = context?.householdId === householdId ? context : undefined;
+  const [individualRows, individualResult] = useQuery(
+    provided
+      ? undefined
+      : queries.workouts.exerciseMedia({ householdId, exerciseId }),
   );
+  const rows = provided
+    ? (provided.rows.get(exerciseId) ?? emptyMediaRows)
+    : (individualRows ?? emptyMediaRows);
+  const complete = provided
+    ? provided.complete
+    : individualResult.type === "complete";
   const [selectedId, setSelectedId] = useState<string>();
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState(false);
@@ -140,8 +198,7 @@ function ExerciseMediaGallery({
     (image) => !hiddenIds.has(image.id),
   );
   const selected = images.find((image) => image.id === selectedId);
-  const writable =
-    enabled && !disabled && !readOnly && result.type === "complete";
+  const writable = enabled && !disabled && !readOnly && complete;
   const sortingDisabled = !writable || busy || deleting || reordering;
   const thumbnail = useExerciseImageUrl({
     ...session,
