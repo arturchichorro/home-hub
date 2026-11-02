@@ -754,6 +754,9 @@ export const workoutExercises = pgTable(
     exerciseId: uuid("exercise_id").notNull(),
     sets: integer("sets").notNull(),
     target: text("target").notNull(),
+    role: text("role", { enum: ["warmup", "workout", "stretching"] })
+      .notNull()
+      .default("workout"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -778,6 +781,10 @@ export const workoutExercises = pgTable(
       columns: [t.householdId, t.exerciseId],
       foreignColumns: [exercises.householdId, exercises.id],
     }),
+    check(
+      "workout_exercises_role",
+      sql`${t.role} IN (\x27warmup\x27, \x27workout\x27, \x27stretching\x27)`,
+    ),
     check("workout_exercises_sets", sql`${t.sets} between 1 and 10`),
     check("workout_exercises_target_length", sql`length(${t.target}) <= 100`),
   ],
@@ -800,6 +807,8 @@ export const workoutLogs = pgTable(
   {
     id: uuid("id").primaryKey(),
     note: text("note").notNull().default(""),
+    // Immutable placement-role snapshot, separate from legacy strict definition JSON.
+    exerciseRoles: jsonb("exercise_roles").notNull().default({}),
     householdId: uuid("household_id").notNull(),
     userId: uuid("user_id")
       .notNull()

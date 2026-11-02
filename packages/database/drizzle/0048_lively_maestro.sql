@@ -1,0 +1,1 @@
+ALTER TABLE "workout_logs" ADD COLUMN "exercise_roles" jsonb DEFAULT '{}'::jsonb NOT NULL;

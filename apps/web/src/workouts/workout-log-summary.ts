@@ -63,6 +63,15 @@ export function summarizeWorkoutLog(
         : descriptions
             .map((value, index) => `Set ${sets[index]?.round}: ${value}`)
             .join("; ");
-      return [{ id: exercise.id, name: exercise.name, details }];
+      return [
+        {
+          id: exercise.id,
+          name: exercise.name,
+          details,
+          ...(exercise.role && exercise.role !== "workout"
+            ? { role: exercise.role }
+            : {}),
+        },
+      ];
     });
 }

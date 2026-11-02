@@ -5,7 +5,13 @@ import {
   saveExerciseSetSchema,
 } from "../exercise-logs";
 import { calendarDate } from "../habits";
-import { workoutExerciseSchema, workoutLogSnapshotSchema } from "../workouts";
+import {
+  workoutExerciseRoleSchema,
+  workoutExerciseRolesSnapshotSchema,
+  workoutExerciseSchema,
+  workoutLogSnapshotSchema,
+  workoutSnapshotWithoutRoles,
+} from "../workouts";
 import type { ZeroAuthContext } from "./context";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
 import { type Schema, zql } from "./schema.gen";
@@ -49,6 +55,34 @@ export const exerciseLogMutators = {
     const snapshot = workoutLogSnapshotSchema.parse(
       existing?.snapshot ?? args.snapshot,
     );
+    if (
+      !existing &&
+      snapshot.exercises.some((exercise) => exercise.role === undefined)
+    ) {
+      // Old clients do not send roles. Capture current placements for a new log,
+      // never reinterpret or rewrite an existing historical snapshot.
+      const placements = await tx.run(
+        zql.workoutExercises
+          .where("householdId", args.householdId)
+          .where("workoutId", args.workoutId),
+      );
+      const roles = new Map(placements.map((slot) => [slot.id, slot.role]));
+      snapshot.exercises = snapshot.exercises.map((exercise) => ({
+        ...exercise,
+        role:
+          exercise.role ??
+          workoutExerciseRoleSchema.parse(roles.get(exercise.id) ?? "workout"),
+      }));
+    }
+    if (existing) {
+      const roles = workoutExerciseRolesSnapshotSchema.parse(
+        existing.exerciseRoles ?? {},
+      );
+      snapshot.exercises = snapshot.exercises.map((exercise) => ({
+        ...exercise,
+        role: roles[exercise.id] ?? "workout",
+      }));
+    }
     const definition = snapshot.exercises.find(
       (e) => e.id === args.workoutExerciseId,
     );
@@ -132,7 +166,13 @@ export const exerciseLogMutators = {
         householdId: args.householdId,
         userId: ctx.userId,
         workoutId: args.workoutId,
-        snapshot,
+        snapshot: workoutSnapshotWithoutRoles(snapshot),
+        exerciseRoles: Object.fromEntries(
+          snapshot.exercises.map((exercise) => [
+            exercise.id,
+            exercise.role ?? "workout",
+          ]),
+        ),
         note: "",
         completedOn: args.completedOn,
         completedAt: args.optimisticTimestamp,
@@ -140,6 +180,7 @@ export const exerciseLogMutators = {
           tx.location === "server" ? Date.now() : args.optimisticTimestamp,
       });
     const exerciseLogId = occurrence?.id ?? args.exerciseLogId;
+    const { role: _role, ...historicalDefinition } = historical;
     if (!occurrence) {
       await tx.mutate.exerciseLogs.insert({
         id: exerciseLogId,
@@ -148,7 +189,7 @@ export const exerciseLogMutators = {
         exerciseId,
         performedOn: existing?.completedOn ?? args.completedOn,
         performedAt: existing?.completedAt ?? args.optimisticTimestamp,
-        snapshot: { ...historical, catalogExerciseId: exerciseId },
+        snapshot: { ...historicalDefinition, catalogExerciseId: exerciseId },
       });
       await tx.mutate.workoutLogExercises.insert({
         workoutLogId: logId,

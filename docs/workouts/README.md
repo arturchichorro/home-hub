@@ -49,7 +49,14 @@ workouts; training logs and set values remain private to their author.
 - Add the supplied A/B/C starter workouts. **Add exercise** searches the household
   catalog or creates a new movement. The searchable catalog is listed below the
   workouts. Name, measure, load convention and sides are shared across workouts;
-  sets and target ranges belong to each workout.
+  sets, target ranges and exercise roles belong to each workout. Each placement
+  has a simple role selector: **Warm-up**, **Workout** (default), or **Stretching**.
+  The same catalog movement can have different roles in different workouts (or
+  slots); classification does not group, reorder, or split performance history.
+  Roles are captured in new log snapshots. Reopening/correcting a log keeps its
+  recorded role; pre-classification history displays Workout without rewriting
+  stored snapshots. Frozen roles are stored separately from strict definition
+  JSON so already-open older clients can still read and correct logs.
 - Catalog rows show **Your last**: the latest nonempty, author-private exercise
   occurrence across workouts, with date and actual sets/counts/weights. Historical
   corrections retain their original date and measurement conventions; they do
@@ -90,12 +97,12 @@ ownership are enforced in Zero queries and mutations.
   soft deletion and timestamps. Composite foreign keys keep assets/exercises in
   one household. Removing a slot or renaming a movement retains its pictures;
   deleting a picture unlinks the shared attachment without deleting asset bytes.
-- `workout_exercises`: catalog references, workout-specific sets/targets, ordering
+- `workout_exercises`: catalog references, workout-specific sets/targets/role, ordering
   and timestamps. Composite household foreign keys protect both parent links.
   The primary key remains `(workout_id, id)`; removing a slot does not delete the
   movement or its history.
 - `workout_logs`: author-private daily grouping, notes and immutable title/exercise
-  snapshot. One grouping per household/author/workout/local day.
+  snapshot, plus a separate `exercise_roles` snapshot keyed by placement ID. One grouping per household/author/workout/local day.
 - `exercise_logs`: independent author-private occurrences, catalog identity,
   original local day/time and historical exercise definition. No workout FK.
 - `exercise_log_sets`: numeric amount/right amount/weight and original unit/load/

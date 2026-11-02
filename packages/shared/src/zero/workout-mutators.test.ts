@@ -945,6 +945,48 @@ describe("shared exercise catalog", () => {
     expect(writes).not.toHaveBeenCalled();
   });
 });
+describe("workout placement roles", () => {
+  it("changes only the selected placement, not the movement or another workout", async () => {
+    const { tx, data } = setup();
+    const first = fixtureRow(data.workoutExercises);
+    data.workouts?.push({ ...data.workouts[0], id: other });
+    data.workoutExercises?.push({
+      ...first,
+      id: other,
+      workoutId: other,
+      role: "stretching",
+    });
+    const catalog = structuredClone(data.exercises);
+    await mutators.workouts.editExercises.fn({
+      tx,
+      ctx,
+      args: {
+        ...scope,
+        creates: [],
+        deletes: [],
+        updates: [
+          { exerciseId: String(first.id), changes: { role: "warmup" } },
+        ],
+      },
+    });
+    expect(data.workoutExercises?.[0]?.role).toBe("warmup");
+    expect(data.workoutExercises?.find((row) => row.id === other)?.role).toBe(
+      "stretching",
+    );
+    expect(data.exercises).toEqual(catalog);
+    await mutators.workouts.editExercises.fn({
+      tx,
+      ctx,
+      args: {
+        ...scope,
+        creates: [],
+        deletes: [],
+        updates: [{ exerciseId: String(first.id), changes: { sets: 4 } }],
+      },
+    });
+    expect(data.workoutExercises?.[0]?.role).toBe("warmup");
+  });
+});
 describe("exercise-first row logging", () => {
   const payload = {
     ...scope,
@@ -958,6 +1000,46 @@ describe("exercise-first row logging", () => {
     round: 1,
     values: { amount: 12, weightKg: 8, rightAmount: null },
   };
+  it("captures roles separately for old-client compatibility and preserves historical corrections", async () => {
+    const { tx, data } = setup();
+    fixtureRow(data.workoutExercises).role = "warmup";
+    await mutators.workouts.saveSet.fn({ tx, ctx, args: payload });
+    const savedRole = () =>
+      (fixtureRow(data.workoutLogs).exerciseRoles as Record<string, string>)[
+        payload.workoutExerciseId
+      ];
+    expect(savedRole()).toBe("warmup");
+    expect(
+      workoutLogSnapshotSchema.parse(fixtureRow(data.workoutLogs).snapshot)
+        .exercises[0],
+    ).not.toHaveProperty("role");
+    expect(fixtureRow(data.exerciseLogs).snapshot).not.toHaveProperty("role");
+    fixtureRow(data.workoutExercises).role = "stretching";
+    await mutators.workouts.saveSet.fn({
+      tx,
+      ctx,
+      args: { ...payload, values: { ...payload.values, amount: 14 } },
+    });
+    expect(savedRole()).toBe("warmup");
+    await mutators.workouts.saveSet.fn({
+      tx,
+      ctx,
+      args: {
+        ...payload,
+        logId: crypto.randomUUID(),
+        exerciseLogId: crypto.randomUUID(),
+        completedOn: "2026-10-27",
+        optimisticTimestamp: now + 86400000,
+      },
+    });
+    expect(
+      (
+        data.workoutLogs?.[1]?.exerciseRoles as
+          | Record<string, string>
+          | undefined
+      )?.[payload.workoutExerciseId],
+    ).toBe("stretching");
+  });
   it("upserts individual rows without replacing other sets or touching the archive", async () => {
     const { tx, data } = setup();
     const save = (args: typeof payload) =>
