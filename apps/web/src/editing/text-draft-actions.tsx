@@ -61,6 +61,7 @@ export function TextDraftActions({ editor }: { editor: Draft }) {
         size="compact"
         variant="ghost"
         disabled={editor.isSaving}
+        onPointerDown={(event) => event.preventDefault()}
         onClick={editor.retry}
       >
         Retry
@@ -69,6 +70,7 @@ export function TextDraftActions({ editor }: { editor: Draft }) {
         size="compact"
         variant="ghost"
         disabled={editor.isSaving}
+        onPointerDown={(event) => event.preventDefault()}
         onClick={editor.discard}
       >
         Discard

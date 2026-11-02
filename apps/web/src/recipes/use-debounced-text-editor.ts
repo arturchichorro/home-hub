@@ -228,7 +228,11 @@ export function useDebouncedTextEditor({
     },
     error,
     errorId,
-    handleBlur: () => void saveDraft(true, true),
+    handleBlur: () => {
+      // Moving to Retry/Discard must not silently resubmit a failed draft.
+      if (preserveOnFailure && error) return;
+      void saveDraft(true, true);
+    },
     handleKeyDown,
     isSaving,
     hasChanges: draftValue !== confirmedValueRef.current,
