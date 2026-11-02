@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { starterWorkouts } from "../workout-seed";
 import {
   normalizeExerciseName,
-  type WorkoutSetValues,
   workoutContentSchema,
   workoutLogSnapshotSchema,
 } from "../workouts";
@@ -223,24 +222,83 @@ function setup(location: "server" | "client" = "server") {
       return format.singular ? rows[0] : rows;
     },
   } as unknown as Transaction<Schema>;
-  const record = (
+  // Historical archive fixtures are not produced by the retired bulk writer.
+  // Use canonical row writes, then seed the immutable pre-cutover archive.
+  const record = async (
     changes: Partial<
       Parameters<typeof mutators.workouts.saveLog.fn>[0]["args"]
     > = {},
-  ) =>
-    mutators.workouts.saveLog.fn({
-      tx,
-      ctx,
-      args: {
-        ...scope,
-        logId,
-        snapshot,
-        note: "",
-        sets: [],
-        timeZone: "Europe/Brussels",
-        ...changes,
-      },
-    });
+  ) => {
+    const args = {
+      ...scope,
+      logId,
+      snapshot,
+      note: "",
+      sets: [],
+      timeZone: "Europe/Brussels",
+      ...changes,
+    };
+    for (const set of args.sets) {
+      await mutators.workouts.saveSet.fn({
+        tx,
+        ctx,
+        args: {
+          householdId: args.householdId,
+          workoutId: args.workoutId,
+          logId: args.logId,
+          snapshot: args.snapshot,
+          completedOn: "2026-10-26",
+          timeZone: args.timeZone,
+          optimisticTimestamp: now,
+          workoutExerciseId: set.workoutExerciseId,
+          exerciseLogId: crypto.randomUUID(),
+          round: set.round,
+          values: set.values,
+        },
+      });
+    }
+    let log = data.workoutLogs?.find((row) => row.id === args.logId);
+    if (!log) {
+      log = {
+        id: args.logId,
+        householdId,
+        workoutId: args.workoutId,
+        userId,
+        snapshot: args.snapshot,
+        completedOn: "2026-10-26",
+        completedAt: now,
+        createdAt: now,
+      };
+      data.workoutLogs?.push(log);
+    }
+    log.note = args.note;
+    for (const set of args.sets) {
+      if (
+        data.workoutLogSets?.some(
+          (row) =>
+            row.logId === log.id &&
+            row.workoutExerciseId === set.workoutExerciseId &&
+            row.round === set.round,
+        )
+      )
+        continue;
+      const definition = args.snapshot.exercises.find(
+        (row) => row.id === set.workoutExerciseId,
+      );
+      if (!definition) throw Error("Missing fixture definition");
+      data.workoutLogSets?.push({
+        logId: log.id,
+        householdId,
+        workoutExerciseId: set.workoutExerciseId,
+        exerciseId: definition.catalogExerciseId ?? definition.id,
+        round: set.round,
+        ...set.values,
+        unit: definition.unit,
+        load: definition.load,
+        unilateral: definition.unilateral,
+      });
+    }
+  };
   return { tx, data, writes, record };
 }
 afterEach(() => vi.restoreAllMocks());
@@ -638,7 +696,7 @@ describe("catalog deletion and ordering", () => {
     const fresh = setup();
     await remove(fresh.tx);
     await expect(fresh.record({ sets: [recordedSet] })).rejects.toThrow(
-      "catalog exercise not allowed",
+      "Workout exercise not allowed",
     );
   });
   it.each(["membership", "module", "household"] as const)(
@@ -1187,288 +1245,27 @@ it("rejects a stale device's differing measurement convention before writing a c
   ).rejects.toThrow("settings changed");
   expect(writes).not.toHaveBeenCalled();
 });
-describe("completed workout logs", () => {
-  it("keeps a stable catalog ID and original measurements after shared edits", async () => {
-    const { tx, data, record } = setup();
-    await record({ sets: [recordedSet] });
-    const first = starter.exercises[0];
-    if (!first) throw new Error("seed");
-    await mutators.workouts.updateExercise.fn({
-      tx,
-      ctx,
-      args: {
-        householdId,
-        exerciseId: first.id,
-        optimisticTimestamp: 1,
-        changes: { name: "Renamed movement", unit: "seconds" },
-      },
-    });
-    data.workouts?.push({
-      id: other,
-      householdId,
-      title: "Another workout",
-      notes: "",
-      sortKey: 0,
-    });
-    data.workoutExercises?.push({
-      id: other,
-      workoutId: other,
-      householdId,
-      exerciseId: first.id,
-      sets: 2,
-      target: "20",
-      sortKey: 0,
-    });
-    await record({
-      workoutId: other,
-      logId: crypto.randomUUID(),
-      snapshot: {
-        title: "Another workout",
-        exercises: [
-          {
-            ...first,
-            id: other,
-            catalogExerciseId: first.id,
-            name: "Renamed movement",
-            unit: "seconds",
-          },
-        ],
-      },
-      sets: [
-        {
-          workoutExerciseId: other,
-          round: 1,
-          values: { amount: 20, weightKg: null, rightAmount: null },
-        },
-      ],
-    });
-    expect(
-      new Set(data.workoutLogSets?.map((row) => row.exerciseId)).size,
-    ).toBe(1);
-    expect(data.workoutLogSets?.map((row) => row.unit)).toEqual([
-      "reps",
-      "seconds",
-    ]);
-    expect(
-      data.workoutLogSets
-        ?.filter((row) => row.unit === "reps")
-        .reduce((sum, row) => sum + Number(row.amount), 0),
-    ).toBe(10);
-    expect(
-      workoutLogSnapshotSchema.parse(data.workoutLogs?.[0]?.snapshot)
-        .exercises[0]?.name,
-    ).toBe(first.name);
-  });
-
-  it("creates the log, note and sets in a single explicit save", async () => {
-    const { data, record } = setup();
-    expect(data.workoutLogs).toHaveLength(0);
-    await record({ note: "Felt good.\nLight weights.", sets: [recordedSet] });
-    expect(data.workoutLogs?.[0]).toMatchObject({
-      userId,
-      workoutId,
-      completedOn: "2026-10-26",
-      completedAt: now,
-      note: "Felt good.\nLight weights.",
-    });
-    expect(data.workoutLogs?.[0]).not.toHaveProperty("status");
-    expect(data.workoutLogs?.[0]?.snapshot).not.toHaveProperty("notes");
-    expect(data.workoutLogSets).toHaveLength(1);
-    expect(data.workoutLogSets?.[0]).toMatchObject({
-      amount: 10,
-      weightKg: 8,
-      rightAmount: null,
-      exerciseId: starter.exercises[0]?.id,
-      workoutExerciseId: recordedSet.workoutExerciseId,
-      unit: "reps",
-    });
-    expect(data.workoutLogSets?.[0]).not.toHaveProperty("values");
-  });
-  it("updates today's log even when another client submits a fresh ID", async () => {
-    const { data, record } = setup();
-    await record({ sets: [recordedSet], note: "First" });
-    await record({
-      logId: crypto.randomUUID(),
-      sets: [{ ...recordedSet, values: { ...recordedSet.values, amount: 12 } }],
-      note: "Updated",
-    });
-    expect(data.workoutLogs).toHaveLength(1);
-    expect(data.workoutLogs?.[0]).toMatchObject({ id: logId, note: "Updated" });
-    expect(data.workoutLogSets).toHaveLength(1);
-    expect(data.workoutLogSets?.[0]).toMatchObject({
-      logId,
-      amount: 12,
-    });
-  });
-  it("creates a different log on the next local day and keeps historical edits on their original day", async () => {
-    const { data, record } = setup();
-    await record({ note: "Yesterday" });
-    vi.spyOn(Date, "now").mockReturnValue(now + 86400000);
-    const nextId = crypto.randomUUID();
-    await record({ logId: nextId, note: "Today" });
-    expect(data.workoutLogs).toHaveLength(2);
-    await record({ note: "Correct yesterday" });
-    expect(data.workoutLogs?.find((row) => row.id === nextId)).toMatchObject({
-      note: "Today",
-      completedOn: "2026-10-27",
-    });
-    expect(data.workoutLogs?.find((row) => row.id === logId)).toMatchObject({
-      note: "Correct yesterday",
-      completedOn: "2026-10-26",
-    });
-  });
-  it("keeps daily logs separate for different authors and workouts", async () => {
-    const { data, record, tx } = setup();
-    await record();
-    data.householdMembers?.push({ householdId, userId: other });
-    await mutators.workouts.saveLog.fn({
-      tx,
-      ctx: { userId: other },
-      args: {
-        ...scope,
-        logId: crypto.randomUUID(),
-        snapshot,
-        note: "Other user",
-        sets: [],
-        timeZone: "Europe/Brussels",
-      },
-    });
-    data.workouts?.push({ ...data.workouts[0], id: other });
-    await record({ workoutId: other, logId: crypto.randomUUID() });
-    expect(data.workoutLogs).toHaveLength(3);
-  });
-  it("allows a deliberate note-only log without fabricating repetitions", async () => {
-    const { data, record } = setup();
-    await record({ note: "Mobility only" });
-    expect(data.workoutLogs).toHaveLength(1);
-    expect(data.workoutLogSets).toHaveLength(0);
-  });
-  it("is idempotent and atomically replaces edited set values", async () => {
-    const { data, record } = setup();
-    await record({ sets: [recordedSet] });
-    await record({ sets: [recordedSet] });
-    expect(data.workoutLogs).toHaveLength(1);
-    expect(data.workoutLogSets).toHaveLength(1);
-    await record({
-      note: "Corrected",
-      sets: [{ ...recordedSet, values: { ...recordedSet.values, amount: 11 } }],
-    });
-    expect(data.workoutLogSets).toHaveLength(1);
-    expect(data.workoutLogSets?.[0]).toMatchObject({ amount: 11 });
-    await record({ note: "Note only", sets: [] });
-    expect(data.workoutLogSets).toHaveLength(0);
-  });
-  it("preserves original dates and snapshots while editing history", async () => {
-    const { data, record, tx } = setup();
-    await record({ sets: [recordedSet] });
-    await mutators.workouts.update.fn({
-      tx,
-      ctx,
-      args: { ...scope, changes: { title: "Changed", notes: "New notes" } },
-    });
-    vi.spyOn(Date, "now").mockReturnValue(now + 86400000);
-    await record({
-      snapshot: { ...snapshot, title: "Another title" },
-      note: "Edited",
-    });
-    expect(data.workoutLogs?.[0]).toMatchObject({
-      completedAt: now,
-      completedOn: "2026-10-26",
-      note: "Edited",
-    });
-    expect(
-      workoutLogSnapshotSchema.parse(data.workoutLogs?.[0]?.snapshot).title,
-    ).toBe(starter.title);
-    expect(data.workouts?.[0]?.notes).toBe("New notes");
-  });
-  it.each([
-    "unknown exercise",
-    "too many sets",
-    "wrong side",
-    "bodyweight load",
-  ])("rejects %s before writing anything", async (reason) => {
-    const { data, record, writes } = setup();
-    const bodyweight = starter.exercises.find((e) => e.load === "bodyweight");
-    if (!bodyweight) throw new Error("seed");
-    const invalid: {
-      workoutExerciseId: string;
-      round: number;
-      values: WorkoutSetValues;
-    } = { ...recordedSet, round: 2, values: { ...recordedSet.values } };
-    if (reason === "unknown exercise") invalid.workoutExerciseId = other;
-    if (reason === "too many sets") invalid.round = 3;
-    if (reason === "wrong side") invalid.values.rightAmount = 8;
-    if (reason === "bodyweight load") invalid.workoutExerciseId = bodyweight.id;
-    await expect(record({ sets: [recordedSet, invalid] })).rejects.toThrow(
-      "not allowed",
-    );
-    expect(writes).not.toHaveBeenCalled();
-    expect(data.workoutLogs).toHaveLength(0);
-  });
-  it.each(["foreign user", "foreign household", "foreign workout"])(
-    "cannot modify %s history",
-    async (reason) => {
-      const { data, record, writes } = setup();
-      await record({ note: "Original" });
-      const row = data.workoutLogs?.[0];
-      if (!row) throw new Error("log");
-      if (reason === "foreign user") row.userId = other;
-      if (reason === "foreign household") row.householdId = other;
-      if (reason === "foreign workout") row.workoutId = other;
-      writes.mockClear();
+describe("retired bulk workout logging", () => {
+  it.each(["server", "client"] as const)(
+    "rejects %s calls without reading or writing archived measurements",
+    async (location) => {
+      const { tx, writes } = setup(location);
       await expect(
-        record({ note: "No", sets: [recordedSet] }),
-      ).rejects.toThrow();
-      expect(writes).not.toHaveBeenCalled();
-      expect(row.note).toBe("Original");
-    },
-  );
-  it.each(["disabled", "missing module", "not member", "deleted household"])(
-    "blocks mutations when %s",
-    async (reason) => {
-      const { tx, data, record, writes } = setup();
-      if (reason === "disabled" && data.householdModuleSettings?.[0])
-        data.householdModuleSettings[0].enabled = false;
-      if (reason === "missing module") data.householdModuleSettings = [];
-      if (reason === "not member") data.householdMembers = [];
-      if (reason === "deleted household" && data.households?.[0])
-        data.households[0].deletedAt = now;
-      const requests = [
-        () => record({ sets: [recordedSet] }),
-        () =>
-          mutators.workouts.create.fn({
-            tx,
-            ctx,
-            args: { ...scope, title: "New" },
-          }),
-        () =>
-          mutators.workouts.update.fn({
-            tx,
-            ctx,
-            args: { ...scope, changes: { notes: "No" } },
-          }),
-        () =>
-          mutators.workouts.reorder.fn({
-            tx,
-            ctx,
-            args: { ...scope, orderedWorkoutIds: [workoutId] },
-          }),
-      ];
-      for (const request of requests)
-        await expect(request()).rejects.toThrow("not allowed");
+        mutators.workouts.saveLog.fn({
+          tx,
+          ctx,
+          args: {
+            ...scope,
+            logId,
+            snapshot,
+            sets: [],
+            timeZone: "Europe/Brussels",
+          },
+        }),
+      ).rejects.toThrow("Reload Home Hub");
       expect(writes).not.toHaveBeenCalled();
     },
   );
-  it("rejects unknown or foreign workouts", async () => {
-    const { data, record } = setup();
-    if (data.workouts?.[0]) data.workouts[0].householdId = other;
-    await expect(record()).rejects.toThrow("not allowed");
-  });
-  it("uses optimistic timestamps only on the client", async () => {
-    const { data, record } = setup("client");
-    await record();
-    expect(data.workoutLogs?.[0]?.completedAt).toBe(1234);
-  });
 });
 describe("private notes added after completion", () => {
   const noteArgs = {
@@ -1490,17 +1287,19 @@ describe("private notes added after completion", () => {
     });
     expect(data.workoutLogSets).toEqual(sets);
     expect(writes).toHaveBeenCalledTimes(1);
-    await mutators.workouts.saveLog.fn({
-      tx,
-      ctx,
-      args: {
-        ...scope,
-        logId,
-        snapshot,
-        sets: [],
-        timeZone: "Europe/Brussels",
-      },
-    });
+    await expect(
+      mutators.workouts.saveLog.fn({
+        tx,
+        ctx,
+        args: {
+          ...scope,
+          logId,
+          snapshot,
+          sets: [],
+          timeZone: "Europe/Brussels",
+        },
+      }),
+    ).rejects.toThrow("Reload Home Hub");
     expect(data.workoutLogs?.[0]?.note).toBe("Felt good.\nWrist rehab.");
     await mutators.workouts.updateLogNote.fn({
       tx,
