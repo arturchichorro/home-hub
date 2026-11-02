@@ -2,6 +2,10 @@ import { mutators } from "@home-hub/shared/zero/mutators";
 import { ErrorPopover, Input } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { useEffect, useRef } from "react";
+import {
+  TextDraftActions,
+  TextDraftGuard,
+} from "../editing/text-draft-actions";
 import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
@@ -28,6 +32,7 @@ export function WorkoutLogNoteInput({
   const enabled = useZeroMutationEnabled();
   const input = useRef<HTMLInputElement>(null);
   const editor = useDebouncedTextEditor({
+    preserveOnFailure: true,
     currentValue: note,
     mutationEnabled: enabled && !disabled,
     normalize: (value) => value.trim(),
@@ -71,6 +76,7 @@ export function WorkoutLogNoteInput({
         }}
         onKeyDown={(event) => editor.handleKeyDown(event, true)}
       />
+      {editor.hasChanges && <TextDraftGuard editor={editor} />}
       <ErrorPopover
         anchor={input}
         id={editor.errorId}
@@ -78,6 +84,7 @@ export function WorkoutLogNoteInput({
         onDismiss={editor.dismissError}
       >
         {editor.error}
+        <TextDraftActions editor={editor} />
       </ErrorPopover>
     </>
   );
