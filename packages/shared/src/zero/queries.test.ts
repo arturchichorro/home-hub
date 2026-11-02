@@ -66,6 +66,21 @@ describe("person-scoped habits", () => {
   });
 });
 
+describe("exercise picker definitions", () => {
+  it("does not subscribe to private performance or sets", () => {
+    const ast = getAst(
+      queries.workouts.definitions.fn({
+        args: { householdId },
+        ctx: { userId },
+      }),
+    );
+    expect(ast.related).toBeUndefined();
+    expect(JSON.stringify(ast.where)).toContain(userId);
+    expect(JSON.stringify(ast.where)).toContain("deletedAt");
+    expect(JSON.stringify(ast.where)).toContain("householdModuleSettings");
+  });
+});
+
 describe("catalog media subscription", () => {
   it("shares gallery metadata without widening household, module or deletion boundaries", () => {
     const ast = getAst(

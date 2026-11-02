@@ -27,9 +27,12 @@ export function AddExercisePicker({
   disabled: boolean;
   onSelect: (exercise: CatalogExercise) => void;
 }) {
-  const [rows, result] = useQuery(queries.workouts.catalog({ householdId }));
   const [open, setOpen] = useState(false),
     [search, setSearch] = useState("");
+  const [data, result] = useQuery(
+    open ? queries.workouts.definitions({ householdId }) : undefined,
+  );
+  const rows = result.type === "complete" ? (data ?? []) : [];
   const name = search.trim(),
     normalized = normalizeExerciseName(name);
   const options: Option[] = rows
@@ -43,7 +46,11 @@ export function AddExercisePicker({
         unilateral: row.unilateral,
       }),
     );
-  if (name && !rows.some((row) => row.normalizedName === normalized))
+  if (
+    result.type === "complete" &&
+    name &&
+    !rows.some((row) => row.normalizedName === normalized)
+  )
     options.push({
       id: "__create__",
       name,
@@ -64,10 +71,10 @@ export function AddExercisePicker({
         setOpen(value);
         if (!value) setSearch("");
       }}
-      disabled={disabled || result.type !== "complete"}
+      disabled={disabled}
       itemToStringLabel={(option) => option.name}
       onValueChange={(option) => {
-        if (!option) return;
+        if (!option || disabled || result.type !== "complete") return;
         onSelect({
           id: option.create ? crypto.randomUUID() : option.id,
           name: option.name,
@@ -104,7 +111,14 @@ export function AddExercisePicker({
             </ComboboxItem>
           )}
         </ComboboxList>
-        {!options.length && (
+        {result.type !== "complete" && (
+          <p role="status" className="px-3 py-2 text-xs text-muted">
+            {result.type === "error"
+              ? "Unable to load exercises. Close and reopen to retry."
+              : "Loading exercises…"}
+          </p>
+        )}
+        {result.type === "complete" && !options.length && (
           <p className="px-3 py-2 text-xs text-muted">
             Type an exercise name to create one.
           </p>
