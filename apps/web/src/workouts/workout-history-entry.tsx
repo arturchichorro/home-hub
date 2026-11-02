@@ -1,3 +1,4 @@
+import { workoutExerciseRoleLabel } from "@home-hub/shared/workouts";
 import { Check, IconButton, MessageSquare } from "@home-hub/ui-web";
 import { useId, useState } from "react";
 import type { WorkoutLog } from "./workout-log";
@@ -74,8 +75,11 @@ export function WorkoutHistoryEntry({
         {summary.length ? (
           summary.map((exercise) => (
             <span key={exercise.id} className="break-words">
-              <span className="font-medium">{exercise.name}</span> —{" "}
-              {exercise.details}
+              <span className="font-medium">{exercise.name}</span>
+              {exercise.role && (
+                <span> · {workoutExerciseRoleLabel(exercise.role)}</span>
+              )}{" "}
+              — {exercise.details}
             </span>
           ))
         ) : (

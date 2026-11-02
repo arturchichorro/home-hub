@@ -68,6 +68,18 @@ describe("exercise occurrence summaries", () => {
   });
 });
 describe("workout history summaries", () => {
+  it("shows the snapshotted placement role without changing measurements", () => {
+    for (const role of ["warmup", "stretching"] as const) {
+      expect(
+        summarizeWorkoutLog(log({ ...bench, role }, [{ round: 1, values }]))[0],
+      ).toMatchObject({ role, details: "10 reps · 8 kg/hand" });
+    }
+    expect(
+      summarizeWorkoutLog(
+        log({ ...bench, role: "workout" }, [{ round: 1, values }]),
+      )[0],
+    ).not.toHaveProperty("role");
+  });
   it("does not invent sets or repetitions from workout targets", () => {
     expect(summarizeWorkoutLog(log(bench, []))).toEqual([]);
   });
