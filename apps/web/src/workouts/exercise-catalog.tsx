@@ -8,6 +8,7 @@ import {
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import {
+  Button,
   ConfirmationPopover,
   ErrorPopover,
   GripVertical,
@@ -21,6 +22,11 @@ import {
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { type Ref, useId, useImperativeHandle, useRef, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import {
+  catalogBatchSize,
+  catalogPage,
+  reorderNeighborhood,
+} from "./catalog-page";
 import { CatalogMediaProvider, ExerciseMedia } from "./exercise-media";
 import { ExerciseSettings } from "./exercise-settings";
 import {
@@ -60,6 +66,7 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
     connected = useZeroMutationEnabled();
   const enabled = connected && result.type === "complete";
   const [search, setSearch] = useState("");
+  const [renderLimit, setRenderLimit] = useState(catalogBatchSize);
   const [draft, setDraft] = useState<Draft>();
   const [pinnedId, setPinnedId] = useState<string>();
   const [adding, setAdding] = useState(false);
@@ -91,6 +98,12 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
       id: draft.id,
       row: undefined,
     });
+  const visibleEntries = catalogPage(
+    entries,
+    renderLimit,
+    pinnedId,
+    activeDraftId,
+  );
   const canOrder = enabled && (!draft || Boolean(draft.saved));
   function observeAction(
     mutation: {
@@ -216,6 +229,7 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
               value={search}
               onValueChange={(value) => {
                 setSearch(value);
+                setRenderLimit(catalogBatchSize);
                 setPinnedId(undefined);
               }}
             />
@@ -229,7 +243,7 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
               onDragEnd={(event) => {
                 const source = event.operation.source;
                 if (!canOrder || event.canceled || !isSortable(source)) return;
-                const ids = entries.map((entry) => entry.id),
+                const ids = visibleEntries.map((entry) => entry.id),
                   from = ids.indexOf(String(source.id));
                 if (
                   from < 0 ||
@@ -246,7 +260,7 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
                     mutators.workouts.reorderExercises({
                       householdId,
                       exerciseId: id,
-                      orderedExerciseIds: ids,
+                      orderedExerciseIds: reorderNeighborhood(ids, id),
                       optimisticTimestamp: Date.now(),
                     }),
                   ),
@@ -255,7 +269,7 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
               }}
             >
               <ul className="divide-y divide-border">
-                {entries.map((entry, index) => {
+                {visibleEntries.map((entry, index) => {
                   const isDraft = entry.id === draft?.id;
                   return (
                     <CatalogRow
@@ -288,6 +302,16 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
                 })}
               </ul>
             </DragDropProvider>
+            {visibleEntries.length < entries.length && (
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  setRenderLimit((count) => count + catalogBatchSize)
+                }
+              >
+                Show more exercises
+              </Button>
+            )}
             {result.type === "complete" && !entries.length && (
               <p className="text-sm text-muted">
                 {search ? "No matching exercises." : "No exercises yet."}
