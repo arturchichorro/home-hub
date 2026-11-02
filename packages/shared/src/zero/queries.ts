@@ -507,7 +507,7 @@ export const workoutHistoryPageSize = 20;
 const historyCursor = z
   .object({
     completedOn: z.iso.date(),
-    completedAt: z.number().nonnegative(),
+    completedAt: z.number().finite(),
     id: z.uuid(),
   })
   .strict();
