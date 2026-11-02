@@ -45,6 +45,8 @@ beforeEach(() => {
     handleBlur: vi.fn(),
     handleKeyDown: vi.fn(),
     dismissError: vi.fn(),
+    retry: vi.fn(),
+    discard: vi.fn(),
   }));
   mutate.mockReturnValue({
     client: Promise.resolve({ type: "success" }),
