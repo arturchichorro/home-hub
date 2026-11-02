@@ -22,7 +22,7 @@ function databaseFailure(error: unknown): { code?: string } | undefined {
     }
     error = error.cause;
   }
-  return found ? { code } : undefined;
+  return found ? (code ? { code } : {}) : undefined;
 }
 
 // Sanitize before Zero serializes transaction failures, including commit errors.
