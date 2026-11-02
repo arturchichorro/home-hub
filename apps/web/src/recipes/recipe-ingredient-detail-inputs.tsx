@@ -11,7 +11,7 @@ import {
   TextDraftGuard,
 } from "../editing/text-draft-actions";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
-import { useDebouncedTextEditor } from "./use-debounced-text-editor";
+import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
 
 type IngredientDetailInputProps = {
   focusOnMount: boolean;

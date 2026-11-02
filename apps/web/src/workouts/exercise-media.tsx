@@ -30,7 +30,7 @@ import {
 } from "react";
 import { ImageViewer } from "../media/image-viewer";
 import { type MediaSession, useMediaSession } from "../media/session";
-import { readImageDimensions } from "../recipes/read-image-dimensions";
+import { readImageDimensions } from "../media/read-image-dimensions";
 import { blockAppUpdate } from "../updates/activity";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {

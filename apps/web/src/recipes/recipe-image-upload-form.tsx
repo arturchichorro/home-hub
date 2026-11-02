@@ -17,7 +17,7 @@ import {
   requestRecipeImageUpload,
   uploadRecipeImageObject,
 } from "./image-api";
-import { readImageDimensions } from "./read-image-dimensions";
+import { readImageDimensions } from "../media/read-image-dimensions";
 
 type RecipeImageUploadFormProps = {
   accessToken: string;
