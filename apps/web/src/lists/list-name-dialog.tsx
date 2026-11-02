@@ -11,6 +11,7 @@ import {
 } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { type SubmitEvent, useId, useState } from "react";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 type Props = {
@@ -43,8 +44,7 @@ export function ListNameDialog({ householdId, onClose, onSaved }: Props) {
           optimisticTimestamp: Date.now(),
         }),
       );
-      const client = await mutation.client;
-      const result = client.type === "error" ? client : await mutation.server;
+      const result = await acknowledgeMutation(mutation);
       if (result.type === "error") {
         setError(
           result.error.message === listNameAlreadyExistsError

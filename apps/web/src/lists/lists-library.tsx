@@ -5,6 +5,7 @@ import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { ListCardGrid } from "./list-card";
 import { ListNameDialog } from "./list-name-dialog";
@@ -48,8 +49,7 @@ export function ListsLibrary({ householdId }: { householdId: string }) {
           optimisticUpdatedAt: Date.now(),
         }),
       );
-      const client = await mutation.client;
-      const outcome = client.type === "error" ? client : await mutation.server;
+      const outcome = await acknowledgeMutation(mutation);
       if (outcome.type === "error")
         setError("The list order could not be saved.");
     } catch {

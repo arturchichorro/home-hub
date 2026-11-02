@@ -29,9 +29,10 @@ import {
   useState,
 } from "react";
 import { ImageViewer } from "../media/image-viewer";
-import { type MediaSession, useMediaSession } from "../media/session";
 import { readImageDimensions } from "../media/read-image-dimensions";
+import { type MediaSession, useMediaSession } from "../media/session";
 import { blockAppUpdate } from "../updates/activity";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
   invalidateExerciseImageUrl,
@@ -245,8 +246,7 @@ function ExerciseMediaGallery({
           optimisticTimestamp: Date.now(),
         }),
       );
-      const client = await mutation.client;
-      const outcome = client.type === "error" ? client : await mutation.server;
+      const outcome = await acknowledgeMutation(mutation);
       if (outcome.type === "error") throw new Error("Reorder failed");
     } catch {
       setError("Unable to reorder these pictures. Try again.");

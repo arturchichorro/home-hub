@@ -29,6 +29,7 @@ import { useQuery, useZero } from "@rocicorp/zero/react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { CreateRecipeDialog } from "./create-recipe-dialog";
 import { useRecipeImageUrl } from "./use-recipe-image-url";
@@ -309,8 +310,7 @@ export function RecipeLibrary({
           optimisticUpdatedAt: Date.now(),
         }),
       );
-      const client = await mutation.client;
-      const outcome = client.type === "error" ? client : await mutation.server;
+      const outcome = await acknowledgeMutation(mutation);
       if (outcome.type === "error")
         setError("The recipe order could not be saved.");
     } catch {

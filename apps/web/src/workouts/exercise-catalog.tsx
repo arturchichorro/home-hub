@@ -21,6 +21,7 @@ import {
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { type Ref, useId, useImperativeHandle, useRef, useState } from "react";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
   catalogBatchSize,
@@ -171,8 +172,7 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
               optimisticTimestamp: Date.now(),
             }),
           );
-      const client = await mutation.client;
-      const outcome = client.type === "error" ? client : await mutation.server;
+      const outcome = await acknowledgeMutation(mutation);
       if (outcome.type === "error")
         return {
           error: "Unable to save exercise. Your changes are still here.",

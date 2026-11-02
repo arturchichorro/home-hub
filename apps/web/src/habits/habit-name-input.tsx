@@ -5,6 +5,7 @@ import { useZero } from "@rocicorp/zero/react";
 import { useRef } from "react";
 import { TextDraftActions } from "../editing/text-draft-actions";
 import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { useHabitDraftStatus } from "./use-habit-draft-status";
 
@@ -44,8 +45,7 @@ export function HabitNameInput({
             optimisticTimestamp: Date.now(),
           }),
         );
-        const client = await mutation.client;
-        const result = client.type === "error" ? client : await mutation.server;
+        const result = await acknowledgeMutation(mutation);
         return result.type === "success";
       } catch {
         return false;

@@ -30,6 +30,7 @@ import {
 } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { blockAppUpdate, useBlockAppUpdate } from "../updates/activity";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { WorkoutExercises, WorkoutText } from "./workout-fields";
 import { WorkoutHistoryEntry } from "./workout-history-entry";
@@ -210,9 +211,8 @@ function WorkoutDetailPage({
     const release = blockAppUpdate();
     if (report) setError("");
     try {
-      const mutation = zero.mutate(request),
-        client = await mutation.client;
-      const outcome = client.type === "error" ? client : await mutation.server;
+      const mutation = zero.mutate(request);
+      const outcome = await acknowledgeMutation(mutation);
       if (outcome.type === "error") throw Error("save");
       return true;
     } catch {
