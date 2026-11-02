@@ -26,7 +26,8 @@ import {
 } from "./workout-log-form";
 import type { ExercisePerformance } from "./workout-log-projection";
 
-export type WorkoutLog = LogRow & {
+export type WorkoutLog = Omit<LogRow, "exerciseRoles"> & {
+  readonly exerciseRoles?: LogRow["exerciseRoles"] | undefined;
   readonly sets: readonly WorkoutLogSet[];
   readonly exerciseLogIds?: Readonly<Record<string, string>>;
 };

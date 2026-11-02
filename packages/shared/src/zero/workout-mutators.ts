@@ -383,7 +383,8 @@ export const workoutMutatorDefinitions = {
       for (const update of args.updates) {
         const row = rows.find((row) => row.id === update.exerciseId);
         if (!row) throw new Error("Exercise update not allowed");
-        const { sets, target, catalogExerciseId, ...shared } = update.changes;
+        const { sets, target, role, catalogExerciseId, ...shared } =
+          update.changes;
         const exerciseId = catalogExerciseId ?? row.exerciseId;
         const catalog = await tx.run(
           scopedCatalog(args.householdId)
@@ -398,6 +399,7 @@ export const workoutMutatorDefinitions = {
         if (
           sets !== undefined ||
           target !== undefined ||
+          role !== undefined ||
           catalogExerciseId !== undefined
         )
           await tx.mutate.workoutExercises.update({
@@ -406,6 +408,7 @@ export const workoutMutatorDefinitions = {
             exerciseId,
             ...(sets === undefined ? {} : { sets }),
             ...(target === undefined ? {} : { target }),
+            ...(role === undefined ? {} : { role }),
             updatedAt: now,
           });
       }
@@ -425,6 +428,7 @@ export const workoutMutatorDefinitions = {
           exerciseId,
           sets: definition.sets,
           target: definition.target,
+          role: definition.role ?? "workout",
           sortKey: bottom,
           createdAt: now,
           updatedAt: now,
@@ -490,6 +494,7 @@ export const workoutMutatorDefinitions = {
           exerciseId,
           sets: definition.sets,
           target: definition.target,
+          role: "workout",
           sortKey: (content.exercises.length - exerciseIndex) * 1024,
           createdAt: now,
           updatedAt: now,
