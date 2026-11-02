@@ -18,6 +18,10 @@ import {
   Trash2,
 } from "@home-hub/ui-web";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  TextDraftActions,
+  TextDraftGuard,
+} from "../editing/text-draft-actions";
 import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
 
 export function WorkoutText({
@@ -42,6 +46,7 @@ export function WorkoutText({
   const input = useRef<HTMLInputElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const editor = useDebouncedTextEditor({
+    preserveOnFailure: true,
     currentValue: value,
     mutationEnabled: !disabled && !readOnly,
     normalize: (v) => v.trim(),
@@ -89,6 +94,7 @@ export function WorkoutText({
           }}
         />
       )}
+      {editor.hasChanges && <TextDraftGuard editor={editor} />}
       <ErrorPopover
         anchor={multiline ? textarea : input}
         id={editor.errorId}
@@ -96,6 +102,7 @@ export function WorkoutText({
         onDismiss={editor.dismissError}
       >
         {editor.error}
+        <TextDraftActions editor={editor} />
       </ErrorPopover>
     </>
   );

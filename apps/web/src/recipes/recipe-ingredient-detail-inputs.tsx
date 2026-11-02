@@ -6,6 +6,10 @@ import { mutators } from "@home-hub/shared/zero/mutators";
 import { ErrorPopover, Input, Textarea } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { useEffect, useRef } from "react";
+import {
+  TextDraftActions,
+  TextDraftGuard,
+} from "../editing/text-draft-actions";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { useDebouncedTextEditor } from "./use-debounced-text-editor";
 
@@ -35,6 +39,7 @@ export function RecipeIngredientAmountInput({
   const mutationEnabled = useZeroMutationEnabled();
   const inputRef = useRef<HTMLInputElement>(null);
   const editor = useDebouncedTextEditor({
+    preserveOnFailure: true,
     currentValue: currentAmount ?? "",
     failureError: "The ingredient amount could not be saved.",
     mutationEnabled,
@@ -83,6 +88,7 @@ export function RecipeIngredientAmountInput({
         onKeyDown={(event) => editor.handleKeyDown(event, true)}
         onValueChange={editor.changeValue}
       />
+      {editor.hasChanges && <TextDraftGuard editor={editor} />}
       <ErrorPopover
         anchor={inputRef}
         id={editor.errorId}
@@ -90,6 +96,7 @@ export function RecipeIngredientAmountInput({
         onDismiss={editor.dismissError}
       >
         {editor.error}
+        <TextDraftActions editor={editor} />
       </ErrorPopover>
     </>
   );
@@ -112,6 +119,7 @@ export function RecipeIngredientNoteInput({
   const mutationEnabled = useZeroMutationEnabled();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editor = useDebouncedTextEditor({
+    preserveOnFailure: true,
     currentValue: currentNote ?? "",
     failureError: "The ingredient note could not be saved.",
     mutationEnabled,
@@ -160,6 +168,7 @@ export function RecipeIngredientNoteInput({
         onFocus={onFocus}
         onKeyDown={(event) => editor.handleKeyDown(event, false)}
       />
+      {editor.hasChanges && <TextDraftGuard editor={editor} />}
       <ErrorPopover
         anchor={textareaRef}
         id={editor.errorId}
@@ -167,6 +176,7 @@ export function RecipeIngredientNoteInput({
         onDismiss={editor.dismissError}
       >
         {editor.error}
+        <TextDraftActions editor={editor} />
       </ErrorPopover>
     </>
   );
