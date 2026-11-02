@@ -10,6 +10,7 @@ import {
   Plus,
 } from "@home-hub/ui-web";
 import { type ChangeEvent, useRef, useState } from "react";
+import { readImageDimensions } from "../media/read-image-dimensions";
 import { blockAppUpdate } from "../updates/activity";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
@@ -17,7 +18,6 @@ import {
   requestRecipeImageUpload,
   uploadRecipeImageObject,
 } from "./image-api";
-import { readImageDimensions } from "./read-image-dimensions";
 
 type RecipeImageUploadFormProps = {
   accessToken: string;

@@ -3,7 +3,12 @@ import { mutators } from "@home-hub/shared/zero/mutators";
 import { ErrorPopover, Input } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { useRef } from "react";
-import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
+import {
+  TextDraftActions,
+  TextDraftGuard,
+} from "../editing/text-draft-actions";
+import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 export function ListNameInput({
@@ -19,6 +24,7 @@ export function ListNameInput({
   const mutationEnabled = useZeroMutationEnabled();
   const inputRef = useRef<HTMLInputElement>(null);
   const editor = useDebouncedTextEditor({
+    preserveOnFailure: true,
     currentValue: currentName,
     emptyError: "The list name cannot be empty.",
     failureError: "The list name could not be saved.",
@@ -34,9 +40,7 @@ export function ListNameInput({
           optimisticUpdatedAt: Date.now(),
         }),
       );
-      const clientResult = await mutation.client;
-      const result =
-        clientResult.type === "error" ? clientResult : await mutation.server;
+      const result = await acknowledgeMutation(mutation);
       return result.type === "success";
     },
   });
@@ -58,6 +62,7 @@ export function ListNameInput({
         onKeyDown={(event) => editor.handleKeyDown(event, true)}
         onValueChange={editor.changeValue}
       />
+      {editor.hasChanges && <TextDraftGuard editor={editor} />}
       <ErrorPopover
         anchor={inputRef}
         id={editor.errorId}
@@ -65,6 +70,7 @@ export function ListNameInput({
         onDismiss={editor.dismissError}
       >
         {editor.error}
+        <TextDraftActions editor={editor} />
       </ErrorPopover>
     </>
   );

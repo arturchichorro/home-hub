@@ -1,11 +1,35 @@
 import * as z from "zod";
 import { timeZoneSchema } from "./habits";
 
+export const workoutExerciseRoleSchema = z.enum([
+  "warmup",
+  "workout",
+  "stretching",
+]);
+export type WorkoutExerciseRole = z.infer<typeof workoutExerciseRoleSchema>;
+export const workoutExerciseRolesSnapshotSchema = z.record(
+  z.uuid(),
+  workoutExerciseRoleSchema,
+);
+export const workoutExerciseRoleOptions = [
+  { value: "warmup", label: "Warm-up" },
+  { value: "workout", label: "Workout" },
+  { value: "stretching", label: "Stretching" },
+] as const;
+export const workoutExerciseRoleLabel = (
+  role: WorkoutExerciseRole | undefined,
+) =>
+  workoutExerciseRoleOptions.find(
+    (option) => option.value === (role ?? "workout"),
+  )?.label ?? "Workout";
+
 const title = z.string().trim().min(1).max(150);
 export const workoutExerciseSchema = z
   .object({
     id: z.uuid(),
     catalogExerciseId: z.uuid().optional(),
+    // Optional only for pre-classification historical snapshots and old clients.
+    role: workoutExerciseRoleSchema.optional(),
     name: title,
     sets: z.number().int().min(1).max(10),
     target: z.string().max(100),
@@ -77,6 +101,17 @@ export const workoutLogSnapshotSchema = workoutContentSchema
     exercises: true,
   })
   .strip();
+// Keep persisted definition JSON readable by older clients' strict parsers.
+export function workoutSnapshotWithoutRoles(
+  snapshot: z.infer<typeof workoutLogSnapshotSchema>,
+) {
+  return {
+    ...snapshot,
+    exercises: snapshot.exercises.map(
+      ({ role: _role, ...exercise }) => exercise,
+    ),
+  };
+}
 export type WorkoutLogSnapshot = z.infer<typeof workoutLogSnapshotSchema>;
 export type WorkoutExercise = z.infer<typeof workoutExerciseSchema>;
 export type WorkoutContent = z.infer<typeof workoutContentSchema>;
@@ -183,6 +218,7 @@ export function workoutExercisesFromRows(
     exerciseId: string;
     sets: number;
     target: string;
+    role?: string | null | undefined;
     exercise:
       | {
           id: string;
@@ -206,6 +242,7 @@ export function workoutExercisesFromRows(
         unilateral: row.exercise.unilateral,
         sets: row.sets,
         target: row.target,
+        role: row.role ?? "workout",
       };
     }),
   );

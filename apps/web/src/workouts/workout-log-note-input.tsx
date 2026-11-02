@@ -2,7 +2,12 @@ import { mutators } from "@home-hub/shared/zero/mutators";
 import { ErrorPopover, Input } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { useEffect, useRef } from "react";
-import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
+import {
+  TextDraftActions,
+  TextDraftGuard,
+} from "../editing/text-draft-actions";
+import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 export function WorkoutLogNoteInput({
@@ -14,6 +19,7 @@ export function WorkoutLogNoteInput({
   disabled = false,
   onFocus,
   onBlur,
+  onDirtyChange,
 }: {
   householdId: string;
   workoutId: string;
@@ -23,11 +29,13 @@ export function WorkoutLogNoteInput({
   disabled?: boolean;
   onFocus: () => void;
   onBlur: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const zero = useZero();
   const enabled = useZeroMutationEnabled();
   const input = useRef<HTMLInputElement>(null);
   const editor = useDebouncedTextEditor({
+    preserveOnFailure: true,
     currentValue: note,
     mutationEnabled: enabled && !disabled,
     normalize: (value) => value.trim(),
@@ -41,11 +49,14 @@ export function WorkoutLogNoteInput({
           note,
         }),
       );
-      const client = await mutation.client;
-      const result = client.type === "error" ? client : await mutation.server;
+      const result = await acknowledgeMutation(mutation);
       return result.type === "success";
     },
   });
+  useEffect(() => {
+    onDirtyChange?.(editor.hasChanges);
+    return () => onDirtyChange?.(false);
+  }, [editor.hasChanges, onDirtyChange]);
   useEffect(() => {
     if (focusOnMount) input.current?.focus();
   }, [focusOnMount]);
@@ -71,6 +82,7 @@ export function WorkoutLogNoteInput({
         }}
         onKeyDown={(event) => editor.handleKeyDown(event, true)}
       />
+      {editor.hasChanges && <TextDraftGuard editor={editor} />}
       <ErrorPopover
         anchor={input}
         id={editor.errorId}
@@ -78,6 +90,7 @@ export function WorkoutLogNoteInput({
         onDismiss={editor.dismissError}
       >
         {editor.error}
+        <TextDraftActions editor={editor} />
       </ErrorPopover>
     </>
   );

@@ -3,8 +3,13 @@ import { mutators } from "@home-hub/shared/zero/mutators";
 import { ErrorPopover, Input } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { useEffect, useRef } from "react";
+import {
+  TextDraftActions,
+  TextDraftGuard,
+} from "../editing/text-draft-actions";
+import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
-import { useDebouncedTextEditor } from "./use-debounced-text-editor";
 
 type RecipeIngredientNameInputProps = {
   currentName: string;
@@ -25,6 +30,7 @@ export function RecipeIngredientNameInput({
   const mutationEnabled = useZeroMutationEnabled();
   const inputRef = useRef<HTMLInputElement>(null);
   const editor = useDebouncedTextEditor({
+    preserveOnFailure: true,
     currentValue: currentName,
     emptyError: "The ingredient name cannot be empty.",
     failureError: "The ingredient name could not be saved.",
@@ -41,9 +47,7 @@ export function RecipeIngredientNameInput({
           optimisticUpdatedAt: Date.now(),
         }),
       );
-      const clientResult = await mutation.client;
-      const result =
-        clientResult.type === "error" ? clientResult : await mutation.server;
+      const result = await acknowledgeMutation(mutation);
       return result.type === "success";
     },
   });
@@ -69,6 +73,7 @@ export function RecipeIngredientNameInput({
         onKeyDown={(event) => editor.handleKeyDown(event, true)}
         onValueChange={editor.changeValue}
       />
+      {editor.hasChanges && <TextDraftGuard editor={editor} />}
       <ErrorPopover
         anchor={inputRef}
         id={editor.errorId}
@@ -76,6 +81,7 @@ export function RecipeIngredientNameInput({
         onDismiss={editor.dismissError}
       >
         {editor.error}
+        <TextDraftActions editor={editor} />
       </ErrorPopover>
     </>
   );

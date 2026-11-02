@@ -9,6 +9,7 @@ import {
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { ListItems } from "./list-items";
 import { ListNameInput } from "./list-name-input";
@@ -41,8 +42,7 @@ export function ListDetail({
           optimisticDeletedAt: Date.now(),
         }),
       );
-      const client = await mutation.client;
-      const outcome = client.type === "error" ? client : await mutation.server;
+      const outcome = await acknowledgeMutation(mutation);
       if (outcome.type === "error") {
         setError("The list could not be deleted.");
         return;

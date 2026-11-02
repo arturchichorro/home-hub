@@ -1,7 +1,7 @@
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { useDebouncedTextEditor as EditorHook } from "../recipes/use-debounced-text-editor";
+import type { useDebouncedTextEditor as EditorHook } from "../editing/use-debounced-text-editor";
 import { HabitNameInput } from "./habit-name-input";
 
 const { mutate, useZeroMutationEnabled, useDebouncedTextEditor } = vi.hoisted(
@@ -20,7 +20,7 @@ vi.mock("@rocicorp/zero/react", () => ({ useZero: () => ({ mutate }) }));
 vi.mock("../zero/use-zero-mutation-enabled", () => ({
   useZeroMutationEnabled,
 }));
-vi.mock("../recipes/use-debounced-text-editor", () => ({
+vi.mock("../editing/use-debounced-text-editor", () => ({
   useDebouncedTextEditor,
 }));
 const props = {
@@ -46,6 +46,8 @@ beforeEach(() => {
     handleBlur: vi.fn(),
     handleKeyDown: vi.fn(),
     dismissError: vi.fn(),
+    retry: vi.fn(),
+    discard: vi.fn(),
   });
 });
 

@@ -1,4 +1,8 @@
-import type { WorkoutExercise } from "@home-hub/shared/workouts";
+import {
+  type WorkoutExercise,
+  workoutExerciseRoleOptions,
+  workoutExerciseRoleSchema,
+} from "@home-hub/shared/workouts";
 import {
   Button,
   ErrorPopover,
@@ -14,7 +18,11 @@ import {
   Trash2,
 } from "@home-hub/ui-web";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
+import {
+  TextDraftActions,
+  TextDraftGuard,
+} from "../editing/text-draft-actions";
+import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
 
 export function WorkoutText({
   label,
@@ -38,6 +46,7 @@ export function WorkoutText({
   const input = useRef<HTMLInputElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const editor = useDebouncedTextEditor({
+    preserveOnFailure: true,
     currentValue: value,
     mutationEnabled: !disabled && !readOnly,
     normalize: (v) => v.trim(),
@@ -85,6 +94,7 @@ export function WorkoutText({
           }}
         />
       )}
+      {editor.hasChanges && <TextDraftGuard editor={editor} />}
       <ErrorPopover
         anchor={multiline ? textarea : input}
         id={editor.errorId}
@@ -92,6 +102,7 @@ export function WorkoutText({
         onDismiss={editor.dismissError}
       >
         {editor.error}
+        <TextDraftActions editor={editor} />
       </ErrorPopover>
     </>
   );
@@ -228,6 +239,7 @@ export function WorkoutExercises({
                         unilateral: exercise.unilateral,
                         sets: 2,
                         target: "8–12",
+                        role: "workout",
                       },
                     ],
                     true,
@@ -309,6 +321,28 @@ export function WorkoutExercises({
                 value={exercise.target}
                 onValueChange={(target) => change(exercise.id, { target })}
               />
+              <SelectRoot
+                value={exercise.role ?? "workout"}
+                disabled={disabled || starting || !!logging}
+                items={workoutExerciseRoleOptions}
+                onValueChange={(value) => {
+                  const role = workoutExerciseRoleSchema.safeParse(value);
+                  if (role.success)
+                    change(exercise.id, { role: role.data }, true);
+                }}
+              >
+                <SelectTrigger
+                  aria-label={`Role for ${exercise.name}`}
+                  className="h-8! w-28! gap-2! px-2! text-xs"
+                />
+                <SelectPopup>
+                  {workoutExerciseRoleOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectPopup>
+              </SelectRoot>
               <SelectRoot
                 value={exercise.unit}
                 disabled={disabled || starting || !!logging}

@@ -1,10 +1,11 @@
+import { calendarDate } from "@home-hub/shared/habits";
 import {
   planExerciseEdits,
   workoutExercisesFromRows,
   workoutLogSnapshotSchema,
 } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
-import { queries } from "@home-hub/shared/zero/queries";
+import { queries, workoutHistoryPageSize } from "@home-hub/shared/zero/queries";
 import {
   AccordionHeader,
   AccordionItem,
@@ -20,6 +21,7 @@ import {
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useBlocker } from "@tanstack/react-router";
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -28,6 +30,7 @@ import {
 } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { blockAppUpdate, useBlockAppUpdate } from "../updates/activity";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { WorkoutExercises, WorkoutText } from "./workout-fields";
 import { WorkoutHistoryEntry } from "./workout-history-entry";
@@ -67,10 +70,28 @@ function WorkoutDetailPage({
   const [workout, result] = useQuery(
     queries.workouts.detail({ householdId, workoutId }),
   );
-  const [logRows, logResult] = useQuery(
-    queries.workouts.logsV2({ householdId, workoutId }),
+  const [dirtyNotes, setDirtyNotes] = useState(new Set<string>());
+  const noteDraftChanged = useCallback(
+    (id: string, dirty: boolean) =>
+      setDirtyNotes((previous) => {
+        if (previous.has(id) === dirty) return previous;
+        const next = new Set(previous);
+        if (dirty) next.add(id);
+        else next.delete(id);
+        return next;
+      }),
+    [],
   );
-  const logs = useMemo(() => logRows.map(projectWorkoutLog), [logRows]);
+  const [cursors, setCursors] = useState<
+    { completedOn: string; completedAt: number; id: string }[]
+  >([]);
+  const [logRows, logResult] = useQuery(
+    queries.workouts.historyPage({
+      householdId,
+      workoutId,
+      cursor: cursors.at(-1),
+    }),
+  );
   const [editor, setEditor] = useState<WorkoutLogEditor>();
   const state = useSyncExternalStore<WorkoutEditorState | undefined>(
     editor?.subscribe ?? emptySubscribe,
@@ -81,7 +102,50 @@ function WorkoutDetailPage({
   const activeLogId = form?.id,
     activeLogDay = form?.completedOn,
     startedAt = form?.startedAt;
-  const loaded = result.type === "complete" && logResult.type === "complete",
+  const [day, setDay] = useState(() =>
+    calendarDate(Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone),
+  );
+  useEffect(() => {
+    const update = () =>
+      setDay(
+        calendarDate(
+          Date.now(),
+          Intl.DateTimeFormat().resolvedOptions().timeZone,
+        ),
+      );
+    const timer = setInterval(update, 60_000);
+    window.addEventListener("focus", update);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", update);
+    };
+  }, []);
+  const [dailyRows, dailyResult] = useQuery(
+    queries.workouts.logForDay({ householdId, workoutId, completedOn: day }),
+  );
+  const [selectedRows] = useQuery(
+    activeLogId
+      ? queries.workouts.logById({ householdId, workoutId, logId: activeLogId })
+      : undefined,
+  );
+  const logs = useMemo(
+    () =>
+      [
+        ...new Map(
+          [...logRows, ...(dailyRows ?? []), ...(selectedRows ?? [])].map(
+            (row) => [row.id, row],
+          ),
+        ).values(),
+      ].map(projectWorkoutLog),
+    [logRows, dailyRows, selectedRows],
+  );
+  const visibleLogs = logRows
+    .slice(0, workoutHistoryPageSize)
+    .map(projectWorkoutLog);
+  const selected = logs.find((log) => log.id === activeLogId);
+  if (selected && !visibleLogs.some((log) => log.id === selected.id))
+    visibleLogs.unshift(selected);
+  const loaded = result.type === "complete" && dailyResult.type === "complete",
     disabled = !enabled || !loaded;
   const enabledRef = useRef(false);
   enabledRef.current = !disabled;
@@ -147,9 +211,8 @@ function WorkoutDetailPage({
     const release = blockAppUpdate();
     if (report) setError("");
     try {
-      const mutation = zero.mutate(request),
-        client = await mutation.client;
-      const outcome = client.type === "error" ? client : await mutation.server;
+      const mutation = zero.mutate(request);
+      const outcome = await acknowledgeMutation(mutation);
       if (outcome.type === "error") throw Error("save");
       return true;
     } catch {
@@ -215,7 +278,7 @@ function WorkoutDetailPage({
     } else action.current();
   }
   useAppHeaderRightComponent(null);
-  if (result.type === "error" || logResult.type === "error")
+  if (result.type === "error" || dailyResult.type === "error")
     return (
       <InlineAlert role="alert" variant="danger">
         Unable to load workout.
@@ -329,15 +392,18 @@ function WorkoutDetailPage({
           History
         </h2>
         <ul className="divide-y divide-border">
-          {logs.map((entry) => (
+          {visibleLogs.map((entry) => (
             <WorkoutHistoryEntry
               key={entry.id}
               entry={entry}
+              onDraftChange={noteDraftChanged}
               householdId={householdId}
               workoutId={workoutId}
               selected={form?.id === entry.id}
               disabled={
-                disabled || (entry.id === form?.id && !state?.headerConfirmed)
+                disabled ||
+                logResult.type !== "complete" ||
+                (entry.id === form?.id && !state?.headerConfirmed)
               }
               onSelect={() =>
                 form?.id === entry.id ? closeLog() : startLog(entry)
@@ -345,6 +411,54 @@ function WorkoutDetailPage({
             />
           ))}
         </ul>
+        {logResult.type === "error" && (
+          <InlineAlert role="alert" variant="danger">
+            Unable to load history.{" "}
+            <Button
+              variant="ghost"
+              disabled={dirtyNotes.size > 0}
+              onClick={() => setCursors([])}
+            >
+              Return to recent history
+            </Button>
+          </InlineAlert>
+        )}
+        {logResult.type !== "complete" && logResult.type !== "error" && (
+          <p role="status" className="text-sm text-muted">
+            Loading history…
+          </p>
+        )}
+        <div className="flex gap-2">
+          {cursors.length > 0 && (
+            <Button
+              variant="ghost"
+              disabled={logResult.type !== "complete" || dirtyNotes.size > 0}
+              onClick={() => setCursors((previous) => previous.slice(0, -1))}
+            >
+              Newer history
+            </Button>
+          )}
+          {logRows.length > workoutHistoryPageSize && (
+            <Button
+              variant="ghost"
+              disabled={logResult.type !== "complete" || dirtyNotes.size > 0}
+              onClick={() => {
+                const last = logRows[workoutHistoryPageSize - 1];
+                if (last)
+                  setCursors((previous) => [
+                    ...previous,
+                    {
+                      completedOn: last.completedOn,
+                      completedAt: last.completedAt,
+                      id: last.id,
+                    },
+                  ]);
+              }}
+            >
+              Load older history
+            </Button>
+          )}
+        </div>
       </section>
       <DialogRoot
         open={confirmClose || blocker.status === "blocked"}

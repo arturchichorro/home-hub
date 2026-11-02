@@ -19,7 +19,7 @@ import {
 import { workoutLogSnapshotSchema } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import {
   afterAll,
   beforeAll,
@@ -129,6 +129,80 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
         unilateral: false,
       },
     ]);
+  });
+  it("keeps roles on workout placements, defaults old inserts and rejects unknown roles", async () => {
+    const firstWorkout = randomUUID(),
+      secondWorkout = randomUUID(),
+      firstSlot = randomUUID(),
+      secondSlot = randomUUID(),
+      defaultSlot = randomUUID();
+    await client.db.insert(workouts).values([
+      { id: firstWorkout, householdId, title: "Warm-up workout", notes: "" },
+      {
+        id: secondWorkout,
+        householdId,
+        title: "Stretching workout",
+        notes: "",
+      },
+    ]);
+    await client.db.insert(workoutExercises).values([
+      {
+        id: firstSlot,
+        householdId,
+        workoutId: firstWorkout,
+        exerciseId,
+        sets: 2,
+        target: "8",
+        role: "warmup",
+      },
+      {
+        id: secondSlot,
+        householdId,
+        workoutId: secondWorkout,
+        exerciseId,
+        sets: 2,
+        target: "8",
+        role: "stretching",
+      },
+      {
+        id: defaultSlot,
+        householdId,
+        workoutId: firstWorkout,
+        exerciseId,
+        sets: 2,
+        target: "8",
+      },
+    ]);
+    const rows = await client.db
+      .select()
+      .from(workoutExercises)
+      .where(eq(workoutExercises.householdId, householdId));
+    expect(rows.find((row) => row.id === defaultSlot)?.role).toBe("workout");
+    await client.db
+      .update(workoutExercises)
+      .set({ role: "workout" })
+      .where(eq(workoutExercises.id, firstSlot));
+    expect(
+      (
+        await client.db
+          .select()
+          .from(workoutExercises)
+          .where(eq(workoutExercises.id, secondSlot))
+      )[0]?.role,
+    ).toBe("stretching");
+    await expect(
+      client.db.execute(
+        sql`UPDATE workout_exercises SET role='invalid' WHERE id=${firstSlot}`,
+      ),
+    ).rejects.toThrow();
+    expect(
+      (
+        await client.db
+          .select()
+          .from(exercises)
+          .where(eq(exercises.id, exerciseId))
+      )[0],
+    ).not.toHaveProperty("role");
   });
   async function pending() {
     const result = await upload();

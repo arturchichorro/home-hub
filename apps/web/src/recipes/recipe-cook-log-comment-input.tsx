@@ -3,8 +3,13 @@ import { mutators } from "@home-hub/shared/zero/mutators";
 import { ErrorPopover, Input } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { useEffect, useRef } from "react";
+import {
+  TextDraftActions,
+  TextDraftGuard,
+} from "../editing/text-draft-actions";
+import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
+import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
-import { useDebouncedTextEditor } from "./use-debounced-text-editor";
 
 type RecipeCookLogCommentInputProps = {
   cookLogId: string;
@@ -29,6 +34,7 @@ export function RecipeCookLogCommentInput({
   const mutationEnabled = useZeroMutationEnabled();
   const inputRef = useRef<HTMLInputElement>(null);
   const editor = useDebouncedTextEditor({
+    preserveOnFailure: true,
     currentValue: currentComment ?? "",
     failureError: "The cooking log comment could not be saved.",
     mutationEnabled,
@@ -43,9 +49,7 @@ export function RecipeCookLogCommentInput({
           optimisticUpdatedAt: Date.now(),
         }),
       );
-      const clientResult = await mutation.client;
-      const result =
-        clientResult.type === "error" ? clientResult : await mutation.server;
+      const result = await acknowledgeMutation(mutation);
       return result.type === "success";
     },
   });
@@ -76,6 +80,7 @@ export function RecipeCookLogCommentInput({
         onFocus={onFocus}
         onKeyDown={(event) => editor.handleKeyDown(event, true)}
       />
+      {editor.hasChanges && <TextDraftGuard editor={editor} />}
       <ErrorPopover
         anchor={inputRef}
         id={editor.errorId}
@@ -83,6 +88,7 @@ export function RecipeCookLogCommentInput({
         onDismiss={editor.dismissError}
       >
         {editor.error}
+        <TextDraftActions editor={editor} />
       </ErrorPopover>
     </>
   );

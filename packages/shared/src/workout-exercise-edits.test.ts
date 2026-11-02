@@ -51,7 +51,7 @@ describe("normalized workout exercise edits", () => {
       updatedAt: 2,
     };
     expect(workoutExercisesFromRows([row])).toEqual([
-      { ...first, catalogExerciseId: first.id },
+      { ...first, catalogExerciseId: first.id, role: "workout" },
     ]);
     expect(() =>
       workoutExercisesFromRows([

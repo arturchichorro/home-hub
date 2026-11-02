@@ -121,7 +121,12 @@ export function useDebouncedTextEditor({
       saveInFlightRef.current = true;
       setIsSaving(true);
       setError(undefined);
-      const success = await saveMutationRef.current(submittedValue);
+      let success = false;
+      try {
+        success = await saveMutationRef.current(submittedValue);
+      } catch {
+        // Rejected promises are failures too; always release the in-flight slot.
+      }
 
       if (success) {
         confirmedValueRef.current = submittedValue;
@@ -215,9 +220,19 @@ export function useDebouncedTextEditor({
 
   return {
     changeValue,
+    retry: () => void saveDraft(true, true),
+    discard: () => {
+      clearScheduledSave();
+      revertDraft();
+      setError(undefined);
+    },
     error,
     errorId,
-    handleBlur: () => void saveDraft(true, true),
+    handleBlur: () => {
+      // Moving to Retry/Discard must not silently resubmit a failed draft.
+      if (preserveOnFailure && error) return;
+      void saveDraft(true, true);
+    },
     handleKeyDown,
     isSaving,
     hasChanges: draftValue !== confirmedValueRef.current,

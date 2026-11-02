@@ -1,5 +1,8 @@
 DO $$ BEGIN
- IF (SELECT jsonb_agg(to_jsonb(l) ORDER BY id) FROM workout_logs l) IS DISTINCT FROM (SELECT logs FROM logging_before)
+ -- Compare every original field; the additive role snapshot must stay empty
+ -- for pre-classification history rather than reclassifying old sessions.
+ IF EXISTS (SELECT FROM workout_logs WHERE exercise_roles <> '{}'::jsonb) THEN RAISE EXCEPTION 'Legacy role snapshots must remain empty'; END IF;
+ IF (SELECT jsonb_agg(to_jsonb(l) - 'exercise_roles' ORDER BY id) FROM workout_logs l) IS DISTINCT FROM (SELECT logs FROM logging_before)
  OR (SELECT jsonb_agg(to_jsonb(s) ORDER BY log_id,workout_exercise_id,round) FROM workout_log_sets s) IS DISTINCT FROM (SELECT sets FROM logging_before)
  THEN RAISE EXCEPTION 'Original history, notes, dates or measurements changed'; END IF;
  IF EXISTS (SELECT FROM exercise_logs WHERE substring(id::text from 15 for 1)<>'5' OR substring(id::text from 20 for 1)<>'a') THEN RAISE EXCEPTION 'Backfilled occurrence IDs are not RFC-compliant'; END IF;

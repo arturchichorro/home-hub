@@ -14,19 +14,21 @@ import {
   Trash2,
   X,
 } from "@home-hub/ui-web";
-import { useRef } from "react";
+import { useId, useRef } from "react";
 import type { WorkoutEditorState } from "./workout-log-editor";
 import {
   completeSetValues,
   exerciseRounds,
   nextExerciseRound,
+  setInputErrors,
   setInputKey,
   type WorkoutLogForm,
   type WorkoutSetInput,
 } from "./workout-log-form";
 import type { ExercisePerformance } from "./workout-log-projection";
 
-export type WorkoutLog = LogRow & {
+export type WorkoutLog = Omit<LogRow, "exerciseRoles"> & {
+  readonly exerciseRoles?: LogRow["exerciseRoles"] | undefined;
   readonly sets: readonly WorkoutLogSet[];
   readonly exerciseLogIds?: Readonly<Record<string, string>>;
 };
@@ -65,6 +67,7 @@ export function WorkoutExerciseSets({
   disabled: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null);
+  const validationId = useId();
   const { form, state, onChange, onFlush } = logging;
   const nextRound = nextExerciseRound(exercise, form.inputs);
   const rounds = exerciseRounds(exercise, form.inputs);
@@ -85,6 +88,8 @@ export function WorkoutExerciseSets({
           amount: "",
           rightAmount: "",
         };
+        const validation = setInputErrors(exercise, input);
+        const invalid = Object.keys(validation).length > 0;
         const prior = old?.sets.find(
           (s) =>
             s.round === round &&
@@ -143,6 +148,12 @@ export function WorkoutExerciseSets({
                   <Input
                     appearance="seamless"
                     aria-label={`Weight in kg for ${label}`}
+                    aria-invalid={Boolean(validation.weightKg) || undefined}
+                    aria-errormessage={
+                      validation.weightKg
+                        ? `${validationId}-${round}-weightKg`
+                        : undefined
+                    }
                     className="h-8! w-14 flex-none! text-sm"
                     type="number"
                     min="0"
@@ -163,6 +174,12 @@ export function WorkoutExerciseSets({
                 <Input
                   appearance="seamless"
                   aria-label={`${exercise.unilateral ? "Left " : ""}${exercise.unit} for ${label}`}
+                  aria-invalid={Boolean(validation.amount) || undefined}
+                  aria-errormessage={
+                    validation.amount
+                      ? `${validationId}-${round}-amount`
+                      : undefined
+                  }
                   className="h-8! w-12 flex-none! text-sm"
                   type="number"
                   min="0"
@@ -182,6 +199,12 @@ export function WorkoutExerciseSets({
                   <Input
                     appearance="seamless"
                     aria-label={`Right ${exercise.unit} for ${label}`}
+                    aria-invalid={Boolean(validation.rightAmount) || undefined}
+                    aria-errormessage={
+                      validation.rightAmount
+                        ? `${validationId}-${round}-rightAmount`
+                        : undefined
+                    }
                     className="h-8! w-12 flex-none! text-sm"
                     type="number"
                     min="0"
@@ -201,13 +224,15 @@ export function WorkoutExerciseSets({
               <span className="text-xs text-muted" role="status">
                 {saving
                   ? "Saving…"
-                  : completeSetValues(exercise, input)
-                    ? state.dirty.has(key)
-                      ? "Unsaved"
-                      : "Saved"
-                    : state.dirty.has(key)
-                      ? "Incomplete"
-                      : ""}
+                  : invalid
+                    ? "Invalid"
+                    : completeSetValues(exercise, input)
+                      ? state.dirty.has(key)
+                        ? "Unsaved"
+                        : "Saved"
+                      : state.dirty.has(key)
+                        ? "Incomplete"
+                        : ""}
               </span>
               {removable &&
                 (state.recorded.has(key) ? (
@@ -221,6 +246,16 @@ export function WorkoutExerciseSets({
                   remove
                 ))}
             </fieldset>
+            {Object.entries(validation).map(([field, message]) => (
+              <p
+                key={field}
+                id={`${validationId}-${round}-${field}`}
+                role="alert"
+                className="text-xs text-danger"
+              >
+                {message}
+              </p>
+            ))}
             {last && (
               <p className="pb-1 text-xs text-muted">
                 <span title="Previous performance">

@@ -1,5 +1,6 @@
+import { workoutExerciseRoleLabel } from "@home-hub/shared/workouts";
 import { Check, IconButton, MessageSquare } from "@home-hub/ui-web";
-import { useId, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import type { WorkoutLog } from "./workout-log";
 import { WorkoutLogNoteInput } from "./workout-log-note-input";
 import { summarizeWorkoutLog } from "./workout-log-summary";
@@ -11,6 +12,7 @@ export function WorkoutHistoryEntry({
   selected,
   disabled,
   onSelect,
+  onDraftChange,
 }: {
   entry: WorkoutLog;
   householdId: string;
@@ -18,7 +20,12 @@ export function WorkoutHistoryEntry({
   selected: boolean;
   disabled: boolean;
   onSelect: () => void;
+  onDraftChange?: (id: string, dirty: boolean) => void;
 }) {
+  const dirtyChanged = useCallback(
+    (dirty: boolean) => onDraftChange?.(entry.id, dirty),
+    [entry.id, onDraftChange],
+  );
   const [editingNote, setEditingNote] = useState(false);
   const summaryId = useId();
   const hasNote = !!entry.note?.trim();
@@ -47,6 +54,7 @@ export function WorkoutHistoryEntry({
               householdId={householdId}
               workoutId={workoutId}
               logId={entry.id}
+              onDirtyChange={dirtyChanged}
               note={entry.note ?? ""}
               focusOnMount={editingNote && !hasNote}
               disabled={disabled}
@@ -74,8 +82,11 @@ export function WorkoutHistoryEntry({
         {summary.length ? (
           summary.map((exercise) => (
             <span key={exercise.id} className="break-words">
-              <span className="font-medium">{exercise.name}</span> —{" "}
-              {exercise.details}
+              <span className="font-medium">{exercise.name}</span>
+              {exercise.role && (
+                <span> · {workoutExerciseRoleLabel(exercise.role)}</span>
+              )}{" "}
+              — {exercise.details}
             </span>
           ))
         ) : (
