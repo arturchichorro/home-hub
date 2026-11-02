@@ -18,6 +18,7 @@ export function WorkoutLogNoteInput({
   disabled = false,
   onFocus,
   onBlur,
+  onDirtyChange,
 }: {
   householdId: string;
   workoutId: string;
@@ -27,6 +28,7 @@ export function WorkoutLogNoteInput({
   disabled?: boolean;
   onFocus: () => void;
   onBlur: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const zero = useZero();
   const enabled = useZeroMutationEnabled();
@@ -51,6 +53,10 @@ export function WorkoutLogNoteInput({
       return result.type === "success";
     },
   });
+  useEffect(() => {
+    onDirtyChange?.(editor.hasChanges);
+    return () => onDirtyChange?.(false);
+  }, [editor.hasChanges, onDirtyChange]);
   useEffect(() => {
     if (focusOnMount) input.current?.focus();
   }, [focusOnMount]);
