@@ -21,7 +21,7 @@ import {
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { type Ref, useId, useImperativeHandle, useRef, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
-import { ExerciseMedia } from "./exercise-media";
+import { CatalogMediaProvider, ExerciseMedia } from "./exercise-media";
 import { ExerciseSettings } from "./exercise-settings";
 import {
   type CatalogSaveResult,
@@ -186,115 +186,117 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
     }
   }
   return (
-    <section aria-label="Exercise catalog" className="grid min-w-0 gap-2">
-      <div className="flex items-center justify-between gap-2 pt-3">
-        <h2 className="font-semibold">Exercise catalog</h2>
-        <IconButton
-          aria-label="Add catalog exercise"
-          title="Add exercise"
-          className="size-7!"
-          disabled={!enabled || adding}
-          onPointerDown={(event) => {
-            if (draft) event.preventDefault();
-          }}
-          onClick={() => void add()}
-        >
-          <Plus aria-hidden="true" className="size-4" />
-        </IconButton>
-      </div>
-      {result.type === "error" ? (
-        <InlineAlert role="alert" variant="danger">
-          Unable to load exercises.
-        </InlineAlert>
-      ) : (
-        <>
-          <Input
-            appearance="seamless"
-            aria-label="Search exercises"
-            placeholder="Search exercises…"
-            value={search}
-            onValueChange={(value) => {
-              setSearch(value);
-              setPinnedId(undefined);
+    <CatalogMediaProvider householdId={householdId}>
+      <section aria-label="Exercise catalog" className="grid min-w-0 gap-2">
+        <div className="flex items-center justify-between gap-2 pt-3">
+          <h2 className="font-semibold">Exercise catalog</h2>
+          <IconButton
+            aria-label="Add catalog exercise"
+            title="Add exercise"
+            className="size-7!"
+            disabled={!enabled || adding}
+            onPointerDown={(event) => {
+              if (draft) event.preventDefault();
             }}
-          />
-          {actionError && (
-            <InlineAlert role="alert" variant="danger">
-              {actionError}
-            </InlineAlert>
-          )}
-          <DragDropProvider
-            sensors={workoutOrderingSensors}
-            onDragEnd={(event) => {
-              const source = event.operation.source;
-              if (!canOrder || event.canceled || !isSortable(source)) return;
-              const ids = entries.map((entry) => entry.id),
-                from = ids.indexOf(String(source.id));
-              if (
-                from < 0 ||
-                source.index < 0 ||
-                source.index >= ids.length ||
-                from === source.index
-              )
-                return;
-              const [id] = ids.splice(from, 1);
-              if (!id) return;
-              ids.splice(source.index, 0, id);
-              observeAction(
-                zero.mutate(
-                  mutators.workouts.reorderExercises({
-                    householdId,
-                    exerciseId: id,
-                    orderedExerciseIds: ids,
-                    optimisticTimestamp: Date.now(),
-                  }),
-                ),
-                "Unable to reorder exercises.",
-              );
-            }}
+            onClick={() => void add()}
           >
-            <ul className="divide-y divide-border">
-              {entries.map((entry, index) => {
-                const isDraft = entry.id === draft?.id;
-                return (
-                  <CatalogRow
-                    key={entry.id}
-                    controls={isDraft ? draftControl : undefined}
-                    householdId={householdId}
-                    initial={entry.row ?? defaultExercise(entry.id)}
-                    current={entry.row}
-                    performance={entry.performance}
-                    enabled={enabled}
-                    autofocus={isDraft && !draft?.saved}
-                    save={save}
-                    index={index}
-                    canOrder={canOrder}
-                    onFocus={() => setPinnedId(entry.id)}
-                    onCancel={() => {
-                      if (isDraft) setDraft(undefined);
-                    }}
-                    onDelete={() => remove(entry.id)}
-                    onSaved={() => {
-                      if (isDraft)
-                        setDraft((current) =>
-                          current?.id === entry.id && !current.saved
-                            ? { ...current, saved: true }
-                            : current,
-                        );
-                    }}
-                  />
+            <Plus aria-hidden="true" className="size-4" />
+          </IconButton>
+        </div>
+        {result.type === "error" ? (
+          <InlineAlert role="alert" variant="danger">
+            Unable to load exercises.
+          </InlineAlert>
+        ) : (
+          <>
+            <Input
+              appearance="seamless"
+              aria-label="Search exercises"
+              placeholder="Search exercises…"
+              value={search}
+              onValueChange={(value) => {
+                setSearch(value);
+                setPinnedId(undefined);
+              }}
+            />
+            {actionError && (
+              <InlineAlert role="alert" variant="danger">
+                {actionError}
+              </InlineAlert>
+            )}
+            <DragDropProvider
+              sensors={workoutOrderingSensors}
+              onDragEnd={(event) => {
+                const source = event.operation.source;
+                if (!canOrder || event.canceled || !isSortable(source)) return;
+                const ids = entries.map((entry) => entry.id),
+                  from = ids.indexOf(String(source.id));
+                if (
+                  from < 0 ||
+                  source.index < 0 ||
+                  source.index >= ids.length ||
+                  from === source.index
+                )
+                  return;
+                const [id] = ids.splice(from, 1);
+                if (!id) return;
+                ids.splice(source.index, 0, id);
+                observeAction(
+                  zero.mutate(
+                    mutators.workouts.reorderExercises({
+                      householdId,
+                      exerciseId: id,
+                      orderedExerciseIds: ids,
+                      optimisticTimestamp: Date.now(),
+                    }),
+                  ),
+                  "Unable to reorder exercises.",
                 );
-              })}
-            </ul>
-          </DragDropProvider>
-          {result.type === "complete" && !entries.length && (
-            <p className="text-sm text-muted">
-              {search ? "No matching exercises." : "No exercises yet."}
-            </p>
-          )}
-        </>
-      )}
-    </section>
+              }}
+            >
+              <ul className="divide-y divide-border">
+                {entries.map((entry, index) => {
+                  const isDraft = entry.id === draft?.id;
+                  return (
+                    <CatalogRow
+                      key={entry.id}
+                      controls={isDraft ? draftControl : undefined}
+                      householdId={householdId}
+                      initial={entry.row ?? defaultExercise(entry.id)}
+                      current={entry.row}
+                      performance={entry.performance}
+                      enabled={enabled}
+                      autofocus={isDraft && !draft?.saved}
+                      save={save}
+                      index={index}
+                      canOrder={canOrder}
+                      onFocus={() => setPinnedId(entry.id)}
+                      onCancel={() => {
+                        if (isDraft) setDraft(undefined);
+                      }}
+                      onDelete={() => remove(entry.id)}
+                      onSaved={() => {
+                        if (isDraft)
+                          setDraft((current) =>
+                            current?.id === entry.id && !current.saved
+                              ? { ...current, saved: true }
+                              : current,
+                          );
+                      }}
+                    />
+                  );
+                })}
+              </ul>
+            </DragDropProvider>
+            {result.type === "complete" && !entries.length && (
+              <p className="text-sm text-muted">
+                {search ? "No matching exercises." : "No exercises yet."}
+              </p>
+            )}
+          </>
+        )}
+      </section>
+    </CatalogMediaProvider>
   );
 }
 
