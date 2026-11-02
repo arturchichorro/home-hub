@@ -27,6 +27,36 @@ export type WorkoutLogForm = {
 };
 export const setInputKey = (exerciseId: string, round: number) =>
   `${exerciseId}:${round}`;
+export function setInputErrors(
+  exercise: WorkoutExercise,
+  input: WorkoutSetInput,
+) {
+  const errors: Partial<Record<keyof WorkoutSetInput, string>> = {};
+  for (const key of ["amount", "rightAmount", "weightKg"] as const) {
+    if (
+      (key === "rightAmount" && !exercise.unilateral) ||
+      (key === "weightKg" && exercise.load === "bodyweight")
+    )
+      continue;
+    const raw = input[key].trim();
+    if (!raw) continue; // Missing fields remain quiet until the row is filled.
+    const value = Number(raw);
+    if (key === "weightKg") {
+      if (!Number.isFinite(value) || value < 0 || value > 1000)
+        errors[key] = "Weight must be between 0 and 1000 kg.";
+    } else if (!Number.isInteger(value) || value < 0 || value > 600) {
+      const side = exercise.unilateral
+        ? key === "rightAmount"
+          ? "Right "
+          : "Left "
+        : "";
+      errors[key] =
+        `${side}${exercise.unit}: use a whole number from 0 to 600.`;
+    }
+  }
+  return errors;
+}
+
 export function completeSetValues(
   exercise: WorkoutExercise,
   input: WorkoutSetInput | undefined,
