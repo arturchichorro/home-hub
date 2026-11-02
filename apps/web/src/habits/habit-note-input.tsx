@@ -8,6 +8,7 @@ import {
 } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { useEffect, useRef, useState } from "react";
+import { TextDraftActions } from "../editing/text-draft-actions";
 import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
@@ -125,6 +126,7 @@ export function HabitNoteInput({
         onDismiss={editor.dismissError}
       >
         {editor.error}
+        <TextDraftActions editor={editor} />
       </ErrorPopover>
     </>
   );

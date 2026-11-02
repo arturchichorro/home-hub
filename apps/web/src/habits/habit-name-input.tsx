@@ -3,6 +3,7 @@ import { mutators } from "@home-hub/shared/zero/mutators";
 import { ErrorPopover, Input } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { useRef } from "react";
+import { TextDraftActions } from "../editing/text-draft-actions";
 import { useDebouncedTextEditor } from "../recipes/use-debounced-text-editor";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { useHabitDraftStatus } from "./use-habit-draft-status";
@@ -80,6 +81,7 @@ export function HabitNameInput({
         onDismiss={editor.dismissError}
       >
         {editor.error}
+        <TextDraftActions editor={editor} />
       </ErrorPopover>
     </>
   );
