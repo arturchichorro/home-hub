@@ -344,6 +344,14 @@ const authorizedExerciseCatalog = (householdId: string, userId: string) =>
           s.where("moduleKey", "workouts").where("enabled", true),
         ),
     );
+const exerciseDefinitions = defineHomeHubQuery(
+  householdIdArgsSchema,
+  ({ args, ctx }) =>
+    authorizedExerciseCatalog(args.householdId, ctx.userId)
+      .where("deletedAt", "IS", null)
+      .orderBy("sortKey", "desc")
+      .orderBy("id", "asc"),
+);
 const exerciseCatalog = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
@@ -497,6 +505,7 @@ export const queries = defineHomeHubQueries({
   workouts: {
     byHousehold: workoutsByHousehold,
     catalog: exerciseCatalog,
+    definitions: exerciseDefinitions,
     exerciseMedia: exerciseMediaQuery,
     catalogMedia: catalogMediaQuery,
     detail: workoutDetail,
