@@ -30,12 +30,30 @@ erDiagram
   households ||--o{ household_members : contains
   households ||--o{ household_invites : issues
   households ||--o{ household_module_settings : configures
-  households ||--o{ shopping_items : owns
+  households ||--o{ lists : owns
+  lists ||--o{ list_items : contains
+  households ||--o{ habits : owns
+  habits ||--o{ habit_entries : records
+  users ||--o{ habit_entries : authors
+  households ||--o{ workouts : owns
+  households ||--o{ exercises : catalogs
+  workouts ||--o{ workout_exercises : prescribes
+  exercises ||--o{ workout_exercises : references
+  workouts ||--o{ workout_logs : groups
+  users ||--o{ workout_logs : authors
+  users ||--o{ exercise_logs : authors
+  exercises ||--o{ exercise_logs : identifies
+  exercise_logs ||--o{ exercise_log_sets : measures
+  workout_logs ||--o{ workout_log_exercises : links
+  exercise_logs ||--o{ workout_log_exercises : appears_in
   households ||--o{ recipes : owns
   recipes ||--o{ recipe_ingredients : contains
   recipes ||--o{ recipe_cook_logs : records
-  recipes ||--o{ recipe_images : illustrates
-  recipe_cook_logs ||--o{ recipe_images : contextualizes
+  recipes ||--o{ recipe_media : illustrates
+  recipe_cook_logs ||--o{ recipe_media : contextualizes
+  media ||--o{ recipe_media : attaches
+  exercises ||--o{ exercise_media : illustrates
+  media ||--o{ exercise_media : attaches
 ```
 
 ## Tables
@@ -48,7 +66,7 @@ erDiagram
 - `password_hash`
 - `created_at`, `updated_at`
 
-Username and email normalization happen before uniqueness checks. Username normalization uses trimming, Unicode NFKC normalization, whitespace folding, and case folding. Email normalization initially uses trimming, Unicode NFKC normalization, and case folding.
+Username and email normalization happen before uniqueness checks. Username normalization uses trimming, Unicode NFKC normalization, whitespace folding, and case folding. Email normalization uses `trim().toLowerCase()` before validation and uniqueness checks.
 
 ### `refresh_tokens`
 
@@ -66,6 +84,7 @@ The raw refresh token is never stored. Short-lived access JWTs are not stored as
 
 - `id`
 - `name`
+- `deleted_at`, nullable
 - `created_at`, `updated_at`
 
 Household names are trimmed display labels of 1–100 characters and do not need
@@ -128,8 +147,9 @@ each module addition includes an explicit migration. Household creation inserts
 a setting for every implemented module. A new module migration backfills every
 existing household with its chosen default; missing settings fail closed.
 
-Lists and Recipes are initially enabled; Habits defaults to disabled. Deferred modules such as French
-Vocabulary default to disabled. Disabling a module retains all of its rows.
+Lists and Recipes are enabled by default; Habits and Workouts default to disabled.
+Deferred modules such as French Vocabulary have no implemented setting yet.
+Disabling a module retains all of its rows.
 Core household and membership behavior has no module setting and cannot be
 disabled.
 
@@ -137,8 +157,8 @@ disabled.
 
 Lists owns `lists` and `list_items`. Their columns, normalization, uniqueness,
 ordering, and status-transition rules are documented in the
-[Lists module data model](./lists/#data-model). The retired `shopping_items`
-table remains temporarily for the staged migration.
+[Lists module data model](./lists/#data-model). Migration `0017` removed
+`shopping_items` and the temporary bridge; neither remains in the current schema.
 
 ### Recipes module tables
 
@@ -160,7 +180,10 @@ Shared definitions live in `workouts`, `exercises` and `workout_exercises`.
 Private measurements live in `exercise_logs` and `exercise_log_sets`, independently
 of workouts. `workout_logs` groups occurrences by author/workout/local day and owns
 private notes; `workout_log_exercises` enforces same-household/author links.
-The pre-cutover `workout_log_sets` table is retained as an archive, not a write target.
+`exercise_media` attaches shared assets to the catalog. Placement roles live on
+`workout_exercises`, while `workout_logs.exercise_roles` freezes historical roles
+separately from strict definition JSON. The pre-cutover `workout_log_sets` table
+is retained as an archive, not a write target.
 See the [Workouts data model](./workouts/#data-model) and its forward migration.
 
 ## Schema invariants
@@ -168,7 +191,7 @@ See the [Workouts data model](./workouts/#data-model) and its forward migration.
 - A household has at most one owner row; application transactions ensure it
   always has exactly one owner.
 - A user has at most one membership in a household.
-- List names are unique within a household; item names are unique within a list.
+- Active list names are unique within a household; item names are unique within a list.
   Item references cannot cross households; see the [Lists data model](./lists/#data-model).
 - Recipes references cannot cross household or recipe boundaries; see the
   [Recipes module data model](./recipes/#data-model).
