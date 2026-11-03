@@ -74,7 +74,10 @@ export {
   ChevronRight,
   CookingPot,
   Crown,
+  Download,
   Dumbbell,
+  Eye,
+  FileText,
   Folder,
   FolderPlus,
   GripVertical,
@@ -84,6 +87,7 @@ export {
   ImagePlus,
   Images,
   LayoutGrid,
+  Link2,
   ListTodo,
   LogOut,
   type LucideIcon,
@@ -99,7 +103,9 @@ export {
   Scale,
   Settings,
   StickyNote,
+  Tags,
   Trash2,
+  Upload,
   UserPlus,
   Users,
   X,
@@ -132,6 +138,7 @@ export {
   type MenuTriggerProps,
 } from "./menu";
 export { Panel, type PanelProps, type PanelVariant } from "./panel";
+export { PopoverPopup, PopoverRoot, PopoverTrigger } from "./popover";
 export {
   SelectItem,
   type SelectItemProps,

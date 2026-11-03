@@ -7,7 +7,7 @@ export const Route = createFileRoute(
 )({
   loader: ({ context, params }) => {
     void context.zero?.run(
-      queries.lists.byHousehold({ householdId: params.householdId }),
+      queries.lists.library({ householdId: params.householdId }),
     );
   },
   component: ListsRoute,

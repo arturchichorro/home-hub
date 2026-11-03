@@ -100,6 +100,7 @@ describe("shared exercise media", () => {
       width: 640,
       height: 480,
       durationMs: null,
+      videoVersion: null,
       animated: null,
       confirmedAt: 2,
       deletedAt: null,

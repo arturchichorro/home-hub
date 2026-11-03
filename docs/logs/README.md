@@ -74,12 +74,12 @@ database if needed, resolving active title/day collisions first. There is no pur
 trash, automatic note generation, attachments, rich text, actual cross-module item
 link, global note-content search, reminders, schedules or scores.
 
-`0052_logs.sql` starts independently from `develop`, reserving ordering after the
-other open feature migrations (#84/#87/#88, `0049`–`0051`). Reconcile journal
-indices/timestamps and snapshot lineage before merging/releasing parallel branches.
-Never append an older pending migration after a newer timestamp is deployed, edit
-applied migration SQL or reset a user's replica. Existing households default Logs
-off; migration/API/cache must be healthy before the matching web release.
+`0052_logs.sql` follows habit links (`0049`), Moodboards (`0050`) and Documents
+(`0051`). Their journal indices are sequential, original timestamps increase, and
+snapshots form one cumulative lineage; migration SQL is unchanged. Never append
+an older pending migration after a newer timestamp is deployed, edit applied
+migration SQL or reset a user's replica. Existing households default Logs off;
+migration/API/cache must be healthy before the matching web release.
 
 Tests cover real PostgreSQL races, daily uniqueness, deletion/restoration, timezone
 boundaries, access revocation, metadata/FKs and cursor search. Browser checks cover

@@ -173,6 +173,9 @@ export const habits = pgTable(
       .notNull()
       .references(() => households.id),
     name: text("name").notNull(),
+    workoutMode: text("workout_mode", { enum: ["none", "any", "selected"] })
+      .notNull()
+      .default("none"),
     note: text("note"),
     sortKey: integer("sort_key").notNull().default(0),
     status: text("status", { enum: ["active", "archived"] })
@@ -196,6 +199,10 @@ export const habits = pgTable(
       sql`${table.note} IS NULL OR length(${table.note}) <= 500`,
     ),
     check(
+      "habits_workout_mode",
+      sql`${table.workoutMode} IN (\x27none\x27, \x27any\x27, \x27selected\x27)`,
+    ),
+    check(
       "habits_status_allowed",
       sql`${table.status} IN ('active', 'archived')`,
     ),
@@ -216,6 +223,7 @@ export const habitEntries = pgTable(
       .references(() => users.id),
     entryOn: text("entry_on").notNull(),
     completed: boolean("completed").notNull().default(false),
+    workoutCompleted: boolean("workout_completed").notNull().default(false),
     note: text("note"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -248,6 +256,7 @@ export const habitEntries = pgTable(
 );
 
 export const habitsRelations = relations(habits, ({ one, many }) => ({
+  workoutLinks: many(habitWorkoutLinks),
   household: one(households, {
     fields: [habits.householdId],
     references: [households.id],
@@ -282,6 +291,10 @@ export const lists = pgTable(
       .references(() => households.id),
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
+    kind: text("kind", { enum: ["checklist", "moodboard"] })
+      .notNull()
+      .default("checklist"),
+    mediaCount: integer("media_count").notNull().default(0),
     sortKey: integer("sort_key").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -293,6 +306,8 @@ export const lists = pgTable(
   },
   (table) => [
     unique("lists_household_id_id_unique").on(table.householdId, table.id),
+    check("lists_kind", sql`${table.kind} IN (\'checklist\', \'moodboard\')`),
+    check("lists_media_count", sql`${table.mediaCount} >= 0`),
     uniqueIndex("lists_household_id_normalized_name_idx")
       .on(table.householdId, table.normalizedName)
       .where(sql`${table.deletedAt} is null`),
@@ -348,6 +363,7 @@ export const listsRelations = relations(lists, ({ many, one }) => ({
     references: [households.id],
   }),
   items: many(listItems),
+  attachments: many(listMedia),
 }));
 
 export const listItemsRelations = relations(listItems, ({ one }) => ({
@@ -536,6 +552,7 @@ export const media = pgTable(
     width: integer("width").notNull(),
     height: integer("height").notNull(),
     durationMs: integer("duration_ms"),
+    videoVersion: text("video_version"),
     animated: boolean("animated"),
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -549,14 +566,22 @@ export const media = pgTable(
   (table) => [
     unique("media_household_id_id").on(table.householdId, table.id),
     check("media_kind", sql`${table.kind} IN ('image', 'video')`),
-    // Expand with the video feature, not before its validation/delivery exists.
+    check(
+      "media_confirmed_video",
+      sql`${table.kind} != \'video\' OR ${table.confirmedAt} IS NULL OR (${table.videoVersion} IS NOT NULL AND ${table.durationMs} IS NOT NULL AND ${table.durationMs} BETWEEN 1 AND 600000 AND ${table.width} <= 4096 AND ${table.height} <= 4096)`,
+    ),
+    check(
+      "media_video_version",
+      sql`${table.videoVersion} IS NULL OR (${table.kind} = \'video\' AND ${table.videoVersion} ~ \'^[a-f0-9]{64}$\')`,
+    ),
+    // Video validation/delivery is enabled only through moodboard attachments.
     check(
       "media_supported_content_type",
-      sql`${table.kind} = 'image' AND ${table.contentType} IN ('image/jpeg', 'image/png', 'image/webp')`,
+      sql`(${table.kind} = 'image' AND ${table.contentType} IN ('image/jpeg', 'image/png', 'image/webp')) OR (${table.kind} = 'video' AND ${table.contentType} IN ('video/mp4', 'video/webm'))`,
     ),
     check(
       "media_byte_size_range",
-      sql`${table.byteSize} > 0 AND ${table.byteSize} <= 10485760`,
+      sql`${table.byteSize} > 0 AND ((${table.kind} = 'image' AND ${table.byteSize} <= 10485760) OR (${table.kind} = 'video' AND ${table.byteSize} <= 104857600))`,
     ),
     check(
       "media_dimensions_range",
@@ -579,7 +604,51 @@ export const mediaRelations = relations(media, ({ one, many }) => ({
     references: [households.id],
   }),
   recipeAttachments: many(recipeMedia),
+  listAttachments: many(listMedia),
   exerciseAttachments: many(exerciseMedia),
+}));
+
+export const listMedia = pgTable(
+  "list_media",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id").notNull(),
+    listId: uuid("list_id").notNull(),
+    mediaId: uuid("media_id").notNull(),
+    sortKey: integer("sort_key").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.householdId, t.listId],
+      foreignColumns: [lists.householdId, lists.id],
+      name: "list_media_list_fk",
+    }),
+    foreignKey({
+      columns: [t.householdId, t.mediaId],
+      foreignColumns: [media.householdId, media.id],
+      name: "list_media_asset_fk",
+    }),
+    index("list_media_order")
+      .on(t.householdId, t.listId, t.sortKey, t.id)
+      .where(sql`${t.deletedAt} is null`),
+  ],
+);
+export const listMediaRelations = relations(listMedia, ({ one }) => ({
+  list: one(lists, {
+    fields: [listMedia.householdId, listMedia.listId],
+    references: [lists.householdId, lists.id],
+  }),
+  asset: one(media, {
+    fields: [listMedia.householdId, listMedia.mediaId],
+    references: [media.householdId, media.id],
+  }),
 }));
 
 export const recipeMedia = pgTable(
@@ -744,6 +813,46 @@ export const exercisesRelations = relations(exercises, ({ one, many }) => ({
     references: [households.id],
   }),
 }));
+export const habitWorkoutLinks = pgTable(
+  "habit_workout_links",
+  {
+    householdId: uuid("household_id").notNull(),
+    habitId: uuid("habit_id").notNull(),
+    workoutId: uuid("workout_id").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.habitId, table.workoutId] }),
+    foreignKey({
+      columns: [table.householdId, table.habitId],
+      foreignColumns: [habits.householdId, habits.id],
+      name: "habit_workout_links_habit_fk",
+    }),
+    foreignKey({
+      columns: [table.householdId, table.workoutId],
+      foreignColumns: [workouts.householdId, workouts.id],
+      name: "habit_workout_links_workout_fk",
+    }),
+    index("habit_workout_links_workout").on(
+      table.householdId,
+      table.workoutId,
+      table.habitId,
+    ),
+  ],
+);
+export const habitWorkoutLinksRelations = relations(
+  habitWorkoutLinks,
+  ({ one }) => ({
+    habit: one(habits, {
+      fields: [habitWorkoutLinks.householdId, habitWorkoutLinks.habitId],
+      references: [habits.householdId, habits.id],
+    }),
+    workout: one(workouts, {
+      fields: [habitWorkoutLinks.householdId, habitWorkoutLinks.workoutId],
+      references: [workouts.householdId, workouts.id],
+    }),
+  }),
+);
+
 export const workoutExercises = pgTable(
   "workout_exercises",
   {
@@ -1084,6 +1193,194 @@ export const recipeMediaRelations = relations(recipeMedia, ({ one }) => ({
     ],
   }),
 }));
+
+// Pending files intentionally precede their document: confirmation creates a new
+// row only after validation. Retained files keep document context without a cycle.
+export const documentFiles = pgTable(
+  "document_files",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    documentId: uuid("document_id").notNull(),
+    filename: text("filename").notNull(),
+    contentType: text("content_type").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    objectKey: text("object_key").notNull(),
+    expectedFileId: uuid("expected_file_id"),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("document_files_context_id").on(t.householdId, t.documentId, t.id),
+    check("document_files_size", sql`${t.byteSize} BETWEEN 1 AND 52428800`),
+    check(
+      "document_files_filename",
+      sql`length(${t.filename}) BETWEEN 1 AND 255`,
+    ),
+  ],
+);
+export const documents = pgTable(
+  "documents",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    title: text("title").notNull(),
+    description: text("description"),
+    fileId: uuid("file_id").notNull(),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("documents_household_id_id").on(t.householdId, t.id),
+    foreignKey({
+      columns: [t.householdId, t.id, t.fileId],
+      foreignColumns: [
+        documentFiles.householdId,
+        documentFiles.documentId,
+        documentFiles.id,
+      ],
+      name: "documents_current_file_fk",
+    }),
+    check("documents_title", sql`length(trim(${t.title})) BETWEEN 1 AND 200`),
+    check(
+      "documents_description",
+      sql`${t.description} IS NULL OR length(${t.description}) <= 1000`,
+    ),
+    index("documents_uploaded")
+      .on(t.householdId, t.uploadedAt, t.id)
+      .where(sql`${t.deletedAt} IS NULL`),
+    index("documents_title_order")
+      .on(t.householdId, t.title, t.id)
+      .where(sql`${t.deletedAt} IS NULL`),
+  ],
+);
+export const documentTags = pgTable(
+  "document_tags",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    color: text("color", {
+      enum: [
+        "slate",
+        "red",
+        "orange",
+        "amber",
+        "green",
+        "teal",
+        "blue",
+        "violet",
+      ],
+    }).notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("document_tags_household_id_id").on(t.householdId, t.id),
+    uniqueIndex("document_tags_active_name")
+      .on(t.householdId, t.normalizedName)
+      .where(sql`${t.deletedAt} IS NULL`),
+    check("document_tags_name", sql`length(trim(${t.name})) BETWEEN 1 AND 50`),
+    check(
+      "document_tags_color",
+      sql`${t.color} IN ('slate','red','orange','amber','green','teal','blue','violet')`,
+    ),
+  ],
+);
+export const documentTagAssignments = pgTable(
+  "document_tag_assignments",
+  {
+    householdId: uuid("household_id").notNull(),
+    documentId: uuid("document_id").notNull(),
+    tagId: uuid("tag_id").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.documentId, t.tagId] }),
+    foreignKey({
+      columns: [t.householdId, t.documentId],
+      foreignColumns: [documents.householdId, documents.id],
+      name: "document_assignment_document_fk",
+    }),
+    foreignKey({
+      columns: [t.householdId, t.tagId],
+      foreignColumns: [documentTags.householdId, documentTags.id],
+      name: "document_assignment_tag_fk",
+    }),
+    index("document_assignments_tag").on(t.householdId, t.tagId, t.documentId),
+  ],
+);
+export const documentsRelations = relations(documents, ({ one, many }) => ({
+  household: one(households, {
+    fields: [documents.householdId],
+    references: [households.id],
+  }),
+  file: one(documentFiles, {
+    fields: [documents.householdId, documents.id, documents.fileId],
+    references: [
+      documentFiles.householdId,
+      documentFiles.documentId,
+      documentFiles.id,
+    ],
+  }),
+  tags: many(documentTagAssignments),
+}));
+export const documentFilesRelations = relations(documentFiles, ({ one }) => ({
+  household: one(households, {
+    fields: [documentFiles.householdId],
+    references: [households.id],
+  }),
+}));
+export const documentTagsRelations = relations(
+  documentTags,
+  ({ one, many }) => ({
+    household: one(households, {
+      fields: [documentTags.householdId],
+      references: [households.id],
+    }),
+    assignments: many(documentTagAssignments),
+  }),
+);
+export const documentTagAssignmentsRelations = relations(
+  documentTagAssignments,
+  ({ one }) => ({
+    document: one(documents, {
+      fields: [
+        documentTagAssignments.householdId,
+        documentTagAssignments.documentId,
+      ],
+      references: [documents.householdId, documents.id],
+    }),
+    tag: one(documentTags, {
+      fields: [
+        documentTagAssignments.householdId,
+        documentTagAssignments.tagId,
+      ],
+      references: [documentTags.householdId, documentTags.id],
+    }),
+  }),
+);
 
 export const logCategories = pgTable(
   "log_categories",

@@ -9,6 +9,8 @@ import { createMeService } from "./auth/me";
 import { createRefreshService } from "./auth/refresh";
 import { createSignupService } from "./auth/signup";
 import { config } from "./config";
+import { createDocumentServices } from "./documents/service";
+import { createDocumentStorage } from "./documents/storage";
 import { createAcceptHouseholdInviteService } from "./households/accept-invite";
 import { createHouseholdService } from "./households/create";
 import { createHouseholdInviteService } from "./households/create-invite";
@@ -22,12 +24,15 @@ import { createRenameHouseholdService } from "./households/rename";
 import { createRevokeHouseholdInviteService } from "./households/revoke-invite";
 import { createSetHouseholdModuleEnabledService } from "./households/set-module-enabled";
 import { createTransferHouseholdOwnershipService } from "./households/transfer-ownership";
+import { createListMediaServices } from "./lists/media";
 import { createLogEntryServices } from "./logs/entries";
 import { inspectR2Object } from "./media/inspect-object";
 import { processMediaImage } from "./media/process-image";
+import { processMediaVideo } from "./media/process-video";
 import { createR2Client } from "./media/r2-client";
 import { signMediaRead } from "./media/sign-read";
 import { signMediaUpload } from "./media/sign-upload";
+import { signVideoRead } from "./media/sign-video";
 import { consoleStructuredLogger } from "./observability";
 import { createDatabaseReadinessCheck } from "./readiness";
 import { createConfirmRecipeImageUploadService } from "./recipes/images/confirm-upload";
@@ -172,11 +177,48 @@ const exerciseMedia = createExerciseMediaServices({
       secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
     }),
 });
+const listMedia = createListMediaServices({
+  db,
+  signUpload: (input) =>
+    signMediaUpload({ ...input, client: r2Client, bucket: config.R2_BUCKET }),
+  inspectObject: (input) =>
+    inspectR2Object({ ...input, client: r2Client, bucket: config.R2_BUCKET }),
+  processImage: (input) =>
+    processMediaImage({
+      ...input,
+      baseUrl: config.IMAGE_DELIVERY_BASE_URL,
+      secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
+    }),
+  processVideo: (input) =>
+    processMediaVideo({ ...input, client: r2Client, bucket: config.R2_BUCKET }),
+  signRead: (input) =>
+    signMediaRead({
+      ...input,
+      baseUrl: config.IMAGE_DELIVERY_BASE_URL,
+      secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
+    }),
+  signVideo: (input) =>
+    signVideoRead({
+      ...input,
+      baseUrl: config.IMAGE_DELIVERY_BASE_URL,
+      secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
+    }),
+});
 const app = createApp({
+  listMedia,
   auth,
   households,
   recipeImages,
   exerciseMedia,
+  documents: createDocumentServices({
+    db,
+    storage: createDocumentStorage({
+      client: r2Client,
+      bucket: config.R2_BUCKET,
+      baseUrl: config.IMAGE_DELIVERY_BASE_URL,
+      secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
+    }),
+  }),
   logs: createLogEntryServices({ db }),
   infrastructure: {
     zeroDbProvider: infrastructure.dbProvider,

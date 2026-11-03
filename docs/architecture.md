@@ -18,8 +18,8 @@ the reasoning behind the major choices.
 | Future native UI library       | Internal package built on Expo UI                 |
 | Runtime validation             | Zod                                               |
 | Local data and synchronization | Rocicorp Zero                                     |
-| HTTP API                       | Hono running on Node.js                           |
-| Authoritative database         | PostgreSQL                                        |
+| HTTP API                       | Hono running on Node.js 26                        |
+| Authoritative database         | PostgreSQL 17                                     |
 | Database access and migrations | Drizzle ORM with committed SQL migrations         |
 | Password hashing               | Argon2id                                          |
 | Image storage                  | Cloudflare R2 through its S3-compatible API       |
@@ -31,7 +31,9 @@ the reasoning behind the major choices.
 | Formatting and linting         | Biome                                             |
 
 
-Use current stable package versions when implementation begins and pin the `zero-cache` container to the same compatible Zero major version as the client package.
+Use the repository-pinned dependencies and matching official Zero SDK/cache versions
+(currently 1.11.3), not local SDK patches or forced overrides. Upgrade compatibility
+and client-drain requirements are documented in [Deployment](./deployment.md).
 
 ## Repository shape
 
@@ -71,8 +73,8 @@ flowchart LR
   UI -->|"presigned PUT"| R2["Cloudflare R2"]
   UI -->|"request derivative authorization"| API
   UI -->|"signed variant read"| Edge["Cloudflare delivery Worker"]
-  Edge -->|"read private original"| R2
-  Edge -->|"transform and cache"| Images["Cloudflare Images"]
+  Edge -->|"read/write derivatives; read original for processing"| R2
+  Edge -->|"confirmation or lazy-repair transform"| Images["Cloudflare Images"]
 ```
 
 
@@ -111,7 +113,8 @@ The household is the tenancy, collaboration, and authorization boundary. A
 user may belong to multiple households, and every household-owned row is
 authorized through current membership in PostgreSQL.
 
-Lists, Recipes and opt-in [Habits](./habits/) are the built-in feature modules. French
+Lists, Recipes, opt-in [Habits](./habits/) and opt-in [Workouts](./workouts/)
+are the built-in feature modules. French
 Vocabulary and possible future features such as household finance use the same
 module boundary when implemented. Modules are not dynamically installed
 plugins: application code owns a small catalogue of stable module keys.
@@ -199,9 +202,12 @@ The API owns:
 - the health endpoint.
 
 The API remains stateless apart from PostgreSQL and R2. Feature dependencies
-are grouped by `auth`, `households`, `shopping`, `recipeImages`, and `zero`.
-Database access, R2, validated configuration, logging, and the Zero database
-provider remain explicit infrastructure dependencies.
+are grouped by `auth`, `households`, `recipeImages` and
+`exerciseMedia`; Zero routes receive the database provider through infrastructure.
+Database access, R2, validated configuration and logging remain explicit boundaries.
+Shared storage/signing helpers live in `apps/api/src/media`; attachment routes own
+feature authorization. Text editing and image-viewer helpers are feature-neutral;
+see [Maintenance](./maintenance.md) for their boundaries.
 
 Run Hono on Node.js through `@hono/node-server`. Hono's Web-standard request and response objects fit Zero's `handleQueryRequest` and `handleMutateRequest` APIs directly. Keep handlers thin: validation and authentication middleware establish trusted inputs, while transactional service functions enforce business rules and tenancy.
 
@@ -226,15 +232,16 @@ short-lived presigned upload URLs. Confirmed originals remain the canonical
 source and are not directly readable by users. The API stores only metadata
 and never writes uploaded files to its filesystem.
 
-For display, a Cloudflare Worker validates a short-lived capability authorized
-by the API, selects one of the code-owned variants, reads the private R2
-original, and uses Cloudflare Images to generate and cache the optimized
-derivative. Arbitrary client-controlled transformations and original-image
-downloads are not exposed.
+Upload confirmation uses Cloudflare Images through a Worker to generate and
+store the two fixed derivatives in R2. For display, the Worker validates a
+short-lived API-authorized capability before cache lookup and reads the stored
+derivative on an edge miss. Only a missing legacy derivative triggers lazy
+original processing; ordinary display does not transform every original.
+Arbitrary client-controlled transformations and original-image downloads are not exposed.
 
-Recipes-specific URL caching, upload, deletion, and bucket CORS rules are
-documented in
-[Recipes image storage and security](./recipes/#image-storage-and-security).
+Shared asset retention, capability binding and attachment security are documented
+in [Shared media](./media/). Recipes-specific caching/CORS and exercise-gallery
+behavior remain in their module references.
 
 ## Configuration
 
@@ -275,8 +282,8 @@ flowchart LR
   PG -->|"logical replication"| Zero
   Client -->|"presigned original upload"| R2["Cloudflare R2"]
   Client -->|"signed variant read"| Edge["Cloudflare delivery Worker"]
-  Edge -->|"private original read"| R2
-  Edge -->|"WebP transform"| Images["Cloudflare Images"]
+  Edge -->|"stored derivative read; original for repair"| R2
+  Edge -->|"confirmation or lazy-repair transform"| Images["Cloudflare Images"]
 ```
 
 The shared vps-infra Caddy is the only public VPS entry point and terminates
@@ -288,7 +295,7 @@ Cloudflare Worker serves signed image derivatives. PostgreSQL and the
 containers' direct API and Zero ports remain private to the application network.
 
 The public API uses the `/api` prefix, keeping API requests distinct from SPA
-routes such as `/households/:householdId/shopping`. Production routing must
+routes such as `/households/:householdId/lists`. Production routing must
 preserve that boundary and the SPA's `index.html` fallback. Changes to the API
 prefix must be made together with the `/api/auth` refresh-cookie path and the
 Zero query and mutation callback URLs. The deployed browser and API share one

@@ -9,9 +9,13 @@ import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import type { List, ListItem } from "@home-hub/shared/zero/schema";
 import { Check } from "@home-hub/ui-web";
 import { Link } from "@tanstack/react-router";
+import { type MoodboardPin, MoodboardPreview } from "./moodboard-preview";
 
 export type ListCardData = Pick<List, "id" | "householdId" | "name"> & {
   items: readonly Pick<ListItem, "id" | "name" | "status">[];
+  kind?: List["kind"];
+  mediaCount?: number | null;
+  attachments?: readonly MoodboardPin[];
 };
 
 // Match image-gallery gestures: movement with a mouse, hold before touch drag.
@@ -45,7 +49,7 @@ const listKeyboardSensor = KeyboardSensor.configure({
   },
 });
 
-function listSensors(defaults: Sensors): Sensors {
+export function listOrderingSensors(defaults: Sensors): Sensors {
   return [
     ...defaults.filter(
       (sensor) => sensor !== PointerSensor && sensor !== KeyboardSensor,
@@ -66,7 +70,7 @@ export function ListCardGrid({
 }) {
   return (
     <DragDropProvider
-      sensors={listSensors}
+      sensors={listOrderingSensors}
       onDragEnd={(event) => {
         const source = event.operation.source;
         if (
@@ -121,34 +125,41 @@ export function ListCard({
         params={{ householdId: list.householdId, listId: list.id }}
         preload="intent"
         draggable={false}
-        className="flex h-full w-full min-w-0 touch-pan-y select-none flex-col gap-5 rounded-xl border border-border bg-surface p-4 outline-none hover:bg-raised focus-visible:ring-2 focus-visible:ring-focus-ring sm:p-5"
+        className={`flex h-full w-full min-w-0 touch-pan-y select-none flex-col gap-5 ${list.kind === "moodboard" ? "rounded-sm" : "rounded-xl"} border border-border bg-surface p-4 outline-none hover:bg-raised focus-visible:ring-2 focus-visible:ring-focus-ring sm:p-5`}
       >
         <h2 className="line-clamp-2 wrap-break-word text-xl font-semibold">
           {list.name}
         </h2>
-        <ul className="grid gap-3">
-          {list.items.map((item) => {
-            const crossed = item.status === "crossed";
-            return (
-              <li key={item.id} className="flex min-w-0 items-center gap-3">
-                <span
-                  aria-hidden="true"
-                  className="flex size-4 shrink-0 items-center justify-center rounded-xs border-2 border-muted text-muted"
-                >
-                  {crossed ? <Check className="size-3" /> : null}
-                </span>
-                <span className="sr-only">
-                  {crossed ? "Completed: " : "Active: "}
-                </span>
-                <span
-                  className={`truncate ${crossed ? "text-muted line-through" : "text-foreground"}`}
-                >
-                  {item.name}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+        {list.kind === "moodboard" ? (
+          <MoodboardPreview
+            pins={list.attachments ?? []}
+            count={list.mediaCount ?? 0}
+          />
+        ) : (
+          <ul className="grid gap-3">
+            {list.items.map((item) => {
+              const crossed = item.status === "crossed";
+              return (
+                <li key={item.id} className="flex min-w-0 items-center gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="flex size-4 shrink-0 items-center justify-center rounded-xs border-2 border-muted text-muted"
+                  >
+                    {crossed ? <Check className="size-3" /> : null}
+                  </span>
+                  <span className="sr-only">
+                    {crossed ? "Completed: " : "Active: "}
+                  </span>
+                  <span
+                    className={`truncate ${crossed ? "text-muted line-through" : "text-foreground"}`}
+                  >
+                    {item.name}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </Link>
     </li>
   );

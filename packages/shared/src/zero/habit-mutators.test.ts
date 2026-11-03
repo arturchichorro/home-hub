@@ -21,7 +21,9 @@ type Table =
   | "householdMembers"
   | "householdModuleSettings"
   | "habits"
-  | "habitEntries";
+  | "habitEntries"
+  | "workouts"
+  | "habitWorkoutLinks";
 type Condition =
   | { type: "and"; conditions: Condition[] }
   | {
@@ -58,6 +60,11 @@ function matches(
   }
   if (condition.op === "IS" && condition.right.value === null)
     return row[condition.left.name] == null;
+  if (condition.op === "IN")
+    return (
+      Array.isArray(condition.right.value) &&
+      condition.right.value.includes(row[condition.left.name])
+    );
   if (condition.op === "=")
     return row[condition.left.name] === condition.right.value;
   throw new Error(`Unsupported operator ${condition.op}`);
@@ -82,14 +89,18 @@ function setup(location: "server" | "client" = "server") {
       },
     ],
     habitEntries: [],
+    workouts: [{ id: foreignId, householdId, title: "A" }],
+    habitWorkoutLinks: [],
   };
   const writes = vi.fn();
   const sameKey = (table: Table, row: Row, key: Row) =>
-    table === "habitEntries"
-      ? row.habitId === key.habitId &&
-        row.userId === key.userId &&
-        row.entryOn === key.entryOn
-      : row.id === key.id;
+    table === "habitWorkoutLinks"
+      ? row.habitId === key.habitId && row.workoutId === key.workoutId
+      : table === "habitEntries"
+        ? row.habitId === key.habitId &&
+          row.userId === key.userId &&
+          row.entryOn === key.entryOn
+        : row.id === key.id;
   const crud = (table: Table) => ({
     insert: async (row: Row) => {
       writes(table, "insert", row);
@@ -123,6 +134,7 @@ function setup(location: "server" | "client" = "server") {
     mutate: {
       habits: crud("habits"),
       habitEntries: crud("habitEntries"),
+      habitWorkoutLinks: crud("habitWorkoutLinks"),
     },
     run: async (query: unknown) => {
       const { ast, format } = query as {
@@ -148,6 +160,89 @@ function setup(location: "server" | "client" = "server") {
 }
 
 afterEach(() => vi.restoreAllMocks());
+
+describe("habit workout linking", () => {
+  it("replaces links while leaving manual entries and notes untouched", async () => {
+    const { tx, data } = setup();
+    data.householdModuleSettings.push({
+      householdId,
+      moduleKey: "workouts",
+      enabled: true,
+    });
+    data.habitEntries.push({
+      habitId,
+      userId: ctx.userId,
+      entryOn: "2026-10-14",
+      completed: true,
+      workoutCompleted: true,
+      note: "Keep",
+    });
+    const before = structuredClone(data.habitEntries);
+    await mutators.habits.linkWorkouts.fn({
+      tx,
+      ctx,
+      args: { ...scope, mode: "selected", workoutIds: [foreignId] },
+    });
+    expect(data.habits[0]?.workoutMode).toBe("selected");
+    expect(data.habitWorkoutLinks).toEqual([
+      { householdId, habitId, workoutId: foreignId },
+    ]);
+    await mutators.habits.linkWorkouts.fn({
+      tx,
+      ctx,
+      args: { ...scope, mode: "any", workoutIds: [] },
+    });
+    expect(data.habitWorkoutLinks).toEqual([]);
+    expect(data.habitEntries).toEqual(before);
+  });
+  it("rejects foreign workouts and disabled modules before writing", async () => {
+    const { tx, data, writes } = setup();
+    await expect(
+      mutators.habits.linkWorkouts.fn({
+        tx,
+        ctx,
+        args: { ...scope, mode: "any", workoutIds: [] },
+      }),
+    ).rejects.toThrow();
+    expect(writes).not.toHaveBeenCalled();
+    data.householdModuleSettings.push({
+      householdId,
+      moduleKey: "workouts",
+      enabled: true,
+    });
+    data.workouts[0] = { id: foreignId, householdId: habitId };
+    await expect(
+      mutators.habits.linkWorkouts.fn({
+        tx,
+        ctx,
+        args: { ...scope, mode: "selected", workoutIds: [foreignId] },
+      }),
+    ).rejects.toThrow("not allowed");
+    expect(writes).not.toHaveBeenCalled();
+  });
+  it("manual edits never replace the server-derived completion bit", async () => {
+    const { tx, data } = setup();
+    data.habitEntries.push({
+      householdId,
+      habitId,
+      userId: ctx.userId,
+      entryOn: completeArgs.entryOn,
+      completed: true,
+      workoutCompleted: true,
+      note: "Keep",
+    });
+    await mutators.habits.setCompleted.fn({
+      tx,
+      ctx,
+      args: { ...completeArgs, completed: false },
+    });
+    expect(data.habitEntries[0]).toMatchObject({
+      completed: false,
+      workoutCompleted: true,
+      note: "Keep",
+    });
+  });
+});
 
 describe("habit mutations", () => {
   it("creates a personal note without completing the day, and retains it after unchecking", async () => {

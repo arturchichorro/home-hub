@@ -26,6 +26,7 @@ export function ListNameDialog({ householdId, onClose, onSaved }: Props) {
   const enabled = useZeroMutationEnabled();
   const formId = useId();
   const [name, setName] = useState("");
+  const [kind, setKind] = useState<"checklist" | "moodboard">("checklist");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -41,6 +42,7 @@ export function ListNameDialog({ householdId, onClose, onSaved }: Props) {
           householdId,
           listId,
           name,
+          kind,
           optimisticTimestamp: Date.now(),
         }),
       );
@@ -86,7 +88,23 @@ export function ListNameDialog({ householdId, onClose, onSaved }: Props) {
           </>
         }
       >
-        <form id={formId} onSubmit={submit}>
+        <form id={formId} onSubmit={submit} className="grid gap-4">
+          <Field label="Type">
+            <select
+              aria-label="List type"
+              className="h-10 rounded-md border border-border bg-canvas px-3"
+              disabled={saving}
+              value={kind}
+              onChange={(e) =>
+                setKind(
+                  e.target.value === "moodboard" ? "moodboard" : "checklist",
+                )
+              }
+            >
+              <option value="checklist">Checklist</option>
+              <option value="moodboard">Moodboard</option>
+            </select>
+          </Field>
           <Field label="Name">
             <FieldControl
               autoFocus

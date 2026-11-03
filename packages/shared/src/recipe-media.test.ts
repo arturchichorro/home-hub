@@ -23,6 +23,7 @@ const asset: Media = {
   height: 600,
   animated: null,
   durationMs: null,
+  videoVersion: null,
   confirmedAt: 15,
   deletedAt: null,
   createdAt: 1,

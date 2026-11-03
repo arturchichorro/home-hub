@@ -4,6 +4,20 @@ import * as drizzleSchema from "./src/schema";
 
 export default drizzleZeroConfig(drizzleSchema, {
   tables: {
+    documents: true,
+    documentTags: true,
+    documentTagAssignments: true,
+    documentFiles: {
+      id: true,
+      householdId: true,
+      documentId: true,
+      filename: true,
+      contentType: true,
+      byteSize: true,
+      confirmedAt: true,
+      createdAt: true,
+    },
+    listMedia: true,
     logs: true,
     logCategories: true,
     logEntries: {
@@ -29,6 +43,7 @@ export default drizzleZeroConfig(drizzleSchema, {
     exerciseLogSets: true,
     workoutLogExercises: true,
     habits: true,
+    habitWorkoutLinks: true,
     habitEntries: true,
     users: {
       id: true,
@@ -39,6 +54,8 @@ export default drizzleZeroConfig(drizzleSchema, {
       householdId: true,
       name: true,
       normalizedName: true,
+      kind: true,
+      mediaCount: true,
       sortKey: true,
       deletedAt: true,
       createdAt: true,
@@ -119,6 +136,7 @@ export default drizzleZeroConfig(drizzleSchema, {
       width: true,
       height: true,
       durationMs: true,
+      videoVersion: true,
       animated: true,
       confirmedAt: true,
       deletedAt: true,

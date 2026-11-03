@@ -1,9 +1,508 @@
 {
-  "id": "2a7577f1-e5bc-485d-8d87-8f208851e885",
-  "prevId": "695039b1-9e5b-4b61-9d26-21564475337f",
+  "id": "7f72a63b-ccba-4e55-8a4f-5cc27b3f6713",
+  "prevId": "62353ef9-6fc4-4756-8a91-32e48db068d5",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.document_files": {
+      "name": "document_files",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "household_id": {
+          "name": "household_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "filename": {
+          "name": "filename",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content_type": {
+          "name": "content_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "byte_size": {
+          "name": "byte_size",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "object_key": {
+          "name": "object_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expected_file_id": {
+          "name": "expected_file_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "confirmed_at": {
+          "name": "confirmed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "document_files_household_id_households_id_fk": {
+          "name": "document_files_household_id_households_id_fk",
+          "tableFrom": "document_files",
+          "tableTo": "households",
+          "columnsFrom": [
+            "household_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "document_files_context_id": {
+          "name": "document_files_context_id",
+          "nullsNotDistinct": false,
+          "columns": [
+            "household_id",
+            "document_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "document_files_size": {
+          "name": "document_files_size",
+          "value": "\"document_files\".\"byte_size\" BETWEEN 1 AND 52428800"
+        },
+        "document_files_filename": {
+          "name": "document_files_filename",
+          "value": "length(\"document_files\".\"filename\") BETWEEN 1 AND 255"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.document_tag_assignments": {
+      "name": "document_tag_assignments",
+      "schema": "",
+      "columns": {
+        "household_id": {
+          "name": "household_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tag_id": {
+          "name": "tag_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "document_assignments_tag": {
+          "name": "document_assignments_tag",
+          "columns": [
+            {
+              "expression": "household_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "tag_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "document_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "document_assignment_document_fk": {
+          "name": "document_assignment_document_fk",
+          "tableFrom": "document_tag_assignments",
+          "tableTo": "documents",
+          "columnsFrom": [
+            "household_id",
+            "document_id"
+          ],
+          "columnsTo": [
+            "household_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "document_assignment_tag_fk": {
+          "name": "document_assignment_tag_fk",
+          "tableFrom": "document_tag_assignments",
+          "tableTo": "document_tags",
+          "columnsFrom": [
+            "household_id",
+            "tag_id"
+          ],
+          "columnsTo": [
+            "household_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "document_tag_assignments_document_id_tag_id_pk": {
+          "name": "document_tag_assignments_document_id_tag_id_pk",
+          "columns": [
+            "document_id",
+            "tag_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.document_tags": {
+      "name": "document_tags",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "household_id": {
+          "name": "household_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "normalized_name": {
+          "name": "normalized_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "color": {
+          "name": "color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "document_tags_active_name": {
+          "name": "document_tags_active_name",
+          "columns": [
+            {
+              "expression": "household_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "normalized_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"document_tags\".\"deleted_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "document_tags_household_id_households_id_fk": {
+          "name": "document_tags_household_id_households_id_fk",
+          "tableFrom": "document_tags",
+          "tableTo": "households",
+          "columnsFrom": [
+            "household_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "document_tags_household_id_id": {
+          "name": "document_tags_household_id_id",
+          "nullsNotDistinct": false,
+          "columns": [
+            "household_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "document_tags_name": {
+          "name": "document_tags_name",
+          "value": "length(trim(\"document_tags\".\"name\")) BETWEEN 1 AND 50"
+        },
+        "document_tags_color": {
+          "name": "document_tags_color",
+          "value": "\"document_tags\".\"color\" IN ('slate','red','orange','amber','green','teal','blue','violet')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.documents": {
+      "name": "documents",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "household_id": {
+          "name": "household_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "file_id": {
+          "name": "file_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "uploaded_at": {
+          "name": "uploaded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "documents_uploaded": {
+          "name": "documents_uploaded",
+          "columns": [
+            {
+              "expression": "household_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "uploaded_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"documents\".\"deleted_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "documents_title_order": {
+          "name": "documents_title_order",
+          "columns": [
+            {
+              "expression": "household_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "title",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"documents\".\"deleted_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "documents_household_id_households_id_fk": {
+          "name": "documents_household_id_households_id_fk",
+          "tableFrom": "documents",
+          "tableTo": "households",
+          "columnsFrom": [
+            "household_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "documents_current_file_fk": {
+          "name": "documents_current_file_fk",
+          "tableFrom": "documents",
+          "tableTo": "document_files",
+          "columnsFrom": [
+            "household_id",
+            "id",
+            "file_id"
+          ],
+          "columnsTo": [
+            "household_id",
+            "document_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "documents_household_id_id": {
+          "name": "documents_household_id_id",
+          "nullsNotDistinct": false,
+          "columns": [
+            "household_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "documents_title": {
+          "name": "documents_title",
+          "value": "length(trim(\"documents\".\"title\")) BETWEEN 1 AND 200"
+        },
+        "documents_description": {
+          "name": "documents_description",
+          "value": "\"documents\".\"description\" IS NULL OR length(\"documents\".\"description\") <= 1000"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.exercise_log_sets": {
       "name": "exercise_log_sets",
       "schema": "",
@@ -599,6 +1098,13 @@
           "notNull": true,
           "default": false
         },
+        "workout_completed": {
+          "name": "workout_completed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "note": {
           "name": "note",
           "type": "text",
@@ -697,6 +1203,104 @@
       },
       "isRLSEnabled": false
     },
+    "public.habit_workout_links": {
+      "name": "habit_workout_links",
+      "schema": "",
+      "columns": {
+        "household_id": {
+          "name": "household_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "habit_id": {
+          "name": "habit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workout_id": {
+          "name": "workout_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "habit_workout_links_workout": {
+          "name": "habit_workout_links_workout",
+          "columns": [
+            {
+              "expression": "household_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "workout_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "habit_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "habit_workout_links_habit_fk": {
+          "name": "habit_workout_links_habit_fk",
+          "tableFrom": "habit_workout_links",
+          "tableTo": "habits",
+          "columnsFrom": [
+            "household_id",
+            "habit_id"
+          ],
+          "columnsTo": [
+            "household_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "habit_workout_links_workout_fk": {
+          "name": "habit_workout_links_workout_fk",
+          "tableFrom": "habit_workout_links",
+          "tableTo": "workouts",
+          "columnsFrom": [
+            "household_id",
+            "workout_id"
+          ],
+          "columnsTo": [
+            "household_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "habit_workout_links_habit_id_workout_id_pk": {
+          "name": "habit_workout_links_habit_id_workout_id_pk",
+          "columns": [
+            "habit_id",
+            "workout_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.habits": {
       "name": "habits",
       "schema": "",
@@ -718,6 +1322,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "workout_mode": {
+          "name": "workout_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
         },
         "note": {
           "name": "note",
@@ -840,6 +1451,10 @@
         "habits_note_length": {
           "name": "habits_note_length",
           "value": "\"habits\".\"note\" IS NULL OR length(\"habits\".\"note\") <= 500"
+        },
+        "habits_workout_mode": {
+          "name": "habits_workout_mode",
+          "value": "\"habits\".\"workout_mode\" IN ('none', 'any', 'selected')"
         },
         "habits_status_allowed": {
           "name": "habits_status_allowed",
@@ -1404,6 +2019,135 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.list_media": {
+      "name": "list_media",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "household_id": {
+          "name": "household_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "list_id": {
+          "name": "list_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "media_id": {
+          "name": "media_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_key": {
+          "name": "sort_key",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "list_media_order": {
+          "name": "list_media_order",
+          "columns": [
+            {
+              "expression": "household_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "list_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sort_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"list_media\".\"deleted_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "list_media_list_fk": {
+          "name": "list_media_list_fk",
+          "tableFrom": "list_media",
+          "tableTo": "lists",
+          "columnsFrom": [
+            "household_id",
+            "list_id"
+          ],
+          "columnsTo": [
+            "household_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "list_media_asset_fk": {
+          "name": "list_media_asset_fk",
+          "tableFrom": "list_media",
+          "tableTo": "media",
+          "columnsFrom": [
+            "household_id",
+            "media_id"
+          ],
+          "columnsTo": [
+            "household_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.lists": {
       "name": "lists",
       "schema": "",
@@ -1431,6 +2175,20 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'checklist'"
+        },
+        "media_count": {
+          "name": "media_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "sort_key": {
           "name": "sort_key",
@@ -1538,7 +2296,16 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "lists_kind": {
+          "name": "lists_kind",
+          "value": "\"lists\".\"kind\" IN ('checklist', 'moodboard')"
+        },
+        "lists_media_count": {
+          "name": "lists_media_count",
+          "value": "\"lists\".\"media_count\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.log_categories": {
@@ -2024,6 +2791,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "video_version": {
+          "name": "video_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "animated": {
           "name": "animated",
           "type": "boolean",
@@ -2097,13 +2870,21 @@
           "name": "media_kind",
           "value": "\"media\".\"kind\" IN ('image', 'video')"
         },
+        "media_confirmed_video": {
+          "name": "media_confirmed_video",
+          "value": "\"media\".\"kind\" != 'video' OR \"media\".\"confirmed_at\" IS NULL OR (\"media\".\"video_version\" IS NOT NULL AND \"media\".\"duration_ms\" IS NOT NULL AND \"media\".\"duration_ms\" BETWEEN 1 AND 600000 AND \"media\".\"width\" <= 4096 AND \"media\".\"height\" <= 4096)"
+        },
+        "media_video_version": {
+          "name": "media_video_version",
+          "value": "\"media\".\"video_version\" IS NULL OR (\"media\".\"kind\" = 'video' AND \"media\".\"video_version\" ~ '^[a-f0-9]{64}$')"
+        },
         "media_supported_content_type": {
           "name": "media_supported_content_type",
-          "value": "\"media\".\"kind\" = 'image' AND \"media\".\"content_type\" IN ('image/jpeg', 'image/png', 'image/webp')"
+          "value": "(\"media\".\"kind\" = 'image' AND \"media\".\"content_type\" IN ('image/jpeg', 'image/png', 'image/webp')) OR (\"media\".\"kind\" = 'video' AND \"media\".\"content_type\" IN ('video/mp4', 'video/webm'))"
         },
         "media_byte_size_range": {
           "name": "media_byte_size_range",
-          "value": "\"media\".\"byte_size\" > 0 AND \"media\".\"byte_size\" <= 10485760"
+          "value": "\"media\".\"byte_size\" > 0 AND ((\"media\".\"kind\" = 'image' AND \"media\".\"byte_size\" <= 10485760) OR (\"media\".\"kind\" = 'video' AND \"media\".\"byte_size\" <= 104857600))"
         },
         "media_dimensions_range": {
           "name": "media_dimensions_range",

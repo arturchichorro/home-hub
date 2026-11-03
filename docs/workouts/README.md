@@ -139,6 +139,20 @@ WHERE l.household_id = $1 AND l.user_id = $2
 Unilateral totals may count both sides using
 `amount + coalesce(right_amount, amount)`; do not mix reps with seconds.
 
+## Bounded views and editing failures
+
+The catalog initially mounts 50 rows; Show more appends another 50 while keeping
+focused/new rows mounted. Search covers the full catalog, and gallery metadata
+uses one authorized shared subscription. This bounds initial rendering, not all
+catalog data transfer. The definition-only picker subscribes only when opened.
+
+Private workout history uses 20-entry pages plus a lookahead and an exclusive
+`(completedOn, completedAt, id)` cursor. Current-day and selected logs stay pinned
+independently, so paging does not replace the active logger. Dirty history notes
+block paging. Rejected text stays editable with Retry/Discard and navigation/unload
+protection. Invalid set fields explain integer/range rules without clearing input;
+zero and decimal kilograms remain valid. See [Maintenance](../maintenance.md).
+
 ## Exercise-media authorization
 
 `workouts.exerciseMedia` synchronizes confirmed, non-deleted image metadata only
@@ -152,14 +166,26 @@ private log notes, sets or snapshots.
 
 ## Upgrade
 
+These are forward-upgrade notes for installations below the named migrations,
+not instructions to replay completed cutovers. Preserve applied SQL, historical
+identities and archive tables; consult release/deployment state before acting.
+
+`0047_chemical_hemingway.sql` adds the placement role (Workout by default) and its
+three-value constraint. `0048_lively_maestro.sql` adds the independent historical
+`exercise_roles` JSON map, defaulting old logs to an empty map. These additions
+leave strict definition snapshots and original measurements/dates untouched.
+Deploy matching migration/API/cache before web; old snapshots display Workout,
+and older clients can still create/correct logs without parsing new JSON keys.
+
 `0046_tense_miss_america.sql` backfills stable RFC-compliant occurrence IDs and
 links from every historical slot with sets. It checks the exact measurement copy,
 preserves log IDs, dates, notes, snapshots, deleted slots and note-only entries,
 and retains the old set table. New tables have primary keys before publication.
 Follow the [coordinated autosave cutover](../deployment.md#exercise-log-autosave-cutover-0046);
-old bulk writes must stop before the backfill. Official Zero 1.8 resumed its
-existing replica and backfilled the new tables in an isolated rehearsal: no
-replica reset, PostgreSQL reset, dependency patch or Zero upgrade is required.
+old bulk writes must stop before the backfill. The isolated `0046` rehearsal
+resumed an existing official Zero 1.8 replica and backfilled the new tables without
+a reset. This is historical compatibility evidence, not a recommendation to
+downgrade the current official Zero 1.11.3 stack. No SDK patch is required.
 Run `scripts/verify-exercise-logging-migration.sh <postgres-container>` for
 disposable fidelity, publication, UUID and author-FK checks.
 
@@ -172,9 +198,11 @@ rewritten by the migration. Catalog mutations serialize through the household
 before updating exercises/slots, preserving concurrent additions and deletions.
 Back up PostgreSQL and Zero, stop API/Zero, apply this forward migration, restart
 matching services and reload clients. Primary keys remain intact throughout;
-local verification required no replica rebuild. Production is not migrated by
-this local change. Run `scripts/verify-exercise-catalog-migration.sh <container>`
-for disposable migration/history/uniqueness checks.
+local verification required no replica rebuild. The standalone
+`scripts/verify-exercise-catalog-migration.sh <container>` fixture currently needs
+its whole-row comparisons updated for the additive role columns in `0047`–`0048`;
+see [Backlog](../backlog.md). Do not confuse that stale assertion with lost history
+or bypass the fidelity checks. The canonical logging/media rehearsals run in CI.
 
 `0044_faulty_the_anarchist.sql` adds `exercise_media` and its Zero publication entry.
 It is additive: no existing exercise, asset, recipe or log data is rewritten, and
@@ -242,4 +270,5 @@ restarting: an existing replica otherwise replays the intermediate keyless table
 and can crash with “Cannot replicate table without a PRIMARY KEY or UNIQUE INDEX”.
 Back up the replica first; do not remove PostgreSQL/application data or its volumes.
 Then deploy matching code, restart Zero/API, and reload clients. Earlier migrations
-remain unchanged. This change is local-only until explicitly committed/deployed.
+remain unchanged. This one-time old-schema recovery is not a routine replica-reset
+instruction for later additive migrations.
