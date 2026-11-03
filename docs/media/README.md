@@ -47,7 +47,7 @@ it is not a separate image-only bucket.
 The generic API storage/signing helpers live in `apps/api/src/media`. Recipe
 and exercise routes remain feature-specific authorization adapters. Authorization
 requires an active user, household membership, the attachment's enabled module,
-and an active parent/attachment/image asset. Exercise media requires a non-archived
+and an active parent/attachment/image asset. Exercise media requires a non-deleted
 catalog entry and Workouts access; Recipes access alone grants none. Storage provenance does not grant access: a legacy asset linked
 elsewhere is authorized through its current attachment, not its source recipe.
 
@@ -73,6 +73,11 @@ attachments/assets. Physical cleanup and reference-count deletion are deferred;
 any future cleanup must respect retained references, including soft-deleted parents.
 
 ## Migration and rollout
+
+The foundation and exercise-attachment follow-up are implemented. The procedure
+below is the one-time upgrade from the old recipe/catalog contract; installations
+that have already applied it must not repeat the cutover or reset their replica
+for ordinary media changes. New features still require their own reviewed migrations.
 
 `0043_cute_deadpool.sql` copies all recipe assets, including pending uploads and
 tombstones, into `media` and their links into `recipe_media`. Initial asset and

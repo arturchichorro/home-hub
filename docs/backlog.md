@@ -1,41 +1,42 @@
 # Home Hub backlog
 
-This document is a lightweight list of optional future improvements, modules,
-and ideas. The order expresses current preference, not a commitment or schedule.
+Optional improvements and possible future modules, in preference order rather
+than a delivery schedule. Move active work to [Tasks](./tasks.md); keep completed
+work in [Task history](./task-history.md). Items below are reconciled with the
+implemented system, not with unmerged feature branches.
 
-Keep each idea to a single bullet. When an item becomes active, move it to
-[Tasks](./tasks.md), follow its working rhythm, and define the requirements
-together before implementation begins.
+## Improvements still open
 
-## Improvements
+- [ ] Rethink the household invitation flow.
+- [ ] Add user profile pictures using Base UI Avatar.
+- [ ] Assign household members to individual list items.
+- [ ] Attach an already-uploaded recipe image to a cooking log; shared assets exist, but there is no reuse picker/API.
+- [ ] Add recipe ratings, such as overall rating and ease of cooking.
+- [ ] Add household-specific module ordering.
+- [ ] Open the last visited household/module on app start, or select the first available household/module; the root route still renders the shell without choosing one.
+- [ ] Copy recipe ingredients into a chosen list, authorizing both modules.
+- [ ] Show local image previews before upload/processing confirmation; current uploads show progress and only publish confirmed assets.
+- [ ] Further simplify database/domain/transport boundaries where a concrete feature needs it; the shared media, text-editing and acknowledgement extractions are already implemented.
+- [ ] Update the standalone catalog-migration preservation fixture for the role columns added in `0047`–`0048`; its whole-row comparisons already fail before `0049`. Keep checking original history and new-column defaults separately, rather than weakening fidelity checks.
 
-- [ ] Find a solution to the problem of old frontend still being served for a bit after deployment because of PWA
-- [ ] Abstract the whole images pipeline away from recipe images, because we'll need images in other parts of the app
-- [ ] Improve empty state UIs: empty recipe list, empty lists list, etc
-- [ ] Rethink the whole invitation flow (not really great at the moment)
-- [ ] Add user profile pictures and use base ui's Avatar
-- [ ] After having multiple lists, add the possibility to assign people to a list item (e.g. todo list, go to commune, Artur)
-- [ ] Allow to append already uploaded recipe image to a cook log
-- [ ] Add recipe ratings table, could be used to say "overall 5*", "ease to cook 3*", etc; could add to the ui
-- [ ] Add ordering to household modules
-- [ ] Open last opened household on app start (through local storage or something) - or just open with the first module of the first household
-- [ ] Add recipe ingredients to a chosen list
-- [ ] Add user comments to cook logs (recipes)
-- [ ] Check and fix flashing of pictures - has to do with first displaying preview and then loading in the full quality webp
-- [ ] Improve separation between database access, domain behavior, and transport code
-- [ ] Make upload be faster by displaying user uploaded picture optimistically, until we get confirmation
+## Completed improvements
+
+- [x] Safe PWA update handling: periodic/resume/reconnect checks, guarded idle activation and per-tab draft protection. See [Deployment](./deployment.md#pwa-caching-and-update-safety).
+- [x] Feature-neutral image pipeline used by Recipes and exercise galleries. See [Shared media](./media/).
+- [x] Dedicated empty/create states for Lists and Recipes libraries. Further visual polish needs a specific remaining problem, not a blanket unfinished task.
+- [x] Cooking-log comments with seamless autosave and retained rejected drafts. See [Recipes](./recipes/#cooking-history).
+- [x] Reuse cached signed image URLs and thumbnails, then crossfade to the viewer derivative instead of blanking the image. See [Recipes image storage](./recipes/#image-storage-and-security); this is not a guarantee against every possible image flash.
+- [x] Sport logging through Workouts: author-private exercise occurrences, per-set autosave, history and placement roles. General goals and other kinds of logs remain separate ideas below.
 
 ## Future modules and capabilities
 
-- [ ] Documentos (para guardar cópias de documentos importantes, categorizado)
-- [ ] French Vocabulary - Flashcards instead
-- [ ] Goals / sport logs / logs in general (log things by category I guess)
-- [ ] Household finance
-- [ ] Friend list with timestamped notes
-- [ ] Module de lugares onde já fui (mapa)
-- [ ] Moodboards, masonry shit tipo pinterest (para inspo de home decoration, por exemplo, para guardar lá imagens) - pode fazer parte do lists module até
+- [ ] Documents: categorized copies of important documents.
+- [ ] French Vocabulary / flashcards.
+- [ ] General goals and category-based logs outside the implemented Workouts scope.
+- [ ] Household finance.
+- [ ] Friend list with timestamped notes.
+- [ ] Places visited, with a map.
+- [ ] Moodboards / masonry inspiration collections, possibly within Lists.
 
-## Ideia
-
-- [ ] Open a part of the app to the public with limited operations (like a no log in public recipes page) and see what happens
-- [ ] Open the recipes part to the people in the house, require no log in
+Accountless household/Recipes access is covered by the [Guest access specification](./guest-access/)
+and the review work in [Tasks](./tasks.md#work-in-review), not a second public-access backlog entry.
