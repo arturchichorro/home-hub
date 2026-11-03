@@ -1,18 +1,21 @@
 # Lists module
 
 Lists provides named, manually ordered lists per household. Its stable module
-key is `lists`. Lists and Recipes are enabled by default; new households start
+key is `lists`. Each list is a Checklist or [Moodboard](./moodboards.md), with a
+normal editable title; existing lists remain Checklists. Lists and Recipes are enabled by default; new households start
 with no lists. Previously migrated households retain their lists, items, and
 module settings.
 
 ## Interface
 
 The sidebar opens `/households/:householdId/lists`, a responsive card library
-similar to Recipes. Each card shows only its title and the first four current
+similar to Recipes. Each Checklist card shows only its title and the first four current
 items, with active items first and checked, struck-through completed items after
 them. Archived items are excluded; item order matches the detail screen. Status
 indicators are read-only previews, not toggle controls. The library query fetches
-at most four items per list.
+at most four items per list. Moodboard cards instead show up to four media
+thumbnails/posters and a confirmed-media count, with no autoplay. Their list detail
+uses responsive masonry and a viewer; see [Moodboards](./moodboards.md).
 
 Cards use one compact fixed height rather than scaling to square tiles, so they
 stay aligned without adding large empty areas on wide screens.
@@ -47,7 +50,8 @@ submission before transitioning to a saved row.
 
 ## Data model
 
-`lists` stores `id`, `household_id`, display and normalized names, `sort_key`,
+`lists` stores `id`, `household_id`, display and normalized names, `kind`
+(`checklist | moodboard`, Checklist by default), `media_count`, `sort_key`,
 `deleted_at`, and timestamps. Active normalized names are unique per household.
 `list_items` adds
 `list_id` and `active | crossed | archived | deleted` status to the same fields;
@@ -63,8 +67,9 @@ the application soft-deletes lists and retains their items.
 
 ## Synchronization and authorization
 
-Named Zero queries `lists.byHousehold` and `lists.detail` check current household
-membership and enabled Lists settings. The detail query joins items using both
+Named Zero queries `lists.library` and `lists.detail` check current household
+membership and enabled Lists settings. The legacy `lists.byHousehold` query
+retains its checklist-only relationship shape for older clients. The detail query joins items using both
 household ID and list ID. Publishing a table does not bypass these checks.
 
 The live `lists` mutators are create, rename, delete, reorder, addItem, renameItem,
@@ -78,6 +83,10 @@ parent tombstone; authorized queries stop exposing that list and its children.
 The application schema and Zero publication contain only the current domain
 tables. Migration `0017` removes the retired module's source tables, settings,
 and temporary mirroring bridge without changing live Lists data.
+
+Moodboards add typed `list_media` attachments to shared assets, plus dedicated
+media queries, upload/read/removal APIs and the `lists.reorderMedia` mutation.
+They do not accept checklist items or change list type after creation.
 
 Recipe ingredients and list items remain separate records. Any future operation
 to copy ingredients must choose a target list and authorize both modules.

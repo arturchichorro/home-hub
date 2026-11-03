@@ -13,6 +13,7 @@ import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { ListItems } from "./list-items";
 import { ListNameInput } from "./list-name-input";
+import { Moodboard } from "./moodboard";
 
 export function ListDetail({
   householdId,
@@ -28,10 +29,11 @@ export function ListDetail({
     queries.lists.detail({ householdId, listId }),
   );
   const [deleting, setDeleting] = useState(false);
+  const [mediaBusy, setMediaBusy] = useState(false);
   const [error, setError] = useState<string>();
 
   async function remove() {
-    if (deleting || !enabled) return;
+    if (deleting || mediaBusy || !enabled) return;
     setDeleting(true);
     setError(undefined);
     try {
@@ -111,7 +113,7 @@ export function ListDetail({
                 aria-label="Delete list"
                 title="Delete list"
                 className="size-7!"
-                disabled={!enabled || deleting}
+                disabled={!enabled || deleting || mediaBusy}
               >
                 <Trash2 aria-hidden="true" className="size-4" />
               </IconButton>
@@ -125,7 +127,20 @@ export function ListDetail({
           {error}
         </InlineAlert>
       ) : null}
-      <ListItems householdId={householdId} listId={listId} items={list.items} />
+      {list.kind === "moodboard" ? (
+        <Moodboard
+          householdId={householdId}
+          listId={listId}
+          count={list.mediaCount ?? 0}
+          onBusy={setMediaBusy}
+        />
+      ) : (
+        <ListItems
+          householdId={householdId}
+          listId={listId}
+          items={list.items}
+        />
+      )}
     </div>
   );
 }

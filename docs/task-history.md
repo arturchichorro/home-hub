@@ -391,6 +391,10 @@ Open review work remains in [Tasks](./tasks.md#work-in-review).
 - [x] Share catalog gallery subscriptions and progressively disclose rows (#75); load the definition-only exercise picker only while open (#76); page private workout history with independent active/current-day pins (#77).
 - [x] Explain invalid numeric set fields without clearing input (#78), move neutral editing/media helpers out of Recipes and retire the bulk archive writer (#79). See [Maintenance](./maintenance.md) for measured results and limits.
 
+## Moodboards inside Lists
+
+- [x] Add titled Moodboard lists alongside existing Checklists, with masonry images/video clips, bounded card mosaics, safe uploads/retry, signed versioned playback and accessible ordering. See [Moodboards](./lists/moodboards.md) for codec limits, retained assets and migration coordination. This is implementation history, not deployment approval.
+
 ## Misc
 
 - [x] Preserve raw seamless-input drafts during debounced saves and normalize them only at editing boundaries

@@ -1,6 +1,7 @@
 import * as z from "zod";
 import { cleanListItemName, cleanListName } from "./normalization";
 
+export const listKindSchema = z.enum(["checklist", "moodboard"]);
 export const listNameSchema = z
   .string()
   .transform(cleanListName)
@@ -34,6 +35,7 @@ export const createListMutationSchema = z
   .object({
     ...scope,
     name: listNameSchema,
+    kind: listKindSchema.optional(),
     optimisticTimestamp: timestamp,
   })
   .strict();

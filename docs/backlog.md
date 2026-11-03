@@ -27,7 +27,6 @@ implemented system, not with unmerged feature branches.
 - [ ] Household finance.
 - [ ] Friend list with timestamped notes.
 - [ ] Places visited, with a map.
-- [ ] Moodboards / masonry inspiration collections, possibly within Lists.
 
 Accountless household/Recipes access is covered by the [Guest access specification](./guest-access/)
 and the review work in [Tasks](./tasks.md#work-in-review), not a second public-access backlog entry.

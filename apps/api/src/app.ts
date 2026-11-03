@@ -1,10 +1,11 @@
 import { Hono } from "hono";
-
 import { type CreateAuthRoutesInput, createAuthRoutes } from "./auth/routes";
 import {
   type CreateHouseholdRoutesInput,
   createHouseholdRoutes,
 } from "./households/routes";
+import type { ListMediaServices } from "./lists/media";
+import { createListMediaRoutes } from "./lists/routes";
 import {
   installApiObservability,
   type ObservabilityEnv,
@@ -28,6 +29,7 @@ export type CreateAppInput = {
   households: HouseholdServices;
   recipeImages: RecipeImageServices;
   exerciseMedia: ExerciseMediaServices;
+  listMedia?: ListMediaServices;
   infrastructure: {
     isProduction: boolean;
     jwtSecret: string;
@@ -69,6 +71,11 @@ export function createApp(input: CreateAppInput) {
     "/api/households/:householdId/workouts/exercises",
     createExerciseMediaRoutes({ jwtSecret, services: input.exerciseMedia }),
   );
+  if (input.listMedia)
+    app.route(
+      "/api/households/:householdId/lists",
+      createListMediaRoutes({ jwtSecret, services: input.listMedia }),
+    );
   app.route(
     "/api/zero",
     createZeroRoutes({ dbProvider: zeroDbProvider, jwtSecret }),
