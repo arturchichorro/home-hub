@@ -1,6 +1,6 @@
 {
-  "id": "d2b67b68-c0ea-409e-812b-a12883f42b2b",
-  "prevId": "695039b1-9e5b-4b61-9d26-21564475337f",
+  "id": "40c0f4d5-4a07-4e8c-b1fa-080b75cc3e2d",
+  "prevId": "36d2f0fc-6ccb-46f4-82e5-eac76d3f972c",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -599,6 +599,13 @@
           "notNull": true,
           "default": false
         },
+        "workout_completed": {
+          "name": "workout_completed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "note": {
           "name": "note",
           "type": "text",
@@ -697,6 +704,104 @@
       },
       "isRLSEnabled": false
     },
+    "public.habit_workout_links": {
+      "name": "habit_workout_links",
+      "schema": "",
+      "columns": {
+        "household_id": {
+          "name": "household_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "habit_id": {
+          "name": "habit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workout_id": {
+          "name": "workout_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "habit_workout_links_workout": {
+          "name": "habit_workout_links_workout",
+          "columns": [
+            {
+              "expression": "household_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "workout_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "habit_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "habit_workout_links_habit_fk": {
+          "name": "habit_workout_links_habit_fk",
+          "tableFrom": "habit_workout_links",
+          "tableTo": "habits",
+          "columnsFrom": [
+            "household_id",
+            "habit_id"
+          ],
+          "columnsTo": [
+            "household_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "habit_workout_links_workout_fk": {
+          "name": "habit_workout_links_workout_fk",
+          "tableFrom": "habit_workout_links",
+          "tableTo": "workouts",
+          "columnsFrom": [
+            "household_id",
+            "workout_id"
+          ],
+          "columnsTo": [
+            "household_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "habit_workout_links_habit_id_workout_id_pk": {
+          "name": "habit_workout_links_habit_id_workout_id_pk",
+          "columns": [
+            "habit_id",
+            "workout_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.habits": {
       "name": "habits",
       "schema": "",
@@ -718,6 +823,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "workout_mode": {
+          "name": "workout_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
         },
         "note": {
           "name": "note",
@@ -840,6 +952,10 @@
         "habits_note_length": {
           "name": "habits_note_length",
           "value": "\"habits\".\"note\" IS NULL OR length(\"habits\".\"note\") <= 500"
+        },
+        "habits_workout_mode": {
+          "name": "habits_workout_mode",
+          "value": "\"habits\".\"workout_mode\" IN ('none', 'any', 'selected')"
         },
         "habits_status_allowed": {
           "name": "habits_status_allowed",

@@ -372,6 +372,25 @@ the backlog.
 - [x] Apply cleanup migration `0017` locally and deploy it to production
 - [x] Complete the Lists concept checkpoint and commit
 
+## Recent completed deliveries
+
+These items are integrated into `develop`; this is implementation history, not
+an instruction to replay migrations or proof of a particular live deployment.
+Open review work remains in [Tasks](./tasks.md#work-in-review).
+
+- [x] Deliver opt-in Habits with shared definitions, personal daily notes/completions, Me-first bounded recent queries and one expanded month. See [Habits](./habits/).
+- [x] Deliver standalone Workouts, a shared movement catalog, author-private performance/history, catalog deletion/ordering and exercise reference pictures. See [Workouts](./workouts/).
+- [x] Move logging to independent exercise occurrences and per-row autosaved sets, retaining original dates, snapshots, measurements and the old set archive (`0046`, #70).
+- [x] Add placement-specific Warm-up / Workout / Stretching roles with separately frozen historical role maps (`0047`–`0048`, #81).
+- [x] Implement shared `media` assets, typed recipe/exercise attachments, compatible delivery capabilities and soft-detachment retention (`0043`–`0044`). The [foundation plan](./plans/shared-media.md) is complete; video, animation and reuse UI remain deferred.
+- [x] Add dedicated empty/create states for Lists and Recipes libraries.
+- [x] Reuse cached signed image URLs and thumbnails, then crossfade to the viewer derivative instead of blanking the image. See [Recipes image storage](./recipes/#image-storage-and-security); this is not a guarantee against every possible image flash.
+- [x] Implement guarded PWA updates (#59): idle activation, per-tab draft/log/upload protection and explicit update/recovery behavior.
+- [x] Adopt official Zero 1.11.3, Node 26 and current workspace tooling without SDK patches, retaining PostgreSQL 17 and coordinated upgrade/release safeguards.
+- [x] Retain failed text drafts with Retry/Discard and navigation/unload protection (#73), and sanitize database failures before Zero serialization (#74).
+- [x] Share catalog gallery subscriptions and progressively disclose rows (#75); load the definition-only exercise picker only while open (#76); page private workout history with independent active/current-day pins (#77).
+- [x] Explain invalid numeric set fields without clearing input (#78), move neutral editing/media helpers out of Recipes and retire the bulk archive writer (#79). See [Maintenance](./maintenance.md) for measured results and limits.
+
 ## Moodboards inside Lists
 
 - [x] Add titled Moodboard lists alongside existing Checklists, with masonry images/video clips, bounded card mosaics, safe uploads/retry, signed versioned playback and accessible ordering. See [Moodboards](./lists/moodboards.md) for codec limits, retained assets and migration coordination. This is implementation history, not deployment approval.

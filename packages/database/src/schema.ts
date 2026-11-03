@@ -173,6 +173,9 @@ export const habits = pgTable(
       .notNull()
       .references(() => households.id),
     name: text("name").notNull(),
+    workoutMode: text("workout_mode", { enum: ["none", "any", "selected"] })
+      .notNull()
+      .default("none"),
     note: text("note"),
     sortKey: integer("sort_key").notNull().default(0),
     status: text("status", { enum: ["active", "archived"] })
@@ -196,6 +199,10 @@ export const habits = pgTable(
       sql`${table.note} IS NULL OR length(${table.note}) <= 500`,
     ),
     check(
+      "habits_workout_mode",
+      sql`${table.workoutMode} IN (\x27none\x27, \x27any\x27, \x27selected\x27)`,
+    ),
+    check(
       "habits_status_allowed",
       sql`${table.status} IN ('active', 'archived')`,
     ),
@@ -216,6 +223,7 @@ export const habitEntries = pgTable(
       .references(() => users.id),
     entryOn: text("entry_on").notNull(),
     completed: boolean("completed").notNull().default(false),
+    workoutCompleted: boolean("workout_completed").notNull().default(false),
     note: text("note"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -248,6 +256,7 @@ export const habitEntries = pgTable(
 );
 
 export const habitsRelations = relations(habits, ({ one, many }) => ({
+  workoutLinks: many(habitWorkoutLinks),
   household: one(households, {
     fields: [habits.householdId],
     references: [households.id],
@@ -804,6 +813,46 @@ export const exercisesRelations = relations(exercises, ({ one, many }) => ({
     references: [households.id],
   }),
 }));
+export const habitWorkoutLinks = pgTable(
+  "habit_workout_links",
+  {
+    householdId: uuid("household_id").notNull(),
+    habitId: uuid("habit_id").notNull(),
+    workoutId: uuid("workout_id").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.habitId, table.workoutId] }),
+    foreignKey({
+      columns: [table.householdId, table.habitId],
+      foreignColumns: [habits.householdId, habits.id],
+      name: "habit_workout_links_habit_fk",
+    }),
+    foreignKey({
+      columns: [table.householdId, table.workoutId],
+      foreignColumns: [workouts.householdId, workouts.id],
+      name: "habit_workout_links_workout_fk",
+    }),
+    index("habit_workout_links_workout").on(
+      table.householdId,
+      table.workoutId,
+      table.habitId,
+    ),
+  ],
+);
+export const habitWorkoutLinksRelations = relations(
+  habitWorkoutLinks,
+  ({ one }) => ({
+    habit: one(habits, {
+      fields: [habitWorkoutLinks.householdId, habitWorkoutLinks.habitId],
+      references: [habits.householdId, habits.id],
+    }),
+    workout: one(workouts, {
+      fields: [habitWorkoutLinks.householdId, habitWorkoutLinks.workoutId],
+      references: [workouts.householdId, workouts.id],
+    }),
+  }),
+);
+
 export const workoutExercises = pgTable(
   "workout_exercises",
   {

@@ -26,8 +26,10 @@ allowing normal vertical scrolling before activation. Keyboard drag controls
 remain available on the focused card. New lists appear at the top. Each card opens
 `/households/:householdId/lists/:listId`, with a named breadcrumb, a seamless
 inline name editor, and confirmed deletion from a trash-icon action. Name
-edits debounce, save on blur or Enter, revert with Escape, and roll back with an
-anchored error when validation or persistence fails. Debounced saves normalize
+edits debounce, save on blur or Enter, and revert with Escape. Rejected text
+remains available with an anchored error and explicit Retry/Discard; it does not
+silently revert to the server value. Dirty drafts protect navigation and unload.
+Debounced saves normalize
 the persisted name without rewriting the live draft under the user's cursor;
 blur and Enter normalize the visible value as the editing boundary.
 
@@ -50,7 +52,8 @@ submission before transitioning to a saved row.
 
 `lists` stores `id`, `household_id`, display and normalized names, `kind`
 (`checklist | moodboard`, Checklist by default), `media_count`, `sort_key`,
-and timestamps. Normalized names are unique per household. `list_items` adds
+`deleted_at`, and timestamps. Active normalized names are unique per household.
+`list_items` adds
 `list_id` and `active | crossed | archived | deleted` status to the same fields;
 item names are unique within a list. Names use Unicode NFKC, collapsed whitespace,
 trimming, and a 1–100-character limit. Normalized names are lowercase display
@@ -59,7 +62,8 @@ names.
 Both tables use descending integer sort keys with UUID tie-breakers. Reordering
 usually updates one key; exhausted gaps cause rebalancing. The composite item
 foreign key `(household_id, list_id)` prevents attaching an item to a list in a
-different household. Deleting a list cascades to its items.
+different household. The foreign key cascades on a physical database deletion;
+the application soft-deletes lists and retains their items.
 
 ## Synchronization and authorization
 
@@ -73,8 +77,8 @@ setItemStatus, and reorderItems. Each server execution checks membership and
 enabled-module access. Parent and child lookups are scoped to the requested
 household/list, and item reordering is scoped to status. PostgreSQL uniqueness
 and foreign keys remain the final constraints. Client changes are optimistic;
-the server supplies authoritative timestamps. List deletion explicitly deletes
-cached children as well as relying on the database cascade.
+the server supplies authoritative timestamps. List deletion updates only the
+parent tombstone; authorized queries stop exposing that list and its children.
 
 The application schema and Zero publication contain only the current domain
 tables. Migration `0017` removes the retired module's source tables, settings,

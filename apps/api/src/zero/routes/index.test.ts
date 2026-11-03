@@ -214,8 +214,8 @@ describe("Zero routes", () => {
       },
       body: JSON.stringify(body),
     });
-    expect(provider.execute).toHaveBeenCalledOnce();
-    expect(provider.execute.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(provider.execute).toHaveBeenCalledTimes(2);
+    expect(provider.execute.mock.invocationCallOrder[1]).toBeLessThan(
       provider.run.mock.invocationCallOrder[0] ?? 0,
     );
   });

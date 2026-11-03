@@ -312,6 +312,44 @@ const personHabitArgs = z
       args.endOn <= shiftCalendarDate(args.startOn, 30),
     "Invalid calendar period",
   );
+const habitWorkoutChoices = defineHomeHubQuery(
+  householdIdArgsSchema,
+  ({ args, ctx }) =>
+    zql.workouts
+      .where("householdId", args.householdId)
+      .whereExists("household", (h) =>
+        h
+          .where("deletedAt", "IS", null)
+          .whereExists("members", (m) => m.where("userId", ctx.userId))
+          .whereExists("moduleSettings", (s) =>
+            s.where("moduleKey", "workouts").where("enabled", true),
+          )
+          .whereExists("moduleSettings", (s) =>
+            s.where("moduleKey", "habits").where("enabled", true),
+          ),
+      )
+      .orderBy("sortKey", "desc")
+      .orderBy("id", "asc"),
+);
+const habitWorkoutSettings = defineHomeHubQuery(
+  z.object({ householdId: z.uuid(), habitId: z.uuid() }).strict(),
+  ({ args, ctx }) =>
+    zql.habits
+      .where("householdId", args.householdId)
+      .where("id", args.habitId)
+      .whereExists("household", (h) =>
+        h
+          .where("deletedAt", "IS", null)
+          .whereExists("members", (m) => m.where("userId", ctx.userId))
+          .whereExists("moduleSettings", (s) =>
+            s.where("moduleKey", "habits").where("enabled", true),
+          ),
+      )
+      .related("workoutLinks", (links) =>
+        links.where("householdId", args.householdId),
+      )
+      .one(),
+);
 const authorizedPersonHabits = (
   householdId: string,
   userId: string,
@@ -626,6 +664,8 @@ export const queries = defineHomeHubQueries({
   habits: {
     byHousehold: habitsByHousehold,
     recentForPerson: recentPersonHabits,
+    workoutChoices: habitWorkoutChoices,
+    workoutSettings: habitWorkoutSettings,
     historyForPerson: personHabitHistory,
   },
   householdMemberships: {

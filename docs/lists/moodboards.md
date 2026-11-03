@@ -65,11 +65,11 @@ IDs, timestamps and storage keys are preserved; there is no replica reset or SDK
 patch. Deploy the backward-compatible Worker, migrate, then make API/cache healthy
 before web. FFmpeg is packaged in the API image; no new signing secret is needed.
 
-**Migration coordination:** `0049` belongs to open habit-link PR #84. This feature
-starts independently from `develop` and reserves `0050`; reconcile its journal/
-snapshot lineage against `0049` before merging/releasing both. Do not deploy a
-higher-timestamp migration and then append an older pending migration: Drizzle
-can skip it. Renumber/regenerate only unapplied work, never applied migration SQL.
+**Migration order:** `0049_freezing_vertigo` (habit links) precedes
+`0050_list_moodboards`. The cumulative snapshot includes both features, with
+sequential journal indices and increasing original timestamps. The migration SQL
+is unchanged. Never append an older pending timestamp after a newer migration
+has been deployed; regenerate only unapplied metadata, never applied SQL.
 
 Verification includes the normal unit/type/build checks, disposable PostgreSQL
 media/retention/authorization tests, warm Zero schema replication, actual old-client

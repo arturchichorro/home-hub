@@ -1,6 +1,7 @@
 import {
   adjacentHabitMonth,
   clampHabitMonth,
+  habitCompleted,
   habitMonth,
 } from "@home-hub/shared/habits";
 import { queries } from "@home-hub/shared/zero/queries";
@@ -162,17 +163,26 @@ export function HabitHistory({
                 <HabitTodayToggle
                   name={name}
                   date={selectedDate}
-                  completed={!!entry?.completed}
+                  completed={habitCompleted(entry)}
                   disabled={
                     !own ||
+                    !!entry?.workoutCompleted ||
                     archived ||
                     !enabled ||
                     selectedDate > today ||
                     pending.has(`${habitId}:${selectedDate}`)
                   }
-                  onToggle={() => onCompleted(selectedDate, !entry?.completed)}
+                  onToggle={() =>
+                    onCompleted(selectedDate, !habitCompleted(entry))
+                  }
                 />
               </div>
+              {entry?.workoutCompleted && (
+                <p className="text-xs text-muted">
+                  A matching workout keeps this day complete. Manual checks and
+                  notes are kept separately.
+                </p>
+              )}
               <HabitEntryNote
                 key={`${personId}:${selectedDate}`}
                 householdId={householdId}
