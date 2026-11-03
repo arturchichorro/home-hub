@@ -18,6 +18,7 @@ import {
 import type { ZeroAuthContext } from "./context";
 import { habitMutatorDefinitions } from "./habit-mutators";
 import { listMutatorDefinitions } from "./list-mutators";
+import { logMutators } from "./log-mutators";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
 import { appendSortKey, nextSortKey, planReorder } from "./ordering";
 import { type Schema, zql } from "./schema.gen";
@@ -473,6 +474,7 @@ export const mutators = defineHomeHubMutators({
   householdMemberships: {
     reorder: reorderHouseholds,
   },
+  logs: logMutators,
   lists: listMutatorDefinitions,
   habits: habitMutatorDefinitions,
   workouts: workoutMutatorDefinitions,

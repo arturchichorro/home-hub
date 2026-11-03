@@ -4,6 +4,21 @@ import * as drizzleSchema from "./src/schema";
 
 export default drizzleZeroConfig(drizzleSchema, {
   tables: {
+    logs: true,
+    logCategories: true,
+    logEntries: {
+      id: true,
+      householdId: true,
+      logId: true,
+      entryOn: true,
+      note: true,
+      version: true,
+      createdBy: true,
+      lastEditedBy: true,
+      deletedAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
     exercises: true,
     exerciseMedia: true,
     workouts: true,

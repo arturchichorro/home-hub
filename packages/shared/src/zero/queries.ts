@@ -3,6 +3,7 @@ import * as z from "zod";
 import { habitsQuerySchema, shiftCalendarDate } from "../habits";
 import { listDetailArgsSchema } from "../lists";
 import type { ZeroAuthContext } from "./context";
+import { logQueries } from "./log-queries";
 import { type Schema, zql } from "./schema.gen";
 
 const defineHomeHubQuery = defineQueryWithType<Schema, ZeroAuthContext>();
@@ -561,6 +562,7 @@ export const queries = defineHomeHubQueries({
     byHousehold: householdMembersByHousehold,
     mine: myHouseholdMemberships,
   },
+  logs: logQueries,
   lists: {
     byHousehold: listsByHousehold,
     detail: listDetail,

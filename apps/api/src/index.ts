@@ -22,6 +22,7 @@ import { createRenameHouseholdService } from "./households/rename";
 import { createRevokeHouseholdInviteService } from "./households/revoke-invite";
 import { createSetHouseholdModuleEnabledService } from "./households/set-module-enabled";
 import { createTransferHouseholdOwnershipService } from "./households/transfer-ownership";
+import { createLogEntryServices } from "./logs/entries";
 import { inspectR2Object } from "./media/inspect-object";
 import { processMediaImage } from "./media/process-image";
 import { createR2Client } from "./media/r2-client";
@@ -176,6 +177,7 @@ const app = createApp({
   households,
   recipeImages,
   exerciseMedia,
+  logs: createLogEntryServices({ db }),
   infrastructure: {
     zeroDbProvider: infrastructure.dbProvider,
     jwtSecret: infrastructure.config.API_JWT_SECRET,

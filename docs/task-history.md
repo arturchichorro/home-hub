@@ -372,6 +372,10 @@ the backlog.
 - [x] Apply cleanup migration `0017` locally and deploy it to production
 - [x] Complete the Lists concept checkpoint and commit
 
+## Manual Logs module
+
+- [x] Implement opt-in household topics, colored categories and one shared multiline entry per calendar date, with inline creation, conflict-safe autosave, backfill/search/paged history and retained soft deletion. See [Logs](./logs/README.md) for date/conflict rules and migration coordination. Implementation history is not deployment approval.
+
 ## Misc
 
 - [x] Preserve raw seamless-input drafts during debounced saves and normalize them only at editing boundaries

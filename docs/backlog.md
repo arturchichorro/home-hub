@@ -29,7 +29,7 @@ together before implementation begins.
 
 - [ ] Documentos (para guardar cópias de documentos importantes, categorizado)
 - [ ] French Vocabulary - Flashcards instead
-- [ ] Goals / sport logs / logs in general (log things by category I guess)
+- [ ] Goals tracking
 - [ ] Household finance
 - [ ] Friend list with timestamped notes
 - [ ] Module de lugares onde já fui (mapa)
