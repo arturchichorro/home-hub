@@ -52,6 +52,26 @@ it("keeps note-only dates unmarked and readonly inspection available", () => {
   expect(html).toContain('aria-expanded="true"');
   expect(html).not.toContain('disabled=""');
 });
+it("shows an automatic X without exposing source workout data", () => {
+  const html = renderToStaticMarkup(
+    <HabitRecentDay
+      name="Read"
+      date={date}
+      today={date}
+      entry={{
+        userId: "me",
+        entryOn: date,
+        completed: false,
+        workoutCompleted: true,
+      }}
+      onInspect={() => {}}
+    />,
+  );
+  expect(html).toContain("lucide-x");
+  expect(html).toContain("Completed from a matching workout");
+  expect(html).not.toContain("Mark done");
+  expect(html).not.toContain("Clear completion");
+});
 it("disables a pending or offline today write", () => {
   expect(
     renderToStaticMarkup(

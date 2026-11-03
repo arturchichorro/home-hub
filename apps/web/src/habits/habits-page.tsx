@@ -1,4 +1,8 @@
-import { calendarDate, shiftCalendarDate } from "@home-hub/shared/habits";
+import {
+  calendarDate,
+  habitCompleted,
+  shiftCalendarDate,
+} from "@home-hub/shared/habits";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import {
@@ -31,6 +35,7 @@ import { HabitHistory } from "./habit-history";
 import { HabitNameDialog } from "./habit-name-dialog";
 import { HabitNameInput } from "./habit-name-input";
 import { HabitNoteInput } from "./habit-note-input";
+import { HabitWorkoutLink } from "./habit-workout-link";
 
 const localToday = () =>
   calendarDate(Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone);
@@ -335,6 +340,15 @@ function HabitListRow({
             onDirtyChange={(v) => dirtyChanged("name", v)}
           />
         )}
+        {!archived && (
+          <HabitWorkoutLink
+            householdId={householdId}
+            habitId={habit.id}
+            name={habit.name}
+            linked={!!habit.workoutMode && habit.workoutMode !== "none"}
+            disabled={!enabled || locked}
+          />
+        )}
         <IconButton
           className="size-11! shrink-0"
           aria-label={`Show today's note for ${habit.name}`}
@@ -385,8 +399,8 @@ function HabitListRow({
                 (!enabled || pending.has(`${habit.id}:${today}`)))
             }
             onToggle={
-              date === today && own && !archived
-                ? () => onCompleted(today, !current?.completed)
+              date === today && own && !archived && !current?.workoutCompleted
+                ? () => onCompleted(today, !habitCompleted(current))
                 : undefined
             }
             selected={expanded?.date === date}

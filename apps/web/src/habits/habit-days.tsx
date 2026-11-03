@@ -1,14 +1,17 @@
+import { habitCompleted } from "@home-hub/shared/habits";
 import { Button, Tooltip, X } from "@home-hub/ui-web";
 
 export type HabitEntry = {
   userId: string;
   entryOn: string;
   completed: boolean | null;
+  workoutCompleted?: boolean | null;
   note?: string | null;
 };
 export type HabitRow = {
   id: string;
   name: string;
+  workoutMode?: "none" | "any" | "selected" | null;
   note?: string | null;
   entries: readonly HabitEntry[];
 };
@@ -69,17 +72,23 @@ export function HabitRecentDay({
 }) {
   const isToday = date === today;
   const label = onToggle
-    ? `${name}, ${date}. ${entry?.completed ? "Clear completion" : "Mark done"}`
-    : `${name}, ${date}. ${entry?.completed ? "Completed" : "Not recorded"}${entry?.note ? `. Note: ${entry.note}` : ""}`;
+    ? `${name}, ${date}. ${habitCompleted(entry) ? "Clear completion" : "Mark done"}`
+    : `${name}, ${date}. ${habitCompleted(entry) ? "Completed" : "Not recorded"}${entry?.note ? `. Note: ${entry.note}` : ""}`;
   const trigger = (
     <Button
       variant="ghost"
       aria-label={label}
       aria-current={isToday ? "date" : undefined}
-      aria-pressed={onToggle ? !!entry?.completed : undefined}
+      aria-pressed={onToggle ? habitCompleted(entry) : undefined}
       aria-expanded={onToggle ? undefined : !!selected}
       disabled={disabled}
-      title={entry?.note ? undefined : formatHabitDate(date)}
+      title={
+        entry?.workoutCompleted
+          ? `${formatHabitDate(date)}. Completed from a matching workout`
+          : entry?.note
+            ? undefined
+            : formatHabitDate(date)
+      }
       className={`relative h-12! w-full! min-w-0! rounded-none! border-y border-l border-border p-0! first:rounded-l-md! last:rounded-r-md! last:border-r ${selected ? "bg-raised!" : ""} ${isToday ? "bg-raised/50 font-semibold" : ""}`}
       onClick={onToggle ?? onInspect}
     >
@@ -89,7 +98,7 @@ export function HabitRecentDay({
       >
         {isToday ? "Today" : Number(date.slice(8))}
       </span>
-      {entry?.completed ? (
+      {habitCompleted(entry) ? (
         <X aria-hidden="true" className="mt-2 size-4 text-foreground" />
       ) : (
         <span aria-hidden="true" className="mt-2 size-4" />
@@ -110,7 +119,7 @@ export function HabitRecentDay({
         <div className="max-w-64 whitespace-pre-wrap break-words">
           <p>
             {formatHabitDate(date)} ·{" "}
-            {entry.completed ? "Completed" : "Not recorded"}
+            {habitCompleted(entry) ? "Completed" : "Not recorded"}
           </p>
           <p>{entry.note}</p>
         </div>
@@ -140,7 +149,7 @@ export function HabitDayPreview({
   onInspect: () => void;
   calendar?: boolean;
 }) {
-  const label = `${name}, ${date}. ${entry?.completed ? "Completed" : "Not recorded"}${entry?.note ? `. Note: ${entry.note}` : ""}`;
+  const label = `${name}, ${date}. ${habitCompleted(entry) ? "Completed" : "Not recorded"}${entry?.note ? `. Note: ${entry.note}` : ""}`;
   const trigger = (
     <Button
       variant="ghost"
@@ -161,7 +170,7 @@ export function HabitDayPreview({
       </span>
       <span
         aria-hidden="true"
-        className={`size-2 rounded-sm ${entry?.completed ? "bg-foreground" : "bg-border"}`}
+        className={`size-2 rounded-sm ${habitCompleted(entry) ? "bg-foreground" : "bg-border"}`}
       />
       {entry?.note ? (
         <span
@@ -179,7 +188,7 @@ export function HabitDayPreview({
         <div className="max-w-64 whitespace-pre-wrap break-words">
           <p>
             {formatHabitDate(date)} ·{" "}
-            {entry.completed ? "Completed" : "Not recorded"}
+            {habitCompleted(entry) ? "Completed" : "Not recorded"}
           </p>
           <p>{entry.note}</p>
         </div>

@@ -3,6 +3,7 @@ import {
   archiveHabitMutationSchema,
   calendarDate,
   createHabitMutationSchema,
+  linkHabitWorkoutsMutationSchema,
   renameHabitMutationSchema,
   reorderHabitsMutationSchema,
   setHabitCompletedMutationSchema,
@@ -98,8 +99,54 @@ export const habitMutatorDefinitions = {
         note: null,
         sortKey: nextSortKey(top?.sortKey ?? 0),
         status: "active",
+        workoutMode: "none",
         createdAt: now,
         updatedAt: now,
+      });
+    },
+  ),
+  linkWorkouts: defineMutator(
+    linkHabitWorkoutsMutationSchema,
+    async ({ tx, ctx, args }) => {
+      const habit = await requireHabit(tx, ctx, args);
+      if (habit.status !== "active")
+        throw new Error("Habit linking not allowed");
+      if (args.mode !== "none")
+        await requireServerHouseholdModuleAccess({
+          tx,
+          userId: ctx.userId,
+          householdId: args.householdId,
+          moduleKey: "workouts",
+        });
+      if (args.mode === "selected") {
+        const allowed = await tx.run(
+          zql.workouts
+            .where("householdId", args.householdId)
+            .where("id", "IN", args.workoutIds),
+        );
+        if (allowed.length !== args.workoutIds.length)
+          throw new Error("Workout selection not allowed");
+      }
+      const links = await tx.run(
+        zql.habitWorkoutLinks
+          .where("householdId", args.householdId)
+          .where("habitId", args.habitId),
+      );
+      for (const link of links)
+        await tx.mutate.habitWorkoutLinks.delete({
+          habitId: link.habitId,
+          workoutId: link.workoutId,
+        });
+      for (const workoutId of args.workoutIds)
+        await tx.mutate.habitWorkoutLinks.insert({
+          householdId: args.householdId,
+          habitId: args.habitId,
+          workoutId,
+        });
+      await tx.mutate.habits.update({
+        id: habit.id,
+        workoutMode: args.mode,
+        updatedAt: timestamp(tx, args.optimisticTimestamp),
       });
     },
   ),
