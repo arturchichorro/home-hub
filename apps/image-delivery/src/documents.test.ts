@@ -94,6 +94,26 @@ describe("signed document delivery", () => {
     expect(head).not.toHaveBeenCalled();
     expect(get).not.toHaveBeenCalled();
   });
+  it("does not advertise body bytes if an object disappears after HEAD", async () => {
+    const c = { ...cap };
+    const url = new URL("https://files.example/documents/files");
+    url.searchParams.set("capability", JSON.stringify(c));
+    url.searchParams.set("signature", await signDocumentRead(c, secret));
+    for (const get of [
+      async () => null,
+      async () => {
+        throw Error("storage failure");
+      },
+    ]) {
+      const response = await handleDocumentRequest(
+        new Request(url, { headers: { Range: "bytes=0-1" } }),
+        { ...env, RECIPE_IMAGES: { head, get } },
+      );
+      expect([404, 503]).toContain(response.status);
+      expect(response.headers.has("Content-Length")).toBe(false);
+      expect(response.headers.has("Content-Range")).toBe(false);
+    }
+  });
   it("rejects expiry", async () => {
     expect((await request(undefined, "GET", { expiresAt: 1 })).status).toBe(
       403,

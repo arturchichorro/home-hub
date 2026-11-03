@@ -99,11 +99,18 @@ export async function handleDocumentRequest(
       key,
       range ? { range } : undefined,
     );
-    return new Response(body?.body ?? null, {
-      status: body ? (range ? 206 : 200) : 404,
+    if (!body) {
+      headers.delete("Content-Length");
+      headers.delete("Content-Range");
+      return new Response(null, { status: 404, headers });
+    }
+    return new Response(body.body, {
+      status: range ? 206 : 200,
       headers,
     });
   } catch {
+    headers.delete("Content-Length");
+    headers.delete("Content-Range");
     return new Response(null, { status: 503, headers });
   }
 }
