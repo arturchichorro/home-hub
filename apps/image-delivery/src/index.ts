@@ -22,6 +22,7 @@ import {
   verifyRecipeImageDeliveryCapability,
   verifyRecipeImageProcessingCapability,
 } from "@home-hub/shared/recipe-image-delivery";
+import { handleDocumentRequest } from "./documents";
 import {
   InvalidStillImageError,
   readImageBytes,
@@ -543,6 +544,7 @@ export default {
     context: ExecutionContextLike,
   ) {
     const path = new URL(request.url).pathname;
+    if (path === "/documents/files") return handleDocumentRequest(request, env);
     if (path === "/media/videos") return handleVideoRequest(request, env);
     if (path === "/internal/media/images/process")
       return handleMediaImageProcessingRequest({ env, request });

@@ -1193,3 +1193,191 @@ export const recipeMediaRelations = relations(recipeMedia, ({ one }) => ({
     ],
   }),
 }));
+
+// Pending files intentionally precede their document: confirmation creates a new
+// row only after validation. Retained files keep document context without a cycle.
+export const documentFiles = pgTable(
+  "document_files",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    documentId: uuid("document_id").notNull(),
+    filename: text("filename").notNull(),
+    contentType: text("content_type").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    objectKey: text("object_key").notNull(),
+    expectedFileId: uuid("expected_file_id"),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("document_files_context_id").on(t.householdId, t.documentId, t.id),
+    check("document_files_size", sql`${t.byteSize} BETWEEN 1 AND 52428800`),
+    check(
+      "document_files_filename",
+      sql`length(${t.filename}) BETWEEN 1 AND 255`,
+    ),
+  ],
+);
+export const documents = pgTable(
+  "documents",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    title: text("title").notNull(),
+    description: text("description"),
+    fileId: uuid("file_id").notNull(),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("documents_household_id_id").on(t.householdId, t.id),
+    foreignKey({
+      columns: [t.householdId, t.id, t.fileId],
+      foreignColumns: [
+        documentFiles.householdId,
+        documentFiles.documentId,
+        documentFiles.id,
+      ],
+      name: "documents_current_file_fk",
+    }),
+    check("documents_title", sql`length(trim(${t.title})) BETWEEN 1 AND 200`),
+    check(
+      "documents_description",
+      sql`${t.description} IS NULL OR length(${t.description}) <= 1000`,
+    ),
+    index("documents_uploaded")
+      .on(t.householdId, t.uploadedAt, t.id)
+      .where(sql`${t.deletedAt} IS NULL`),
+    index("documents_title_order")
+      .on(t.householdId, t.title, t.id)
+      .where(sql`${t.deletedAt} IS NULL`),
+  ],
+);
+export const documentTags = pgTable(
+  "document_tags",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    color: text("color", {
+      enum: [
+        "slate",
+        "red",
+        "orange",
+        "amber",
+        "green",
+        "teal",
+        "blue",
+        "violet",
+      ],
+    }).notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("document_tags_household_id_id").on(t.householdId, t.id),
+    uniqueIndex("document_tags_active_name")
+      .on(t.householdId, t.normalizedName)
+      .where(sql`${t.deletedAt} IS NULL`),
+    check("document_tags_name", sql`length(trim(${t.name})) BETWEEN 1 AND 50`),
+    check(
+      "document_tags_color",
+      sql`${t.color} IN ('slate','red','orange','amber','green','teal','blue','violet')`,
+    ),
+  ],
+);
+export const documentTagAssignments = pgTable(
+  "document_tag_assignments",
+  {
+    householdId: uuid("household_id").notNull(),
+    documentId: uuid("document_id").notNull(),
+    tagId: uuid("tag_id").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.documentId, t.tagId] }),
+    foreignKey({
+      columns: [t.householdId, t.documentId],
+      foreignColumns: [documents.householdId, documents.id],
+      name: "document_assignment_document_fk",
+    }),
+    foreignKey({
+      columns: [t.householdId, t.tagId],
+      foreignColumns: [documentTags.householdId, documentTags.id],
+      name: "document_assignment_tag_fk",
+    }),
+    index("document_assignments_tag").on(t.householdId, t.tagId, t.documentId),
+  ],
+);
+export const documentsRelations = relations(documents, ({ one, many }) => ({
+  household: one(households, {
+    fields: [documents.householdId],
+    references: [households.id],
+  }),
+  file: one(documentFiles, {
+    fields: [documents.householdId, documents.id, documents.fileId],
+    references: [
+      documentFiles.householdId,
+      documentFiles.documentId,
+      documentFiles.id,
+    ],
+  }),
+  tags: many(documentTagAssignments),
+}));
+export const documentFilesRelations = relations(documentFiles, ({ one }) => ({
+  household: one(households, {
+    fields: [documentFiles.householdId],
+    references: [households.id],
+  }),
+}));
+export const documentTagsRelations = relations(
+  documentTags,
+  ({ one, many }) => ({
+    household: one(households, {
+      fields: [documentTags.householdId],
+      references: [households.id],
+    }),
+    assignments: many(documentTagAssignments),
+  }),
+);
+export const documentTagAssignmentsRelations = relations(
+  documentTagAssignments,
+  ({ one }) => ({
+    document: one(documents, {
+      fields: [
+        documentTagAssignments.householdId,
+        documentTagAssignments.documentId,
+      ],
+      references: [documents.householdId, documents.id],
+    }),
+    tag: one(documentTags, {
+      fields: [
+        documentTagAssignments.householdId,
+        documentTagAssignments.tagId,
+      ],
+      references: [documentTags.householdId, documentTags.id],
+    }),
+  }),
+);

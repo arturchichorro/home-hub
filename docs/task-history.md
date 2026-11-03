@@ -395,6 +395,10 @@ Open review work remains in [Tasks](./tasks.md#work-in-review).
 
 - [x] Add titled Moodboard lists alongside existing Checklists, with masonry images/video clips, bounded card mosaics, safe uploads/retry, signed versioned playback and accessible ordering. See [Moodboards](./lists/moodboards.md) for codec limits, retained assets and migration coordination. This is implementation history, not deployment approval.
 
+## Documents module
+
+- [x] Implement household document rows with direct one-file upload, inline autosave, colored reusable tags, search/filter/sort, safe PDF/image previews and downloads, atomic replacement and privately retained files. See [Documents](./documents/README.md) for limits, retention and migration coordination. Implementation history is not deployment approval.
+
 ## Misc
 
 - [x] Preserve raw seamless-input drafts during debounced saves and normalize them only at editing boundaries

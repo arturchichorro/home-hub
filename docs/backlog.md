@@ -21,7 +21,6 @@ implemented system, not with unmerged feature branches.
 
 ## Future modules and capabilities
 
-- [ ] Documents: categorized copies of important documents.
 - [ ] French Vocabulary / flashcards.
 - [ ] General goals and category-based logs outside the implemented Workouts scope.
 - [ ] Household finance.

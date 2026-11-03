@@ -4,6 +4,19 @@ import * as drizzleSchema from "./src/schema";
 
 export default drizzleZeroConfig(drizzleSchema, {
   tables: {
+    documents: true,
+    documentTags: true,
+    documentTagAssignments: true,
+    documentFiles: {
+      id: true,
+      householdId: true,
+      documentId: true,
+      filename: true,
+      contentType: true,
+      byteSize: true,
+      confirmedAt: true,
+      createdAt: true,
+    },
     listMedia: true,
     exercises: true,
     exerciseMedia: true,

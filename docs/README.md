@@ -28,6 +28,9 @@ Connected changes should appear immediately and converge across clients. Previou
 - [Habits](./habits/) owns shared habits, personal completion tracking, calendar views,
   data and authorization.
 
+- [Documents](./documents/) owns opt-in household file rows, reusable colored tags,
+  private upload/download, replacement and retention.
+
 - [Workouts](./workouts/) owns shared definitions/catalog/media and private logging/history.
 - [Shared media](./media/) owns reusable asset storage, delivery and attachment security.
 - [Maintenance](./maintenance.md) records editing boundaries, bounded views and measured audit follow-ups.
