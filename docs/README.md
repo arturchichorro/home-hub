@@ -28,6 +28,9 @@ Connected changes should appear immediately and converge across clients. Previou
 - [Habits](./habits/) owns shared habits, personal completion tracking, calendar views,
   data and authorization.
 
+- [Logs](./logs/) owns opt-in shared topics, colored categories, daily manual notes,
+  conflict-safe editing and retained history.
+
 - [Documents](./documents/) owns opt-in household file rows, reusable colored tags,
   private upload/download, replacement and retention.
 

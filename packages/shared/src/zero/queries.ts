@@ -5,6 +5,7 @@ import { listMediaPageSchema } from "../list-media";
 import { listDetailArgsSchema } from "../lists";
 import type { ZeroAuthContext } from "./context";
 import { documentQueries } from "./document-queries";
+import { logQueries } from "./log-queries";
 import { type Schema, zql } from "./schema.gen";
 
 const defineHomeHubQuery = defineQueryWithType<Schema, ZeroAuthContext>();
@@ -674,6 +675,7 @@ export const queries = defineHomeHubQueries({
     mine: myHouseholdMemberships,
   },
   documents: documentQueries,
+  logs: logQueries,
   lists: {
     library: listsLibrary,
     mediaPage: listMediaPage,

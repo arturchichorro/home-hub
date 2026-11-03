@@ -31,15 +31,12 @@ deployment applies tested forward migrations after an off-host backup.
 As of 3 November 2026, these branches are open PRs, not part of `develop` or
 completed backlog items. Review status is not authorization to merge or deploy:
 
-- [PR #83](https://github.com/arturchichorro/home-hub/pull/83): seven adjacent habit boxes, with today's X on the right.
-- [PR #84](https://github.com/arturchichorro/home-hub/pull/84), based on #83: optional workout-linked habit completion and migration `0049`.
 - Guest access prototype stack [#35](https://github.com/arturchichorro/home-hub/pull/35), [#36](https://github.com/arturchichorro/home-hub/pull/36), [#38](https://github.com/arturchichorro/home-hub/pull/38), [#39](https://github.com/arturchichorro/home-hub/pull/39): requires reconciliation with current `develop` and current module/privacy rules before integration. The earlier foundation was reverted; the prototype does not establish current Guest support.
 
-The implemented habit list on `develop` still has its separate today toggle and
-six past dates; workout-linked completion is not yet available there. Workouts
-placement roles and the seven audit follow-ups are already integrated; see
-[Task history](./task-history.md#recent-completed-deliveries). When a review item
-merges, remove its pending entry and update the corresponding subject/history.
+Habits day boxes and optional workout-linked completion are integrated into
+`develop`; see [Task history](./task-history.md#recent-completed-deliveries).
+When a review item merges, remove its pending entry and update the corresponding
+subject/history. Guest Access remains excluded from this integration.
 
 ## Deploy to and migrate onto the Raspberry Pi
 

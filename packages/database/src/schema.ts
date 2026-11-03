@@ -1381,3 +1381,154 @@ export const documentTagAssignmentsRelations = relations(
     }),
   }),
 );
+
+export const logCategories = pgTable(
+  "log_categories",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    color: text("color", {
+      enum: [
+        "slate",
+        "red",
+        "orange",
+        "amber",
+        "green",
+        "teal",
+        "blue",
+        "violet",
+      ],
+    }).notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("log_categories_context").on(t.householdId, t.id),
+    uniqueIndex("log_categories_active_name")
+      .on(t.householdId, t.normalizedName)
+      .where(sql`${t.deletedAt} IS NULL`),
+    check(
+      "log_categories_name",
+      sql`length(trim(${t.name})) BETWEEN 1 AND 100`,
+    ),
+    check(
+      "log_categories_color",
+      sql`${t.color} IN ('slate','red','orange','amber','green','teal','blue','violet')`,
+    ),
+  ],
+);
+export const logs = pgTable(
+  "logs",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    title: text("title").notNull(),
+    normalizedTitle: text("normalized_title").notNull(),
+    categoryId: uuid("category_id"),
+    lastEntryOn: text("last_entry_on"),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("logs_context").on(t.householdId, t.id),
+    uniqueIndex("logs_active_title")
+      .on(t.householdId, t.normalizedTitle)
+      .where(sql`${t.deletedAt} IS NULL`),
+    foreignKey({
+      columns: [t.householdId, t.categoryId],
+      foreignColumns: [logCategories.householdId, logCategories.id],
+      name: "logs_category_fk",
+    }),
+    check("logs_title", sql`length(trim(${t.title})) BETWEEN 1 AND 100`),
+  ],
+);
+export const logEntries = pgTable(
+  "log_entries",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id").notNull(),
+    logId: uuid("log_id").notNull(),
+    entryOn: text("entry_on").notNull(),
+    note: text("note").notNull(),
+    version: integer("version").notNull().default(1),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id),
+    lastEditedBy: uuid("last_edited_by")
+      .notNull()
+      .references(() => users.id),
+    lastWriteId: uuid("last_write_id").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.householdId, t.logId],
+      foreignColumns: [logs.householdId, logs.id],
+      name: "log_entries_log_fk",
+    }),
+    uniqueIndex("log_entries_active_day")
+      .on(t.householdId, t.logId, t.entryOn)
+      .where(sql`${t.deletedAt} IS NULL`),
+    check(
+      "log_entries_date",
+      sql`${t.entryOn} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND ${t.entryOn}::date::text=${t.entryOn}`,
+    ),
+    check("log_entries_note", sql`length(trim(${t.note})) BETWEEN 1 AND 20000`),
+    check("log_entries_version", sql`${t.version}>0`),
+  ],
+);
+export const logsRelations = relations(logs, ({ one, many }) => ({
+  household: one(households, {
+    fields: [logs.householdId],
+    references: [households.id],
+  }),
+  category: one(logCategories, {
+    fields: [logs.householdId, logs.categoryId],
+    references: [logCategories.householdId, logCategories.id],
+  }),
+  entries: many(logEntries),
+}));
+export const logCategoriesRelations = relations(logCategories, ({ one }) => ({
+  household: one(households, {
+    fields: [logCategories.householdId],
+    references: [households.id],
+  }),
+}));
+export const logEntriesRelations = relations(logEntries, ({ one }) => ({
+  log: one(logs, {
+    fields: [logEntries.householdId, logEntries.logId],
+    references: [logs.householdId, logs.id],
+  }),
+  creator: one(users, {
+    fields: [logEntries.createdBy],
+    references: [users.id],
+    relationName: "log_entry_creator",
+  }),
+  editor: one(users, {
+    fields: [logEntries.lastEditedBy],
+    references: [users.id],
+    relationName: "log_entry_editor",
+  }),
+}));

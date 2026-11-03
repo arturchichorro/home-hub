@@ -379,10 +379,11 @@ an instruction to replay migrations or proof of a particular live deployment.
 Open review work remains in [Tasks](./tasks.md#work-in-review).
 
 - [x] Deliver opt-in Habits with shared definitions, personal daily notes/completions, Me-first bounded recent queries and one expanded month. See [Habits](./habits/).
+- [x] Add seven adjacent habit day boxes (#83) and optional private-source-safe workout-linked completion (#84, `0049`), retaining manual completion and frozen archived results.
 - [x] Deliver standalone Workouts, a shared movement catalog, author-private performance/history, catalog deletion/ordering and exercise reference pictures. See [Workouts](./workouts/).
 - [x] Move logging to independent exercise occurrences and per-row autosaved sets, retaining original dates, snapshots, measurements and the old set archive (`0046`, #70).
 - [x] Add placement-specific Warm-up / Workout / Stretching roles with separately frozen historical role maps (`0047`–`0048`, #81).
-- [x] Implement shared `media` assets, typed recipe/exercise attachments, compatible delivery capabilities and soft-detachment retention (`0043`–`0044`). The [foundation plan](./plans/shared-media.md) is complete; video, animation and reuse UI remain deferred.
+- [x] Implement shared `media` assets, typed recipe/exercise attachments, compatible delivery capabilities and soft-detachment retention (`0043`–`0044`). The [foundation plan](./plans/shared-media.md) is complete; that phase deferred video, animation and reuse UI. Moodboards now add video in their own scoped path.
 - [x] Add dedicated empty/create states for Lists and Recipes libraries.
 - [x] Reuse cached signed image URLs and thumbnails, then crossfade to the viewer derivative instead of blanking the image. See [Recipes image storage](./recipes/#image-storage-and-security); this is not a guarantee against every possible image flash.
 - [x] Implement guarded PWA updates (#59): idle activation, per-tab draft/log/upload protection and explicit update/recovery behavior.
@@ -398,6 +399,10 @@ Open review work remains in [Tasks](./tasks.md#work-in-review).
 ## Documents module
 
 - [x] Implement household document rows with direct one-file upload, inline autosave, colored reusable tags, search/filter/sort, safe PDF/image previews and downloads, atomic replacement and privately retained files. See [Documents](./documents/README.md) for limits, retention and migration coordination. Implementation history is not deployment approval.
+
+## Manual Logs module
+
+- [x] Implement opt-in household topics, colored categories and one shared multiline entry per calendar date, with inline creation, conflict-safe autosave, backfill/search/paged history and retained soft deletion. See [Logs](./logs/README.md) for date/conflict rules and migration coordination. Implementation history is not deployment approval.
 
 ## Misc
 

@@ -8,6 +8,8 @@ import {
 } from "./households/routes";
 import type { ListMediaServices } from "./lists/media";
 import { createListMediaRoutes } from "./lists/routes";
+import type { LogEntryServices } from "./logs/entries";
+import { createLogRoutes } from "./logs/routes";
 import {
   installApiObservability,
   type ObservabilityEnv,
@@ -33,6 +35,7 @@ export type CreateAppInput = {
   exerciseMedia: ExerciseMediaServices;
   documents?: DocumentServices;
   listMedia?: ListMediaServices;
+  logs?: LogEntryServices;
   infrastructure: {
     isProduction: boolean;
     jwtSecret: string;
@@ -83,6 +86,11 @@ export function createApp(input: CreateAppInput) {
     app.route(
       "/api/households/:householdId/lists",
       createListMediaRoutes({ jwtSecret, services: input.listMedia }),
+    );
+  if (input.logs)
+    app.route(
+      "/api/households/:householdId/logs",
+      createLogRoutes({ jwtSecret, services: input.logs }),
     );
   app.route(
     "/api/zero",

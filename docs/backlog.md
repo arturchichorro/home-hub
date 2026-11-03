@@ -22,7 +22,7 @@ implemented system, not with unmerged feature branches.
 ## Future modules and capabilities
 
 - [ ] French Vocabulary / flashcards.
-- [ ] General goals and category-based logs outside the implemented Workouts scope.
+- [ ] Goals tracking.
 - [ ] Household finance.
 - [ ] Friend list with timestamped notes.
 - [ ] Places visited, with a map.

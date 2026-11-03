@@ -25,6 +25,7 @@ import { createRevokeHouseholdInviteService } from "./households/revoke-invite";
 import { createSetHouseholdModuleEnabledService } from "./households/set-module-enabled";
 import { createTransferHouseholdOwnershipService } from "./households/transfer-ownership";
 import { createListMediaServices } from "./lists/media";
+import { createLogEntryServices } from "./logs/entries";
 import { inspectR2Object } from "./media/inspect-object";
 import { processMediaImage } from "./media/process-image";
 import { processMediaVideo } from "./media/process-video";
@@ -218,6 +219,7 @@ const app = createApp({
       secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
     }),
   }),
+  logs: createLogEntryServices({ db }),
   infrastructure: {
     zeroDbProvider: infrastructure.dbProvider,
     jwtSecret: infrastructure.config.API_JWT_SECRET,
