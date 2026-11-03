@@ -2,8 +2,10 @@
 
 This is the canonical source for cross-cutting authentication, authorization,
 tenant isolation, transaction-locking requirements, and synchronization
-behavior. Module-specific rules live in the [Recipes](./recipes/) and
-[Shopping](./shopping/) documentation. Runtime structure belongs in
+behavior. Module-specific rules live in [Lists](./lists/), [Recipes](./recipes/),
+[Habits](./habits/) and [Workouts](./workouts/); shared asset rules live in
+[Shared media](./media/). Shopping is a retired historical reference.
+Runtime structure belongs in
 [Architecture](./architecture.md), and shared table structure belongs in
 [Data model](./data-model.md).
 
@@ -204,6 +206,13 @@ or presigned URLs. Expected authentication, authorization, validation, and
 domain failures remain ordinary handled responses rather than unexpected-error
 logs.
 
+Zero mutation transactions sanitize database callback and commit failures before
+SDK serialization. Never send raw SQL, bound values, database causes or driver
+error stacks into Zero responses/logs: they can contain private notes and sets.
+Diagnostics retain only a request/correlation ID and safe SQLSTATE. Intentional
+authorization/reload errors retain their contract. A mutation transport's HTTP 200
+does not establish application success; inspect client/server acknowledgement.
+
 ## Query authorization
 
 Define named Zero queries in shared TypeScript. At the API query endpoint:
@@ -230,15 +239,18 @@ Zero uses a custom PostgreSQL publication named `home_hub_zero` as a coarse
 replication allowlist. It publishes the columns required from `households`,
 `household_members`, `household_module_settings`, `lists`, `list_items`, `recipes`,
 `recipe_ingredients`, `recipe_cook_logs`, `recipe_media`, `exercise_media`, `media`, `habits`, and
-`habit_entries`. It excludes
-`users`, `refresh_tokens`, and `household_invites`, so password hashes, email
-addresses, refresh-token hashes, and invite-token hashes do not enter the Zero
-replica. The shared-media publication also omits object keys. Media access must
+`habit_entries`, plus shared workout definitions/catalog and author-private log,
+occurrence, set and link tables. The pre-cutover `workout_log_sets` archive remains
+published for compatibility, not current writes. `users` publishes **only `id`
+and `username`** for authorized safe member profiles; it does not publish email,
+password hashes or account timestamps. `refresh_tokens` and `household_invites`
+are excluded entirely, so token hashes never enter the Zero replica. The
+shared-media publication also omits object keys. Media access must
 follow an authorized feature attachment, never household membership alone; see
 [Shared media](./media/). Publishing a
 table does not authorize client access; named queries must still apply
-authenticated, household-scoped row authorization. The retired `shopping_items`
-table remains in the publication until cleanup, but has no live named query.
+authenticated, household-scoped row authorization. Migration `0017` removed the
+retired Shopping tables and publication entries.
 
 ## Mutation authorization
 
@@ -269,8 +281,9 @@ commands.
 ### Connected
 
 Allow the optimistic module mutations documented by
-[Shopping](./shopping/#synchronization-and-authorization) and
-[Recipes](./recipes/#synchronization-and-authorization).
+[Lists](./lists/#synchronization-and-authorization),
+[Recipes](./recipes/#synchronization-and-authorization), [Habits](./habits/)
+and [Workouts](./workouts/).
 
 ### Connecting
 
@@ -286,15 +299,19 @@ Zero may queue writes during a short interruption. This is acceptable, but it is
 
 Connection-state changes do not remount the application, so controlled form
 state remains intact. A full page reload still resets unsaved component state;
-only previously synchronized Zero rows persist in the local cache.
+only previously synchronized Zero rows persist in the local cache. Retained dirty
+text and active workout editors guard navigation/unload; PWA updates additionally
+wait for per-tab work guards. Explicit discard or a forced reload is not draft
+persistence.
 
 ## Conflict policy
 
 - Scalar values use the last write accepted by PostgreSQL.
 - Independently created rows survive because they have stable client-generated IDs.
 - Module-specific conflict rules are documented in
-  [Shopping](./shopping/#synchronization-and-authorization) and
-  [Recipes](./recipes/#synchronization-and-authorization).
+  [Lists](./lists/#synchronization-and-authorization),
+  [Recipes](./recipes/#synchronization-and-authorization), [Habits](./habits/)
+  and [Workouts](./workouts/).
 
 ## Habits authorization
 
@@ -309,13 +326,18 @@ Calendar and schema details are in the [Habits module](./habits/).
 Workout definitions and notes are household-shared; training logs, their
 snapshots, and sets are private to the verified actor, including from household
 owners. Queries and writes require a live household, membership, and enabled
-Workouts setting. Sets are returned only through owner-filtered logs. The three
-module tables are published to Zero; publication is not client authorization.
+Workouts setting. Measurements are returned only through author-filtered daily
+groupings or independent exercise occurrences, never another member's performance
+relations. Current occurrence/set/link tables and the read-compatible archive are
+published, but publication is not client authorization.
 See [Workouts](./workouts/).
 
 ## Module storage security
 
-The Recipes module owns the complete presigned original-upload, signed
-derivative-read, deletion, cache-partitioning, file-type, variant, and size
-rules. Original objects remain private and have no user-facing read path. See
-[Recipes image storage and security](./recipes/#image-storage-and-security).
+[Shared media](./media/) owns stored assets, fixed processing/delivery capabilities,
+file validation, cache partitioning and retention. Recipes and exercise-gallery
+routes authorize their own attachments and active parents; membership or a raw
+asset ID is not sufficient. Removing an attachment retains the asset and bytes;
+physical cleanup remains deferred. Originals have no user-facing read path. See
+also [Recipes image storage and security](./recipes/#image-storage-and-security)
+and [Exercise-media authorization](./workouts/#exercise-media-authorization).

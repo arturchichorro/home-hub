@@ -27,6 +27,10 @@ export const mediaReadCapabilitySchema = identitySchema
   .extend({
     expiresAt: z.number().int().positive(),
     variant: z.enum(mediaImageVariants),
+    videoVersion: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/u)
+      .optional(),
   })
   .strict();
 export const mediaProcessingCapabilitySchema = identitySchema
@@ -77,8 +81,9 @@ export function mediaStorageIdentity({
 export function mediaDerivativeObjectKey(
   identity: Pick<MediaIdentity, "householdId" | "mediaId" | "storageRecipeId">,
   variant: "thumbnail" | "viewer",
+  videoVersion?: string,
 ): string {
-  return `${mediaOriginalObjectKey(identity)}/derivatives/${variant}.webp`;
+  return `${mediaOriginalObjectKey(identity)}${videoVersion ? `/video/${videoVersion}` : ""}/derivatives/${variant}.webp`;
 }
 
 function payload(
@@ -96,8 +101,13 @@ function payload(
     capability.expiresAt,
   ];
   return JSON.stringify([
-    `home-hub-media-${purpose}-v2`,
+    "videoVersion" in capability && capability.videoVersion
+      ? `home-hub-media-${purpose}-v3`
+      : `home-hub-media-${purpose}-v2`,
     ...identity,
+    ...("videoVersion" in capability && capability.videoVersion
+      ? [capability.videoVersion]
+      : []),
     ...("variant" in capability
       ? [capability.variant]
       : [capability.contentType, capability.byteSize]),

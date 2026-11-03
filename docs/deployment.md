@@ -8,11 +8,10 @@ and remaining work in [Tasks](./tasks.md).
 
 ## Deployment sequence
 
-Production is introduced in two deliberate stages:
-
-1. deploy and operate the application on an online VPS;
-2. validate a Raspberry Pi as a production host, then migrate with a tested
-   rollback path.
+The VPS deployment is implemented. Migrating to a Raspberry Pi remains open
+work in [Tasks](./tasks.md#deploy-to-and-migrate-onto-the-raspberry-pi), gated on
+hardware, ingress, restore and rollback validation. Do not mark that migration
+complete merely because the Docker topology is portable.
 
 The first production deployment is an OVHcloud VPS-1 in Gravelines, France,
 running Ubuntu Server 26.04 LTS on AMD64. Shared public ingress and HTTPS are
@@ -25,7 +24,9 @@ home-hub Docker Compose project contains:
 - one self-hosted `zero-cache`;
 - PostgreSQL.
 
-Cloudflare R2 remains external and stores recipe image bytes.
+Cloudflare R2 remains external and stores shared media originals and derivatives
+for recipe and exercise attachments. Node 26 and PostgreSQL 17 are the supported
+runtime/database lines; official Zero SDK/cache versions remain matched.
 
 The VPS includes OVHcloud's standard daily backup retained for 24 hours. The
 optional manual snapshot service is useful before risky maintenance, but
@@ -63,6 +64,8 @@ module-specific R2 CORS policy is documented in
 [Recipes image storage and security](./recipes/#image-storage-and-security).
 The private backup bucket does not use this browser CORS policy.
 
+### PWA caching and update safety
+
 Caddy serves hashed files under `/assets/` with a one-year immutable cache
 policy. It serves `index.html`, the service worker, the web manifest, icons,
 and SPA navigation fallbacks with revalidation so a deployment can install a
@@ -83,7 +86,8 @@ coordinated deployment procedure; a client reload cannot repair a server replica
 
 ## Shared ingress migration and operations
 
-The initial networking handover must follow `vps-infra/docs/MIGRATION.md`:
+For an installation still using the old direct public web service, the one-time
+networking handover must follow `vps-infra/docs/MIGRATION.md`:
 prepare `vps-edge`, preserve the existing Caddy volumes and old web image,
 validate shared ingress, then coordinate replacing the old public web service
 with this internal-only backend. Expect a brief maintenance interruption; do
@@ -95,21 +99,22 @@ code stay in the bolota repository. Neither is built or deployed by home-hub.
 
 Routine home-hub deployments retain the external edge network alias. Production
 CI still deploys only `main`: merging configuration into `develop` does not
-release it. If Guest development is unfinished, promote only these reviewed
-networking changes to `main` rather than deploying the whole development branch.
-The first promotion must be coordinated with the vps-infra handoff watcher;
-subsequent application releases need no shared-ingress rebuild.
+release it. The initial shared-ingress promotion requires the vps-infra handoff;
+ordinary releases on the current topology need no shared-ingress rebuild. Do not
+bundle unreviewed feature branches into an infrastructure release.
 
 ## Shared-media contract migration
 
 The `0042` catalog key change and `0043` shared-media contract require coordinated
 API/Zero maintenance and a backed-up disposable replica rebuild. Routine deployment
 does not perform that one-time cutover. Follow [Shared media rollout](./media/#migration-and-rollout)
-before releasing these migrations; deploy the backward-compatible Worker first.
+when upgrading an installation that has not applied these migrations; deploy the
+backward-compatible Worker first. Already-upgraded installations must not repeat
+the contract cutover or rebuild replicas for routine deployments.
 
 ## Exercise-log autosave cutover (0046)
 
-Before promoting this release to `main`, bring every device/profile online,
+For an installation upgrading from pre-`0046` logging, bring every device/profile online,
 submit any old explicit-save workout forms, wait for all mutations to be
 acknowledged, and pause edits. Automatic PWA updates do not perform this check.
 
@@ -261,6 +266,10 @@ the database.
 
 ### Manual release and rollback
 
+Prefer the locked `scripts/deploy-production.sh` entrypoint, which executes the
+freshly pulled release procedure and enforces migration/cutover guards. The outline
+below is not permission to bypass those guards.
+
 Before a manual release, record the currently deployed Git revision and create
 an off-host PostgreSQL backup. Pull with `git pull --ff-only`, build the release
 images, apply the already reviewed and tested forward migrations through the
@@ -282,8 +291,9 @@ application rollback.
 
 ### Zero 1.8 → 1.11 cutover
 
-This release requires an operator-coordinated client cutover. Before promoting
-it to `main`, open **every device/browser profile** on the old app while online
+For an installation still on the older Zero client, this version transition
+requires an operator-coordinated cutover. Open **every device/browser profile**
+on the old app while online
 and wait for all saves to be acknowledged. Do not proceed while any device has
 unsent/offline mutations: Zero 1.11 starts a new local database for clients older
 than 1.10 and does not preserve their unsent mutations. An inactive device must

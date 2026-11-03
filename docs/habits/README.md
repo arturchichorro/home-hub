@@ -11,11 +11,14 @@ shows another current member's activity read-only. Definitions and ordering rema
 shared. No targets, schedules, amounts, streaks or scores are introduced: each
 person decides when a daily completion makes sense.
 
-- Each compact row contains a seamless name, today's neutral filled/unfilled
-  toggle, a daily-note action, history disclosure and six previous dates.
-  Completions never move rows. Narrow screens use a second line for recent dates
-  rather than shrinking touch targets or forcing horizontal page scrolling.
-- Today's completion is one tap. Its optional note opens inline and autosaves.
+- Each compact row contains a seamless name, a daily-note action and history
+  disclosure, followed by seven adjacent day boxes: six previous dates and
+  **Today** on the far right. Completed days show an X; unrecorded days stay blank.
+  Today's box is the completion toggle, not a separate checkbox in the header.
+  The strip fits narrow screens without horizontal page scrolling. Completions
+  never move rows.
+- Today's manual completion is one tap; workout-derived completion opens inspection
+  instead of allowing undo. Its optional note opens inline and autosaves.
   Note-bearing dates have a subtle marker, including note-only dates.
 - History starts collapsed. Expand one habit at a time to mount one monthly
   calendar, with previous/next/current-month navigation. No future months.
@@ -48,18 +51,37 @@ member-overflow marks. Date formatters are reused.
 
 The new named queries are `habits.recentForPerson` and
 `habits.historyForPerson`. The old `habits.byHousehold` contract remains available
-for already-open clients. This redesign requires no database migration.
+for already-open clients. The display-only redesign requires no database migration.
+
+## Optional workout links
+
+The chain action configures **Manual only**, **Any workout**, or **Selected workouts**
+(any selected definition qualifies). Linking is shared; each person's own logs count
+on their stored local `completed_on` date, only after at least one saved set. Empty
+and note-only logs do not count. Existing history is included; changing or removing
+links recalculates automatic history for active habits. Archived history stays frozen.
+
+Completion is manual **OR** automatic. Removing the last qualifying set clears only
+its automatic contribution, retaining independent manual checks, notes and entry
+identity/creation timestamps. A matching workout cannot be manually unchecked. Only
+completion is shared as habit activity: raw workout logs, sets and notes stay
+author-private. The chooser subscribes only while open, requires both enabled modules,
+and retains selections after rejected saves.
 
 ## Data and authorization
 
-Two tables, both household-scoped:
+Three tables, all household-scoped:
 
 - `habits`: UUID `id`, `household_id`, `name`, nullable `note`, `sort_key`,
-  `status` (`active | archived`), and creation/update timestamps.
+  `status` (`active | archived`), `workout_mode` (`none | any | selected`),
+  and creation/update timestamps.
 - `habit_entries`: `household_id`, `habit_id`, `user_id`, `entry_on`, `completed`
-  (default false), nullable `note`, and timestamps. Primary key
+  (manual, default false), `workout_completed` (server-derived, default false),
+  nullable `note`, and timestamps. Primary key
   `(habit_id, user_id, entry_on)` gives one daily entry without a redundant ID.
   Empty/incomplete entries may remain after clearing; they produce no marks or details.
+- `habit_workout_links`: primary key `(habit_id, workout_id)`, with composite
+  household/habit and household/workout foreign keys; indexed by household/workout.
 
 Entry dates use canonical `YYYY-MM-DD` text, constrained as real dates in
 PostgreSQL and validated by shared Zod contracts, to preserve string semantics
@@ -75,7 +97,11 @@ at most 31 dates and constrain the root to one habit. Active/archive status is
 explicit. Profile names come from the existing safe member query.
 
 Custom mutators are `habits.create`, `rename`, `updateNote`, `archive`, `reorder`,
-`setCompleted` and `updateEntryNote`.
+`setCompleted`, `updateEntryNote` and `linkWorkouts`.
+Workout set writes/removals and link changes refresh the derived flag in the same
+server transaction. A household-scoped transaction advisory lock serializes these
+writers with archiving, preventing link/set races; manual fields use partial upserts
+and never accept client-supplied derived flags.
 Reordering uses the existing sparse integer sort keys and full-scope rebalance
 helper, scoped to active habits in the household. Foreign and archived order IDs
 are rejected. Stale orders may omit concurrently created habits without deleting them.
@@ -90,6 +116,14 @@ validated device timezone supplied by the client. This is a trusted household
 calendar, not a tamper-proof activity record.
 
 ## Migration and rollout
+
+`0049` adds optional workout linking, defaulting existing habits to manual-only and
+all derived flags to false. It extends the existing **explicit** Zero publication
+column lists and publishes the new composite-primary-key junction. Apply migration
+and updated API/Zero before serving the new web client. No archive rewrite, replica
+reset, SDK patch or dependency change is required. Supported application mutations
+maintain derived flags; direct out-of-band SQL imports must explicitly recalculate
+or re-save the link settings.
 
 Migration `0029` creates both tables, backfills disabled Habits settings for
 existing households, and adds explicit column lists to `home_hub_zero`.
@@ -138,6 +172,6 @@ if required. Rollback requires the backup. Fresh and populated upgrades are veri
 in disposable PostgreSQL only; the normal local database is not migrated.
 
 Deferred: goals, streaks, schedules, reminders, quantities and participation history.
-Consecutive-day streaks can later be derived from `completed = true` entries, with
+Consecutive-day streaks could later use manual-or-automatic completed entries, with
 history beyond the displayed month; note-only entries do not count. No streak UI
 or persisted counters are part of the notes change.

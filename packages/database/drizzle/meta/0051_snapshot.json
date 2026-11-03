@@ -1,6 +1,6 @@
 {
-  "id": "1af190b1-2da9-4e1f-b7e9-d7fd7f2cbbc4",
-  "prevId": "695039b1-9e5b-4b61-9d26-21564475337f",
+  "id": "62353ef9-6fc4-4756-8a91-32e48db068d5",
+  "prevId": "40c0f4d5-4a07-4e8c-b1fa-080b75cc3e2d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1098,6 +1098,13 @@
           "notNull": true,
           "default": false
         },
+        "workout_completed": {
+          "name": "workout_completed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "note": {
           "name": "note",
           "type": "text",
@@ -1196,6 +1203,104 @@
       },
       "isRLSEnabled": false
     },
+    "public.habit_workout_links": {
+      "name": "habit_workout_links",
+      "schema": "",
+      "columns": {
+        "household_id": {
+          "name": "household_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "habit_id": {
+          "name": "habit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workout_id": {
+          "name": "workout_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "habit_workout_links_workout": {
+          "name": "habit_workout_links_workout",
+          "columns": [
+            {
+              "expression": "household_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "workout_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "habit_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "habit_workout_links_habit_fk": {
+          "name": "habit_workout_links_habit_fk",
+          "tableFrom": "habit_workout_links",
+          "tableTo": "habits",
+          "columnsFrom": [
+            "household_id",
+            "habit_id"
+          ],
+          "columnsTo": [
+            "household_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "habit_workout_links_workout_fk": {
+          "name": "habit_workout_links_workout_fk",
+          "tableFrom": "habit_workout_links",
+          "tableTo": "workouts",
+          "columnsFrom": [
+            "household_id",
+            "workout_id"
+          ],
+          "columnsTo": [
+            "household_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "habit_workout_links_habit_id_workout_id_pk": {
+          "name": "habit_workout_links_habit_id_workout_id_pk",
+          "columns": [
+            "habit_id",
+            "workout_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.habits": {
       "name": "habits",
       "schema": "",
@@ -1217,6 +1322,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "workout_mode": {
+          "name": "workout_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
         },
         "note": {
           "name": "note",
@@ -1339,6 +1451,10 @@
         "habits_note_length": {
           "name": "habits_note_length",
           "value": "\"habits\".\"note\" IS NULL OR length(\"habits\".\"note\") <= 500"
+        },
+        "habits_workout_mode": {
+          "name": "habits_workout_mode",
+          "value": "\"habits\".\"workout_mode\" IN ('none', 'any', 'selected')"
         },
         "habits_status_allowed": {
           "name": "habits_status_allowed",
@@ -1903,6 +2019,135 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.list_media": {
+      "name": "list_media",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "household_id": {
+          "name": "household_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "list_id": {
+          "name": "list_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "media_id": {
+          "name": "media_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_key": {
+          "name": "sort_key",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "list_media_order": {
+          "name": "list_media_order",
+          "columns": [
+            {
+              "expression": "household_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "list_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sort_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"list_media\".\"deleted_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "list_media_list_fk": {
+          "name": "list_media_list_fk",
+          "tableFrom": "list_media",
+          "tableTo": "lists",
+          "columnsFrom": [
+            "household_id",
+            "list_id"
+          ],
+          "columnsTo": [
+            "household_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "list_media_asset_fk": {
+          "name": "list_media_asset_fk",
+          "tableFrom": "list_media",
+          "tableTo": "media",
+          "columnsFrom": [
+            "household_id",
+            "media_id"
+          ],
+          "columnsTo": [
+            "household_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.lists": {
       "name": "lists",
       "schema": "",
@@ -1930,6 +2175,20 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'checklist'"
+        },
+        "media_count": {
+          "name": "media_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "sort_key": {
           "name": "sort_key",
@@ -2037,7 +2296,16 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "lists_kind": {
+          "name": "lists_kind",
+          "value": "\"lists\".\"kind\" IN ('checklist', 'moodboard')"
+        },
+        "lists_media_count": {
+          "name": "lists_media_count",
+          "value": "\"lists\".\"media_count\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.media": {
@@ -2095,6 +2363,12 @@
         "duration_ms": {
           "name": "duration_ms",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "video_version": {
+          "name": "video_version",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -2171,13 +2445,21 @@
           "name": "media_kind",
           "value": "\"media\".\"kind\" IN ('image', 'video')"
         },
+        "media_confirmed_video": {
+          "name": "media_confirmed_video",
+          "value": "\"media\".\"kind\" != 'video' OR \"media\".\"confirmed_at\" IS NULL OR (\"media\".\"video_version\" IS NOT NULL AND \"media\".\"duration_ms\" IS NOT NULL AND \"media\".\"duration_ms\" BETWEEN 1 AND 600000 AND \"media\".\"width\" <= 4096 AND \"media\".\"height\" <= 4096)"
+        },
+        "media_video_version": {
+          "name": "media_video_version",
+          "value": "\"media\".\"video_version\" IS NULL OR (\"media\".\"kind\" = 'video' AND \"media\".\"video_version\" ~ '^[a-f0-9]{64}$')"
+        },
         "media_supported_content_type": {
           "name": "media_supported_content_type",
-          "value": "\"media\".\"kind\" = 'image' AND \"media\".\"content_type\" IN ('image/jpeg', 'image/png', 'image/webp')"
+          "value": "(\"media\".\"kind\" = 'image' AND \"media\".\"content_type\" IN ('image/jpeg', 'image/png', 'image/webp')) OR (\"media\".\"kind\" = 'video' AND \"media\".\"content_type\" IN ('video/mp4', 'video/webm'))"
         },
         "media_byte_size_range": {
           "name": "media_byte_size_range",
-          "value": "\"media\".\"byte_size\" > 0 AND \"media\".\"byte_size\" <= 10485760"
+          "value": "\"media\".\"byte_size\" > 0 AND ((\"media\".\"kind\" = 'image' AND \"media\".\"byte_size\" <= 10485760) OR (\"media\".\"kind\" = 'video' AND \"media\".\"byte_size\" <= 104857600))"
         },
         "media_dimensions_range": {
           "name": "media_dimensions_range",

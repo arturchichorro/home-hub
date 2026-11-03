@@ -6,6 +6,8 @@ import {
   type CreateHouseholdRoutesInput,
   createHouseholdRoutes,
 } from "./households/routes";
+import type { ListMediaServices } from "./lists/media";
+import { createListMediaRoutes } from "./lists/routes";
 import {
   installApiObservability,
   type ObservabilityEnv,
@@ -30,6 +32,7 @@ export type CreateAppInput = {
   recipeImages: RecipeImageServices;
   exerciseMedia: ExerciseMediaServices;
   documents?: DocumentServices;
+  listMedia?: ListMediaServices;
   infrastructure: {
     isProduction: boolean;
     jwtSecret: string;
@@ -75,6 +78,11 @@ export function createApp(input: CreateAppInput) {
     app.route(
       "/api/households/:householdId/documents",
       createDocumentRoutes({ jwtSecret, services: input.documents }),
+    );
+  if (input.listMedia)
+    app.route(
+      "/api/households/:householdId/lists",
+      createListMediaRoutes({ jwtSecret, services: input.listMedia }),
     );
   app.route(
     "/api/zero",

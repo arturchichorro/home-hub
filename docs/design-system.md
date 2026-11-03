@@ -235,11 +235,12 @@ spacing, and semantic-color utilities over long strings of decorative or
 breakpoint-specific overrides. Move genuinely repeated interaction styling
 into a shared primitive instead of repeating it across feature components.
 
-The first web vocabulary is intentionally limited to Button, IconButton,
-Input, Textarea, Field, Select, Switch, Menu, Dialog, Collapsible, Panel,
-InlineAlert, ErrorPopover, StatusIndicator, and divided-list presentation. Add Tooltip, Toast, Combobox,
-or dedicated Sheet only when a working screen requires them. Route-navigation
-links, application shell composition, shopping rows, recipe content, and
+The current web vocabulary includes Button, IconButton, Input, Textarea, Field,
+Select, Switch, Menu, Dialog, Drawer, Collapsible, Panel, InlineAlert,
+ErrorPopover, ConfirmationPopover, StatusIndicator, Tooltip, Combobox and
+divided-list presentation. Tooltip and Combobox already have concrete consumers;
+a Toast or separate Sheet still needs a demonstrated feature requirement. Route-navigation
+links, application shell composition, list-item rows, recipe content, and
 household-management rows remain feature or application components.
 
 ### Future native: Expo UI
@@ -294,7 +295,7 @@ accessible name that describes the action, not the icon shape. Variants are
 `ghost` and `danger`; one comfortable square size is enough initially.
 
 Support the same interaction states as Button. Use it for recognizable,
-repeated row actions such as crossing or archiving a shopping item. Use a
+repeated row actions such as crossing or archiving a list item. Use a
 labeled Button when the meaning would be ambiguous; a tooltip is not a
 substitute for the accessible name.
 
@@ -316,7 +317,10 @@ accessible name, either through Field or an explicit label.
 Feature-level seamless editors keep their exact focused draft separate from the
 canonical persisted value. Debounced persistence must not rewrite text under the
 caret; normalization becomes visible only on blur, explicit submission, or
-reversion.
+reversion. Failed persistence retains the typed draft with explicit Retry/Discard,
+and dirty text guards navigation/unload and PWA updates. Required empty-name
+validation and Escape still restore confirmed values. These are feature editing
+policies, not behavior owned by the primitive; see [Maintenance](./maintenance.md).
 
 ### Textarea
 
@@ -437,7 +441,7 @@ remains available to assistive technology and live announcements.
 
 The initial divided-list presentation standardizes separators, row spacing,
 and responsive action placement but does not prescribe domain row props.
-ShoppingItemRow, MemberRow, InvitationRow, IngredientRow, and CookLogRow remain
+ListItemRow, MemberRow, InvitationRow, IngredientRow, and CookLogRow remain
 feature components composed from buttons, icons, status text, and list
 presentation.
 
@@ -494,7 +498,7 @@ Forms stack labels, controls, messages, and primary actions by default. From
 `sm`, short related controls and secondary actions may share a row. Controls
 remain full width when narrowing them would harm scanning or touch use.
 
-List rows use a flexible content column and a fixed action area. Shopping item
+List rows use a flexible content column and a fixed action area. List item
 names may wrap while their cross/archive actions remain reachable. Household
 member and invitation rows may move actions below their content on narrow
 screens instead of shrinking labels or forcing page-level horizontal scroll.
@@ -548,15 +552,23 @@ offline/error/auth-required/closed use a danger color. On narrow screens only
 the colored dot is visible, while the full text remains available to assistive
 technology and status announcements.
 
-### Shopping
+### Lists
 
-See the [Shopping module interface](./shopping/#interface) for its add, current,
-crossed, archive, editing, and synchronization-state behavior.
+See the [Lists module interface](./lists/#interface) for the compact card library,
+list detail, current/crossed/archive items, editing and ordering. Shopping is retired.
 
 ### Recipes
 
 See the [Recipes module interface](./recipes/#interface) for its library,
 detail, gallery, ingredient, cooking-history, editing, and viewer behavior.
+
+### Habits and Workouts
+
+[Habits](./habits/#interface) is a Me-first compact list with bounded recent days
+and one expanded calendar. [Workouts](./workouts/) combines shared definitions,
+placement-role selectors and reference media with author-private autosaved sets
+and paged history. Their controllers stay feature-owned; the shared UI package
+does not own completion, snapshot, logging or privacy policy.
 
 ### Household settings
 
@@ -579,7 +591,7 @@ The current screens justify these reusable primitives or behaviors:
 - divided list and action row;
 - empty, loading, unavailable, and disconnected states.
 
-Application-shell composition, recipe cards, recipe image viewers, shopping rows, member rows,
+Application-shell composition, recipe cards, recipe image viewers, list-item rows, member rows,
 invitation rows, image galleries, and cooking-history entries remain in their
 feature folders. The UI package supplies primitives; it does not own domain
 language, authorization rules, queries, or mutations.
@@ -598,6 +610,6 @@ authoritative server rejection without removing the user's unsaved form input.
 ## Deferred refinements
 
 The initial design intentionally leaves room for later refinement of visual
-detail, recipe management actions, responsive menu behavior, and additional
+detail, responsive menu behavior, and additional
 account actions. Add them when a working screen reveals a real need rather than
 pre-designing every future variation.

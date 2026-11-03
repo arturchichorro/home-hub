@@ -21,6 +21,7 @@ export {
   ImagePlus,
   Images,
   LayoutGrid,
+  Link2,
   ListTodo,
   LogOut,
   MessageSquare,

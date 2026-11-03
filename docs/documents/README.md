@@ -83,11 +83,11 @@ to Documents; existing Recipes/exercise image-original restrictions are unchange
   active normalized-name uniqueness and preset colors.
 - Explicit publication exposes file metadata, **not object keys/preconditions**.
 
-`0051_documents.sql` reserves ordering after open habit-link #84 (`0049`) and
-moodboard #87 (`0050`), but this branch starts independently from `develop`.
-Reconcile journal timestamps/indices and snapshot lineage before merging/releasing
-these parallel migrations. Never append an older unapplied migration after a
-higher timestamp has been deployed; never rewrite applied migration SQL.
+`0051_documents.sql` follows habit links (`0049`) and Moodboards (`0050`).
+The journal uses sequential indices and increasing original timestamps, and the
+cumulative snapshot includes all three features. Migration SQL is unchanged.
+Never append an older unapplied migration after a higher timestamp has been
+deployed; never rewrite applied migration SQL.
 
 Deploy the backward-compatible Worker first, migrate and make API/cache healthy,
 then web. No new storage credentials, dependencies, SDK patches or replica resets

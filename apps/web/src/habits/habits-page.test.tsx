@@ -55,7 +55,7 @@ afterEach(() => vi.useRealTimers());
 const render = () =>
   renderToStaticMarkup(<HabitsPage householdId={householdId} />);
 describe("today-first habits", () => {
-  it("renders one compact list with six past days, a separate today action and no mounted calendars", () => {
+  it("renders seven adjacent boxes with today last and no separate header toggle or mounted calendars", () => {
     setup();
     const html = render();
     expect(html).toContain('aria-label="Read, 2026-10-15. Mark done"');
@@ -65,11 +65,39 @@ describe("today-first habits", () => {
     expect(
       html.match(/aria-label="Read, 2026-10-(09|10|11|12|13|14)\./g),
     ).toHaveLength(6);
+    expect(
+      html.match(/aria-label="Read, 2026-10-(09|10|11|12|13|14|15)\./g),
+    ).toHaveLength(7);
+    expect(html.indexOf('aria-label="Read, 2026-10-14.')).toBeLessThan(
+      html.indexOf('aria-label="Read, 2026-10-15.'),
+    );
+    expect(
+      html.match(/aria-label="Read, 2026-10-15. Mark done"/g),
+    ).toHaveLength(1);
+    expect(html).toContain('aria-current="date"');
+    expect(html).toContain("grid-cols-7 gap-0");
     expect(html).not.toContain("<table");
     expect(html).not.toContain("Previous month");
     expect(html).not.toContain("Today's habits");
     expect(html).toContain('aria-label="Habit name"');
     expect(useQuery).toHaveBeenCalledTimes(2);
+  });
+  it("keeps the seven boxes chronological across a month boundary, with today last", () => {
+    vi.setSystemTime(new Date("2026-11-03T12:00:00Z"));
+    setup();
+    const html = render();
+    const dates = [...html.matchAll(/aria-label="Read, ([0-9-]+)\./g)].map(
+      (match) => match[1],
+    );
+    expect(dates).toEqual([
+      "2026-10-28",
+      "2026-10-29",
+      "2026-10-30",
+      "2026-10-31",
+      "2026-11-01",
+      "2026-11-02",
+      "2026-11-03",
+    ]);
   });
   it("defaults to me, lists the roster, and does not mix another person's completion or note into the row", () => {
     setup();
