@@ -130,6 +130,11 @@ describe("create household service", () => {
           moduleKey: "workouts",
           enabled: false,
         },
+        {
+          householdId: result.household.id,
+          moduleKey: "documents",
+          enabled: false,
+        },
       ],
     });
     expect(result.household).toEqual({

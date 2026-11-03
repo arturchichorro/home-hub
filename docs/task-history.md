@@ -372,6 +372,10 @@ the backlog.
 - [x] Apply cleanup migration `0017` locally and deploy it to production
 - [x] Complete the Lists concept checkpoint and commit
 
+## Documents module
+
+- [x] Implement household document rows with direct one-file upload, inline autosave, colored reusable tags, search/filter/sort, safe PDF/image previews and downloads, atomic replacement and privately retained files. See [Documents](./documents/README.md) for limits, retention and migration coordination. Implementation history is not deployment approval.
+
 ## Misc
 
 - [x] Preserve raw seamless-input drafts during debounced saves and normalize them only at editing boundaries

@@ -22,6 +22,7 @@ import {
   verifyRecipeImageDeliveryCapability,
   verifyRecipeImageProcessingCapability,
 } from "@home-hub/shared/recipe-image-delivery";
+import { handleDocumentRequest } from "./documents";
 import {
   InvalidStillImageError,
   readImageBytes,
@@ -47,7 +48,11 @@ type R2ObjectBody = {
 };
 
 type R2BucketBinding = {
-  get(key: string): Promise<R2ObjectBody | null>;
+  head?(key: string): Promise<{ size: number; httpEtag?: string } | null>;
+  get(
+    key: string,
+    options?: { range: { offset: number; length: number } },
+  ): Promise<R2ObjectBody | null>;
   put(
     key: string,
     value: ArrayBuffer | ReadableStream,
@@ -530,6 +535,7 @@ export default {
     context: ExecutionContextLike,
   ) {
     const path = new URL(request.url).pathname;
+    if (path === "/documents/files") return handleDocumentRequest(request, env);
     if (path === "/internal/media/images/process")
       return handleMediaImageProcessingRequest({ env, request });
     if (path === "/internal/recipe-images/process") {

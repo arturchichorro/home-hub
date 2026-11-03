@@ -27,6 +27,9 @@ Connected changes should appear immediately and converge across clients. Previou
 - [Habits](./habits/) owns shared habits, personal completion tracking, calendar views,
   data and authorization.
 
+- [Documents](./documents/) owns opt-in household file rows, reusable colored tags,
+  private upload/download, replacement and retention.
+
 ## Planned feature specifications
 
 - [Guest access](./guest-access/) specifies accountless, household-scoped

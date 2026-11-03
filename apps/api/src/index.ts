@@ -9,6 +9,8 @@ import { createMeService } from "./auth/me";
 import { createRefreshService } from "./auth/refresh";
 import { createSignupService } from "./auth/signup";
 import { config } from "./config";
+import { createDocumentServices } from "./documents/service";
+import { createDocumentStorage } from "./documents/storage";
 import { createAcceptHouseholdInviteService } from "./households/accept-invite";
 import { createHouseholdService } from "./households/create";
 import { createHouseholdInviteService } from "./households/create-invite";
@@ -176,6 +178,15 @@ const app = createApp({
   households,
   recipeImages,
   exerciseMedia,
+  documents: createDocumentServices({
+    db,
+    storage: createDocumentStorage({
+      client: r2Client,
+      bucket: config.R2_BUCKET,
+      baseUrl: config.IMAGE_DELIVERY_BASE_URL,
+      secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
+    }),
+  }),
   infrastructure: {
     zeroDbProvider: infrastructure.dbProvider,
     jwtSecret: infrastructure.config.API_JWT_SECRET,

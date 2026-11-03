@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Drawer,
   Dumbbell,
+  FileText,
   House,
   HousePlus,
   IconButton,
@@ -62,7 +63,7 @@ type HouseholdNavigationGroupProps = {
 };
 
 type ModuleDefinition = {
-  key: "recipes" | "settings" | "lists" | "habits" | "workouts";
+  key: "recipes" | "settings" | "lists" | "habits" | "workouts" | "documents";
   label: string;
   Icon: typeof BookOpen;
   to:
@@ -70,7 +71,8 @@ type ModuleDefinition = {
     | "/households/$householdId/settings"
     | "/households/$householdId/lists"
     | "/households/$householdId/habits"
-    | "/households/$householdId/workouts";
+    | "/households/$householdId/workouts"
+    | "/households/$householdId/documents";
 };
 
 const moduleDefinitions: readonly ModuleDefinition[] = [
@@ -97,6 +99,12 @@ const moduleDefinitions: readonly ModuleDefinition[] = [
     label: "Workouts",
     Icon: Dumbbell,
     to: "/households/$householdId/workouts",
+  },
+  {
+    key: "documents",
+    label: "Documents",
+    Icon: FileText,
+    to: "/households/$householdId/documents",
   },
   {
     key: "settings",

@@ -16,6 +16,7 @@ import {
   updateRecipeMutationSchema,
 } from "../recipes";
 import type { ZeroAuthContext } from "./context";
+import { documentMutators } from "./document-mutators";
 import { habitMutatorDefinitions } from "./habit-mutators";
 import { listMutatorDefinitions } from "./list-mutators";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
@@ -473,6 +474,7 @@ export const mutators = defineHomeHubMutators({
   householdMemberships: {
     reorder: reorderHouseholds,
   },
+  documents: documentMutators,
   lists: listMutatorDefinitions,
   habits: habitMutatorDefinitions,
   workouts: workoutMutatorDefinitions,

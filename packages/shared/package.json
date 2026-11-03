@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./still-image-validation": "./src/still-image-validation.ts",
+    "./documents": "./src/documents.ts",
+    "./document-delivery": "./src/document-delivery.ts",
     "./auth": "./src/auth.ts",
     "./habits": "./src/habits.ts",
     "./workouts": "./src/workouts.ts",
