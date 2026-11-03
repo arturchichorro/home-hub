@@ -14,7 +14,7 @@ export async function signMediaRead({
   variant,
 }: {
   baseUrl: string;
-  identity: MediaIdentity;
+  identity: MediaIdentity & { videoVersion?: string };
   now?: Date;
   secret: string;
   variant: MediaReadCapability["variant"];

@@ -1,4 +1,5 @@
 import { defineMutatorWithType, type Transaction } from "@rocicorp/zero";
+import { reorderListMediaSchema } from "../list-media";
 import {
   addListItemMutationSchema,
   createListMutationSchema,
@@ -56,13 +57,51 @@ async function requireItem(
   ctx: ZeroAuthContext,
   scope: Scope & { itemId: string },
 ) {
-  await requireList(tx, ctx, scope);
+  const parent = await requireList(tx, ctx, scope);
+  if (parent.kind === "moodboard")
+    throw new Error("Checklist mutation not allowed");
   const item = await tx.run(scopedItems(scope).where("id", scope.itemId).one());
   if (!item) throw new Error("List item mutation not allowed");
   return item;
 }
 
 export const listMutatorDefinitions = {
+  reorderMedia: defineMutator(
+    reorderListMediaSchema,
+    async ({ tx, ctx, args }) => {
+      const parent = await requireList(tx, ctx, args);
+      if (parent.kind !== "moodboard")
+        throw Error("Moodboard mutation not allowed");
+      const now = timestamp(tx, args.optimisticTimestamp);
+      await tx.mutate.lists.update({ id: args.listId, updatedAt: now });
+      if ((await requireList(tx, ctx, args)).kind !== "moodboard")
+        throw Error("Moodboard mutation not allowed");
+      const rows = await tx.run(
+        zql.listMedia
+          .where("householdId", args.householdId)
+          .where("listId", args.listId)
+          .where("deletedAt", "IS", null)
+          .related("asset"),
+      );
+      const visible = new Set(
+        rows
+          .filter(
+            (r) => r.asset?.confirmedAt != null && r.asset.deletedAt == null,
+          )
+          .map((r) => r.id),
+      );
+      const ids = [
+        ...(args.previousId ? [args.previousId] : []),
+        args.attachmentId,
+        ...(args.nextId ? [args.nextId] : []),
+      ];
+      if (ids.some((id) => !visible.has(id)))
+        throw Error("Moodboard reorder not allowed");
+      for (const update of planReorder(rows, ids, args.attachmentId))
+        await tx.mutate.listMedia.update({ ...update, updatedAt: now });
+    },
+  ),
+
   create: defineMutator(createListMutationSchema, async ({ tx, ctx, args }) => {
     await requireAccess(tx, ctx, args.householdId);
     const normalizedName = normalizeListName(args.name);
@@ -84,6 +123,8 @@ export const listMutatorDefinitions = {
       householdId: args.householdId,
       name: args.name,
       normalizedName,
+      kind: args.kind ?? "checklist",
+      mediaCount: 0,
       sortKey: nextSortKey(top?.sortKey),
       deletedAt: null,
       createdAt: now,
@@ -128,7 +169,9 @@ export const listMutatorDefinitions = {
   addItem: defineMutator(
     addListItemMutationSchema,
     async ({ tx, ctx, args }) => {
-      await requireList(tx, ctx, args);
+      const parent = await requireList(tx, ctx, args);
+      if (parent.kind === "moodboard")
+        throw new Error("Checklist mutation not allowed");
       const normalizedName = normalizeListItemName(args.name);
       const existing = await tx.run(
         scopedItems(args).where("normalizedName", normalizedName).one(),
@@ -199,7 +242,9 @@ export const listMutatorDefinitions = {
   reorderItems: defineMutator(
     reorderListItemsMutationSchema,
     async ({ tx, ctx, args }) => {
-      await requireList(tx, ctx, args);
+      const parent = await requireList(tx, ctx, args);
+      if (parent.kind === "moodboard")
+        throw new Error("Checklist mutation not allowed");
       const rows = await tx.run(scopedItems(args).where("status", args.status));
       const updates = planReorder(rows, args.orderedItemIds, args.itemId);
       const updatedAt = timestamp(tx, args.optimisticUpdatedAt);

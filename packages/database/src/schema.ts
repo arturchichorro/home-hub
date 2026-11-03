@@ -282,6 +282,10 @@ export const lists = pgTable(
       .references(() => households.id),
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
+    kind: text("kind", { enum: ["checklist", "moodboard"] })
+      .notNull()
+      .default("checklist"),
+    mediaCount: integer("media_count").notNull().default(0),
     sortKey: integer("sort_key").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -293,6 +297,8 @@ export const lists = pgTable(
   },
   (table) => [
     unique("lists_household_id_id_unique").on(table.householdId, table.id),
+    check("lists_kind", sql`${table.kind} IN (\'checklist\', \'moodboard\')`),
+    check("lists_media_count", sql`${table.mediaCount} >= 0`),
     uniqueIndex("lists_household_id_normalized_name_idx")
       .on(table.householdId, table.normalizedName)
       .where(sql`${table.deletedAt} is null`),
@@ -348,6 +354,7 @@ export const listsRelations = relations(lists, ({ many, one }) => ({
     references: [households.id],
   }),
   items: many(listItems),
+  attachments: many(listMedia),
 }));
 
 export const listItemsRelations = relations(listItems, ({ one }) => ({
@@ -536,6 +543,7 @@ export const media = pgTable(
     width: integer("width").notNull(),
     height: integer("height").notNull(),
     durationMs: integer("duration_ms"),
+    videoVersion: text("video_version"),
     animated: boolean("animated"),
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -549,14 +557,22 @@ export const media = pgTable(
   (table) => [
     unique("media_household_id_id").on(table.householdId, table.id),
     check("media_kind", sql`${table.kind} IN ('image', 'video')`),
-    // Expand with the video feature, not before its validation/delivery exists.
+    check(
+      "media_confirmed_video",
+      sql`${table.kind} != \'video\' OR ${table.confirmedAt} IS NULL OR (${table.videoVersion} IS NOT NULL AND ${table.durationMs} IS NOT NULL AND ${table.durationMs} BETWEEN 1 AND 600000 AND ${table.width} <= 4096 AND ${table.height} <= 4096)`,
+    ),
+    check(
+      "media_video_version",
+      sql`${table.videoVersion} IS NULL OR (${table.kind} = \'video\' AND ${table.videoVersion} ~ \'^[a-f0-9]{64}$\')`,
+    ),
+    // Video validation/delivery is enabled only through moodboard attachments.
     check(
       "media_supported_content_type",
-      sql`${table.kind} = 'image' AND ${table.contentType} IN ('image/jpeg', 'image/png', 'image/webp')`,
+      sql`(${table.kind} = 'image' AND ${table.contentType} IN ('image/jpeg', 'image/png', 'image/webp')) OR (${table.kind} = 'video' AND ${table.contentType} IN ('video/mp4', 'video/webm'))`,
     ),
     check(
       "media_byte_size_range",
-      sql`${table.byteSize} > 0 AND ${table.byteSize} <= 10485760`,
+      sql`${table.byteSize} > 0 AND ((${table.kind} = 'image' AND ${table.byteSize} <= 10485760) OR (${table.kind} = 'video' AND ${table.byteSize} <= 104857600))`,
     ),
     check(
       "media_dimensions_range",
@@ -579,7 +595,51 @@ export const mediaRelations = relations(media, ({ one, many }) => ({
     references: [households.id],
   }),
   recipeAttachments: many(recipeMedia),
+  listAttachments: many(listMedia),
   exerciseAttachments: many(exerciseMedia),
+}));
+
+export const listMedia = pgTable(
+  "list_media",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id").notNull(),
+    listId: uuid("list_id").notNull(),
+    mediaId: uuid("media_id").notNull(),
+    sortKey: integer("sort_key").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.householdId, t.listId],
+      foreignColumns: [lists.householdId, lists.id],
+      name: "list_media_list_fk",
+    }),
+    foreignKey({
+      columns: [t.householdId, t.mediaId],
+      foreignColumns: [media.householdId, media.id],
+      name: "list_media_asset_fk",
+    }),
+    index("list_media_order")
+      .on(t.householdId, t.listId, t.sortKey, t.id)
+      .where(sql`${t.deletedAt} is null`),
+  ],
+);
+export const listMediaRelations = relations(listMedia, ({ one }) => ({
+  list: one(lists, {
+    fields: [listMedia.householdId, listMedia.listId],
+    references: [lists.householdId, lists.id],
+  }),
+  asset: one(media, {
+    fields: [listMedia.householdId, listMedia.mediaId],
+    references: [media.householdId, media.id],
+  }),
 }));
 
 export const recipeMedia = pgTable(

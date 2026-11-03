@@ -4,6 +4,7 @@ import * as drizzleSchema from "./src/schema";
 
 export default drizzleZeroConfig(drizzleSchema, {
   tables: {
+    listMedia: true,
     exercises: true,
     exerciseMedia: true,
     workouts: true,
@@ -24,6 +25,8 @@ export default drizzleZeroConfig(drizzleSchema, {
       householdId: true,
       name: true,
       normalizedName: true,
+      kind: true,
+      mediaCount: true,
       sortKey: true,
       deletedAt: true,
       createdAt: true,
@@ -104,6 +107,7 @@ export default drizzleZeroConfig(drizzleSchema, {
       width: true,
       height: true,
       durationMs: true,
+      videoVersion: true,
       animated: true,
       confirmedAt: true,
       deletedAt: true,

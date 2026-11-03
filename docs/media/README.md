@@ -18,16 +18,21 @@ in the catalog and linked workouts; pictures remain viewable while logging, but
 are never copied into private logs. `0044_faulty_the_anarchist.sql` adds this table
 and its publication entry without changing existing assets or Worker configuration.
 
+`list_media` attaches still images and validated video clips to Moodboard lists;
+its count, masonry, ordering and codec/size rules are documented in
+[Moodboards](../lists/moodboards.md). No changes enable video uploads in Recipes
+or exercise galleries.
+
 Future features add typed `*_media` attachment tables; there is no polymorphic
 owner-ID field or generic household-wide media library. Multiple attachments can
 reference one asset, but no reuse/linking API or picker is exposed yet. A future
 reuse API must authorize both the source asset's existing attachment and the target.
 
-Uploads currently support still JPEG/PNG/WebP, at most 10 MiB, with browser-supplied
+Recipe/exercise uploads support still JPEG/PNG/WebP, at most 10 MiB, with browser-supplied
 layout dimensions of 1–16,384 pixels. These dimensions are not trusted security
-metadata. Video is reserved in the kind model; current database content-type
-constraints and upload validation deliberately reject videos and GIF. Enabling them
-requires a separate validation/delivery feature, not another asset table.
+metadata. Moodboards additionally accept bounded MP4/WebM clips through their
+own validated processing/delivery path; other attachments still reject videos.
+GIF/animation playback remains deferred. There is still only one asset table.
 
 Animated GIF/WebP remain images. New animated WebP/APNG uploads are rejected by
 container inspection in the Worker before transformations; actual image decoding
@@ -56,8 +61,10 @@ attachment, storage layout and expiry; reads also bind a fixed variant, processi
 binds expected MIME type/byte size. Read and processing signatures have separate
 purposes. The Worker supports only bounded known storage layouts, verifies before
 cache lookup, and partitions cached bytes by asset/storage identity and transform.
-Capabilities last one hour for reads and five minutes for processing. No original
-read/download or arbitrary transform is exposed.
+Capabilities last one hour for reads and five minutes for image processing. No
+image-original download or arbitrary transform is exposed. Video playback uses
+its own signed GET/HEAD/range route and server-owned versioned playback copies;
+posters bind that version in their signed image capability. See [Moodboards](../lists/moodboards.md).
 
 Upload confirmation inspects R2 metadata, then the Worker reads a bounded snapshot,
 rejects unsupported animation/type/size, decodes and stores both derivatives. Only

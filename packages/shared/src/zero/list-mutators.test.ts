@@ -22,7 +22,8 @@ type Table =
   | "householdMembers"
   | "householdModuleSettings"
   | "lists"
-  | "listItems";
+  | "listItems"
+  | "listMedia";
 function required<T>(value: T | undefined): T {
   if (value === undefined) throw new Error("Missing test fixture");
   return value;
@@ -88,6 +89,7 @@ function setup(location: "server" | "client" = "server") {
       },
     ],
     listItems: [],
+    listMedia: [],
   };
   const writes = vi.fn();
   const crud = (table: Table) => ({
@@ -107,7 +109,11 @@ function setup(location: "server" | "client" = "server") {
   });
   const tx = {
     location,
-    mutate: { lists: crud("lists"), listItems: crud("listItems") },
+    mutate: {
+      lists: crud("lists"),
+      listItems: crud("listItems"),
+      listMedia: crud("listMedia"),
+    },
     run: async (query: unknown) => {
       const { ast, format } = query as {
         ast: {
@@ -150,6 +156,90 @@ const item = (overrides: Row = {}): Row => ({
 
 afterEach(() => vi.restoreAllMocks());
 
+describe("Moodboard mutations", () => {
+  it("creates an explicit, titled moodboard without touching existing checklists", async () => {
+    const { tx, data } = setup();
+    await mutators.create.fn({
+      tx,
+      ctx,
+      args: {
+        householdId,
+        listId: otherListId,
+        name: "Inspiration",
+        kind: "moodboard",
+        optimisticTimestamp: 1000,
+      },
+    });
+    expect(data.lists[1]).toMatchObject({
+      kind: "moodboard",
+      name: "Inspiration",
+      mediaCount: 0,
+    });
+    expect(data.lists[0]?.name).toBe("Shopping");
+  });
+  it("rejects checklist writes to moodboards", async () => {
+    const { tx, data, writes } = setup();
+    required(data.lists[0]).kind = "moodboard";
+    await expect(
+      mutators.addItem.fn({
+        tx,
+        ctx,
+        args: { ...scope, itemId, name: "No", optimisticTimestamp: 1000 },
+      }),
+    ).rejects.toThrow("Checklist");
+    expect(writes).not.toHaveBeenCalled();
+  });
+  it("reorders only visible same-board media and retains unseen/pending rows", async () => {
+    const { tx, data } = setup();
+    required(data.lists[0]).kind = "moodboard";
+    data.listMedia = [
+      {
+        id: itemId,
+        ...scope,
+        sortKey: 3000,
+        asset: { confirmedAt: 1, deletedAt: null },
+      },
+      {
+        id: otherItemId,
+        ...scope,
+        sortKey: 2000,
+        asset: { confirmedAt: 1, deletedAt: null },
+      },
+      {
+        id: otherListId,
+        ...scope,
+        sortKey: 1000,
+        asset: { confirmedAt: null, deletedAt: null },
+      },
+    ];
+    await mutators.reorderMedia.fn({
+      tx,
+      ctx,
+      args: {
+        ...scope,
+        attachmentId: otherItemId,
+        previousId: null,
+        nextId: itemId,
+        optimisticTimestamp: 1000,
+      },
+    });
+    expect(Number(data.listMedia[1]?.sortKey)).toBeGreaterThan(3000);
+    expect(data.listMedia[2]?.sortKey).toBe(1000);
+    await expect(
+      mutators.reorderMedia.fn({
+        tx,
+        ctx,
+        args: {
+          ...scope,
+          attachmentId: otherListId,
+          previousId: null,
+          nextId: itemId,
+          optimisticTimestamp: 1000,
+        },
+      }),
+    ).rejects.toThrow("not allowed");
+  });
+});
 describe("Lists mutators", () => {
   it("activates Lists and removes legacy Shopping writes", () => {
     expect(mutators.create.mutatorName).toBe("lists.create");
@@ -176,6 +266,8 @@ describe("Lists mutators", () => {
         householdId,
         name: "To Do",
         normalizedName: "to do",
+        kind: "checklist",
+        mediaCount: 0,
         sortKey: 2048,
         deletedAt: null,
         createdAt: location === "server" ? 9000 : 1000,
