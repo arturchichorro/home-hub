@@ -24,7 +24,7 @@ import { useBlockAppUpdate } from "../updates/activity";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { HabitActions } from "./habit-actions";
-import { HabitDayPreview, type HabitRow, HabitTodayToggle } from "./habit-days";
+import { HabitRecentDay, type HabitRow } from "./habit-days";
 import { HabitEntryNote } from "./habit-entry-note";
 import { HabitGrid } from "./habit-grid";
 import { HabitHistory } from "./habit-history";
@@ -335,15 +335,6 @@ function HabitListRow({
             onDirtyChange={(v) => dirtyChanged("name", v)}
           />
         )}
-        {!archived ? (
-          <HabitTodayToggle
-            name={habit.name}
-            date={today}
-            completed={!!current?.completed}
-            disabled={!own || !enabled || pending.has(`${habit.id}:${today}`)}
-            onToggle={() => onCompleted(today, !current?.completed)}
-          />
-        ) : null}
         <IconButton
           className="size-11! shrink-0"
           aria-label={`Show today's note for ${habit.name}`}
@@ -374,19 +365,30 @@ function HabitListRow({
         </IconButton>
       </div>
       <fieldset
-        className="flex min-w-0 justify-between sm:justify-start"
+        className="grid min-w-0 grid-cols-7 gap-0 py-1"
         aria-label={`Recent days for ${habit.name}`}
       >
-        {Array.from({ length: 6 }, (_, i) =>
+        {Array.from({ length: 7 }, (_, i) =>
           shiftCalendarDate(today, i - 6),
         ).map((date) => (
-          <HabitDayPreview
+          <HabitRecentDay
             key={date}
             name={habit.name}
             date={date}
             entry={entries.get(date)}
             today={today}
-            disabled={locked}
+            disabled={
+              locked ||
+              (date === today &&
+                own &&
+                !archived &&
+                (!enabled || pending.has(`${habit.id}:${today}`)))
+            }
+            onToggle={
+              date === today && own && !archived
+                ? () => onCompleted(today, !current?.completed)
+                : undefined
+            }
             selected={expanded?.date === date}
             onInspect={() => onInspect(date)}
           />
