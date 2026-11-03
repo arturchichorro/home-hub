@@ -3,8 +3,16 @@ import {
   documentInitialTitle,
   documentUploadSchema,
 } from "@home-hub/shared/documents";
-import { Button, IconButton, Upload } from "@home-hub/ui-web";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { Button, IconButton, Plus, Upload } from "@home-hub/ui-web";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useAppHeaderRightComponent } from "../app-header-right-component";
 import type { MediaSession } from "../media/session";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
@@ -42,6 +50,7 @@ export function DocumentUpload({
     [phase, setPhase] = useState(""),
     [error, setError] = useState<string>();
   const key = `${documentId ?? "new"}:upload`;
+  const chooseFile = useCallback(() => input.current?.click(), []);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -117,7 +126,7 @@ export function DocumentUpload({
     }
   }
   return (
-    <div className={documentId ? "" : "grid gap-2"}>
+    <div className={documentId ? "" : "contents"}>
       <input
         ref={input}
         className="sr-only"
@@ -150,12 +159,10 @@ export function DocumentUpload({
           <Upload aria-hidden="true" className="size-4" />
         </IconButton>
       ) : (
-        <Button
+        <DocumentUploadHeaderAction
           disabled={!enabled || !!file}
-          onClick={() => input.current?.click()}
-        >
-          Upload document
-        </Button>
+          choose={chooseFile}
+        />
       )}
       {file ? (
         <div
@@ -192,7 +199,7 @@ export function DocumentUpload({
           ) : null}
         </div>
       ) : !documentId && phase === "Uploaded" ? (
-        <span role="status" className="text-xs text-muted">
+        <span role="status" className="sr-only">
           Document uploaded.
         </span>
       ) : null}
@@ -201,4 +208,30 @@ export function DocumentUpload({
       ) : null}
     </div>
   );
+}
+
+// Register only the control in the header; upload/draft state stays on the page.
+function DocumentUploadHeaderAction({
+  choose,
+  disabled,
+}: {
+  choose: () => void;
+  disabled: boolean;
+}) {
+  const action = useMemo(
+    () => (
+      <IconButton
+        aria-label="Upload document"
+        title="Upload document"
+        className="size-7!"
+        disabled={disabled}
+        onClick={choose}
+      >
+        <Plus aria-hidden="true" className="size-4" />
+      </IconButton>
+    ),
+    [choose, disabled],
+  );
+  useAppHeaderRightComponent(action);
+  return null;
 }

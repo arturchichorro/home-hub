@@ -126,20 +126,12 @@ function DocumentsWorkspace({
   }, [tags, tagResult.type]);
   return (
     <DocumentThumbnailProvider session={session} householdId={householdId}>
-      <section className="grid min-w-0 gap-5">
-        <header className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold">Documents</h1>
-            <p className="text-sm text-muted">
-              Household files, simply organised.
-            </p>
-          </div>
-          <DocumentUpload
-            session={session}
-            householdId={householdId}
-            onWork={onWork}
-          />
-        </header>
+      <section aria-label="Documents" className="grid min-w-0 gap-5">
+        <DocumentUpload
+          session={session}
+          householdId={householdId}
+          onWork={onWork}
+        />
         <div className="flex flex-wrap items-center gap-2">
           <Input
             aria-label="Search documents"
