@@ -11,10 +11,12 @@ shows another current member's activity read-only. Definitions and ordering rema
 shared. No targets, schedules, amounts, streaks or scores are introduced: each
 person decides when a daily completion makes sense.
 
-- Each compact row contains a seamless name, today's neutral filled/unfilled
-  toggle, a daily-note action, history disclosure and six previous dates.
-  Completions never move rows. Narrow screens use a second line for recent dates
-  rather than shrinking touch targets or forcing horizontal page scrolling.
+- Each compact row contains a seamless name, a daily-note action and history
+  disclosure, followed by seven adjacent day boxes: six previous dates and
+  **Today** on the far right. Completed days show an X; unrecorded days stay blank.
+  Today's box is the completion toggle, not a separate checkbox in the header.
+  The strip fits narrow screens without horizontal page scrolling. Completions
+  never move rows.
 - Today's completion is one tap. Its optional note opens inline and autosaves.
   Note-bearing dates have a subtle marker, including note-only dates.
 - History starts collapsed. Expand one habit at a time to mount one monthly
