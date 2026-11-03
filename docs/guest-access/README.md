@@ -1,14 +1,6 @@
 # Guest access
 
-**Status:** specification/prototype review; not implemented on `develop`.
-
-The earlier foundation was reverted. Open review PRs #35, #36, #38 and #39 do not
-establish deployed Guest support; see [Tasks](../tasks.md#work-in-review). Before
-integration, reconcile that prototype with the current schema and all current
-modules. In particular, the identity-free model below does not yet resolve who
-could own author-private workout logs. Do not infer Guest access to those logs
-from the proposed all-enabled-modules rule; that privacy policy still needs an
-explicit decision.
+**Status:** planned; not yet implemented
 
 This document specifies accountless access to a household through a QR code.
 The first version deliberately uses one small model: an expiring Guest access

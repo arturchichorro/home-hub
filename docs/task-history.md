@@ -383,6 +383,8 @@ Open review work remains in [Tasks](./tasks.md#work-in-review).
 - [x] Move logging to independent exercise occurrences and per-row autosaved sets, retaining original dates, snapshots, measurements and the old set archive (`0046`, #70).
 - [x] Add placement-specific Warm-up / Workout / Stretching roles with separately frozen historical role maps (`0047`–`0048`, #81).
 - [x] Implement shared `media` assets, typed recipe/exercise attachments, compatible delivery capabilities and soft-detachment retention (`0043`–`0044`). The [foundation plan](./plans/shared-media.md) is complete; video, animation and reuse UI remain deferred.
+- [x] Add dedicated empty/create states for Lists and Recipes libraries.
+- [x] Reuse cached signed image URLs and thumbnails, then crossfade to the viewer derivative instead of blanking the image. See [Recipes image storage](./recipes/#image-storage-and-security); this is not a guarantee against every possible image flash.
 - [x] Implement guarded PWA updates (#59): idle activation, per-tab draft/log/upload protection and explicit update/recovery behavior.
 - [x] Adopt official Zero 1.11.3, Node 26 and current workspace tooling without SDK patches, retaining PostgreSQL 17 and coordinated upgrade/release safeguards.
 - [x] Retain failed text drafts with Retry/Discard and navigation/unload protection (#73), and sanitize database failures before Zero serialization (#74).
