@@ -6,6 +6,30 @@ import { queries } from "./queries";
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+describe("workout linking queries", () => {
+  it("offers only shared definitions, never private logs, sets or notes", () => {
+    const query = getAst(
+      queries.habits.workoutChoices.fn({
+        args: { householdId },
+        ctx: { userId },
+      }),
+    );
+    expect(query.table).toBe("workouts");
+    expect(query.related).toBeUndefined();
+    const scope = JSON.stringify(query.where);
+    for (const key of [
+      householdId,
+      userId,
+      "householdMembers",
+      "householdModuleSettings",
+      "habits",
+      "workouts",
+    ])
+      expect(scope).toContain(key);
+    expect(scope).not.toContain("workoutLogs");
+    expect(scope).not.toContain("exerciseLogs");
+  });
+});
 describe("person-scoped habits", () => {
   const personId = "0b994d6f-691a-4e3b-beca-978db54fbe69";
   it.each([false, true])(
