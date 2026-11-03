@@ -12,6 +12,7 @@ export const documentReadSchema = z
       .refine((t) => (Object.values(documentFormats) as string[]).includes(t)),
     disposition: z.enum(["inline", "attachment"]),
     expiresAt: z.number().int().positive(),
+    thumbnail: z.literal(true).optional(),
   })
   .strict();
 export type DocumentRead = z.infer<typeof documentReadSchema>;
@@ -26,7 +27,7 @@ export const documentReadKey = (
 const payload = (c: DocumentRead) =>
   new TextEncoder().encode(
     JSON.stringify([
-      "home-hub-document-v1",
+      c.thumbnail ? "home-hub-document-thumbnail-v1" : "home-hub-document-v1",
       c.householdId,
       c.documentId,
       c.fileId,

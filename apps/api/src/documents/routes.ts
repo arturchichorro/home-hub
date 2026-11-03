@@ -44,7 +44,10 @@ export function createDocumentRoutes({
         documentId: c.req.param("documentId"),
       }),
       b = z
-        .object({ disposition: z.enum(["inline", "attachment"]) })
+        .object({
+          disposition: z.enum(["inline", "attachment"]),
+          thumbnail: z.literal(true).optional(),
+        })
         .strict()
         .safeParse(await c.req.json().catch(() => null));
     if (!s.success || !b.success)

@@ -238,6 +238,7 @@ export function createDocumentServices({
       input: Scope & {
         documentId: string;
         disposition: "inline" | "attachment";
+        thumbnail?: true | undefined;
       },
     ) {
       const f = await db.transaction(async (tx) => {
@@ -257,6 +258,8 @@ export function createDocumentServices({
           throw new DocumentServiceError(404, "File not found");
         return f;
       });
+      if (input.thumbnail && !f.contentType.startsWith("image/"))
+        throw new DocumentServiceError(422, "Only images have thumbnails.");
       const hash = f.objectKey.split("/").pop() ?? "";
       return {
         url: await storage.signRead({
@@ -267,6 +270,7 @@ export function createDocumentServices({
           contentType: f.contentType,
           hash,
           disposition: input.disposition,
+          ...(input.thumbnail ? { thumbnail: true as const } : {}),
           expiresAt: Math.floor(Date.now() / 1000) + 900,
         }),
         contentType: f.contentType,

@@ -3,15 +3,10 @@ import { queries } from "@home-hub/shared/zero/queries";
 import type { Schema } from "@home-hub/shared/zero/schema";
 import {
   Button,
-  ConfirmationPopover,
-  Download,
-  Eye,
-  FileText,
   IconButton,
   InlineAlert,
   Input,
   MessageSquare,
-  Trash2,
 } from "@home-hub/ui-web";
 import type { Row } from "@rocicorp/zero";
 import { useQuery, useZero } from "@rocicorp/zero/react";
@@ -19,8 +14,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { type MediaSession, useMediaSession } from "../media/session";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import { DocumentActions } from "./document-actions";
 import { DocumentText } from "./document-text";
+import { DocumentFileTypeIcon } from "./file-type-icon";
 import { type DocumentTag, DocumentTagPicker, tagClasses } from "./tag-picker";
+import { DocumentThumbnail, DocumentThumbnailProvider } from "./thumbnail";
 import { DocumentUpload } from "./uploads";
 import { DocumentViewer, downloadDocument } from "./viewer";
 
@@ -127,163 +125,167 @@ function DocumentsWorkspace({
       });
   }, [tags, tagResult.type]);
   return (
-    <section className="grid min-w-0 gap-5">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Documents</h1>
-          <p className="text-sm text-muted">
-            Household files, simply organised.
-          </p>
+    <DocumentThumbnailProvider session={session} householdId={householdId}>
+      <section className="grid min-w-0 gap-5">
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold">Documents</h1>
+            <p className="text-sm text-muted">
+              Household files, simply organised.
+            </p>
+          </div>
+          <DocumentUpload
+            session={session}
+            householdId={householdId}
+            onWork={onWork}
+          />
+        </header>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            aria-label="Search documents"
+            placeholder="Search documents"
+            className="min-w-0 flex-1"
+            maxLength={200}
+            value={search}
+            disabled={busy}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setLimit(50);
+            }}
+          />
+          <DocumentTagPicker
+            householdId={householdId}
+            tags={tags}
+            onWork={onWork}
+          />
         </div>
-        <DocumentUpload
-          session={session}
-          householdId={householdId}
-          onWork={onWork}
-        />
-      </header>
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          aria-label="Search documents"
-          placeholder="Search documents"
-          className="min-w-0 flex-1"
-          maxLength={200}
-          value={search}
-          disabled={busy}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setLimit(50);
-          }}
-        />
-        <DocumentTagPicker
-          householdId={householdId}
-          tags={tags}
-          onWork={onWork}
-        />
-      </div>
-      {tags.length ? (
-        <div
-          className="flex flex-wrap items-center gap-2"
-          role="toolbar"
-          aria-label="Filter documents by tags"
-        >
-          {tags.map((tag) => (
+        {tags.length ? (
+          <div
+            className="flex flex-wrap items-center gap-2"
+            role="toolbar"
+            aria-label="Filter documents by tags"
+          >
+            {tags.map((tag) => (
+              <button
+                key={tag.id}
+                type="button"
+                disabled={busy}
+                aria-pressed={tagIds.includes(tag.id)}
+                className={`rounded-sm border px-2 py-1 text-xs ${tagIds.includes(tag.id) ? "border-foreground" : "border-transparent"} ${tagClasses[tag.color]}`}
+                onClick={() => {
+                  setUntagged(false);
+                  setTags((ids) =>
+                    ids.includes(tag.id)
+                      ? ids.filter((id) => id !== tag.id)
+                      : [...ids, tag.id],
+                  );
+                  setLimit(50);
+                }}
+              >
+                {tag.name}
+              </button>
+            ))}
             <button
-              key={tag.id}
               type="button"
               disabled={busy}
-              aria-pressed={tagIds.includes(tag.id)}
-              className={`rounded-sm border px-2 py-1 text-xs ${tagIds.includes(tag.id) ? "border-foreground" : "border-transparent"} ${tagClasses[tag.color]}`}
+              aria-pressed={untagged}
+              className={`rounded-sm border px-2 py-1 text-xs text-muted ${untagged ? "border-foreground" : "border-transparent"}`}
               onClick={() => {
-                setUntagged(false);
-                setTags((ids) =>
-                  ids.includes(tag.id)
-                    ? ids.filter((id) => id !== tag.id)
-                    : [...ids, tag.id],
-                );
+                setTags([]);
+                setUntagged((v) => !v);
                 setLimit(50);
               }}
             >
-              {tag.name}
+              Untagged
             </button>
-          ))}
+            {tagIds.length || untagged ? (
+              <Button
+                size="compact"
+                variant="ghost"
+                disabled={busy}
+                onClick={() => {
+                  setTags([]);
+                  setUntagged(false);
+                  setLimit(50);
+                }}
+              >
+                Clear tags
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+        <div className="flex items-center justify-between border-b border-border pb-2 text-xs text-muted">
           <button
             type="button"
             disabled={busy}
-            aria-pressed={untagged}
-            className={`rounded-sm border px-2 py-1 text-xs text-muted ${untagged ? "border-foreground" : "border-transparent"}`}
-            onClick={() => {
-              setTags([]);
-              setUntagged((v) => !v);
-              setLimit(50);
-            }}
+            aria-label="Sort documents by title"
+            onClick={() => changeOrder("title")}
           >
-            Untagged
+            Title {sort === "title" ? (direction === "asc" ? "↑" : "↓") : ""}
           </button>
-          {tagIds.length || untagged ? (
-            <Button
-              size="compact"
-              variant="ghost"
-              disabled={busy}
-              onClick={() => {
-                setTags([]);
-                setUntagged(false);
-                setLimit(50);
-              }}
-            >
-              Clear tags
-            </Button>
-          ) : null}
+          <button
+            type="button"
+            disabled={busy}
+            aria-label="Sort documents by upload time"
+            onClick={() => changeOrder("uploadedAt")}
+          >
+            Uploaded{" "}
+            {sort === "uploadedAt" ? (direction === "asc" ? "↑" : "↓") : ""}
+          </button>
         </div>
-      ) : null}
-      <div className="flex items-center justify-between border-b border-border pb-2 text-xs text-muted">
-        <button
-          type="button"
-          disabled={busy}
-          aria-label="Sort documents by title"
-          onClick={() => changeOrder("title")}
-        >
-          Title {sort === "title" ? (direction === "asc" ? "↑" : "↓") : ""}
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          aria-label="Sort documents by upload time"
-          onClick={() => changeOrder("uploadedAt")}
-        >
-          Uploaded{" "}
-          {sort === "uploadedAt" ? (direction === "asc" ? "↑" : "↓") : ""}
-        </button>
-      </div>
-      {result.type === "error" ? (
-        <InlineAlert variant="danger" role="alert">
-          Unable to load documents.
-        </InlineAlert>
-      ) : null}
-      <ul className="min-w-0 divide-y divide-border">
-        {display.map((row) => (
-          <DocumentRow
-            key={row.id}
-            row={row}
-            tags={tags}
-            householdId={householdId}
+        {result.type === "error" ? (
+          <InlineAlert variant="danger" role="alert">
+            Unable to load documents.
+          </InlineAlert>
+        ) : null}
+        <ul className="min-w-0 divide-y divide-border">
+          {display.map((row) => (
+            <DocumentRow
+              key={row.id}
+              row={row}
+              tags={tags}
+              householdId={householdId}
+              session={session}
+              work={work}
+              onWork={onWork}
+              onFocus={() => setFocused(row.id)}
+              onBlur={() =>
+                setFocused((id) => (id === row.id ? undefined : id))
+              }
+              onPreview={() => setSelected({ id: row.id, title: row.title })}
+            />
+          ))}
+        </ul>
+        {!display.length ? (
+          <p className="text-sm text-muted">
+            {result.type !== "complete"
+              ? "Loading documents…"
+              : search || tagIds.length || untagged
+                ? "No matching documents."
+                : "Upload a document to get started."}
+          </p>
+        ) : null}
+        {rows.length > limit ? (
+          <Button
+            variant="ghost"
+            disabled={busy || limit >= 999}
+            onClick={() => setLimit((n) => Math.min(n + 50, 999))}
+          >
+            {limit >= 999 ? "Refine your search to see more" : "Show more"}
+          </Button>
+        ) : null}
+        {selected ? (
+          <DocumentViewer
+            key={selected.id}
             session={session}
-            work={work}
-            onWork={onWork}
-            onFocus={() => setFocused(row.id)}
-            onBlur={() => setFocused((id) => (id === row.id ? undefined : id))}
-            onPreview={() => setSelected({ id: row.id, title: row.title })}
+            householdId={householdId}
+            documentId={selected.id}
+            title={selected.title}
+            onClose={() => setSelected(undefined)}
           />
-        ))}
-      </ul>
-      {!display.length ? (
-        <p className="text-sm text-muted">
-          {result.type !== "complete"
-            ? "Loading documents…"
-            : search || tagIds.length || untagged
-              ? "No matching documents."
-              : "Upload a document to get started."}
-        </p>
-      ) : null}
-      {rows.length > limit ? (
-        <Button
-          variant="ghost"
-          disabled={busy || limit >= 999}
-          onClick={() => setLimit((n) => Math.min(n + 50, 999))}
-        >
-          {limit >= 999 ? "Refine your search to see more" : "Show more"}
-        </Button>
-      ) : null}
-      {selected ? (
-        <DocumentViewer
-          key={selected.id}
-          session={session}
-          householdId={householdId}
-          documentId={selected.id}
-          title={selected.title}
-          onClose={() => setSelected(undefined)}
-        />
-      ) : null}
-    </section>
+        ) : null}
+      </section>
+    </DocumentThumbnailProvider>
   );
 }
 type PageRow = Row<Schema["tables"]["documents"]> & {
@@ -357,11 +359,30 @@ function DocumentRow({
       }}
     >
       <div className="flex min-w-0 flex-wrap items-start gap-2">
-        <FileText
-          aria-hidden="true"
-          className="mt-1 size-4 shrink-0 text-muted"
-        />
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+        <button
+          type="button"
+          aria-label={`Open document: ${row.title}`}
+          title={`Open ${row.title}`}
+          disabled={!file}
+          className="relative size-12 shrink-0 overflow-hidden rounded-sm bg-surface outline-none hover:bg-raised focus-visible:ring-2 focus-visible:ring-focus-ring"
+          onClick={() => {
+            if (preview) onPreview();
+            else
+              void downloadDocument(session, householdId, row.id).catch(() =>
+                setError("Unable to open this document."),
+              );
+          }}
+        >
+          <DocumentFileTypeIcon contentType={file?.contentType ?? ""} />
+          {file?.contentType.startsWith("image/") ? (
+            <DocumentThumbnail
+              documentId={row.id}
+              fileId={file.id}
+              title={row.title}
+            />
+          ) : null}
+        </button>
+        <div className="flex min-h-12 min-w-0 flex-1 flex-wrap items-center gap-1">
           <div className="min-w-32 flex-1">
             <DocumentText
               householdId={householdId}
@@ -393,7 +414,7 @@ function DocumentRow({
             </IconButton>
           )}
         </div>
-        <div className="flex shrink-0 flex-wrap items-start gap-1">
+        <div className="flex min-h-12 shrink-0 flex-wrap items-center gap-1">
           <DocumentTagPicker
             householdId={householdId}
             documentId={row.id}
@@ -401,51 +422,29 @@ function DocumentRow({
             selected={assigned.map((t) => t.id)}
             onWork={onWork}
           />
-          {preview ? (
-            <IconButton
-              aria-label="Preview document"
-              className="size-7!"
-              onClick={onPreview}
-            >
-              <Eye aria-hidden="true" className="size-4" />
-            </IconButton>
-          ) : null}
-          <IconButton
-            aria-label="Download document"
-            className="size-7!"
-            onClick={() =>
-              void downloadDocument(session, householdId, row.id).catch(() =>
-                setError("Unable to download this document."),
-              )
-            }
-          >
-            <Download aria-hidden="true" className="size-4" />
-          </IconButton>
           <DocumentUpload
             session={session}
             householdId={householdId}
             documentId={row.id}
             onWork={onWork}
-          />
-          <ConfirmationPopover
-            message="Remove this document? Its file will remain privately retained."
-            trigger={
-              <IconButton
-                aria-label="Remove document"
-                className="size-7!"
-                disabled={!enabled || blocked}
-              >
-                <Trash2 aria-hidden="true" className="size-4" />
-              </IconButton>
-            }
-            onConfirm={remove}
+            trigger={({ choose, disabled }) => (
+              <DocumentActions
+                title={row.title}
+                replaceDisabled={disabled}
+                removeDisabled={!enabled || blocked}
+                onDownload={() =>
+                  void downloadDocument(session, householdId, row.id).catch(
+                    () => setError("Unable to download this document."),
+                  )
+                }
+                onReplace={choose}
+                onRemove={() => void remove()}
+              />
+            )}
           />
         </div>
       </div>
-      <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 pl-6">
-        <span className="truncate text-xs text-muted" title={file?.filename}>
-          {file?.filename}
-        </span>
+      <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 pl-14">
         {assigned.map((tag) => (
           <span
             key={tag.id}

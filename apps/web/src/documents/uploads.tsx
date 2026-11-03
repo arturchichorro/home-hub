@@ -4,7 +4,7 @@ import {
   documentUploadSchema,
 } from "@home-hub/shared/documents";
 import { Button, IconButton, Upload } from "@home-hub/ui-web";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { MediaSession } from "../media/session";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
@@ -20,12 +20,14 @@ export function DocumentUpload({
   documentId,
   onWork,
   onSaved,
+  trigger,
 }: {
   session: MediaSession;
   householdId: string;
   documentId?: string;
   onWork?: (key: string, busy: boolean) => void;
   onSaved?: () => void;
+  trigger?: (props: { choose: () => void; disabled: boolean }) => ReactNode;
 }) {
   const input = useRef<HTMLInputElement>(null),
     lock = useRef(false),
@@ -133,7 +135,12 @@ export function DocumentUpload({
           if (chosen) void run(chosen);
         }}
       />
-      {documentId ? (
+      {trigger ? (
+        trigger({
+          choose: () => input.current?.click(),
+          disabled: !enabled || !!file,
+        })
+      ) : documentId ? (
         <IconButton
           aria-label="Replace document file"
           className="size-7!"

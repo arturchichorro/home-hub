@@ -24,6 +24,7 @@ export {
   ListTodo,
   LogOut,
   MessageSquare,
+  MoreHorizontal,
   PanelLeft,
   Pencil,
   Play,

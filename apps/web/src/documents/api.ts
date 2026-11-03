@@ -79,12 +79,13 @@ export const readDocument = (
   householdId: string,
   documentId: string,
   disposition: "inline" | "attachment",
+  thumbnail?: true,
 ) =>
   documentRequest(
     session,
     householdId,
     `/${documentId}/read-url`,
-    { disposition },
+    { disposition, ...(thumbnail ? { thumbnail } : {}) },
     documentReadResponseSchema,
   );
 export function uploadDocumentBytes(

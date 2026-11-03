@@ -11,7 +11,14 @@ gets a filename-derived title. Titles autosave seamlessly; optional plain-text
 descriptions use the cooking-log comment pattern beside the title. Failed drafts
 retain Retry/Discard, focus and navigation/unload/PWA protections.
 
-Each row displays reusable colored tags and the current file's upload date, with
+Each row starts with a clickable 48px image thumbnail or a muted, folded-page
+file-type badge (PDF, DOCX, XLSX, PPTX, TXT, CSV, MD). Clicking opens PDF/image
+preview; download-only formats download directly. Original filenames remain
+searchable and are used for downloads, but are not displayed on rows. A single
+ellipsis menu groups Download, Replace file and confirmed Remove; pending upload
+state lives outside that menu so closing it cannot discard a replacement.
+
+Rows display reusable colored tags and the current file's upload date, with
 full timestamp on hover. The tag icon opens assignment/creation; household tags
 can be renamed, recolored from an accessible preset palette or soft-deleted.
 Names are case/whitespace-normalized and unique within the active catalogue.
@@ -33,6 +40,12 @@ and archive uploads. Validate signatures/containers rather than trusting MIME or
 extension alone; OOXML central-directory bounds and its content-type manifest are
 inspected with bounded decompression and without extracting user paths. This is
 not a malware scanner or a guarantee that every accepted file is uncorrupted.
+
+Image row previews use fixed 96×96 WebP derivatives, generated through the existing
+Images binding and retained beside their immutable file version. Thumbnail mode
+is independently signed; it never falls back to serving a full original. Visible
+rows share one lazy visibility observer and a session-scoped URL cache with four
+concurrent URL reads. No database migration or per-row Zero query is added.
 
 PDF/image previews use isolated signed delivery. PDF rendering uses the browser's
 native viewer and depends on browser support; Open file/Download remain available.

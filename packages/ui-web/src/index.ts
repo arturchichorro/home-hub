@@ -90,6 +90,7 @@ export {
   type LucideIcon,
   type LucideProps,
   MessageSquare,
+  MoreHorizontal,
   PanelLeft,
   Pencil,
   Play,

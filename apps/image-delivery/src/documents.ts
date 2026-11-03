@@ -4,7 +4,24 @@ import {
   verifyDocumentRead,
 } from "@home-hub/shared/document-delivery";
 
+type ThumbnailImages = {
+  input(stream: ReadableStream): {
+    transform(options: { fit: "cover"; width: number; height: number }): {
+      output(options: {
+        format: "image/webp";
+        quality: number;
+      }): Promise<{ response(): Response }>;
+    };
+  };
+};
 type Bucket = {
+  put?(
+    key: string,
+    value: ArrayBuffer,
+    options?: {
+      httpMetadata?: { contentType?: string; cacheControl?: string };
+    },
+  ): Promise<unknown>;
   head?(key: string): Promise<{ size: number; httpEtag?: string } | null>;
   get(
     key: string,
@@ -13,7 +30,11 @@ type Bucket = {
 };
 export async function handleDocumentRequest(
   request: Request,
-  env: { RECIPE_IMAGES: Bucket; IMAGE_DELIVERY_SIGNING_SECRET: string },
+  env: {
+    RECIPE_IMAGES: Bucket;
+    IMAGE_DELIVERY_SIGNING_SECRET: string;
+    IMAGES?: ThumbnailImages;
+  },
 ) {
   const headers = new Headers({
     "Cache-Control": "private, no-store",
@@ -47,6 +68,42 @@ export async function handleDocumentRequest(
   const c = cap.data,
     key = documentReadKey(c);
   try {
+    if (c.thumbnail) {
+      if (!c.contentType.startsWith("image/"))
+        return new Response(null, { status: 415, headers });
+      const thumbnailKey = `${key}/thumbnail-96-q82-v1.webp`;
+      headers.set("Content-Type", "image/webp");
+      headers.set("Content-Disposition", 'inline; filename="thumbnail.webp"');
+      const cached = await env.RECIPE_IMAGES.get(thumbnailKey);
+      if (cached) {
+        if (request.method === "HEAD") await cached.body.cancel();
+        return new Response(request.method === "HEAD" ? null : cached.body, {
+          headers,
+        });
+      }
+      if (!env.IMAGES || !env.RECIPE_IMAGES.put)
+        return new Response(null, { status: 503, headers });
+      const original = await env.RECIPE_IMAGES.get(key);
+      if (!original) return new Response(null, { status: 404, headers });
+      const output = await env.IMAGES.input(original.body)
+        .transform({ width: 96, height: 96, fit: "cover" })
+        .output({ format: "image/webp", quality: 82 });
+      const response = output.response();
+      if (!response.ok) return new Response(null, { status: 503, headers });
+      const bytes = await response.arrayBuffer();
+      if (bytes.byteLength > 262144)
+        return new Response(null, { status: 503, headers });
+      await env.RECIPE_IMAGES.put(thumbnailKey, bytes, {
+        httpMetadata: {
+          contentType: "image/webp",
+          cacheControl: "private, max-age=31536000, immutable",
+        },
+      });
+      headers.set("Content-Length", String(bytes.byteLength));
+      return new Response(request.method === "HEAD" ? null : bytes, {
+        headers,
+      });
+    }
     const meta = await env.RECIPE_IMAGES.head?.(key);
     if (!meta) return new Response(null, { status: 404, headers });
     headers.set("Accept-Ranges", "bytes");
