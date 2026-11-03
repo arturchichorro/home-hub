@@ -60,7 +60,7 @@ export function MoodboardPreview({
   return (
     <div className="grid gap-2">
       <div
-        className="grid aspect-4/3 grid-cols-2 grid-rows-2 gap-1 overflow-hidden rounded-md bg-raised"
+        className="grid aspect-4/3 grid-cols-2 grid-rows-2 gap-1 overflow-hidden rounded-sm bg-raised"
         role="img"
         aria-label="Moodboard preview"
       >

@@ -48,7 +48,7 @@ function Tile({
   return (
     <li
       ref={sortable.ref}
-      className={`relative mb-3 break-inside-avoid overflow-hidden rounded-lg bg-raised ${sortable.isDragging ? "opacity-50" : ""}`}
+      className={`relative mb-3 break-inside-avoid overflow-hidden rounded-sm bg-raised ${sortable.isDragging ? "opacity-50" : ""}`}
       data-moodboard-pin={pin.id}
     >
       <button
@@ -63,7 +63,7 @@ function Tile({
       >
         <MoodboardThumbnail pin={pin} session={session} />
         {pin.asset?.kind === "video" && (
-          <span className="absolute bottom-2 left-2 rounded-full bg-canvas/80 p-2">
+          <span className="absolute bottom-2 left-2 rounded-sm bg-canvas/80 p-2">
             <Play className="size-4" aria-hidden="true" />
           </span>
         )}

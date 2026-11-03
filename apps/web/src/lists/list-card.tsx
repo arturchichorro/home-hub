@@ -125,7 +125,7 @@ export function ListCard({
         params={{ householdId: list.householdId, listId: list.id }}
         preload="intent"
         draggable={false}
-        className="flex h-full w-full min-w-0 touch-pan-y select-none flex-col gap-5 rounded-xl border border-border bg-surface p-4 outline-none hover:bg-raised focus-visible:ring-2 focus-visible:ring-focus-ring sm:p-5"
+        className={`flex h-full w-full min-w-0 touch-pan-y select-none flex-col gap-5 ${list.kind === "moodboard" ? "rounded-sm" : "rounded-xl"} border border-border bg-surface p-4 outline-none hover:bg-raised focus-visible:ring-2 focus-visible:ring-focus-ring sm:p-5`}
       >
         <h2 className="line-clamp-2 wrap-break-word text-xl font-semibold">
           {list.name}
