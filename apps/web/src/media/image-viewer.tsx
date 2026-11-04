@@ -31,6 +31,7 @@ export function ImageViewer<Image extends DisplayImage>({
   onSelect,
   onDelete,
   onOpenChange,
+  onViewerLoad,
 }: {
   image: Image | undefined;
   images: readonly Image[];
@@ -45,6 +46,7 @@ export function ImageViewer<Image extends DisplayImage>({
   onSelect: (image: Image) => void;
   onDelete: (image: Image) => void;
   onOpenChange: (open: boolean) => void;
+  onViewerLoad?: (url: string) => void;
 }) {
   const [loadedUrl, setLoadedUrl] = useState<string>();
   const loaded = viewerUrl !== undefined && viewerUrl === loadedUrl;
@@ -62,7 +64,10 @@ export function ImageViewer<Image extends DisplayImage>({
         title="Image preview"
         size="large"
         onKeyDown={(event) => {
-          if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          if (
+            !deleting &&
+            (event.key === "ArrowLeft" || event.key === "ArrowRight")
+          ) {
             event.preventDefault();
             navigate(event.key === "ArrowLeft" ? -1 : 1);
           }
@@ -70,6 +75,7 @@ export function ImageViewer<Image extends DisplayImage>({
       >
         <DialogClose
           aria-label="Close image preview"
+          disabled={deleting}
           className="fixed! top-4 left-4 z-10 size-10! rounded-full p-0!"
         >
           <X aria-hidden="true" />
@@ -105,7 +111,10 @@ export function ImageViewer<Image extends DisplayImage>({
                   "max-h-[90vh] w-full object-contain transition-opacity duration-200",
                   loaded ? "opacity-100" : "opacity-0",
                 ].join(" ")}
-                onLoad={() => setLoadedUrl(viewerUrl)}
+                onLoad={() => {
+                  setLoadedUrl(viewerUrl);
+                  onViewerLoad?.(viewerUrl);
+                }}
               />
             )}
             {thumbnailUrl && (
@@ -142,6 +151,7 @@ export function ImageViewer<Image extends DisplayImage>({
           <>
             <IconButton
               aria-label="Previous image"
+              disabled={deleting}
               className="fixed! top-1/2 left-4 z-10 -translate-y-1/2 rounded-full"
               variant="secondary"
               onClick={() => navigate(-1)}
@@ -150,6 +160,7 @@ export function ImageViewer<Image extends DisplayImage>({
             </IconButton>
             <IconButton
               aria-label="Next image"
+              disabled={deleting}
               className="fixed! top-1/2 right-4 z-10 -translate-y-1/2 rounded-full"
               variant="secondary"
               onClick={() => navigate(1)}

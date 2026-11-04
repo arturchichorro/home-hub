@@ -15,6 +15,7 @@ import {
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useState } from "react";
+import { ImageViewer } from "../media/image-viewer";
 import { type MediaSession, useMediaSession } from "../media/session";
 import { useBlockAppUpdate } from "../updates/activity";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
@@ -82,42 +83,77 @@ function Tile({
 }
 function Viewer({
   pin,
-  index,
-  total,
+  pins,
   session,
   enabled,
   onClose,
-  onMove,
+  onSelect,
   onDelete,
 }: {
   pin: MoodboardPin;
-  index: number;
-  total: number;
+  pins: readonly MoodboardPin[];
   session: MediaSession;
   enabled: boolean;
   onClose: () => void;
-  onMove: (n: number) => void;
+  onSelect: (id: string) => void;
   onDelete: () => Promise<void>;
 }) {
   useBlockAppUpdate(true);
-  const [deleting, setDeleting] = useState(false),
-    [error, setError] = useState(false),
-    [loadedImage, setLoadedImage] = useState<string>();
+  const [deleting, setDeleting] = useState(false);
+  const [errorFor, setErrorFor] = useState<string>();
+  const error = errorFor === pin.id;
+  const index = pins.findIndex((item) => item.id === pin.id);
   const identity = {
     ...session,
     householdId: pin.householdId,
     listId: pin.listId,
   };
   const poster = useListImageUrl({
-      ...identity,
-      attachmentId: pin.id,
-      variant: "thumbnail",
-    }),
-    full = useListImageUrl({
-      ...identity,
-      attachmentId: pin.id,
-      variant: pin.asset?.kind === "video" ? "video" : "viewer",
-    });
+    ...identity,
+    attachmentId: pin.id,
+    variant: "thumbnail",
+  });
+  const full = useListImageUrl({
+    ...identity,
+    attachmentId: pin.id,
+    variant: pin.asset?.kind === "video" ? "video" : "viewer",
+  });
+  function remove() {
+    if (deleting || !enabled) return;
+    setDeleting(true);
+    setErrorFor(undefined);
+    void onDelete()
+      .catch(() => setErrorFor(pin.id))
+      .finally(() => setDeleting(false));
+  }
+  if (pin.asset?.kind !== "video") {
+    const images = pins.map((item) => ({
+      id: item.id,
+      width: item.asset?.width ?? null,
+      height: item.asset?.height ?? null,
+    }));
+    return (
+      <ImageViewer
+        image={images.find((item) => item.id === pin.id)}
+        images={images}
+        thumbnailUrl={poster.url}
+        viewerUrl={full.url}
+        error={full.error}
+        alt="Moodboard image"
+        canDelete={enabled}
+        deleting={deleting}
+        deleteDescription="Remove this picture from the moodboard."
+        actionError={
+          error ? "Unable to remove this picture. Please retry." : undefined
+        }
+        onSelect={(item) => onSelect(item.id)}
+        onDelete={remove}
+        onOpenChange={(open) => {
+          if (!open && !deleting) onClose();
+        }}
+      />
+    );
+  }
   return (
     <DialogRoot
       open
@@ -126,21 +162,27 @@ function Viewer({
       }}
     >
       <DialogPopup
-        title={`Media ${index + 1} of ${total}`}
+        title="Video preview"
         size="large"
         actions={
           <>
             <Button
               variant="ghost"
               disabled={index === 0 || deleting}
-              onClick={() => onMove(-1)}
+              onClick={() => {
+                const previous = pins[index - 1];
+                if (previous) onSelect(previous.id);
+              }}
             >
               Previous
             </Button>
             <Button
               variant="ghost"
-              disabled={index >= total - 1 || deleting}
-              onClick={() => onMove(1)}
+              disabled={index >= pins.length - 1 || deleting}
+              onClick={() => {
+                const next = pins[index + 1];
+                if (next) onSelect(next.id);
+              }}
             >
               Next
             </Button>
@@ -148,7 +190,7 @@ function Viewer({
               Close
             </Button>
             <ConfirmationPopover
-              message="Remove this media from the moodboard?"
+              message="Remove this video from the moodboard?"
               confirmLabel="Remove"
               trigger={
                 <IconButton
@@ -158,61 +200,24 @@ function Viewer({
                   <Trash2 className="size-4" aria-hidden="true" />
                 </IconButton>
               }
-              onConfirm={() => {
-                setDeleting(true);
-                setError(false);
-                void onDelete()
-                  .catch(() => setError(true))
-                  .finally(() => setDeleting(false));
-              }}
+              onConfirm={remove}
             />
           </>
         }
       >
-        {pin.asset?.kind === "video" ? (
-          <video
-            key={pin.id}
-            controls
-            playsInline
-            preload="metadata"
-            poster={poster.url}
-            src={full.url}
-            className="mx-auto max-h-[65vh] max-w-full"
-            aria-label="Moodboard video"
-            onError={() => setError(true)}
-          >
-            <track kind="captions" />
-          </video>
-        ) : (
-          <div
-            className="grid place-items-center"
-            role="img"
-            aria-label="Moodboard inspiration"
-          >
-            {poster.url && (
-              <img
-                src={poster.url}
-                alt=""
-                width={pin.asset?.width}
-                height={pin.asset?.height}
-                className={`col-start-1 row-start-1 mx-auto max-h-[65vh] max-w-full object-contain ${loadedImage === full.url ? "opacity-0" : "opacity-100"}`}
-              />
-            )}
-            {full.url && (
-              <img
-                src={full.url}
-                alt=""
-                width={pin.asset?.width}
-                height={pin.asset?.height}
-                className={`col-start-1 row-start-1 mx-auto max-h-[65vh] max-w-full object-contain transition-opacity duration-200 ${loadedImage === full.url ? "opacity-100" : "opacity-0"}`}
-                onLoad={(event) =>
-                  setLoadedImage(event.currentTarget.currentSrc)
-                }
-                onError={() => setError(true)}
-              />
-            )}
-          </div>
-        )}
+        <video
+          key={pin.id}
+          controls
+          playsInline
+          preload="metadata"
+          poster={poster.url}
+          src={full.url}
+          className="mx-auto max-h-[65vh] max-w-full"
+          aria-label="Moodboard video"
+          onError={() => setErrorFor(pin.id)}
+        >
+          <track kind="captions" />
+        </video>
         {(error || full.error) && (
           <InlineAlert role="alert" variant="danger">
             Unable to load or remove this media. Close and reopen to retry.
@@ -225,12 +230,10 @@ function Viewer({
 export function Moodboard({
   householdId,
   listId,
-  count,
   onBusy,
 }: {
   householdId: string;
   listId: string;
-  count: number;
   onBusy: (busy: boolean) => void;
 }) {
   const session = useMediaSession(),
@@ -251,12 +254,12 @@ export function Moodboard({
   );
   useBlockAppUpdate(dragging || reordering);
   const visible = rows.slice(0, limit - 1);
+  const pinned = selectedRow?.id === selected ? selectedRow : undefined;
   const viewerRows =
-    selectedRow && !visible.some((row) => row.id === selectedRow.id)
-      ? [...visible, selectedRow]
+    pinned && !visible.some((row) => row.id === pinned.id)
+      ? [...visible, pinned]
       : visible;
-  const current = selectedRow ?? visible.find((r) => r.id === selected),
-    index = viewerRows.findIndex((r) => r.id === selected);
+  const current = pinned ?? visible.find((row) => row.id === selected);
   async function move(from: number, to: number) {
     if (!enabled || from === to || to < 0 || to >= visible.length) return;
     const order = [...visible],
@@ -292,16 +295,16 @@ export function Moodboard({
       <p className="text-muted">Sign in online to load moodboard media.</p>
     );
   return (
-    <section aria-label="Moodboard" className="grid gap-4">
+    <section
+      aria-label="Moodboard"
+      className="grid min-w-0 max-w-full grid-cols-[minmax(0,1fr)] gap-4 overflow-x-clip"
+    >
       <MoodboardUploads
         householdId={householdId}
         listId={listId}
         session={session}
         onBusy={onBusy}
       />
-      <p className="text-xs text-muted">
-        {count} {count === 1 ? "media item" : "media items"}
-      </p>
       {error && (
         <InlineAlert role="alert" variant="danger">
           {error}
@@ -313,10 +316,8 @@ export function Moodboard({
         </InlineAlert>
       )}
       {!rows.length && (
-        <p className="py-12 text-center text-muted" role="status">
-          {result.type === "complete"
-            ? "Add images or video clips to start your moodboard."
-            : "Loading media…"}
+        <p className="sr-only" role="status">
+          {result.type === "complete" ? "Empty moodboard" : "Loading media…"}
         </p>
       )}
       <DragDropProvider
@@ -331,7 +332,7 @@ export function Moodboard({
       >
         <ul
           aria-label="Moodboard media"
-          className="columns-2 gap-3 sm:columns-3 lg:columns-4"
+          className="min-w-0 max-w-full columns-2 gap-3 sm:columns-3 lg:columns-4"
         >
           {visible.map((pin, i) => (
             <Tile
@@ -358,14 +359,12 @@ export function Moodboard({
         ))}
       {current && (
         <Viewer
-          key={current.id}
           pin={current}
-          index={index}
-          total={viewerRows.length}
+          pins={viewerRows}
           session={session}
           enabled={enabled}
           onClose={() => setSelected(undefined)}
-          onMove={(direction) => setSelected(viewerRows[index + direction]?.id)}
+          onSelect={setSelected}
           onDelete={async () => {
             const result = await deleteListImage({
               ...session,
