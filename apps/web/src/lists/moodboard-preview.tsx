@@ -37,7 +37,9 @@ export function MoodboardThumbnail({
       decoding="async"
       width={pin.asset?.width}
       height={pin.asset?.height}
-      className={cover ? "size-full object-cover" : "h-auto w-full"}
+      className={
+        cover ? "size-full object-cover" : "h-auto w-full min-w-0 max-w-full"
+      }
     />
   ) : (
     <span
@@ -49,13 +51,7 @@ export function MoodboardThumbnail({
     />
   );
 }
-export function MoodboardPreview({
-  pins,
-  count,
-}: {
-  pins: readonly MoodboardPin[];
-  count: number;
-}) {
+export function MoodboardPreview({ pins }: { pins: readonly MoodboardPin[] }) {
   const session = useMediaSession();
   return (
     <div className="grid gap-2">
@@ -81,9 +77,6 @@ export function MoodboardPreview({
           </div>
         ))}
       </div>
-      <p className="text-xs text-muted">
-        {count} {count === 1 ? "media item" : "media items"}
-      </p>
     </div>
   );
 }

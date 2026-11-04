@@ -6,19 +6,8 @@ import {
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import type { RecipeImage } from "@home-hub/shared/recipe-images";
-import {
-  ChevronLeft,
-  ChevronRight,
-  ConfirmationPopover,
-  DialogClose,
-  DialogPopup,
-  DialogRoot,
-  IconButton,
-  InlineAlert,
-  Trash2,
-  X,
-} from "@home-hub/ui-web";
-import { type KeyboardEvent, type Ref, useEffect, useState } from "react";
+import { type Ref, useEffect, useState } from "react";
+import { ImageViewer } from "../media/image-viewer";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { prefetchRecipeImage } from "./prefetch-recipe-image";
 import { getAdjacentRecipeImage } from "./recipe-image-navigation";
@@ -250,7 +239,6 @@ export function RecipeImageViewer({
   });
   const [loadedViewerUrl, setLoadedViewerUrl] = useState<string>();
   const viewerLoaded = viewerUrl !== undefined && loadedViewerUrl === viewerUrl;
-  const canNavigate = images.length > 1;
 
   useEffect(() => {
     if (!image || !viewerLoaded) return;
@@ -282,106 +270,22 @@ export function RecipeImageViewer({
     viewerLoaded,
   ]);
 
-  function navigate(direction: -1 | 1) {
-    if (!image) return;
-    const nextImage = getAdjacentRecipeImage(images, image.id, direction);
-    if (nextImage) onSelect(nextImage);
-  }
-
-  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (!canNavigate) return;
-    if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      navigate(-1);
-    } else if (event.key === "ArrowRight") {
-      event.preventDefault();
-      navigate(1);
-    }
-  }
-
   return (
-    <DialogRoot open={image !== undefined} onOpenChange={onOpenChange}>
-      <DialogPopup
-        appearance="bare"
-        title="Image preview"
-        size="large"
-        onKeyDown={handleKeyDown}
-      >
-        <DialogClose
-          aria-label="Close image preview"
-          className="fixed! top-4 left-4 z-10 size-10! rounded-full p-0!"
-        >
-          <X aria-hidden="true" />
-        </DialogClose>
-        {image ? (
-          <ConfirmationPopover
-            title="Delete picture?"
-            description="This permanently removes the picture."
-            trigger={
-              <IconButton
-                aria-label="Delete picture"
-                className="fixed! top-4 right-4 z-10 rounded-full"
-                disabled={!mutationEnabled}
-                variant="secondary"
-              >
-                <Trash2 aria-hidden="true" />
-              </IconButton>
-            }
-            onConfirm={() => {
-              if (mutationEnabled) onDelete(image);
-            }}
-          />
-        ) : null}
-        {viewerUrl || smallUrl ? (
-          <div className="relative">
-            {viewerUrl ? (
-              <img
-                src={viewerUrl}
-                alt="Recipe"
-                width={image?.width ?? undefined}
-                height={image?.height ?? undefined}
-                className={`max-h-[90vh] w-full object-contain transition-opacity duration-200 ${viewerLoaded ? "opacity-100" : "opacity-0"}`}
-                onLoad={() => setLoadedViewerUrl(viewerUrl)}
-              />
-            ) : null}
-            {smallUrl ? (
-              <img
-                src={smallUrl}
-                alt={viewerUrl ? "" : "Recipe"}
-                width={image?.width ?? undefined}
-                height={image?.height ?? undefined}
-                className={`${viewerUrl ? "absolute inset-0" : ""} max-h-[90vh] w-full object-contain transition-opacity duration-200 ${viewerLoaded ? "opacity-0" : "opacity-100"}`}
-              />
-            ) : null}
-          </div>
-        ) : error ? (
-          <InlineAlert role="alert" variant="danger">
-            This image is not currently available.
-          </InlineAlert>
-        ) : (
-          <div className="aspect-video animate-pulse rounded-md bg-surface" />
-        )}
-        {canNavigate ? (
-          <>
-            <IconButton
-              aria-label="Previous image"
-              className="fixed! top-1/2 left-4 z-10 -translate-y-1/2 rounded-full"
-              variant="secondary"
-              onClick={() => navigate(-1)}
-            >
-              <ChevronLeft aria-hidden="true" />
-            </IconButton>
-            <IconButton
-              aria-label="Next image"
-              className="fixed! top-1/2 right-4 z-10 -translate-y-1/2 rounded-full"
-              variant="secondary"
-              onClick={() => navigate(1)}
-            >
-              <ChevronRight aria-hidden="true" />
-            </IconButton>
-          </>
-        ) : null}
-      </DialogPopup>
-    </DialogRoot>
+    <ImageViewer
+      image={image}
+      images={images}
+      thumbnailUrl={smallUrl}
+      viewerUrl={viewerUrl}
+      error={error}
+      alt="Recipe"
+      canDelete={mutationEnabled}
+      deleting={false}
+      deleteDescription="Remove this picture from the recipe."
+      actionError={undefined}
+      onSelect={onSelect}
+      onDelete={onDelete}
+      onOpenChange={onOpenChange}
+      onViewerLoad={setLoadedViewerUrl}
+    />
   );
 }

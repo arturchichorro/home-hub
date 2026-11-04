@@ -98,7 +98,7 @@ export function ListDetail({
     );
 
   return (
-    <div className="grid gap-4">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <ListNameInput
           currentName={list.name}
@@ -131,7 +131,6 @@ export function ListDetail({
         <Moodboard
           householdId={householdId}
           listId={listId}
-          count={list.mediaCount ?? 0}
           onBusy={setMediaBusy}
         />
       ) : (
