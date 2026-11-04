@@ -38,6 +38,11 @@ Habits day boxes and optional workout-linked completion are integrated into
 When a review item merges, remove its pending entry and update the corresponding
 subject/history. Guest Access remains excluded from this integration.
 
+## Activate agent-accessible operational logs
+
+- [ ] Confirm a dedicated personal Grafana Cloud Free stack, EU region, retention and quotas; create separate stack-scoped write/read tokens.
+- [ ] Follow the [activation runbook](./operations/), verify collector health/usage limits and cite a real production canary through the read-only agent tool. Implementation and synthetic end-to-end verification do not authorize activation.
+
 ## Deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack

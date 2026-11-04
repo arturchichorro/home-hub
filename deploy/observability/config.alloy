@@ -1,0 +1,257 @@
+// No Docker socket. Only Docker json-file records for this Compose project,
+// plus fixed-schema host operation events, are accepted. Never forward raw lines.
+logging {
+	level = "warn"
+}
+
+local.file_match "docker" {
+	path_targets = [{
+		"__path__" = "/docker-logs/*/*-json.log", "source" = "docker",
+	}]
+
+	sync_period = "5s"
+}
+
+local.file_match "operations" {
+	path_targets = [{
+		"__path__" = "/operations/events.jsonl", "source" = "operations",
+	}]
+
+	sync_period = "5s"
+}
+
+loki.source.file "docker" {
+	targets = local.file_match.docker.targets
+
+	forward_to = [loki.process.private_projection.receiver]
+}
+
+loki.source.file "operations" {
+	targets = local.file_match.operations.targets
+
+	forward_to = [loki.process.private_projection.receiver]
+}
+
+loki.process "private_projection" {
+	forward_to = [loki.write.cloud.receiver]
+
+	stage.drop {
+		longer_than = "64KiB"
+	}
+
+	stage.match {
+		selector = "{source=\"docker\"}"
+
+		stage.json {
+			drop_malformed = true
+
+			expressions = {
+				body           = "log", dockerTime = "time",
+				project        = "attrs.\"com.docker.compose.project\"",
+				sourceService  = "attrs.\"com.docker.compose.service\"",
+				sourceRevision = "attrs.\"org.opencontainers.image.revision\"",
+			}
+		}
+
+		stage.labels {
+			values = {
+				project = "",
+				service = "sourceService",
+			}
+		}
+
+		stage.match {
+			selector            = "{project!=\"home-hub-production\"}"
+			action              = "drop"
+			drop_counter_reason = "other_project"
+		}
+
+		stage.match {
+			selector            = "{service!~\"api|zero-cache|postgres|web\"}"
+			action              = "drop"
+			drop_counter_reason = "other_service"
+		}
+
+		stage.timestamp {
+			source            = "dockerTime"
+			format            = "RFC3339Nano"
+			action_on_failure = "skip"
+		}
+
+		stage.output {
+			source = "body"
+		}
+	}
+
+	stage.json {
+		expressions = {
+			phase       = "phase",
+			zeroMessage = "message",
+			event       = "event",
+			level       = "level", requestId = "requestId",
+			method      = "method",
+			route       = "route",
+			status      = "status", durationMs = "durationMs",
+			code        = "code",
+			errorType   = "error.name", serviceValue = "service", recordRevision = "revision",
+			exitCode    = "exitCode", operationTime  = "timestamp",
+		}
+	}
+
+	stage.match {
+		selector = "{source=\"operations\"}"
+
+		stage.template {
+			source   = "sourceService"
+			template = `{{ if regexMatch "^(deploy|backup)$" (toString .serviceValue) }}{{ .serviceValue }}{{ else }}rejected{{ end }}`
+		}
+
+		stage.template {
+			source   = "sourceRevision"
+			template = `{{ if regexMatch "^[a-f0-9]{40}$" (toString .recordRevision) }}{{ .recordRevision }}{{ else }}unknown{{ end }}`
+		}
+
+		stage.labels {
+			values = {
+				service = "sourceService",
+			}
+		}
+
+		stage.match {
+			selector            = "{service=\"rejected\"}"
+			action              = "drop"
+			drop_counter_reason = "invalid_operation"
+		}
+
+		stage.timestamp {
+			source            = "operationTime"
+			format            = "RFC3339Nano"
+			action_on_failure = "skip"
+		}
+	}
+
+	stage.match {
+		selector = "{service=\"postgres\"}"
+
+		stage.regex {
+			expression = `\[[0-9]+\] (?:(?P<pgCode>[0-9A-Z]{5}) )?(?P<pgSeverity>LOG|ERROR|FATAL|PANIC|WARNING):`
+		}
+	}
+
+	stage.template {
+		source = "safe"
+
+		template = `{{- $o := dict "event" "operational_log" "severity" "unknown" -}}
+{{- $level := lower (toString .level) -}}
+{{- if regexMatch "^(debug|info|warn|error|fatal)$" $level -}}{{- $_ := set $o "severity" $level -}}{{- end -}}
+{{- if eq (toString .sourceService) "api" -}}
+  {{- if regexMatch "^(http_request|mutation_database_error|server_started|shutdown_started|shutdown_completed|shutdown_failed)$" (toString .event) -}}
+  {{- $_ := set $o "event" .event -}}
+  {{- if regexMatch "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$" (toString .requestId) -}}{{- $_ := set $o "requestId" .requestId -}}{{- end -}}
+  {{- if regexMatch "^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$" (toString .method) -}}{{- $_ := set $o "method" .method -}}{{- end -}}
+  {{- if and (le (len (toString .route)) 180) (regexMatch "^(unmatched|/api(/([a-z-]+|:[A-Za-z]+))*)$" (toString .route)) -}}{{- $_ := set $o "route" .route -}}{{- end -}}
+  {{- if regexMatch "^[1-5][0-9]{2}$" (toString .status) -}}{{- $_ := set $o "status" (toString .status) -}}{{- $_ := set $o "severity" "info" -}}{{- end -}}
+  {{- if regexMatch "^5[0-9]{2}$" (toString .status) -}}{{- $_ := set $o "severity" "error" -}}{{- end -}}
+  {{- if regexMatch "^[0-9]{1,7}$" (toString .durationMs) -}}{{- $_ := set $o "durationMs" (toString .durationMs) -}}{{- end -}}
+  {{- if regexMatch "^[0-9A-Z]{5}$" (toString .code) -}}{{- $_ := set $o "code" .code -}}{{- end -}}
+  {{- if regexMatch "^(Error|TypeError|RangeError|SyntaxError|DatabaseError|AbortError)$" (toString .errorType) -}}{{- $_ := set $o "errorType" .errorType -}}{{- end -}}
+  {{- end -}}
+{{- else if regexMatch "^(deploy|backup)$" (toString .sourceService) -}}
+  {{- if regexMatch "^(deployment_started|deployment_succeeded|deployment_failed|backup_started|backup_succeeded|backup_failed|collector_canary)$" (toString .event) -}}{{- $_ := set $o "event" .event -}}{{- $_ := set $o "severity" "info" -}}{{- end -}}
+  {{- if regexMatch "failed$" (toString .event) -}}{{- $_ := set $o "severity" "error" -}}{{- end -}}
+  {{- if regexMatch "^[a-f0-9]{40}$" (toString .recordRevision) -}}{{- $_ := set $o "revision" .recordRevision -}}{{- end -}}
+  {{- if regexMatch "^(preflight|build|cutover|migrate|backend|web|health|configuration|dump|archive|upload|verify_upload|unknown)$" (toString .phase) -}}{{- $_ := set $o "phase" .phase -}}{{- end -}}
+  {{- if regexMatch "^[0-9]{1,3}$" (toString .exitCode) -}}{{- $_ := set $o "exitCode" (toString .exitCode) -}}{{- end -}}
+{{- else if eq (toString .sourceService) "postgres" -}}
+  {{- if regexMatch "^(ERROR|FATAL|PANIC)$" (toString .pgSeverity) -}}{{- $_ := set $o "event" "postgres_error" -}}{{- $_ := set $o "severity" "error" -}}{{- end -}}
+  {{- if regexMatch "LOG:  database system is ready to accept connections" .Entry -}}{{- $_ := set $o "event" "postgres_ready" -}}{{- $_ := set $o "severity" "info" -}}{{- end -}}
+  {{- if regexMatch "^[0-9A-Z]{5}$" (toString .pgCode) -}}{{- $_ := set $o "code" .pgCode -}}{{- end -}}
+{{- else if eq (toString .sourceService) "zero-cache" -}}
+  {{- if regexMatch "Cannot replicate table .[a-z_]+. without a PRIMARY KEY or UNIQUE INDEX" (toString (coalesce .zeroMessage .Entry)) -}}{{- $_ := set $o "event" "zero_replica_missing_key" -}}{{- $_ := set $o "severity" "error" -}}{{- end -}}
+{{- end -}}
+{{- toJson $o -}}`
+	}
+
+	stage.template {
+		source   = "sourceRevision"
+		template = `{{ if regexMatch "^[a-f0-9]{40}$" (toString .Value) }}{{ .Value }}{{ else }}unknown{{ end }}`
+	}
+
+	stage.labels {
+		values = {
+			revision = "sourceRevision",
+		}
+	}
+
+	stage.static_labels {
+		values = {
+			app         = "home-hub",
+			environment = "production",
+		}
+	}
+
+	stage.output {
+		source = "safe"
+	}
+
+	stage.drop {
+		longer_than         = "1KiB"
+		drop_counter_reason = "projection_too_large"
+	}
+
+	stage.drop {
+		older_than          = "24h"
+		drop_counter_reason = "outside_replay_window"
+	}
+	// Two global priority buckets, never per service/revision. Routine traffic
+	// cannot consume the error/outcome/canary budget. Total <=2 lines/sec.
+	stage.json {
+		source      = "safe"
+		expressions = {safeSeverity = "severity", safeEvent = "event"}
+	}
+
+	stage.template {
+		source   = "priority"
+		template = `{{ if or (regexMatch "^(error|fatal)$" (toString .safeSeverity)) (regexMatch "^(deployment_|backup_|collector_canary|mutation_database_error|shutdown_failed)" (toString .safeEvent)) }}critical{{ else }}normal{{ end }}`
+	}
+
+	stage.labels {
+		values = {priority = "priority"}
+	}
+
+	stage.limit {
+		rate                = 1
+		burst               = 20
+		by_label_name       = "priority"
+		max_distinct_labels = 2
+		drop                = true
+	}
+
+	stage.label_keep {
+		values = ["app", "environment", "service", "revision"]
+	}
+}
+
+loki.write "cloud" {
+	endpoint {
+		url = sys.env("LOKI_WRITE_URL")
+
+		basic_auth {
+			username = sys.env("LOKI_TENANT")
+			password = sys.env("LOKI_WRITE_TOKEN")
+		}
+
+		batch_size = "64KiB"
+
+		batch_wait = "1s"
+
+		remote_timeout = "5s"
+
+		min_backoff_period = "500ms"
+
+		max_backoff_period = "5s"
+
+		max_backoff_retries = 3
+		retry_on_http_429   = false
+	}
+}

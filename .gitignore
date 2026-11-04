@@ -9,3 +9,5 @@ dist/
 !.env.production.example
 apps/image-delivery/.dev.vars
 apps/image-delivery/.wrangler/
+deploy/observability/cloud.env
+deploy/observability/reader.env

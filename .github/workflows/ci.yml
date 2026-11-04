@@ -51,6 +51,9 @@ jobs:
       - name: Run test suite
         run: pnpm test
 
+      - name: Verify privacy-safe operational logs and read-only MCP
+        run: bash scripts/verify-operational-logs.sh
+
       - name: Verify generated Zero schema
         run: |
           pnpm --filter @home-hub/database zero:generate

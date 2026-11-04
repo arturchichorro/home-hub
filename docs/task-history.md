@@ -404,6 +404,10 @@ Open review work remains in [Tasks](./tasks.md#work-in-review).
 
 - [x] Implement opt-in household topics, colored categories and one shared multiline entry per calendar date, with inline creation, conflict-safe autosave, backfill/search/paged history and retained soft deletion. See [Logs](./logs/README.md) for date/conflict rules and migration coordination. Implementation history is not deployment approval.
 
+## Agent-accessible operational logs
+
+- [x] Implement opt-in Alloy privacy projection for API/Zero/PostgreSQL/Caddy, safe deployment/backup outcomes, bounded local rotation and a restricted, audited read-only MCP log search. Real synthetic Alloy → Loki → MCP verification checks pre-export redaction and cited evidence. See [Operations](./operations/) for deliberate Cloud activation and remaining production acceptance; no deployment is implied.
+
 ## Misc
 
 - [x] Preserve raw seamless-input drafts during debounced saves and normalize them only at editing boundaries
