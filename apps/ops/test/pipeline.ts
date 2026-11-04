@@ -20,6 +20,13 @@ if (mode === "seed") {
     "../../api/test/diagnostics-fixture.ts"
   );
   const emitted = await sourceDiagnosticFixture(secret, requestId);
+  assert(
+    Array.isArray(emitted.locations) &&
+      emitted.locations.some((location: string) =>
+        location.startsWith("apps/api/src/documents/storage.ts:"),
+      ),
+    "Source failed to emit validated locations",
+  );
   await mkdir(join(directory, "docker/a"), { recursive: true });
   await mkdir(join(directory, "operations"), { recursive: true });
   const wrap = (

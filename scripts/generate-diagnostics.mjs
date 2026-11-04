@@ -62,8 +62,10 @@ const block = `{{- /* BEGIN GENERATED DIAGNOSTICS: scripts/generate-diagnostics.
     {{- $_ := set $o "diagnosticMessage" (get $messages .diagnosticCode) -}}
     {{- $locations := list -}}
     {{- $limits := dict ${lineLimits} -}}
-    {{- if kindIs "slice" .diagnosticLocations -}}
-      {{- range .diagnosticLocations -}}
+    {{- $inputLocations := .diagnosticLocations -}}
+    {{- if kindIs "string" $inputLocations -}}{{- $inputLocations = fromJson $inputLocations -}}{{- end -}}
+    {{- if kindIs "slice" $inputLocations -}}
+      {{- range $inputLocations -}}
         {{- if and (lt (len $locations) 3) (regexMatch ${JSON.stringify(locationsPattern)} (toString .)) -}}
           {{- $parts := splitList ":" . -}}
           {{- if and (le (atoi (index $parts 1)) (get $limits (index $parts 0))) (le (atoi (index $parts 2)) 4096) -}}
