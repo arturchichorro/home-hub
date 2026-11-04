@@ -41,6 +41,16 @@ unconfirmed, and the recipe upload button shows a dismissible error popover.
 Legacy assets retain unknown (`NULL`) animation metadata and existing display
 behavior; originals are neither rewritten nor falsely classified as static.
 
+## Expanded image previews
+
+Recipes and Moodboards share a viewport-fitted progressive image frame. The
+thumbnail remains visible until the larger derivative has decoded; only the
+larger layer fades in, so the backdrop is never exposed between two fading layers.
+URL arrival does not change layout. Refreshing a signed URL retains the last good
+image, and closing/navigating discards stale decode work. Reduced-motion settings
+skip the fade. A failed larger image keeps the available lower-resolution image;
+no additional derivative, signing request or backend change is required.
+
 ## Storage, delivery and authorization
 
 New originals use `households/{householdId}/media/{mediaId}`. Migrated originals

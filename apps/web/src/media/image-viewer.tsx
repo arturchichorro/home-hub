@@ -10,7 +10,7 @@ import {
   Trash2,
   X,
 } from "@home-hub/ui-web";
-import { useState } from "react";
+import { ProgressiveImage } from "./progressive-image";
 
 export type DisplayImage = {
   id: string;
@@ -48,8 +48,6 @@ export function ImageViewer<Image extends DisplayImage>({
   onOpenChange: (open: boolean) => void;
   onViewerLoad?: (url: string) => void;
 }) {
-  const [loadedUrl, setLoadedUrl] = useState<string>();
-  const loaded = viewerUrl !== undefined && viewerUrl === loadedUrl;
   const navigate = (direction: number) => {
     if (!image || images.length < 2) return;
     const index = images.findIndex((item) => item.id === image.id);
@@ -99,44 +97,15 @@ export function ImageViewer<Image extends DisplayImage>({
             }}
           />
         )}
-        {viewerUrl || thumbnailUrl ? (
-          <div className="relative">
-            {viewerUrl && (
-              <img
-                src={viewerUrl}
-                alt={alt}
-                width={image?.width ?? undefined}
-                height={image?.height ?? undefined}
-                className={[
-                  "max-h-[90vh] w-full object-contain transition-opacity duration-200",
-                  loaded ? "opacity-100" : "opacity-0",
-                ].join(" ")}
-                onLoad={() => {
-                  setLoadedUrl(viewerUrl);
-                  onViewerLoad?.(viewerUrl);
-                }}
-              />
-            )}
-            {thumbnailUrl && (
-              <img
-                src={thumbnailUrl}
-                alt={viewerUrl ? "" : alt}
-                width={image?.width ?? undefined}
-                height={image?.height ?? undefined}
-                className={[
-                  viewerUrl ? "absolute inset-0" : "",
-                  "max-h-[90vh] w-full object-contain transition-opacity duration-200",
-                  loaded ? "opacity-0" : "opacity-100",
-                ].join(" ")}
-              />
-            )}
-          </div>
-        ) : error ? (
-          <InlineAlert role="alert" variant="danger">
-            This image is not currently available.
-          </InlineAlert>
-        ) : (
-          <div className="aspect-video animate-pulse rounded-md bg-surface" />
+        {image && (
+          <ProgressiveImage
+            key={image.id}
+            thumbnailUrl={thumbnailUrl}
+            viewerUrl={viewerUrl}
+            alt={alt}
+            error={error}
+            {...(onViewerLoad ? { onViewerLoad } : {})}
+          />
         )}
         {actionError && (
           <InlineAlert

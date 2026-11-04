@@ -408,6 +408,10 @@ Open review work remains in [Tasks](./tasks.md#work-in-review).
 
 - [x] Share the Recipes image viewer with Moodboards, replace the upload CTA/helper copy with a small header `+`, remove media-count captions and constrain masonry/upload grid widths to prevent horizontal page scrolling. Preserve failed uploads, retry/discard, ordering and paused video previews.
 
+## Smooth expanded image loading
+
+- [x] Keep Recipes/Moodboard previews in one stable frame, wait for full-image decode and fade the larger image over an opaque fallback. Preserve last-good pixels on URL refresh/failure, reset on close/navigation and respect reduced motion.
+
 ## Misc
 
 - [x] Preserve raw seamless-input drafts during debounced saves and normalize them only at editing boundaries

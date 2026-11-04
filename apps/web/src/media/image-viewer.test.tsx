@@ -92,7 +92,8 @@ const props = {
 it("renders the bare Recipes-style viewer, with image-fit and icon controls rather than a framed media dialog", () => {
   const html = renderToStaticMarkup(<ImageViewer {...props} />);
   expect(html).toContain('data-appearance="bare"');
-  expect(html).toContain("max-h-[90vh] w-full object-contain");
+  expect(html).toContain("h-[90svh] w-full");
+  expect(html).toContain("absolute inset-0 size-full object-contain");
   for (const label of [
     "Close image preview",
     "Delete picture",
