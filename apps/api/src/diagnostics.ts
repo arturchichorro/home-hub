@@ -14,6 +14,16 @@ export type DiagnosticContext = {
   failure?: { operation: DiagnosticOperation; error: unknown };
 };
 export const diagnosticContext = new AsyncLocalStorage<DiagnosticContext>();
+const errorOperations = new WeakMap<Error, DiagnosticOperation>();
+export function operationForError(
+  error: unknown,
+): DiagnosticOperation | undefined {
+  for (const cause of errorChain(error)) {
+    const operation = errorOperations.get(cause);
+    if (operation) return operation;
+  }
+  return undefined;
+}
 const repositoryRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const errorNames = new Set([
   "Error",
@@ -164,8 +174,10 @@ export async function withDiagnosticOperation<T>(
   try {
     return await run();
   } catch (error) {
+    const deepest = operationForError(error) ?? operation;
+    if (error instanceof Error) errorOperations.set(error, deepest);
     const context = diagnosticContext.getStore();
-    if (context && !context.failure) context.failure = { operation, error };
+    if (context) context.failure = { operation: deepest, error };
     throw error;
   }
 }

@@ -6,6 +6,7 @@ import {
   diagnosticContext,
   diagnosticFor,
   diagnosticLocations,
+  operationForError,
   safeErrorType,
 } from "./diagnostics";
 import { httpOperation } from "./http-operations";
@@ -50,7 +51,8 @@ export function installApiObservability(
         status >= 400 ? diagnosticContext.getStore()?.failure : undefined;
       const error = c.error ?? failure?.error;
       const operation =
-        failure?.operation ?? httpOperation(c.req.method, route);
+        (status >= 400 ? operationForError(error) : undefined) ??
+        httpOperation(c.req.method, route);
       const diagnostic =
         status >= 400
           ? diagnosticFor(

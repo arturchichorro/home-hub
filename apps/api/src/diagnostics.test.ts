@@ -159,6 +159,25 @@ describe("source-first diagnostics", () => {
     expect(JSON.stringify(records)).not.toContain("PRIVATE");
     expect(JSON.stringify(records)).not.toContain("/private/");
   });
+  it("does not misattribute a later unrelated exception to a recovered dependency failure", async () => {
+    const records: StructuredLogRecord[] = [],
+      app = new Hono<ObservabilityEnv>();
+    installApiObservability(app, {
+      logger: { info: (r) => records.push(r), error: (r) => records.push(r) },
+    });
+    app.get("/api/health", async () => {
+      await withDiagnosticOperation("documents.storage_read", async () => {
+        throw unknownError();
+      }).catch(() => {});
+      throw new Error("Different private failure");
+    });
+    await app.request("/api/health");
+    expect(records[0]).toMatchObject({
+      status: 500,
+      operation: "http.health",
+      errorCode: "HH_UNEXPECTED",
+    });
+  });
   it("does not turn a recovered failure into an error on a successful response", async () => {
     const records: StructuredLogRecord[] = [],
       app = new Hono<ObservabilityEnv>();
