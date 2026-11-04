@@ -1,8 +1,16 @@
 import { createListMediaUploadSchema } from "@home-hub/shared/list-media";
 import { maxVideoDurationMs } from "@home-hub/shared/media";
-import { Button, DialogPopup, DialogRoot, InlineAlert } from "@home-hub/ui-web";
+import {
+  Button,
+  DialogPopup,
+  DialogRoot,
+  IconButton,
+  InlineAlert,
+  Plus,
+} from "@home-hub/ui-web";
 import { useBlocker } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { readImageDimensions } from "../media/read-image-dimensions";
 import type { MediaSession } from "../media/session";
 import { useBlockAppUpdate } from "../updates/activity";
@@ -94,6 +102,30 @@ function put(
     }
     xhr.send(file);
   });
+}
+function UploadHeaderAction({
+  input,
+  disabled,
+}: {
+  input: RefObject<HTMLInputElement | null>;
+  disabled: boolean;
+}) {
+  const action = useMemo(
+    () => (
+      <IconButton
+        aria-label="Add images or videos"
+        title="Add images or videos"
+        className="size-7!"
+        disabled={disabled}
+        onClick={() => input.current?.click()}
+      >
+        <Plus className="size-4" aria-hidden="true" />
+      </IconButton>
+    ),
+    [input, disabled],
+  );
+  useAppHeaderRightComponent(action);
+  return null;
 }
 export function MoodboardUploads({
   householdId,
@@ -228,7 +260,8 @@ export function MoodboardUploads({
     setJobs([]);
   }
   return (
-    <div className="grid gap-3">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+      <UploadHeaderAction input={ref} disabled={!enabled} />
       <input
         ref={ref}
         className="sr-only"
@@ -253,14 +286,6 @@ export function MoodboardUploads({
           });
         }}
       />
-      <div className="flex flex-wrap items-center gap-3">
-        <Button disabled={!enabled} onClick={() => ref.current?.click()}>
-          Add media
-        </Button>
-        <span className="text-xs text-muted">
-          Images · MP4 / WebM clips · No autoplay
-        </span>
-      </div>
       {jobs.some((job) => job.done) && (
         <div className="flex items-center gap-2 text-xs text-muted">
           <span role="status">
@@ -276,13 +301,16 @@ export function MoodboardUploads({
         </div>
       )}
       {jobs.some((job) => !job.done) && (
-        <ul className="grid gap-2" aria-label="Media uploads">
+        <ul
+          className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2"
+          aria-label="Media uploads"
+        >
           {jobs
             .filter((job) => !job.done)
             .map((job) => (
               <li
                 key={job.id}
-                className="grid gap-1 rounded-md border border-border p-2 text-sm"
+                className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 rounded-md border border-border p-2 text-sm"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="min-w-0 truncate">{job.file.name}</span>

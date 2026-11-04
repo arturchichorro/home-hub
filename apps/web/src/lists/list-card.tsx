@@ -131,10 +131,7 @@ export function ListCard({
           {list.name}
         </h2>
         {list.kind === "moodboard" ? (
-          <MoodboardPreview
-            pins={list.attachments ?? []}
-            count={list.mediaCount ?? 0}
-          />
+          <MoodboardPreview pins={list.attachments ?? []} />
         ) : (
           <ul className="grid gap-3">
             {list.items.map((item) => {

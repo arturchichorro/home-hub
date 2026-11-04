@@ -8,22 +8,26 @@ items/media are not part of this version.
 
 ## Interface and bounds
 
-- Add multiple still images or video clips. Each local file has progress and a
+- Add multiple still images or video clips through the small header `+`; no
+  persistent format helper text or media-count captions. Each local file has progress and a
   retryable error; successful uploads collapse into a compact summary. Failed
   files remain until retry/discard. Pending work guards navigation, unload and
   PWA updates; list deletion is disabled until it is resolved.
 - Show media in responsive masonry: two columns on phones, three/four on wider
-  screens. Aspect ratios reserve layout space. Media opens from its image surface;
+  screens. Shrinkable grid tracks and bounded image/upload widths prevent
+  horizontal page scrolling, including long filenames. Aspect ratios reserve layout space. Media opens from its image surface;
   a separate handle supports mouse drag, touch hold and Space/arrows/Escape.
 - Initially query/render 50 pins plus a lookahead; Show more adds 50. The current
   display safety ceiling is 10,000 loaded pins; stored media is not deleted at that
   ceiling. The active viewer has an independent authorized query so new uploads
   do not evict a playing clip from the loaded window.
-- Library cards show at most four thumbnails/posters, title and confirmed-media
-  count, without autoplay. `lists.library` is the new query; `lists.byHousehold`
+- Library cards show at most four thumbnails/posters and the title, without a
+  media-count caption or autoplay. `lists.library` is the new query; `lists.byHousehold`
   retains its original shape for older clients. No tile subscribes independently
   to Zero; signed read misses batch by user/household, at most 100 per request.
-- The viewer keeps a thumbnail while a larger image loads. Videos open paused
+- Images use the same shared bare viewer as Recipes: thumbnail-to-viewer fade,
+  close/delete icon controls, and arrow/keyboard navigation. Failed removal keeps
+  the image open; active removal disables navigation. Videos open paused
   with native playback/seeking controls. No transcoding or external embeds.
 
 ## Formats and storage

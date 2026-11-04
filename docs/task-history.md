@@ -404,6 +404,10 @@ Open review work remains in [Tasks](./tasks.md#work-in-review).
 
 - [x] Implement opt-in household topics, colored categories and one shared multiline entry per calendar date, with inline creation, conflict-safe autosave, backfill/search/paged history and retained soft deletion. See [Logs](./logs/README.md) for date/conflict rules and migration coordination. Implementation history is not deployment approval.
 
+## Moodboard UI refinement
+
+- [x] Share the Recipes image viewer with Moodboards, replace the upload CTA/helper copy with a small header `+`, remove media-count captions and constrain masonry/upload grid widths to prevent horizontal page scrolling. Preserve failed uploads, retry/discard, ordering and paused video previews.
+
 ## Misc
 
 - [x] Preserve raw seamless-input drafts during debounced saves and normalize them only at editing boundaries

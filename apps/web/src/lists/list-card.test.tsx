@@ -55,6 +55,25 @@ describe("ListCard", () => {
     expect(markup).not.toContain("Move");
   });
 
+  it("shows a moodboard mosaic without its internal media count", () => {
+    const markup = renderToStaticMarkup(
+      <ListCard
+        list={{
+          ...list,
+          name: "Inspiration",
+          kind: "moodboard",
+          mediaCount: 9,
+          attachments: [],
+        }}
+        index={0}
+        disabled={false}
+      />,
+    );
+    expect(markup).toContain("Moodboard preview");
+    expect(markup).toContain("Inspiration");
+    expect(markup).not.toContain("media item");
+  });
+
   it("keeps empty and disconnected lists openable without extra card content", () => {
     const markup = renderToStaticMarkup(
       <ListCard list={{ ...list, items: [] }} index={0} disabled />,
