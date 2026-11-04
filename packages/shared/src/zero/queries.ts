@@ -1,8 +1,11 @@
 import { defineQueriesWithType, defineQueryWithType } from "@rocicorp/zero";
 import * as z from "zod";
 import { habitsQuerySchema, shiftCalendarDate } from "../habits";
+import { listMediaPageSchema } from "../list-media";
 import { listDetailArgsSchema } from "../lists";
 import type { ZeroAuthContext } from "./context";
+import { documentQueries } from "./document-queries";
+import { logQueries } from "./log-queries";
 import { type Schema, zql } from "./schema.gen";
 
 const defineHomeHubQuery = defineQueryWithType<Schema, ZeroAuthContext>();
@@ -104,6 +107,35 @@ const listsByHousehold = defineHomeHubQuery(
       .orderBy("id", "asc"),
 );
 
+const listsLibrary = defineHomeHubQuery(
+  householdIdArgsSchema,
+  ({ args, ctx }) =>
+    authorizedLists(args.householdId, ctx.userId)
+      .related("attachments", (a) =>
+        a
+          .where("deletedAt", "IS", null)
+          .whereExists("asset", (m) =>
+            m
+              .where("deletedAt", "IS", null)
+              .where("confirmedAt", "IS NOT", null),
+          )
+          .related("asset")
+          .orderBy("sortKey", "desc")
+          .orderBy("id", "asc")
+          .limit(4),
+      )
+      .related("items", (item) =>
+        item
+          .where("status", "IN", ["active", "crossed"])
+          .orderBy("status", "asc")
+          .orderBy("sortKey", "desc")
+          .orderBy("id", "asc")
+          .limit(4),
+      )
+      .orderBy("sortKey", "desc")
+      .orderBy("id", "asc"),
+);
+
 const listDetail = defineHomeHubQuery(listDetailArgsSchema, ({ args, ctx }) =>
   authorizedLists(args.householdId, ctx.userId)
     .where("id", args.listId)
@@ -114,6 +146,47 @@ const listDetail = defineHomeHubQuery(listDetailArgsSchema, ({ args, ctx }) =>
         .orderBy("id", "asc"),
     )
     .one(),
+);
+
+const authorizedBoardMedia = (
+  householdId: string,
+  listId: string,
+  userId: string,
+) =>
+  zql.listMedia
+    .where("householdId", householdId)
+    .where("listId", listId)
+    .where("deletedAt", "IS", null)
+    .whereExists("asset", (a) =>
+      a.where("deletedAt", "IS", null).where("confirmedAt", "IS NOT", null),
+    )
+    .whereExists("list", (l) =>
+      l
+        .where("householdId", householdId)
+        .where("kind", "moodboard")
+        .where("deletedAt", "IS", null)
+        .whereExists("household", (h) =>
+          h
+            .where("deletedAt", "IS", null)
+            .whereExists("members", (m) => m.where("userId", userId))
+            .whereExists("moduleSettings", (s) =>
+              s.where("moduleKey", "lists").where("enabled", true),
+            ),
+        ),
+    )
+    .related("asset");
+const listMediaPage = defineHomeHubQuery(listMediaPageSchema, ({ args, ctx }) =>
+  authorizedBoardMedia(args.householdId, args.listId, ctx.userId)
+    .orderBy("sortKey", "desc")
+    .orderBy("id", "asc")
+    .limit(args.limit),
+);
+const listMediaById = defineHomeHubQuery(
+  listDetailArgsSchema.extend({ attachmentId: z.uuid() }).strict(),
+  ({ args, ctx }) =>
+    authorizedBoardMedia(args.householdId, args.listId, ctx.userId)
+      .where("id", args.attachmentId)
+      .one(),
 );
 
 const authorizedRecipes = (householdId: string, userId: string) =>
@@ -241,6 +314,44 @@ const personHabitArgs = z
       args.endOn <= shiftCalendarDate(args.startOn, 30),
     "Invalid calendar period",
   );
+const habitWorkoutChoices = defineHomeHubQuery(
+  householdIdArgsSchema,
+  ({ args, ctx }) =>
+    zql.workouts
+      .where("householdId", args.householdId)
+      .whereExists("household", (h) =>
+        h
+          .where("deletedAt", "IS", null)
+          .whereExists("members", (m) => m.where("userId", ctx.userId))
+          .whereExists("moduleSettings", (s) =>
+            s.where("moduleKey", "workouts").where("enabled", true),
+          )
+          .whereExists("moduleSettings", (s) =>
+            s.where("moduleKey", "habits").where("enabled", true),
+          ),
+      )
+      .orderBy("sortKey", "desc")
+      .orderBy("id", "asc"),
+);
+const habitWorkoutSettings = defineHomeHubQuery(
+  z.object({ householdId: z.uuid(), habitId: z.uuid() }).strict(),
+  ({ args, ctx }) =>
+    zql.habits
+      .where("householdId", args.householdId)
+      .where("id", args.habitId)
+      .whereExists("household", (h) =>
+        h
+          .where("deletedAt", "IS", null)
+          .whereExists("members", (m) => m.where("userId", ctx.userId))
+          .whereExists("moduleSettings", (s) =>
+            s.where("moduleKey", "habits").where("enabled", true),
+          ),
+      )
+      .related("workoutLinks", (links) =>
+        links.where("householdId", args.householdId),
+      )
+      .one(),
+);
 const authorizedPersonHabits = (
   householdId: string,
   userId: string,
@@ -555,13 +666,20 @@ export const queries = defineHomeHubQueries({
   habits: {
     byHousehold: habitsByHousehold,
     recentForPerson: recentPersonHabits,
+    workoutChoices: habitWorkoutChoices,
+    workoutSettings: habitWorkoutSettings,
     historyForPerson: personHabitHistory,
   },
   householdMemberships: {
     byHousehold: householdMembersByHousehold,
     mine: myHouseholdMemberships,
   },
+  documents: documentQueries,
+  logs: logQueries,
   lists: {
+    library: listsLibrary,
+    mediaPage: listMediaPage,
+    mediaById: listMediaById,
     byHousehold: listsByHousehold,
     detail: listDetail,
   },

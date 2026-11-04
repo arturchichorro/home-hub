@@ -6,6 +6,7 @@ import {
   clearSessionBootstrap,
   saveSessionBootstrap,
 } from "./auth/session-bootstrap";
+import { clearListImageUrlCache } from "./lists/list-media-url";
 import { clearRecipeImageUrlCache } from "./recipes/recipe-image-url-cache";
 import { createAppRouter } from "./router";
 import { clearExerciseImageUrlCache } from "./workouts/exercise-image-url";
@@ -35,6 +36,7 @@ export function Root({ initialSession }: RootProps) {
     clearSessionBootstrap();
     clearRecipeImageUrlCache();
     clearExerciseImageUrlCache();
+    clearListImageUrlCache();
     setZero(undefined);
     setSession(null);
   }, []);
@@ -49,6 +51,7 @@ export function Root({ initialSession }: RootProps) {
           clearSessionBootstrap();
           clearRecipeImageUrlCache(expiredSession.user.id);
           clearExerciseImageUrlCache(expiredSession.user.id);
+          clearListImageUrlCache(expiredSession.user.id);
           setZero(undefined);
         }
         setSession(refreshedSession);

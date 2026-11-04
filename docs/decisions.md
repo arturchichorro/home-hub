@@ -98,7 +98,7 @@ token sessions; invitations as account-creation credentials.
 
 **Status:** accepted for original uploads; display reads use stored derivatives
 
-The API authorizes original recipe-image uploads and issues short-lived
+Feature-specific API routes authorize original image uploads and issue short-lived
 presigned `PUT` URLs. Original bytes move directly from clients to R2;
 PostgreSQL stores metadata and server-controlled object keys. Display reads use
 the separately accepted pre-generated derivative path below. See
@@ -111,7 +111,7 @@ application host; persisting public or signed URLs.
 
 **Status:** accepted
 
-Retain every confirmed original recipe-image upload in private Cloudflare R2
+Retain every confirmed original image upload in private Cloudflare R2
 as the canonical source. Before confirming metadata, use Cloudflare Images to
 generate and store `thumbnail.webp` and `viewer.webp` beside the original. Do
 not replace or discard the original after transformation. The application does
@@ -121,9 +121,10 @@ later access policy.
 
 Derivative delivery must preserve the existing household authorization
 boundary through a one-hour HMAC-signed capability issued only after the API
-reauthorizes the current user, household membership, Recipes module, and
-confirmed image. The Worker verifies the capability before consulting its
-shared cache or private R2. The active client uses an aspect-preserving
+reauthorizes the current user, household membership, the attachment's enabled
+module and active parent, and the confirmed image. Recipes and exercise galleries
+use the same shared asset/signing pipeline. The Worker verifies the capability
+before consulting its shared cache or private R2. The active client uses an aspect-preserving
 `thumbnail` constrained to 768 pixels wide for both recipe cards and detail
 thumbnails, with each surface applying its own CSS crop, plus a `viewer`
 constrained to 1,920 pixels wide without enlargement. The previous 640×427
@@ -141,9 +142,12 @@ two fixed transformations from the Worker. Deterministic keys make retries
 idempotent, and metadata remains pending unless both derivatives are stored.
 Transformation failures fail closed and never fall back to the original.
 Existing images need no eager migration because the Worker repairs a missing
-stored derivative on first use. Deletion removes metadata, the original, and
-both stored derivatives; a previously edge-cached derivative is unreachable
-without an unexpired capability, and image UUIDs are never reused.
+stored derivative on first use. Removal now soft-deletes the attachment, retaining
+the asset, original and both
+derivatives so other references and retained history remain safe. This supersedes
+the earlier hard-delete flow. The API stops issuing capabilities through that
+attachment; already-issued capabilities can remain valid until expiry. Asset UUIDs
+are never reused. Physical cleanup/reuse UI remain deferred; see [Shared media](./media/).
 
 **Alternatives:** generating derivatives only on first display; processing
 images on the application host; converting in the browser; moving canonical
@@ -187,17 +191,23 @@ automation when repeated manual regression becomes costly.
 **Alternatives:** end-to-end browser automation from the start; relying only on
 manual testing.
 
-## Application-shell caching remains deferred
+## Static-shell PWA with guarded updates
 
-**Status:** accepted
+**Status:** accepted; supersedes the earlier decision to defer shell caching
 
-Zero's cached synchronized data and an offline-loadable application shell are
-separate concerns. Do not add a service worker unless offline reload becomes a
-concrete requirement; if added, cache compiled static assets only, never API
-responses or authenticated data.
+The installable PWA precaches compiled static assets only. Zero still owns cached
+application data; API responses, synchronization traffic, signed media URLs and
+uploads are not service-worker runtime caches. Unexpired signed media URL metadata
+has its own user-scoped client cache.
 
-**Alternatives:** install a PWA service worker by default; custom caching of API
-or synchronized data.
+Check for updates on launch/resume, reconnect and every five visible online minutes.
+Activate a downloaded build only after ten idle seconds and when each tab's draft,
+log, upload and dialog guards allow it. An explicit update asks before discarding
+unsaved work. Zero/chunk incompatibility has an update-required recovery path, not
+a reload loop. See [Deployment](./deployment.md#pwa-caching-and-update-safety).
+
+**Alternatives:** unconditional reload on deployment; custom caching of API or
+synchronized data; replacing Zero with another offline queue.
 
 ## Git-versioned living documentation
 

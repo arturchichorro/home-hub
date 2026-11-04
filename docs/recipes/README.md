@@ -52,9 +52,11 @@ objects remain stored.
 
 Title, description, ingredient names, ingredient amounts and notes, and
 cooking-log comments use seamless debounced inline editing. Valid changes also
-save on blur. Server rejection reverts to the authoritative value and appears
-in an error popover without turning the fields into conventional bordered
-form controls. Autosave normalizes the persisted value while preserving the
+save on blur. Server rejection retains the typed draft with an error and explicit
+Retry/Discard, without turning fields into conventional bordered controls. Dirty
+drafts protect navigation/unload and PWA updates; newer input survives older
+acknowledgements. Required empty-name validation and Escape still restore the
+confirmed value. Autosave normalizes the persisted value while preserving the
 exact focused draft, including intentional trailing whitespace while the user
 pauses; blur or Enter canonicalizes the visible value.
 
@@ -109,8 +111,9 @@ An entry with a comment displays it as seamless inline-editable text. An entry
 without one shows a comment action on the right instead of empty placeholder
 text; activating it reveals and focuses the comment editor. Each entry also has
 compact linked image thumbnails, a smaller low-emphasis image-upload control,
-and a confirmed delete action. Deleting a cooking log preserves its pictures
-by detaching them from the log and leaving them in the general recipe gallery.
+and a confirmed delete action. Deleting a cooking log soft-deletes that log;
+its pictures remain in the general recipe gallery and their stored attachment
+context is retained.
 
 The Recipes interface must represent loading, empty, synchronization-error,
 mutation-disabled, optimistic, upload-progress, upload-failure, and destructive
@@ -148,6 +151,7 @@ store an empty description as `null`.
 - `name`
 - `amount`: nullable text
 - `note`: nullable text
+- `deleted_at`, nullable
 - `sort_key`: integer
 - `created_at`, `updated_at`
 
@@ -164,6 +168,7 @@ exhausted gaps cause the recipe's ingredients to be rebalanced.
 - `recipe_id`
 - `cooked_at`: timestamp with time zone
 - `comment`: nullable text
+- `deleted_at`, nullable
 - `created_at`, `updated_at`
 
 Each row represents one cooking event. Multiple events may have the same

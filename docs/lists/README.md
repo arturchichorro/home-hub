@@ -1,18 +1,21 @@
 # Lists module
 
 Lists provides named, manually ordered lists per household. Its stable module
-key is `lists`. Lists and Recipes are enabled by default; new households start
+key is `lists`. Each list is a Checklist or [Moodboard](./moodboards.md), with a
+normal editable title; existing lists remain Checklists. Lists and Recipes are enabled by default; new households start
 with no lists. Previously migrated households retain their lists, items, and
 module settings.
 
 ## Interface
 
 The sidebar opens `/households/:householdId/lists`, a responsive card library
-similar to Recipes. Each card shows only its title and the first four current
+similar to Recipes. Each Checklist card shows only its title and the first four current
 items, with active items first and checked, struck-through completed items after
 them. Archived items are excluded; item order matches the detail screen. Status
 indicators are read-only previews, not toggle controls. The library query fetches
-at most four items per list.
+at most four items per list. Moodboard cards instead show up to four media
+thumbnails/posters and a confirmed-media count, with no autoplay. Their list detail
+uses responsive masonry and a viewer; see [Moodboards](./moodboards.md).
 
 Cards use one compact fixed height rather than scaling to square tiles, so they
 stay aligned without adding large empty areas on wide screens.
@@ -23,8 +26,10 @@ allowing normal vertical scrolling before activation. Keyboard drag controls
 remain available on the focused card. New lists appear at the top. Each card opens
 `/households/:householdId/lists/:listId`, with a named breadcrumb, a seamless
 inline name editor, and confirmed deletion from a trash-icon action. Name
-edits debounce, save on blur or Enter, revert with Escape, and roll back with an
-anchored error when validation or persistence fails. Debounced saves normalize
+edits debounce, save on blur or Enter, and revert with Escape. Rejected text
+remains available with an anchored error and explicit Retry/Discard; it does not
+silently revert to the server value. Dirty drafts protect navigation and unload.
+Debounced saves normalize
 the persisted name without rewriting the live draft under the user's cursor;
 blur and Enter normalize the visible value as the editing boundary.
 
@@ -45,8 +50,10 @@ submission before transitioning to a saved row.
 
 ## Data model
 
-`lists` stores `id`, `household_id`, display and normalized names, `sort_key`,
-and timestamps. Normalized names are unique per household. `list_items` adds
+`lists` stores `id`, `household_id`, display and normalized names, `kind`
+(`checklist | moodboard`, Checklist by default), `media_count`, `sort_key`,
+`deleted_at`, and timestamps. Active normalized names are unique per household.
+`list_items` adds
 `list_id` and `active | crossed | archived | deleted` status to the same fields;
 item names are unique within a list. Names use Unicode NFKC, collapsed whitespace,
 trimming, and a 1–100-character limit. Normalized names are lowercase display
@@ -55,12 +62,14 @@ names.
 Both tables use descending integer sort keys with UUID tie-breakers. Reordering
 usually updates one key; exhausted gaps cause rebalancing. The composite item
 foreign key `(household_id, list_id)` prevents attaching an item to a list in a
-different household. Deleting a list cascades to its items.
+different household. The foreign key cascades on a physical database deletion;
+the application soft-deletes lists and retains their items.
 
 ## Synchronization and authorization
 
-Named Zero queries `lists.byHousehold` and `lists.detail` check current household
-membership and enabled Lists settings. The detail query joins items using both
+Named Zero queries `lists.library` and `lists.detail` check current household
+membership and enabled Lists settings. The legacy `lists.byHousehold` query
+retains its checklist-only relationship shape for older clients. The detail query joins items using both
 household ID and list ID. Publishing a table does not bypass these checks.
 
 The live `lists` mutators are create, rename, delete, reorder, addItem, renameItem,
@@ -68,12 +77,16 @@ setItemStatus, and reorderItems. Each server execution checks membership and
 enabled-module access. Parent and child lookups are scoped to the requested
 household/list, and item reordering is scoped to status. PostgreSQL uniqueness
 and foreign keys remain the final constraints. Client changes are optimistic;
-the server supplies authoritative timestamps. List deletion explicitly deletes
-cached children as well as relying on the database cascade.
+the server supplies authoritative timestamps. List deletion updates only the
+parent tombstone; authorized queries stop exposing that list and its children.
 
 The application schema and Zero publication contain only the current domain
 tables. Migration `0017` removes the retired module's source tables, settings,
 and temporary mirroring bridge without changing live Lists data.
+
+Moodboards add typed `list_media` attachments to shared assets, plus dedicated
+media queries, upload/read/removal APIs and the `lists.reorderMedia` mutation.
+They do not accept checklist items or change list type after creation.
 
 Recipe ingredients and list items remain separate records. Any future operation
 to copy ingredients must choose a target list and authorize both modules.

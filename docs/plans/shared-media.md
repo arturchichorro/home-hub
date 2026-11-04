@@ -1,5 +1,10 @@
 # Shared media foundation
 
+**Status: implemented historical design.** `0043` delivered the foundation;
+`0044` subsequently added exercise attachments. Current behavior and operations
+live in [Shared media](../media/) and [Workouts](../workouts/), not this original
+phase plan. Video, animation playback, reuse UI and physical cleanup remain deferred.
+
 ## Goal and scope
 
 Separate stored media from the features that use it. Use **one `media` table for
@@ -10,8 +15,8 @@ This phase migrates existing recipe images and keeps uploads, galleries, covers,
 cooking-log pictures, ordering and delivery working unchanged. **Do not implement
 video uploads/playback, animated-image playback, exercise attachments, a media
 library/reuse picker, transcoding jobs, streaming infrastructure or cleanup jobs.**
-Implementation approved on the current branch, with local commits only. No push
-or deployment is authorized.
+Those exclusions and the original local-only approval applied to this completed
+phase; they are historical scope, not current branch or deployment instructions.
 
 ## Recommended model
 
@@ -37,7 +42,8 @@ Preserve existing attachment IDs; backfill asset IDs from the same UUIDs. Asset
 identity and attachment identity remain separate. A future recipe gallery can
 order images and videos together without another attachment table.
 
-Later, `exercise_media` can reference the catalog and `media`. Prefer typed
+The follow-up `0044` implemented `exercise_media` references to the catalog and
+`media`, as originally deferred here. Prefer typed
 attachment tables over an unchecked `entity_type/entity_id` pair: real foreign
 keys prevent orphaned/cross-household references. Multiple attachments to one
 asset within a household are structurally supported, but reuse is not exposed yet.

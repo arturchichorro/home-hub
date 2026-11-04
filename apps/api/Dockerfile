@@ -21,6 +21,8 @@ COPY packages/shared/src packages/shared/src
 
 FROM node:26.12.1-bookworm-slim AS runtime
 
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
+
 ENV NODE_ENV=production
 ENV API_PORT=3000
 

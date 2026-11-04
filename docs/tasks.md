@@ -26,6 +26,18 @@ commit changes unless explicitly asked for that specific action. CI rehearses
 the committed migration history on a disposable database, and the production
 deployment applies tested forward migrations after an off-host backup.
 
+## Work in review
+
+As of 3 November 2026, these branches are open PRs, not part of `develop` or
+completed backlog items. Review status is not authorization to merge or deploy:
+
+- Guest access prototype stack [#35](https://github.com/arturchichorro/home-hub/pull/35), [#36](https://github.com/arturchichorro/home-hub/pull/36), [#38](https://github.com/arturchichorro/home-hub/pull/38), [#39](https://github.com/arturchichorro/home-hub/pull/39): requires reconciliation with current `develop` and current module/privacy rules before integration. The earlier foundation was reverted; the prototype does not establish current Guest support.
+
+Habits day boxes and optional workout-linked completion are integrated into
+`develop`; see [Task history](./task-history.md#recent-completed-deliveries).
+When a review item merges, remove its pending entry and update the corresponding
+subject/history. Guest Access remains excluded from this integration.
+
 ## Deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack

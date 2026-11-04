@@ -1,5 +1,12 @@
 import * as z from "zod";
 
+export const habitWorkoutModeSchema = z.enum(["none", "any", "selected"]);
+export const habitCompleted = (
+  entry:
+    | { completed?: boolean | null; workoutCompleted?: boolean | null }
+    | undefined,
+) => !!entry?.completed || !!entry?.workoutCompleted;
+
 export const calendarDateSchema = z.iso.date();
 export function cleanHabitName(value: string): string {
   return value.normalize("NFKC").replace(/\s+/gu, " ").trim();
@@ -113,6 +120,25 @@ export const updateHabitNoteMutationSchema = z
     optimisticTimestamp: timestamp,
   })
   .strict();
+
+export const linkHabitWorkoutsMutationSchema = z
+  .object({
+    ...scope,
+    mode: habitWorkoutModeSchema,
+    workoutIds: z
+      .array(z.uuid())
+      .max(500)
+      .refine((ids) => new Set(ids).size === ids.length, "Duplicate workouts"),
+    optimisticTimestamp: timestamp,
+  })
+  .strict()
+  .refine(
+    (args) =>
+      args.mode === "selected"
+        ? args.workoutIds.length > 0
+        : args.workoutIds.length === 0,
+    "Choose workouts only for selected-workout mode",
+  );
 
 export const archiveHabitMutationSchema = z
   .object({

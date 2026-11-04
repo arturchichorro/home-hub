@@ -1,10 +1,15 @@
 import { Hono } from "hono";
-
 import { type CreateAuthRoutesInput, createAuthRoutes } from "./auth/routes";
+import { createDocumentRoutes } from "./documents/routes";
+import type { DocumentServices } from "./documents/service";
 import {
   type CreateHouseholdRoutesInput,
   createHouseholdRoutes,
 } from "./households/routes";
+import type { ListMediaServices } from "./lists/media";
+import { createListMediaRoutes } from "./lists/routes";
+import type { LogEntryServices } from "./logs/entries";
+import { createLogRoutes } from "./logs/routes";
 import {
   installApiObservability,
   type ObservabilityEnv,
@@ -28,6 +33,9 @@ export type CreateAppInput = {
   households: HouseholdServices;
   recipeImages: RecipeImageServices;
   exerciseMedia: ExerciseMediaServices;
+  documents?: DocumentServices;
+  listMedia?: ListMediaServices;
+  logs?: LogEntryServices;
   infrastructure: {
     isProduction: boolean;
     jwtSecret: string;
@@ -69,6 +77,21 @@ export function createApp(input: CreateAppInput) {
     "/api/households/:householdId/workouts/exercises",
     createExerciseMediaRoutes({ jwtSecret, services: input.exerciseMedia }),
   );
+  if (input.documents)
+    app.route(
+      "/api/households/:householdId/documents",
+      createDocumentRoutes({ jwtSecret, services: input.documents }),
+    );
+  if (input.listMedia)
+    app.route(
+      "/api/households/:householdId/lists",
+      createListMediaRoutes({ jwtSecret, services: input.listMedia }),
+    );
+  if (input.logs)
+    app.route(
+      "/api/households/:householdId/logs",
+      createLogRoutes({ jwtSecret, services: input.logs }),
+    );
   app.route(
     "/api/zero",
     createZeroRoutes({ dbProvider: zeroDbProvider, jwtSecret }),

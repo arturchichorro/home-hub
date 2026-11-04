@@ -22,11 +22,13 @@ import {
   verifyRecipeImageDeliveryCapability,
   verifyRecipeImageProcessingCapability,
 } from "@home-hub/shared/recipe-image-delivery";
+import { handleDocumentRequest } from "./documents";
 import {
   InvalidStillImageError,
   readImageBytes,
   validateStillImage,
 } from "./still-image";
+import { handleVideoRequest } from "./video";
 
 function originalObjectKey(identity: RecipeImageIdentity | MediaIdentity) {
   return "mediaId" in identity
@@ -34,11 +36,11 @@ function originalObjectKey(identity: RecipeImageIdentity | MediaIdentity) {
     : recipeImageOriginalObjectKey(identity);
 }
 function derivativeObjectKey(
-  identity: RecipeImageIdentity | MediaIdentity,
+  identity: RecipeImageIdentity | (MediaIdentity & { videoVersion?: string }),
   variant: RecipeImageStoredVariant,
 ) {
   return "mediaId" in identity
-    ? mediaDerivativeObjectKey(identity, variant)
+    ? mediaDerivativeObjectKey(identity, variant, identity.videoVersion)
     : recipeImageDerivativeObjectKey({ ...identity, variant });
 }
 
@@ -47,7 +49,15 @@ type R2ObjectBody = {
 };
 
 type R2BucketBinding = {
-  get(key: string): Promise<R2ObjectBody | null>;
+  head?(key: string): Promise<{
+    size: number;
+    httpEtag?: string;
+    httpMetadata?: { contentType?: string };
+  } | null>;
+  get(
+    key: string,
+    options?: { range: { offset: number; length: number } },
+  ): Promise<R2ObjectBody | null>;
   put(
     key: string,
     value: ArrayBuffer | ReadableStream,
@@ -373,6 +383,8 @@ async function serveImage({
       }
     }
 
+    if ("videoVersion" in identity && identity.videoVersion)
+      return errorResponse(404);
     const transformed = await transformOriginal({
       env,
       identity,
@@ -443,6 +455,8 @@ export async function handleMediaImageDeliveryRequest({
     "storage",
     capability.storageRecipeId ?? "media",
   );
+  if (capability.videoVersion)
+    cacheKeyUrl.searchParams.set("video", capability.videoVersion);
   cacheKeyUrl.searchParams.set("transform", transformVersion);
   return serveImage({
     cache,
@@ -530,6 +544,8 @@ export default {
     context: ExecutionContextLike,
   ) {
     const path = new URL(request.url).pathname;
+    if (path === "/documents/files") return handleDocumentRequest(request, env);
+    if (path === "/media/videos") return handleVideoRequest(request, env);
     if (path === "/internal/media/images/process")
       return handleMediaImageProcessingRequest({ env, request });
     if (path === "/internal/recipe-images/process") {

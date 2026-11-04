@@ -5,6 +5,8 @@ export const householdModuleKeys = [
   "recipes",
   "habits",
   "workouts",
+  "documents",
+  "logs",
 ] as const;
 
 export type HouseholdModuleKey = (typeof householdModuleKeys)[number];
@@ -22,6 +24,8 @@ export const householdModuleCatalog = [
   { key: "recipes", label: "Recipes", defaultEnabled: true },
   { key: "habits", label: "Habits", defaultEnabled: false },
   { key: "workouts", label: "Workouts", defaultEnabled: false },
+  { key: "documents", label: "Documents", defaultEnabled: false },
+  { key: "logs", label: "Logs", defaultEnabled: false },
 ] as const satisfies readonly HouseholdModuleDefinition[];
 
 export const setHouseholdModuleEnabledRequestSchema = z
