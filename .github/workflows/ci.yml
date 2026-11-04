@@ -51,6 +51,12 @@ jobs:
       - name: Run test suite
         run: pnpm test
 
+      - name: Verify generated diagnostic contract
+        run: |
+          node scripts/generate-diagnostics.mjs
+          pnpm exec biome format --write packages/shared/src/diagnostic-sources.gen.ts
+          git diff --exit-code -- packages/shared/src/diagnostic-sources.gen.ts deploy/observability/config.alloy
+
       - name: Verify privacy-safe operational logs and read-only MCP
         run: bash scripts/verify-operational-logs.sh
 

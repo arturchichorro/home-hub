@@ -1,4 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
+import {
+  diagnosticCodeSchema,
+  diagnosticLocationsSchema,
+  diagnosticMessages,
+  diagnosticOperationSchema,
+} from "@home-hub/shared/diagnostics";
 import * as z from "zod";
 
 export const services = [
@@ -13,6 +19,8 @@ export const events = [
   "operational_log",
   "http_request",
   "mutation_database_error",
+  "zero_query_error",
+  "zero_mutation_error",
   "server_started",
   "shutdown_started",
   "shutdown_completed",
@@ -42,6 +50,8 @@ export const searchSchema = z
     start: z.iso.datetime({ offset: true }),
     end: z.iso.datetime({ offset: true }),
     event: z.enum(events).optional(),
+    errorCode: diagnosticCodeSchema.optional(),
+    operation: diagnosticOperationSchema.optional(),
     severity: severitySchema.optional(),
     requestId: z.uuid().optional(),
     revision: z
@@ -69,66 +79,79 @@ export const searchSchema = z
 export type Search = z.infer<typeof searchSchema>;
 
 // A second allowlist protects tool responses even if a backend stream is misconfigured.
-export const recordSchema = z.object({
-  phase: z
-    .enum([
-      "preflight",
-      "build",
-      "cutover",
-      "migrate",
-      "backend",
-      "web",
-      "health",
-      "configuration",
-      "dump",
-      "archive",
-      "upload",
-      "verify_upload",
-      "unknown",
-    ])
-    .optional(),
-  event: z.enum(events),
-  severity: severitySchema.optional(),
-  requestId: z.uuid().optional(),
-  method: z
-    .enum(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
-    .optional(),
-  route: z
-    .string()
-    .max(180)
-    .regex(/^(unmatched|\/api(?:\/(?:[a-z-]+|:[A-Za-z]+))*)$/)
-    .optional(),
-  status: z
-    .string()
-    .regex(/^[1-5][0-9]{2}$/)
-    .optional(),
-  durationMs: z
-    .string()
-    .regex(/^[0-9]{1,7}$/)
-    .optional(),
-  code: z
-    .string()
-    .regex(/^[0-9A-Z]{5}$/)
-    .optional(),
-  errorType: z
-    .enum([
-      "Error",
-      "TypeError",
-      "RangeError",
-      "SyntaxError",
-      "DatabaseError",
-      "AbortError",
-    ])
-    .optional(),
-  revision: z
-    .string()
-    .regex(/^[a-f0-9]{40}$/)
-    .optional(),
-  exitCode: z
-    .string()
-    .regex(/^[0-9]{1,3}$/)
-    .optional(),
-});
+export const recordSchema = z
+  .object({
+    errorCode: diagnosticCodeSchema.optional(),
+    operation: diagnosticOperationSchema.optional(),
+    locations: diagnosticLocationsSchema.optional(),
+    phase: z
+      .enum([
+        "preflight",
+        "build",
+        "cutover",
+        "migrate",
+        "backend",
+        "web",
+        "health",
+        "configuration",
+        "dump",
+        "archive",
+        "upload",
+        "verify_upload",
+        "unknown",
+      ])
+      .optional(),
+    event: z.enum(events),
+    severity: severitySchema.optional(),
+    requestId: z.uuid().optional(),
+    method: z
+      .enum(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
+      .optional(),
+    route: z
+      .string()
+      .max(180)
+      .regex(/^(unmatched|\/api(?:\/(?:[a-z-]+|:[A-Za-z]+))*)$/)
+      .optional(),
+    status: z
+      .string()
+      .regex(/^[1-5][0-9]{2}$/)
+      .optional(),
+    durationMs: z
+      .string()
+      .regex(/^[0-9]{1,7}$/)
+      .optional(),
+    code: z
+      .string()
+      .regex(/^[0-9A-Z]{5}$/)
+      .optional(),
+    errorType: z
+      .enum([
+        "Error",
+        "TypeError",
+        "RangeError",
+        "SyntaxError",
+        "DatabaseError",
+        "AbortError",
+        "TimeoutError",
+        "ZodError",
+      ])
+      .optional(),
+    revision: z
+      .string()
+      .regex(/^[a-f0-9]{40}$/)
+      .optional(),
+    exitCode: z
+      .string()
+      .regex(/^[0-9]{1,3}$/)
+      .optional(),
+  })
+  .refine((record) => !record.errorCode || !!record.operation)
+  .transform((record) => ({
+    ...record,
+    ...(record.errorCode
+      ? { diagnosticMessage: diagnosticMessages[record.errorCode] }
+      : {}),
+  }));
 export type SafeRecord = z.infer<typeof recordSchema>;
 export type AuditRecord = {
   queryId: string;
@@ -183,6 +206,8 @@ export function compileQuery(s: Search): string {
   q += " | json";
   for (const key of [
     "event",
+    "errorCode",
+    "operation",
     "severity",
     "requestId",
     "code",
@@ -228,7 +253,7 @@ const backendSchema = z.object({
         z.object({
           stream: z.record(z.string(), z.string()),
           values: z.array(
-            z.tuple([z.string().regex(/^[0-9]{19}$/), z.string().max(2048)]),
+            z.tuple([z.string().regex(/^[0-9]{19}$/), z.string().max(4096)]),
           ),
         }),
       )

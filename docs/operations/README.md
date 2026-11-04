@@ -21,9 +21,12 @@ stack → local stdio MCP server (`apps/ops`) → bounded `search_logs` tool.
 - Rebuild every exported line from an allowlist; do not try to make arbitrary error
   messages safe with a secret regex. Keep event/severity, API route **templates**,
   UUID request IDs, status, duration, SQLSTATE, fixed error classes and operation
-  phase/exit code. Drop bodies, headers, SQL, private notes/titles, URLs, raw messages,
-  stack traces and unknown fields. Unknown operational messages retain only their
-  service/severity and generic event. Extending classifiers requires privacy tests.
+  phase/exit code. Application failures also carry stable error codes, operation
+  names, catalogue-owned messages and validated repository-relative source locations.
+  Drop bodies, headers, SQL, private notes/titles, URLs, raw exception messages,
+  full stacks/function names and unknown fields. Unknown application exceptions
+  retain useful source evidence; uninstrumented vendor messages remain metadata-only.
+  Vendor classifiers supplement source diagnostics, not replace them.
 - Original Docker/event timestamps survive export. API/web container revision labels
   identify the build source; `deployment_succeeded` records that revision only after
   backend/web readiness and public checks. PostgreSQL/Zero use pinned upstream images,
@@ -33,18 +36,56 @@ stack → local stdio MCP server (`apps/ops`) → bounded `search_logs` tool.
   Failures retain their original exit status. CI/Worker failures before the host is
   reached remain in GitHub Actions, not these host logs. No full CI/build output export.
 
+## Source-first diagnostics
+
+The API emits a shared contract (`packages/shared/src/diagnostics.ts`), rather than
+requiring Alloy to recognize an exception's prose. For an unfamiliar storage failure:
+
+```json
+{
+  "errorCode": "HH_UNEXPECTED",
+  "operation": "documents.storage_read",
+  "diagnosticMessage": "An unexpected application error interrupted this operation.",
+  "locations": ["apps/api/src/documents/storage.ts:49:37"]
+}
+```
+
+Database errors additionally preserve SQLSTATE (`code`); error families distinguish
+constraints, retryable transactions and unavailable connections. Request rejections,
+readiness, shutdown and Zero query/mutation/commit boundaries have controlled codes.
+Deep storage/media boundaries retain their operation even if a service returns a
+safe 503. Child-handled errors are logged once; client responses are unchanged.
+No raw mutation/query name or arguments are logged; Zero operations identify the
+query, mutation or transaction boundary, with owned source locations for detail.
+
+Messages are fixed literals, never interpolated from `error.message`, SQL or input.
+Alloy derives them again from the code catalogue; the reader does too. Stack parsing
+exports at most three file/line/column locations present in a generated owned-source
+inventory; no absolute/home paths, dependency paths, URLs, arbitrary filenames or
+function names. Source paths and maximum historical line bounds are retained so
+old logs remain readable; use the cited revision to inspect the corresponding code.
+These are validated locations, not cryptographic attestation of a stack's origin.
+
+After source/contract changes run `node scripts/generate-diagnostics.mjs` and format
+`packages/shared/src/diagnostic-sources.gen.ts`; CI rejects drift in both inventory
+and Alloy rules. Keep existing code meanings stable. Revalidate/recreate the
+**already authorized** collector and restart MCP readers with updated contracts
+when new codes, operations or source files ship; normal app deployment still does
+not start the collector. An old contract may omit new details—never relax it to
+accept arbitrary message text. No official Zero/PostgreSQL binary is patched.
+
 ## Bounds and loss
 
-| Boundary              | Limit                                                                                                                                 |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Cloud                 | Free plan only; current public offer: 50 GB/month, 14-day retention, no card                                                          |
-| Export                | Two priority buckets, 1 line/sec + burst 20 each; max exported line 1 KiB; roughly 5.5 GB/31 days of line payload plus bounded labels |
-| Raw local Docker logs | 3 × 10 MB per service, non-blocking 1 MB buffer; rotation independent of Alloy                                                        |
-| Host events           | Daily logrotate, maxsize 1 MB checked by logrotate, seven rotated files; not a hard instantaneous size cap                            |
-| Alloy                 | 256 MiB RAM, 0.25 CPU, 64 PIDs, 16 MiB temporary space; batches 64 KiB, timeout 5 sec, three retries; no disk WAL                     |
-| Search                | Past 14 days, max six-hour window, max 200 entries (default 50), 2 MiB decompressed response, 10 sec backend timeout                  |
-| Gateway               | Two concurrent reads, 20 starts/minute per process; no raw LogQL, SQL, endpoint/tenant selection or writes                            |
-| Query audit           | Owner-only, synced before query/return, four ~1 MiB files; inactive files pruned after 14 days on access                              |
+| Boundary              | Limit                                                                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Cloud                 | Free plan only; current public offer: 50 GB/month, 14-day retention, no card                                                         |
+| Export                | Two priority buckets, 1 line/sec + burst 20 each; max exported line 2 KiB; roughly 11 GB/31 days of line payload plus bounded labels |
+| Raw local Docker logs | 3 × 10 MB per service, non-blocking 1 MB buffer; rotation independent of Alloy                                                       |
+| Host events           | Daily logrotate, maxsize 1 MB checked by logrotate, seven rotated files; not a hard instantaneous size cap                           |
+| Alloy                 | 256 MiB RAM, 0.25 CPU, 64 PIDs, 16 MiB temporary space; batches 64 KiB, timeout 5 sec, three retries; no disk WAL                    |
+| Search                | Past 14 days, max six-hour window, max 200 entries (default 50), 2 MiB decompressed response, 10 sec backend timeout                 |
+| Gateway               | Two concurrent reads, 20 starts/minute per process; no raw LogQL, SQL, endpoint/tenant selection or writes                           |
+| Query audit           | Owner-only, synced before query/return, four ~1 MiB files; inactive files pruned after 14 days on access                             |
 
 [Pricing](https://grafana.com/pricing/) was checked on 4 November 2026. Recheck the
 actual plan, region, quotas and retention **before activation**. Do not rely on a
@@ -139,7 +180,8 @@ Local audits are bounded operational evidence, not tamper-proof against their ow
 Do not give agents a generic HTTP tool pre-authenticated with this token.
 
 `search_logs` requires services and explicit ISO start/end. Optional filters:
-event, severity, UUID requestId, 40-character revision, SQLSTATE code, HTTP status and literal
+event, severity, stable errorCode, operation, UUID requestId, 40-character revision,
+SQLSTATE code, HTTP status and literal
 contains; no regex or arbitrary query. Each entry includes exact nanoseconds and
 a stable `citation`; `source` contains backend hostname and reproducible bounded
 LogQL/time range. Include those references when reporting facts.

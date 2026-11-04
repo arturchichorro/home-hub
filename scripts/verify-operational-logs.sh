@@ -18,7 +18,7 @@ cleanup() {
 }
 trap cleanup EXIT
 mkdir -p "$work/bin"
-node apps/ops/test/pipeline.ts seed "$work"
+(cd apps/api && node --import tsx "$repo/apps/ops/test/pipeline.ts" seed "$work")
 # Fake fixture files only: permit a capability-dropped container to traverse/read
 # host-owned files, and permit the mock host writer to append synthetic events.
 chmod 755 "$work"

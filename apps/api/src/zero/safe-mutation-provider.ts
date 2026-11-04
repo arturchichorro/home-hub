@@ -1,35 +1,22 @@
+import type { Diagnostic } from "@home-hub/shared/diagnostics";
 import { DrizzleQueryError } from "drizzle-orm";
+import { diagnosticFor, errorChain, sqlState } from "../diagnostics";
 import type { ZeroDbProvider } from "./db-provider";
 
 function databaseFailure(error: unknown): { code?: string } | undefined {
-  const seen = new Set<unknown>();
-  let found = false;
-  let code: string | undefined;
-  for (
-    let depth = 0;
-    depth < 12 && error instanceof Error && !seen.has(error);
-    depth++
-  ) {
-    seen.add(error);
-    found ||= error instanceof DrizzleQueryError;
-    if (
-      "code" in error &&
-      typeof error.code === "string" &&
-      /^[0-9A-Z]{5}$/.test(error.code)
-    ) {
-      code = error.code;
-      found = true;
-    }
-    error = error.cause;
-  }
-  return found ? (code ? { code } : {}) : undefined;
+  const code = sqlState(error);
+  return code || errorChain(error).some((e) => e instanceof DrizzleQueryError)
+    ? code
+      ? { code }
+      : {}
+    : undefined;
 }
 
 // Sanitize before Zero serializes transaction failures, including commit errors.
 // Never attach the raw cause: Drizzle errors contain SQL and bound private text.
 export function safeMutationProvider(
   provider: ZeroDbProvider,
-  report: (failure: { code?: string }) => void,
+  report: (failure: { code?: string; diagnostic: Diagnostic }) => void,
 ): ZeroDbProvider {
   return new Proxy(provider, {
     get(target, property, receiver) {
@@ -41,7 +28,14 @@ export function safeMutationProvider(
         } catch (error) {
           const failure = databaseFailure(error);
           if (!failure) throw error;
-          report(failure);
+          report({
+            ...failure,
+            diagnostic: diagnosticFor(
+              "zero.transaction",
+              error,
+              "HH_DATABASE_FAILURE",
+            ),
+          });
           throw new Error("Unable to save changes. Please retry.");
         }
       };

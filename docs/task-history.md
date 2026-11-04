@@ -406,7 +406,7 @@ Open review work remains in [Tasks](./tasks.md#work-in-review).
 
 ## Agent-accessible operational logs
 
-- [x] Implement opt-in Alloy privacy projection for API/Zero/PostgreSQL/Caddy, safe deployment/backup outcomes, bounded local rotation and a restricted, audited read-only MCP log search. Real synthetic Alloy → Loki → MCP verification checks pre-export redaction and cited evidence. See [Operations](./operations/) for deliberate Cloud activation and remaining production acceptance; no deployment is implied.
+- [x] Implement opt-in Alloy privacy projection for API/Zero/PostgreSQL/Caddy, safe deployment/backup outcomes, bounded local rotation and a restricted, audited read-only MCP log search. Add source-first stable error codes/operations, controlled messages and validated source locations for unfamiliar application failures. Real synthetic Alloy → Loki → MCP verification checks pre-export redaction and cited evidence. See [Operations](./operations/) for deliberate Cloud activation and remaining production acceptance; no deployment is implied.
 
 ## Misc
 

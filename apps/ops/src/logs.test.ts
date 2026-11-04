@@ -234,6 +234,49 @@ describe("bounded read-only log queries", () => {
   });
 });
 
+describe("source diagnostic contract", () => {
+  it("retains error codes, operations and validated locations, deriving messages from the catalogue", async () => {
+    const record = {
+      event: "http_request",
+      errorCode: "HH_UNEXPECTED",
+      operation: "documents.storage_read",
+      locations: ["apps/api/src/app.ts:1:1"],
+      diagnosticMessage: "PRIVATE_DIAGNOSTIC_TEXT",
+    };
+    const { reader, fetcher } = fixture(body([JSON.stringify(record)]));
+    const result = await reader.search({
+      ...input,
+      errorCode: "HH_UNEXPECTED",
+      operation: "documents.storage_read",
+    });
+    expect(result.entries[0]?.record).toMatchObject({
+      errorCode: "HH_UNEXPECTED",
+      operation: "documents.storage_read",
+      locations: record.locations,
+      diagnosticMessage:
+        "An unexpected application error interrupted this operation.",
+    });
+    expect(JSON.stringify(result)).not.toContain("PRIVATE_DIAGNOSTIC_TEXT");
+    expect(decodeURIComponent(String(fetcher.mock.calls[0]?.[0]))).toContain(
+      'errorCode="HH_UNEXPECTED"',
+    );
+  });
+  it("rejects unregistered codes, operations and private/invalid source locations", async () => {
+    for (const extra of [
+      { errorCode: "PRIVATE" },
+      { operation: "private.name" },
+      { locations: ["/home/private/secret.ts:1:1"] },
+      { locations: ["apps/api/src/app.ts:999999:1"] },
+    ]) {
+      await expect(
+        fixture(
+          body([JSON.stringify({ event: "http_request", ...extra })]),
+        ).reader.search(input),
+      ).rejects.toThrow("Unexpected log record");
+    }
+  });
+});
+
 describe("agent protocol and audit", () => {
   it("exposes only the read-only search tool over the actual MCP protocol", async () => {
     const server = createLogsServer(fixture().reader);

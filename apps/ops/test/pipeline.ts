@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { appendFile, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { diagnosticMessages } from "@home-hub/shared/diagnostics";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { fileAudit } from "../src/audit.ts";
@@ -15,6 +16,10 @@ const requestId = "147db701-6b85-42f9-b09d-aa39784bf1ca";
 const revision = "a".repeat(40);
 const secret = "DO_NOT_EXPORT_PRIVATE_CANARY_9a70";
 if (mode === "seed") {
+  const { sourceDiagnosticFixture } = await import(
+    "../../api/test/diagnostics-fixture.ts"
+  );
+  const emitted = await sourceDiagnosticFixture(secret, requestId);
   await mkdir(join(directory, "docker/a"), { recursive: true });
   await mkdir(join(directory, "operations"), { recursive: true });
   const wrap = (
@@ -34,13 +39,13 @@ if (mode === "seed") {
     });
   const lines = [
     wrap("api", {
-      event: "http_request",
-      requestId,
-      status: 500,
-      method: "POST",
-      route: "/api/zero/mutate",
-      durationMs: 12,
-      error: { name: "TypeError", message: secret },
+      ...emitted,
+      diagnosticMessage: secret, // Collector must derive the message from its catalogue, not trust this.
+      locations: [
+        `apps/api/src/${secret}.ts:1:1`,
+        "apps/api/src/app.ts:999999:1",
+        ...(emitted.locations as string[]),
+      ],
       body: secret,
       authorization: `Bearer ${secret}`,
       url: `https://private.invalid/?X-Amz-Signature=${secret}`,
@@ -161,6 +166,26 @@ if (mode === "seed") {
     assert.equal(known.entries.length, 1);
     assert.equal(known.entries[0].record.status, "500");
     assert.equal(known.entries[0].record.errorType, "TypeError");
+    assert.equal(known.entries[0].record.errorCode, "HH_UNEXPECTED");
+    assert.equal(known.entries[0].record.operation, "documents.storage_read");
+    assert.equal(
+      known.entries[0].record.diagnosticMessage,
+      diagnosticMessages.HH_UNEXPECTED,
+    );
+    assert(
+      known.entries[0].record.locations.some((location: string) =>
+        location.startsWith("apps/api/src/documents/storage.ts:"),
+      ),
+    );
+    assert.equal(
+      (
+        await query({
+          errorCode: "HH_UNEXPECTED",
+          operation: "documents.storage_read",
+        })
+      ).entries.length,
+      1,
+    );
     assert.equal(known.entries[0].revision, revision);
     assert.match(known.entries[0].citation, /^loki:/);
     const canary = await query({
@@ -213,6 +238,7 @@ if (mode === "seed") {
       },
       log: JSON.stringify({
         event: "http_request",
+        operation: "http.health",
         requestId: randomUUID(),
         method: "GET",
         route: "/api/health",
