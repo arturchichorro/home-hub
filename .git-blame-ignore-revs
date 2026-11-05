@@ -1,0 +1,3 @@
+# Ignore the mechanical readability sweep when investigating line history.
+# GitHub honors this file; locally use git -c blame.ignoreRevsFile=.git-blame-ignore-revs blame <file>.
+f3ed3ade6d33a34d879093beb5ef9ca0b8b889bc

@@ -412,6 +412,10 @@ Open review work remains in [Tasks](./tasks.md#work-in-review).
 
 - [x] Keep Recipes/Moodboard previews in one stable frame, wait for full-image decode and fade the larger image over an opaque fallback. Preserve last-good pixels on URL refresh/failure, reset on close/navigation and respect reduced motion.
 
+## Repository readability
+
+- [x] Sweep hand-written application, shared, test and tooling code for explicit control-flow braces, single-variable statements and whitespace between logical steps. Enforce braces/declarations in Biome and record readability conventions in `AGENTS.md`; preserve generated files, migrations and historical fixtures.
+
 ## Misc
 
 - [x] Preserve raw seamless-input drafts during debounced saves and normalize them only at editing boundaries
