@@ -13,7 +13,7 @@ import {
   Trash2,
 } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
-import { useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
@@ -22,6 +22,7 @@ import {
 } from "./add-list-item-form";
 import { ListItemNameInput } from "./list-item-name-input";
 import { orderCurrentListItems } from "./list-item-order";
+import { preserveListScroll } from "./preserve-list-scroll";
 
 type ListItemsProps = {
   householdId: string;
@@ -75,6 +76,7 @@ function ListItemRow({
   return (
     <li
       ref={sortable.ref}
+      data-list-item-id={item.id}
       className={`flex min-h-14 items-center gap-2 py-2 ${sortable.isDragging ? "opacity-60" : ""}`}
     >
       <IconButton
@@ -94,6 +96,7 @@ function ListItemRow({
         crossed={crossed}
       />
       <IconButton
+        data-list-status-toggle
         aria-label={`${toggleLabel} ${item.name}`}
         title={`${toggleLabel} ${item.name}`}
         disabled={disabled}
@@ -120,6 +123,15 @@ function ListItemRow({
 export function ListItems({ householdId, listId, items }: ListItemsProps) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
+  const root = useRef<HTMLElement>(null);
+  const scrollRequest = useRef<
+    | {
+        itemId: string;
+        status: ListItem["status"] | undefined;
+        snapshot: ReturnType<typeof preserveListScroll>;
+      }
+    | undefined
+  >(undefined);
   const [showArchived, setShowArchived] = useState(false);
   const [draft, setDraft] = useState<DraftListItem>();
   const [creationError, setCreationError] = useState<string>();
@@ -146,7 +158,39 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
     );
   }, [draft?.savedItemId, draftIsPersisted]);
 
+  useEffect(() => () => scrollRequest.current?.snapshot.dispose(), []);
+
+  useLayoutEffect(() => {
+    const request = scrollRequest.current;
+
+    if (!request) {
+      return;
+    }
+
+    const status = items.find((item) => item.id === request.itemId)?.status;
+
+    if (status !== request.status) {
+      request.status = status;
+      request.snapshot.restore();
+    }
+  }, [items]);
+
   function setStatus(itemId: string, status: ListItemStatus) {
+    if (!mutationEnabled) {
+      return;
+    }
+
+    scrollRequest.current?.snapshot.dispose();
+
+    const request = root.current
+      ? {
+          itemId,
+          status: items.find((item) => item.id === itemId)?.status,
+          snapshot: preserveListScroll(root.current, itemId),
+        }
+      : undefined;
+    scrollRequest.current = request;
+
     observeMutation(
       zero.mutate(
         mutators.lists.setItemStatus({
@@ -157,13 +201,23 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
           optimisticUpdatedAt: Date.now(),
         }),
       ),
+      () =>
+        requestAnimationFrame(() => {
+          if (scrollRequest.current === request) {
+            request?.snapshot.dispose();
+            scrollRequest.current = undefined;
+          }
+        }),
     );
   }
 
-  function observeMutation(mutation: {
-    client: PromiseLike<{ type: string }>;
-    server: PromiseLike<{ type: string }>;
-  }) {
+  function observeMutation(
+    mutation: {
+      client: PromiseLike<{ type: string }>;
+      server: PromiseLike<{ type: string }>;
+    },
+    onSettled?: () => void,
+  ) {
     setActionError(undefined);
     void Promise.all([mutation.client, mutation.server])
       .then((results) => {
@@ -171,7 +225,8 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
           setActionError("The change could not be saved.");
         }
       })
-      .catch(() => setActionError("The change could not be saved."));
+      .catch(() => setActionError("The change could not be saved."))
+      .finally(onSettled);
   }
 
   function resolveDraftItemId(name: string) {
@@ -182,7 +237,7 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
   }
 
   return (
-    <section aria-label="List" className="grid gap-5">
+    <section ref={root} tabIndex={-1} aria-label="List" className="grid gap-5">
       {actionError ? (
         <InlineAlert role="alert" variant="danger">
           {actionError}
@@ -332,6 +387,7 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
             ? archivedItems.map((item) => (
                 <li
                   key={item.id}
+                  data-list-item-id={item.id}
                   className="flex min-h-14 items-center gap-2 py-2"
                 >
                   <IconButton
@@ -349,6 +405,7 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
                     muted
                   />
                   <IconButton
+                    data-list-status-toggle
                     aria-label={`Restore ${item.name}`}
                     title={`Restore ${item.name}`}
                     disabled={!mutationEnabled}

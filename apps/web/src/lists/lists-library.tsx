@@ -16,7 +16,9 @@ export function ListsLibrary({ householdId }: { householdId: string }) {
   const enabled = useZeroMutationEnabled();
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string>();
-  const [lists, result] = useQuery(queries.lists.library({ householdId }));
+  const [lists, result] = useQuery(
+    queries.lists.libraryPreview({ householdId }),
+  );
   const header = useMemo(
     () => (
       <Button

@@ -2,7 +2,7 @@ import { defineQueriesWithType, defineQueryWithType } from "@rocicorp/zero";
 import * as z from "zod";
 import { habitsQuerySchema, shiftCalendarDate } from "../habits";
 import { listMediaPageSchema } from "../list-media";
-import { listDetailArgsSchema } from "../lists";
+import { listDetailArgsSchema, listPreviewItemLimit } from "../lists";
 import type { ZeroAuthContext } from "./context";
 import { documentQueries } from "./document-queries";
 import { logQueries } from "./log-queries";
@@ -108,33 +108,44 @@ const listsByHousehold = defineHomeHubQuery(
       .orderBy("id", "asc"),
 );
 
+const listLibraryQuery = (
+  householdId: string,
+  userId: string,
+  itemLimit: number,
+) =>
+  authorizedLists(householdId, userId)
+    .related("attachments", (a) =>
+      a
+        .where("deletedAt", "IS", null)
+        .whereExists("asset", (m) =>
+          m.where("deletedAt", "IS", null).where("confirmedAt", "IS NOT", null),
+        )
+        .related("asset")
+        .orderBy("sortKey", "desc")
+        .orderBy("id", "asc")
+        .limit(4),
+    )
+    .related("items", (item) =>
+      item
+        .where("status", "IN", ["active", "crossed"])
+        .orderBy("status", "asc")
+        .orderBy("sortKey", "desc")
+        .orderBy("id", "asc")
+        .limit(itemLimit),
+    )
+    .orderBy("sortKey", "desc")
+    .orderBy("id", "asc");
+
+// Preserve both existing query shapes for clients installed before this UI.
 const listsLibrary = defineHomeHubQuery(
   householdIdArgsSchema,
+  ({ args, ctx }) => listLibraryQuery(args.householdId, ctx.userId, 4),
+);
+
+const listsLibraryPreview = defineHomeHubQuery(
+  householdIdArgsSchema,
   ({ args, ctx }) =>
-    authorizedLists(args.householdId, ctx.userId)
-      .related("attachments", (a) =>
-        a
-          .where("deletedAt", "IS", null)
-          .whereExists("asset", (m) =>
-            m
-              .where("deletedAt", "IS", null)
-              .where("confirmedAt", "IS NOT", null),
-          )
-          .related("asset")
-          .orderBy("sortKey", "desc")
-          .orderBy("id", "asc")
-          .limit(4),
-      )
-      .related("items", (item) =>
-        item
-          .where("status", "IN", ["active", "crossed"])
-          .orderBy("status", "asc")
-          .orderBy("sortKey", "desc")
-          .orderBy("id", "asc")
-          .limit(4),
-      )
-      .orderBy("sortKey", "desc")
-      .orderBy("id", "asc"),
+    listLibraryQuery(args.householdId, ctx.userId, listPreviewItemLimit),
 );
 
 const listDetail = defineHomeHubQuery(listDetailArgsSchema, ({ args, ctx }) =>
@@ -702,6 +713,7 @@ export const queries = defineHomeHubQueries({
   logs: logQueries,
   lists: {
     library: listsLibrary,
+    libraryPreview: listsLibraryPreview,
     mediaPage: listMediaPage,
     mediaById: listMediaById,
     byHousehold: listsByHousehold,

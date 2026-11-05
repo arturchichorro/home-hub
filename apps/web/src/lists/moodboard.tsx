@@ -14,7 +14,7 @@ import {
   Trash2,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { ImageViewer } from "../media/image-viewer";
 import { type MediaSession, useMediaSession } from "../media/session";
 import { useBlockAppUpdate } from "../updates/activity";
@@ -23,6 +23,7 @@ import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { listOrderingSensors } from "./list-card";
 import { deleteListImage } from "./list-media-api";
 import { invalidateListImageUrl, useListImageUrl } from "./list-media-url";
+import { MoodboardLayout } from "./moodboard-layout";
 import { type MoodboardPin, MoodboardThumbnail } from "./moodboard-preview";
 import { MoodboardUploads } from "./moodboard-uploads";
 
@@ -72,6 +73,7 @@ function Tile({
       </button>
       <IconButton
         ref={sortable.handleRef}
+        data-moodboard-handle
         disabled={disabled}
         aria-label={`Move media ${index + 1}`}
         title="Drag to reorder, or press Space and arrow keys"
@@ -260,6 +262,9 @@ export function Moodboard({
   const session = useMediaSession();
   const zero = useZero();
   const enabled = useZeroMutationEnabled();
+  const container = useRef<HTMLElement>(null);
+  const keyboardDragPin = useRef<string | undefined>(undefined);
+  const [focusAfterReorder, setFocusAfterReorder] = useState<string>();
   const [limit, setLimit] = useState(51);
   const [selected, setSelected] = useState<string>();
   const [error, setError] = useState<string>();
@@ -282,6 +287,33 @@ export function Moodboard({
       ? [...visible, pinned]
       : visible;
   const current = pinned ?? visible.find((row) => row.id === selected);
+
+  useLayoutEffect(() => {
+    if (!focusAfterReorder || reordering) {
+      return;
+    }
+
+    // A moved pin can change columns. Restore its handle after it is enabled,
+    // unless the user has already focused a different control while saving.
+    const active = document.activeElement;
+    const focusedPin = active
+      ?.closest("[data-moodboard-pin]")
+      ?.getAttribute("data-moodboard-pin");
+
+    if (
+      active === document.body ||
+      active === document.documentElement ||
+      focusedPin === focusAfterReorder
+    ) {
+      container.current
+        ?.querySelector<HTMLElement>(
+          `[data-moodboard-pin="${CSS.escape(focusAfterReorder)}"] [data-moodboard-handle]`,
+        )
+        ?.focus({ preventScroll: true });
+    }
+
+    setFocusAfterReorder(undefined);
+  }, [focusAfterReorder, reordering]);
 
   async function move(from: number, to: number) {
     if (!enabled || from === to || to < 0 || to >= visible.length) {
@@ -333,6 +365,22 @@ export function Moodboard({
 
   return (
     <section
+      ref={container}
+      onKeyDownCapture={(event) => {
+        if (
+          event.code === "Space" &&
+          event.target instanceof Element &&
+          event.target.hasAttribute("data-moodboard-handle")
+        ) {
+          keyboardDragPin.current =
+            event.target
+              .closest("[data-moodboard-pin]")
+              ?.getAttribute("data-moodboard-pin") ?? undefined;
+        }
+      }}
+      onPointerDownCapture={() => {
+        keyboardDragPin.current = undefined;
+      }}
       aria-label="Moodboard"
       className="grid min-w-0 max-w-full grid-cols-[minmax(0,1fr)] gap-4 overflow-x-clip"
     >
@@ -365,26 +413,26 @@ export function Moodboard({
 
           const source = event.operation.source;
 
+          setFocusAfterReorder(keyboardDragPin.current);
+          keyboardDragPin.current = undefined;
+
           if (!event.canceled && isSortable(source)) {
             void move(source.initialIndex, source.index);
           }
         }}
       >
-        <ul
-          aria-label="Moodboard media"
-          className="min-w-0 max-w-full columns-2 gap-3 sm:columns-3 lg:columns-4"
-        >
-          {visible.map((pin, i) => (
+        <MoodboardLayout pins={visible}>
+          {(pin, index) => (
             <Tile
               key={pin.id}
               pin={pin}
-              index={i}
+              index={index}
               session={session}
               disabled={!enabled || reordering}
               onOpen={() => setSelected(pin.id)}
             />
-          ))}
-        </ul>
+          )}
+        </MoodboardLayout>
       </DragDropProvider>
       {rows.length >= limit &&
         (limit < 10001 ? (

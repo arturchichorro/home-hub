@@ -1,6 +1,11 @@
 import * as z from "zod";
 import { cleanListItemName, cleanListName } from "./normalization";
 
+// Two extra records prove that a clipped preview has more than one hidden item.
+export const listPreviewMaxRows = 20;
+
+export const listPreviewItemLimit = listPreviewMaxRows + 2;
+
 export const listKindSchema = z.enum(["checklist", "moodboard"]);
 
 export const listNameSchema = z
