@@ -126,6 +126,7 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
   const root = useRef<HTMLElement>(null);
   const scrollRequest = useRef<
     | {
+        id: symbol;
         itemId: string;
         status: ListItem["status"] | undefined;
         snapshot: ReturnType<typeof preserveListScroll>;
@@ -158,7 +159,13 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
     );
   }, [draft?.savedItemId, draftIsPersisted]);
 
-  useEffect(() => () => scrollRequest.current?.snapshot.dispose(), []);
+  useEffect(
+    () => () => {
+      scrollRequest.current?.snapshot.dispose();
+      scrollRequest.current = undefined;
+    },
+    [],
+  );
 
   useLayoutEffect(() => {
     const request = scrollRequest.current;
@@ -182,8 +189,10 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
 
     scrollRequest.current?.snapshot.dispose();
 
+    const requestId = Symbol();
     const request = root.current
       ? {
+          id: requestId,
           itemId,
           status: items.find((item) => item.id === itemId)?.status,
           snapshot: preserveListScroll(root.current, itemId),
@@ -203,8 +212,8 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
       ),
       () =>
         requestAnimationFrame(() => {
-          if (scrollRequest.current === request) {
-            request?.snapshot.dispose();
+          if (scrollRequest.current?.id === requestId) {
+            scrollRequest.current.snapshot.dispose();
             scrollRequest.current = undefined;
           }
         }),
