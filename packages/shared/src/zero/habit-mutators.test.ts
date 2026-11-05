@@ -4,18 +4,26 @@ import { mutators } from "./mutators";
 import type { Schema } from "./schema.gen";
 
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const habitId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+
 const foreignId = "5944cb0d-931a-4723-b981-77eacb122314";
+
 const ctx = { userId: "9f8a6942-f721-499d-957d-7bb3ed1158db" };
+
 const now = Date.parse("2026-10-15T12:00:00Z");
+
 const scope = { householdId, habitId, optimisticTimestamp: now };
+
 const completeArgs = {
   ...scope,
   entryOn: "2026-10-14",
   completed: true,
   timeZone: "UTC",
 };
+
 type Row = Record<string, unknown>;
+
 type Table =
   | "households"
   | "householdMembers"
@@ -24,6 +32,7 @@ type Table =
   | "habitEntries"
   | "workouts"
   | "habitWorkoutLinks";
+
 type Condition =
   | { type: "and"; conditions: Condition[] }
   | {
@@ -45,11 +54,17 @@ function matches(
   condition: Condition | undefined,
   data: Record<Table, Row[]>,
 ): boolean {
-  if (!condition) return true;
-  if (condition.type === "and")
+  if (!condition) {
+    return true;
+  }
+
+  if (condition.type === "and") {
     return condition.conditions.every((entry) => matches(row, entry, data));
+  }
+
   if (condition.type === "correlatedSubquery") {
     const { correlation, subquery } = condition.related;
+
     return data[subquery.table].some(
       (candidate) =>
         correlation.parentField.every(
@@ -58,20 +73,28 @@ function matches(
         ) && matches(candidate, subquery.where, data),
     );
   }
-  if (condition.op === "IS" && condition.right.value === null)
+
+  if (condition.op === "IS" && condition.right.value === null) {
     return row[condition.left.name] == null;
-  if (condition.op === "IN")
+  }
+
+  if (condition.op === "IN") {
     return (
       Array.isArray(condition.right.value) &&
       condition.right.value.includes(row[condition.left.name])
     );
-  if (condition.op === "=")
+  }
+
+  if (condition.op === "=") {
     return row[condition.left.name] === condition.right.value;
+  }
+
   throw new Error(`Unsupported operator ${condition.op}`);
 }
 
 function setup(location: "server" | "client" = "server") {
   vi.spyOn(Date, "now").mockReturnValue(now);
+
   const data: Record<Table, Row[]> = {
     households: [{ id: householdId, deletedAt: null }],
     householdMembers: [{ householdId, userId: ctx.userId }],
@@ -104,26 +127,39 @@ function setup(location: "server" | "client" = "server") {
   const crud = (table: Table) => ({
     insert: async (row: Row) => {
       writes(table, "insert", row);
-      if (!data[table].some((entry) => sameKey(table, entry, row)))
+
+      if (!data[table].some((entry) => sameKey(table, entry, row))) {
         data[table].push({ ...row });
+      }
     },
+
     upsert: async (row: Row) => {
       writes(table, "upsert", row);
+
       const existing = data[table].find((entry) => sameKey(table, entry, row));
-      if (existing) Object.assign(existing, row);
-      else
+
+      if (existing) {
+        Object.assign(existing, row);
+      } else {
         data[table].push({
           completed: false,
           note: null,
           createdAt: now,
           ...row,
         });
+      }
     },
+
     update: async (row: Row) => {
       writes(table, "update", row);
+
       const existing = data[table].find((entry) => sameKey(table, entry, row));
-      if (existing) Object.assign(existing, row);
+
+      if (existing) {
+        Object.assign(existing, row);
+      }
     },
+
     delete: async (key: Row) => {
       writes(table, "delete", key);
       data[table] = data[table].filter((row) => !sameKey(table, row, key));
@@ -136,6 +172,7 @@ function setup(location: "server" | "client" = "server") {
       habitEntries: crud("habitEntries"),
       habitWorkoutLinks: crud("habitWorkoutLinks"),
     },
+
     run: async (query: unknown) => {
       const { ast, format } = query as {
         ast: { table: Table; where?: Condition; orderBy?: [string, string][] };
@@ -144,18 +181,22 @@ function setup(location: "server" | "client" = "server") {
       const rows = data[ast.table].filter((row) =>
         matches(row, ast.where, data),
       );
+
       for (const [key, direction] of [...(ast.orderBy ?? [])].reverse()) {
         rows.sort((a, b) => {
           const av = a[key] as string | number;
           const bv = b[key] as string | number;
+
           return (
             (av < bv ? -1 : av > bv ? 1 : 0) * (direction === "asc" ? 1 : -1)
           );
         });
       }
+
       return format.singular ? rows[0] : rows;
     },
   } as unknown as Transaction<Schema>;
+
   return { tx, data, writes };
 }
 
@@ -177,6 +218,7 @@ describe("habit workout linking", () => {
       workoutCompleted: true,
       note: "Keep",
     });
+
     const before = structuredClone(data.habitEntries);
     await mutators.habits.linkWorkouts.fn({
       tx,
@@ -310,6 +352,7 @@ describe("habit mutations", () => {
       completed: true,
       note: "Note",
     });
+
     const patches = writes.mock.calls
       .filter(([table]) => table === "habitEntries")
       .map((call) => call[2]);
@@ -324,13 +367,21 @@ describe("habit mutations", () => {
     "rejects daily note writes when %s",
     async (reason) => {
       const { tx, data, writes } = setup();
-      if (reason === "archived")
+
+      if (reason === "archived") {
         data.habits = [{ id: habitId, householdId, status: "archived" }];
-      if (reason === "foreign")
+      }
+
+      if (reason === "foreign") {
         data.habits = [
           { id: habitId, householdId: foreignId, status: "active" },
         ];
-      if (reason === "disabled") data.householdModuleSettings = [];
+      }
+
+      if (reason === "disabled") {
+        data.householdModuleSettings = [];
+      }
+
       await expect(
         mutators.habits.updateEntryNote.fn({
           tx,
@@ -369,13 +420,21 @@ describe("habit mutations", () => {
     "rejects shared habit note writes when %s",
     async (reason) => {
       const { tx, data, writes } = setup();
-      if (reason === "archived")
+
+      if (reason === "archived") {
         data.habits = [{ id: habitId, householdId, status: "archived" }];
-      if (reason === "foreign")
+      }
+
+      if (reason === "foreign") {
         data.habits = [
           { id: habitId, householdId: foreignId, status: "active" },
         ];
-      if (reason === "disabled") data.householdModuleSettings = [];
+      }
+
+      if (reason === "disabled") {
+        data.householdModuleSettings = [];
+      }
+
       await expect(
         mutators.habits.updateNote.fn({
           tx,
@@ -417,13 +476,16 @@ describe("habit mutations", () => {
     "rejects %s IDs in the requested order",
     async (reason) => {
       const { tx, data, writes } = setup();
-      if (reason !== "missing")
+
+      if (reason !== "missing") {
         data.habits.push({
           id: foreignId,
           householdId: reason === "foreign" ? foreignId : householdId,
           sortKey: 2048,
           status: reason === "archived" ? "archived" : "active",
         });
+      }
+
       await expect(
         mutators.habits.reorder.fn({
           tx,
@@ -438,12 +500,21 @@ describe("habit mutations", () => {
     "rejects reorder when %s",
     async (reason) => {
       const { tx, data, writes } = setup();
-      if (reason === "archived")
+
+      if (reason === "archived") {
         data.habits = [
           { id: habitId, householdId, status: "archived", sortKey: 1024 },
         ];
-      if (reason === "disabled") data.householdModuleSettings = [];
-      if (reason === "not a member") data.householdMembers = [];
+      }
+
+      if (reason === "disabled") {
+        data.householdModuleSettings = [];
+      }
+
+      if (reason === "not a member") {
+        data.householdMembers = [];
+      }
+
       await expect(
         mutators.habits.reorder.fn({
           tx,
@@ -506,6 +577,7 @@ describe("habit mutations", () => {
           optimisticTimestamp,
         },
       });
+
       const expectedTime = location === "server" ? now : optimisticTimestamp;
       expect(data.habits[1]).toMatchObject({
         id: foreignId,
@@ -526,16 +598,29 @@ describe("habit mutations", () => {
     "deleted household",
   ])("rejects writes for %s", async (reason) => {
     const { tx, data, writes } = setup();
-    if (reason === "missing membership") data.householdMembers = [];
-    if (reason === "foreign membership")
+
+    if (reason === "missing membership") {
+      data.householdMembers = [];
+    }
+
+    if (reason === "foreign membership") {
       data.householdMembers = [{ householdId: foreignId, userId: ctx.userId }];
-    if (reason === "disabled module")
+    }
+
+    if (reason === "disabled module") {
       data.householdModuleSettings = [
         { householdId, moduleKey: "habits", enabled: false },
       ];
-    if (reason === "missing module") data.householdModuleSettings = [];
-    if (reason === "deleted household")
+    }
+
+    if (reason === "missing module") {
+      data.householdModuleSettings = [];
+    }
+
+    if (reason === "deleted household") {
       data.households = [{ id: householdId, deletedAt: now }];
+    }
+
     await expect(
       mutators.habits.setCompleted.fn({ tx, ctx, args: completeArgs }),
     ).rejects.toThrow("not allowed");
@@ -546,22 +631,30 @@ describe("habit mutations", () => {
     async (action) => {
       const { tx, data, writes } = setup();
       data.habits = [{ id: habitId, householdId: foreignId }];
+
       const request = { tx, ctx, args: { ...completeArgs, name: "Read" } };
-      if (action === "rename")
+
+      if (action === "rename") {
         await expect(
           mutators.habits.rename.fn({
             ...request,
             args: { ...scope, name: "Read" },
           }),
         ).rejects.toThrow("not allowed");
-      if (action === "archive")
+      }
+
+      if (action === "archive") {
         await expect(
           mutators.habits.archive.fn({ ...request, args: scope }),
         ).rejects.toThrow("not allowed");
-      if (action === "setCompleted")
+      }
+
+      if (action === "setCompleted") {
         await expect(
           mutators.habits.setCompleted.fn({ tx, ctx, args: completeArgs }),
         ).rejects.toThrow("not allowed");
+      }
+
       expect(writes).not.toHaveBeenCalled();
     },
   );
@@ -635,6 +728,7 @@ describe("habit mutations", () => {
     "rejects future date changes (completed=%s)",
     async (completed) => {
       const { tx, writes } = setup();
+
       for (const entryOn of ["2026-10-16", "2026-10-17"]) {
         await expect(
           mutators.habits.setCompleted.fn({
@@ -644,6 +738,7 @@ describe("habit mutations", () => {
           }),
         ).rejects.toThrow("not allowed");
       }
+
       expect(writes).not.toHaveBeenCalled();
     },
   );

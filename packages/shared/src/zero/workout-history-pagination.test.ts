@@ -2,10 +2,14 @@ import type { AST } from "@rocicorp/zero";
 import { expect, it } from "vitest";
 import { queries, workoutHistoryPageSize } from "./queries";
 
-const householdId = crypto.randomUUID(),
-  workoutId = crypto.randomUUID(),
-  userId = crypto.randomUUID();
+const householdId = crypto.randomUUID();
+
+const workoutId = crypto.randomUUID();
+
+const userId = crypto.randomUUID();
+
 const ast = (q: unknown) => (q as { ast: AST }).ast;
+
 it("uses an exclusive stable composite cursor with a bounded lookahead", () => {
   const cursor = {
     completedOn: "2026-10-02",
@@ -25,19 +29,25 @@ it("uses an exclusive stable composite cursor with a bounded lookahead", () => {
     ["completedAt", "desc"],
     ["id", "desc"],
   ]);
+
   const serialized = JSON.stringify(q);
+
   for (const scope of [
     userId,
     householdId,
     workoutId,
     "householdMembers",
     "householdModuleSettings",
-  ])
+  ]) {
     expect(serialized).toContain(scope);
+  }
+
   expect(serialized).toContain("loggedExercises");
 });
+
 it("pins a selected historical log or current local day independently of the page", () => {
   const logId = crypto.randomUUID();
+
   for (const q of [
     ast(
       queries.workouts.logById.fn({
@@ -53,13 +63,15 @@ it("pins a selected historical log or current local day independently of the pag
     ),
   ]) {
     expect(q.limit).toBe(1);
+
     for (const value of [
       householdId,
       workoutId,
       userId,
       "workoutLogExercises",
       "exerciseLogSets",
-    ])
+    ]) {
       expect(JSON.stringify(q)).toContain(value);
+    }
   }
 });

@@ -37,6 +37,7 @@ export function RecipeIngredientNameInput({
     mutationEnabled,
     normalize: cleanRecipeIngredientName,
     required: true,
+
     save: async (name) => {
       const mutation = zero.mutate(
         mutators.recipes.renameIngredient({
@@ -48,12 +49,15 @@ export function RecipeIngredientNameInput({
         }),
       );
       const result = await acknowledgeMutation(mutation);
+
       return result.type === "success";
     },
   });
 
   useEffect(() => {
-    if (focusOnMount) inputRef.current?.focus();
+    if (focusOnMount) {
+      inputRef.current?.focus();
+    }
   }, [focusOnMount]);
 
   return (

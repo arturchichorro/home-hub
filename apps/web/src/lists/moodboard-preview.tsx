@@ -3,6 +3,7 @@ import { Play } from "@home-hub/ui-web";
 import { useState } from "react";
 import { type MediaSession, useMediaSession } from "../media/session";
 import { useListImageUrl } from "./list-media-url";
+
 export type MoodboardPin = {
   id: string;
   householdId: string;
@@ -10,6 +11,7 @@ export type MoodboardPin = {
   sortKey?: number | null;
   asset?: Pick<Media, "id" | "kind" | "width" | "height"> | undefined;
 };
+
 export function MoodboardThumbnail({
   pin,
   session,
@@ -27,6 +29,7 @@ export function MoodboardThumbnail({
     variant: "thumbnail",
   });
   const [failedUrl, setFailedUrl] = useState<string>();
+
   return state.url && state.url !== failedUrl ? (
     <img
       src={state.url}
@@ -51,8 +54,10 @@ export function MoodboardThumbnail({
     />
   );
 }
+
 export function MoodboardPreview({ pins }: { pins: readonly MoodboardPin[] }) {
   const session = useMediaSession();
+
   return (
     <div className="grid gap-2">
       <div

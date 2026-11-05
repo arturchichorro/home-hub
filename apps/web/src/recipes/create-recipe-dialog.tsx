@@ -32,7 +32,10 @@ export function CreateRecipeDialog({
   const [submitting, setSubmitting] = useState(false);
 
   function changeOpen(nextOpen: boolean) {
-    if (submitting) return;
+    if (submitting) {
+      return;
+    }
+
     onOpenChange(nextOpen);
 
     if (!nextOpen) {
@@ -61,6 +64,7 @@ export function CreateRecipeDialog({
     if (clientResult.type === "error") {
       setError("Unable to create the recipe.");
       setSubmitting(false);
+
       return;
     }
 
@@ -69,9 +73,11 @@ export function CreateRecipeDialog({
     onCreated(recipeId);
 
     const serverResult = await mutation.server;
+
     if (serverResult.type === "error") {
       setError("The recipe could not be saved.");
     }
+
     setSubmitting(false);
   }
 

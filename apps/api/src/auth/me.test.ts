@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createMeService } from "./me";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const storedUser = {
   id: "selected-user-id",
   username: "artur",

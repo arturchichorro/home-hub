@@ -24,6 +24,7 @@ export async function signMediaRead({
     variant,
     expiresAt: Math.floor(now.getTime() / 1_000) + mediaReadLifetimeSeconds,
   };
+
   return mediaReadUrl({
     baseUrl,
     capability,

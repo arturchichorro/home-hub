@@ -29,26 +29,38 @@ export function createDeleteRecipeImageService({ db }: { db: Database }) {
   }: DeleteRecipeImageInput): Promise<DeleteRecipeImageResult> {
     return db.transaction(async (tx) => {
       const user = await findActiveUser(tx, userId);
-      if (!user) return { kind: "unauthorized" as const };
+
+      if (!user) {
+        return { kind: "unauthorized" as const };
+      }
 
       const membership = await findHouseholdMembershipForShare(tx, {
         householdId,
         userId,
       });
-      if (!membership) return { kind: "forbidden" as const };
+
+      if (!membership) {
+        return { kind: "forbidden" as const };
+      }
 
       const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
         householdId,
         moduleKey: "recipes",
       });
-      if (!moduleSetting) return { kind: "forbidden" as const };
+
+      if (!moduleSetting) {
+        return { kind: "forbidden" as const };
+      }
 
       const image = await findRecipeImageObjectForUpdate(tx, {
         householdId,
         recipeId,
         imageId,
       });
-      if (!image) return { kind: "success" };
+
+      if (!image) {
+        return { kind: "success" };
+      }
 
       const deletedAt = new Date();
       const [deletedImage] = await tx
@@ -63,6 +75,7 @@ export function createDeleteRecipeImageService({ db }: { db: Database }) {
           ),
         )
         .returning({ id: recipeMedia.id });
+
       if (!deletedImage) {
         throw new Error("Recipe image deletion returned no row");
       }

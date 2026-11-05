@@ -1,6 +1,7 @@
 import * as z from "zod";
 
 export const habitWorkoutModeSchema = z.enum(["none", "any", "selected"]);
+
 export const habitCompleted = (
   entry:
     | { completed?: boolean | null; workoutCompleted?: boolean | null }
@@ -8,9 +9,11 @@ export const habitCompleted = (
 ) => !!entry?.completed || !!entry?.workoutCompleted;
 
 export const calendarDateSchema = z.iso.date();
+
 export function cleanHabitName(value: string): string {
   return value.normalize("NFKC").replace(/\s+/gu, " ").trim();
 }
+
 export const habitNameSchema = z
   .string()
   .transform(cleanHabitName)
@@ -19,6 +22,7 @@ export const habitNameSchema = z
 export function cleanHabitNote(value: string): string | null {
   return value.normalize("NFKC").trim() || null;
 }
+
 export const habitNoteSchema = z
   .string()
   .transform(cleanHabitNote)
@@ -30,6 +34,7 @@ export const timeZoneSchema = z
   .refine((value) => {
     try {
       new Intl.DateTimeFormat("en", { timeZone: value });
+
       return true;
     } catch {
       return false;
@@ -45,6 +50,7 @@ export function calendarDate(now: number | Date, timeZone: string): string {
   }).formatToParts(now);
   const part = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((entry) => entry.type === type)?.value;
+
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
@@ -52,6 +58,7 @@ export function calendarDate(now: number | Date, timeZone: string): string {
 export function shiftCalendarDate(value: string, days: number): string {
   const date = new Date(`${value}T12:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
+
   return date.toISOString().slice(0, 10);
 }
 
@@ -64,22 +71,27 @@ export function habitMonth(anchor: string) {
   const dates = Array.from({ length }, (_, index) =>
     shiftCalendarDate(startOn, index),
   );
+
   return { startOn, endOn: shiftCalendarDate(startOn, length - 1), dates };
 }
 
 export function clampHabitMonth(anchor: string, today: string): string {
   const month = anchor.slice(0, 7) > today.slice(0, 7) ? today : anchor;
+
   return `${month.slice(0, 7)}-01`;
 }
 
 export function adjacentHabitMonth(anchor: string, direction: -1 | 1): string {
   const date = new Date(`${anchor.slice(0, 7)}-01T12:00:00Z`);
   date.setUTCMonth(date.getUTCMonth() + direction);
+
   return date.toISOString().slice(0, 10);
 }
 
 const scope = { householdId: z.uuid(), habitId: z.uuid() };
+
 const timestamp = z.number().int().nonnegative();
+
 export const createHabitMutationSchema = z
   .object({
     ...scope,
@@ -87,9 +99,11 @@ export const createHabitMutationSchema = z
     optimisticTimestamp: timestamp,
   })
   .strict();
+
 export const reorderHabitsMutationSchema = z
   .object({
     ...scope,
+
     orderedHabitIds: z
       .array(z.uuid())
       .min(1)
@@ -98,6 +112,7 @@ export const reorderHabitsMutationSchema = z
         (ids) => new Set(ids).size === ids.length,
         "Ordered IDs must be unique",
       ),
+
     optimisticTimestamp: timestamp,
   })
   .strict()
@@ -113,6 +128,7 @@ export const renameHabitMutationSchema = z
     optimisticTimestamp: timestamp,
   })
   .strict();
+
 export const updateHabitNoteMutationSchema = z
   .object({
     ...scope,
@@ -125,10 +141,12 @@ export const linkHabitWorkoutsMutationSchema = z
   .object({
     ...scope,
     mode: habitWorkoutModeSchema,
+
     workoutIds: z
       .array(z.uuid())
       .max(500)
       .refine((ids) => new Set(ids).size === ids.length, "Duplicate workouts"),
+
     optimisticTimestamp: timestamp,
   })
   .strict()
@@ -146,6 +164,7 @@ export const archiveHabitMutationSchema = z
     optimisticTimestamp: timestamp,
   })
   .strict();
+
 export const setHabitCompletedMutationSchema = z
   .object({
     ...scope,
@@ -155,6 +174,7 @@ export const setHabitCompletedMutationSchema = z
     optimisticTimestamp: timestamp,
   })
   .strict();
+
 export const updateHabitEntryNoteMutationSchema = z
   .object({
     ...scope,

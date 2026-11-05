@@ -4,8 +4,11 @@ import { describe, expect, it } from "vitest";
 import { queries } from "./queries";
 
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 describe("workout linking queries", () => {
   it("offers only shared definitions, never private logs, sets or notes", () => {
     const query = getAst(
@@ -16,7 +19,9 @@ describe("workout linking queries", () => {
     );
     expect(query.table).toBe("workouts");
     expect(query.related).toBeUndefined();
+
     const scope = JSON.stringify(query.where);
+
     for (const key of [
       householdId,
       userId,
@@ -24,12 +29,15 @@ describe("workout linking queries", () => {
       "householdModuleSettings",
       "habits",
       "workouts",
-    ])
+    ]) {
       expect(scope).toContain(key);
+    }
+
     expect(scope).not.toContain("workoutLogs");
     expect(scope).not.toContain("exerciseLogs");
   });
 });
+
 describe("person-scoped habits", () => {
   const personId = "0b994d6f-691a-4e3b-beca-978db54fbe69";
   it.each([false, true])(
@@ -48,6 +56,7 @@ describe("person-scoped habits", () => {
         }),
       );
       const scope = JSON.stringify(ast.where);
+
       for (const required of [
         householdId,
         userId,
@@ -56,8 +65,10 @@ describe("person-scoped habits", () => {
         "householdModuleSettings",
         "deletedAt",
         archived ? "archived" : "active",
-      ])
+      ]) {
         expect(scope).toContain(required);
+      }
+
       const entries = ast.related?.find(
         (r) => r.subquery.table === "habitEntries",
       )?.subquery;
@@ -114,7 +125,9 @@ describe("catalog media subscription", () => {
       }),
     );
     expect(ast.table).toBe("exerciseMedia");
+
     const scope = JSON.stringify(ast.where);
+
     for (const required of [
       householdId,
       userId,
@@ -124,8 +137,10 @@ describe("catalog media subscription", () => {
       "deletedAt",
       "confirmedAt",
       "image",
-    ])
+    ]) {
       expect(scope).toContain(required);
+    }
+
     expect(
       ast.related?.some((relation) => relation.subquery.table === "media"),
     ).toBe(true);
@@ -168,16 +183,21 @@ describe("workout library last completion", () => {
 // for every authorization clause without depending on construction order.
 function conditionsContaining(conditions: unknown[]) {
   function partial(value: unknown): unknown {
-    if (Array.isArray(value)) return value.map(partial);
+    if (Array.isArray(value)) {
+      return value.map(partial);
+    }
+
     if (!value || typeof value !== "object" || "asymmetricMatch" in value) {
       return value;
     }
+
     return expect.objectContaining(
       Object.fromEntries(
         Object.entries(value).map(([key, entry]) => [key, partial(entry)]),
       ),
     );
   }
+
   return expect.arrayContaining(conditions.map(partial));
 }
 

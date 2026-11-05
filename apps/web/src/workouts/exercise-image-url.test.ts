@@ -10,6 +10,7 @@ import {
 } from "./exercise-media-api";
 
 vi.mock("./exercise-media-api", () => ({ batchExerciseImageUrl: vi.fn() }));
+
 const identity: ExerciseImageIdentity = {
   accessToken: "token",
   userId: "user",
@@ -18,6 +19,7 @@ const identity: ExerciseImageIdentity = {
   attachmentId: "attachment",
   variant: "thumbnail",
 };
+
 beforeEach(() => {
   clearExerciseImageUrlCache();
   vi.mocked(batchExerciseImageUrl).mockReset();
@@ -27,7 +29,9 @@ beforeEach(() => {
     expiresInSeconds: 3600,
   });
 });
+
 afterEach(() => clearExerciseImageUrlCache());
+
 describe("exercise media URL cache", () => {
   it("deduplicates repeated catalog/slot reads for the same shared movement", async () => {
     await Promise.all([
@@ -49,6 +53,7 @@ describe("exercise media URL cache", () => {
     ]) {
       await prefetchExerciseImage({ ...identity, ...patch });
     }
+
     expect(batchExerciseImageUrl).toHaveBeenCalledTimes(6);
   });
   it("invalidates every variant on removal and prevents stale pending reads repopulating cache", async () => {
@@ -65,6 +70,7 @@ describe("exercise media URL cache", () => {
           finish = resolve;
         }),
     );
+
     const pending = prefetchExerciseImage(identity);
     invalidateExerciseImageUrl(identity);
     finish?.({

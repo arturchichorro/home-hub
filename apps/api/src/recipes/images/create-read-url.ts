@@ -51,31 +51,45 @@ export function createRecipeImageReadUrlService({
   }: CreateRecipeImageReadUrlInput): Promise<CreateRecipeImageReadUrlResult> {
     const authorizedImage = await db.transaction(async (tx) => {
       const user = await findActiveUser(tx, userId);
-      if (!user) return { kind: "unauthorized" as const };
+
+      if (!user) {
+        return { kind: "unauthorized" as const };
+      }
 
       const membership = await findHouseholdMembershipForShare(tx, {
         householdId,
         userId,
       });
-      if (!membership) return { kind: "forbidden" as const };
+
+      if (!membership) {
+        return { kind: "forbidden" as const };
+      }
 
       const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
         householdId,
         moduleKey: "recipes",
       });
-      if (!moduleSetting) return { kind: "forbidden" as const };
+
+      if (!moduleSetting) {
+        return { kind: "forbidden" as const };
+      }
 
       const image = await findConfirmedRecipeImageForShare(tx, {
         householdId,
         recipeId,
         imageId,
       });
-      if (!image) return { kind: "not_found" as const };
+
+      if (!image) {
+        return { kind: "not_found" as const };
+      }
 
       return { kind: "image" as const, image };
     });
 
-    if (authorizedImage.kind !== "image") return authorizedImage;
+    if (authorizedImage.kind !== "image") {
+      return authorizedImage;
+    }
 
     return {
       kind: "success",

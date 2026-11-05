@@ -39,7 +39,9 @@ import type { ExercisePerformance } from "./workout-log-projection";
 import { summarizeExercisePerformance } from "./workout-log-summary";
 
 type Draft = { id: string; saved?: boolean };
+
 type RowControls = { flush: () => Promise<boolean>; focus: () => void };
+
 const catalogFields = (
   row: Pick<CatalogExercise, "id" | "name" | "unilateral"> & {
     unit: string;
@@ -53,6 +55,7 @@ const catalogFields = (
     load: row.load,
     unilateral: row.unilateral,
   });
+
 const defaultExercise = (id: string): CatalogExercise => ({
   id,
   name: "",
@@ -63,8 +66,8 @@ const defaultExercise = (id: string): CatalogExercise => ({
 
 export function ExerciseCatalog({ householdId }: { householdId: string }) {
   const [rows, result] = useQuery(queries.workouts.catalog({ householdId }));
-  const zero = useZero(),
-    connected = useZeroMutationEnabled();
+  const zero = useZero();
+  const connected = useZeroMutationEnabled();
   const enabled = connected && result.type === "complete";
   const [search, setSearch] = useState("");
   const [renderLimit, setRenderLimit] = useState(catalogBatchSize);
@@ -74,6 +77,7 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
   const draftControl = useRef<RowControls>(null);
   const latestRows = useRef(rows);
   latestRows.current = rows;
+
   const activeDraftId = draft?.id;
   const draftRow = rows.find((row) => row.id === activeDraftId);
   const [actionError, setActionError] = useState<string>();
@@ -94,11 +98,14 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
       row: catalogFields(row),
       performance: row.performances?.[0],
     }));
-  if (draft && !draft.saved && !draftRow)
+
+  if (draft && !draft.saved && !draftRow) {
     entries.unshift({
       id: draft.id,
       row: undefined,
     });
+  }
+
   const visibleEntries = catalogPage(
     entries,
     renderLimit,
@@ -106,6 +113,7 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
     activeDraftId,
   );
   const canOrder = enabled && (!draft || Boolean(draft.saved));
+
   function observeAction(
     mutation: {
       client: PromiseLike<{ type: string }>;
@@ -116,14 +124,22 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
     setActionError(undefined);
     void Promise.all([mutation.client, mutation.server])
       .then((outcomes) => {
-        if (outcomes.some((outcome) => outcome.type === "error"))
+        if (outcomes.some((outcome) => outcome.type === "error")) {
           setActionError(message);
+        }
       })
       .catch(() => setActionError(message));
   }
+
   function remove(exerciseId: string) {
-    if (!enabled) return;
-    if (draft?.id === exerciseId) setDraft(undefined);
+    if (!enabled) {
+      return;
+    }
+
+    if (draft?.id === exerciseId) {
+      setDraft(undefined);
+    }
+
     observeAction(
       zero.mutate(
         mutators.workouts.deleteExercise({
@@ -135,12 +151,15 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
       "Unable to delete exercise.",
     );
   }
+
   async function save(
     next: CatalogExercise,
     previous: CatalogExercise | undefined,
   ): Promise<CatalogSaveResult> {
-    if (!enabled)
+    if (!enabled) {
       return { error: "Unable to save exercise while disconnected." };
+    }
+
     const duplicate = latestRows.current.find(
       (row) =>
         row.id !== next.id &&
@@ -149,8 +168,11 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
             normalizeExerciseName(next.name)) &&
         row.normalizedName === normalizeExerciseName(next.name),
     );
-    if (duplicate)
+
+    if (duplicate) {
       return { error: "An exercise with this name already exists." };
+    }
+
     try {
       const mutation = previous
         ? zero.mutate(
@@ -173,24 +195,37 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
             }),
           );
       const outcome = await acknowledgeMutation(mutation);
-      if (outcome.type === "error")
+
+      if (outcome.type === "error") {
         return {
           error: "Unable to save exercise. Your changes are still here.",
         };
-      if (previous) return { exercise: next };
+      }
+
+      if (previous) {
+        return { exercise: next };
+      }
+
       return { exercise: next };
     } catch {
       return { error: "Unable to save exercise. Your changes are still here." };
     }
   }
+
   async function add() {
-    if (!enabled || adding) return;
+    if (!enabled || adding) {
+      return;
+    }
+
     setAdding(true);
+
     try {
       if (draftControl.current && !(await draftControl.current.flush())) {
         draftControl.current.focus();
+
         return;
       }
+
       setSearch("");
       setPinnedId(undefined);
       setDraft({ id: crypto.randomUUID() });
@@ -198,6 +233,7 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
       setAdding(false);
     }
   }
+
   return (
     <CatalogMediaProvider householdId={householdId}>
       <section aria-label="Exercise catalog" className="grid min-w-0 gap-2">
@@ -209,7 +245,9 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
             className="size-7!"
             disabled={!enabled || adding}
             onPointerDown={(event) => {
-              if (draft) event.preventDefault();
+              if (draft) {
+                event.preventDefault();
+              }
             }}
             onClick={() => void add()}
           >
@@ -242,18 +280,29 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
               sensors={workoutOrderingSensors}
               onDragEnd={(event) => {
                 const source = event.operation.source;
-                if (!canOrder || event.canceled || !isSortable(source)) return;
-                const ids = visibleEntries.map((entry) => entry.id),
-                  from = ids.indexOf(String(source.id));
+
+                if (!canOrder || event.canceled || !isSortable(source)) {
+                  return;
+                }
+
+                const ids = visibleEntries.map((entry) => entry.id);
+                const from = ids.indexOf(String(source.id));
+
                 if (
                   from < 0 ||
                   source.index < 0 ||
                   source.index >= ids.length ||
                   from === source.index
-                )
+                ) {
                   return;
+                }
+
                 const [id] = ids.splice(from, 1);
-                if (!id) return;
+
+                if (!id) {
+                  return;
+                }
+
                 ids.splice(source.index, 0, id);
                 observeAction(
                   zero.mutate(
@@ -271,6 +320,7 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
               <ul className="divide-y divide-border">
                 {visibleEntries.map((entry, index) => {
                   const isDraft = entry.id === draft?.id;
+
                   return (
                     <CatalogRow
                       key={entry.id}
@@ -286,16 +336,19 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
                       canOrder={canOrder}
                       onFocus={() => setPinnedId(entry.id)}
                       onCancel={() => {
-                        if (isDraft) setDraft(undefined);
+                        if (isDraft) {
+                          setDraft(undefined);
+                        }
                       }}
                       onDelete={() => remove(entry.id)}
                       onSaved={() => {
-                        if (isDraft)
+                        if (isDraft) {
                           setDraft((current) =>
                             current?.id === entry.id && !current.saved
                               ? { ...current, saved: true }
                               : current,
                           );
+                        }
                       }}
                     />
                   );
@@ -367,10 +420,13 @@ function CatalogRow({
     save,
     onSaved,
   });
+
   useImperativeHandle(controls, () => ({
     flush: () => editor.flush(),
+
     focus: () => input.current?.focus(),
   }));
+
   const value = editor.value;
   const sortable = useSortable({
     id: initial.id,
@@ -379,6 +435,7 @@ function CatalogRow({
     accept: "catalog-exercise",
     disabled: !canOrder || !editor.persistedId,
   });
+
   return (
     <li
       ref={sortable.ref}
@@ -420,11 +477,16 @@ function CatalogRow({
               event.preventDefault();
               void editor.flush();
             }
+
             if (event.key === "Escape") {
               event.preventDefault();
               editor.revert();
-              if (!editor.persistedId) onCancel();
-              else event.currentTarget.blur();
+
+              if (!editor.persistedId) {
+                onCancel();
+              } else {
+                event.currentTarget.blur();
+              }
             }
           }}
         />

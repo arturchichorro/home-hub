@@ -63,11 +63,13 @@ const recipePointerSensor = PointerSensor.configure({
     if (event.pointerType === "mouse") {
       return [new PointerActivationConstraints.Distance({ value: 5 })];
     }
+
     if (event.pointerType === "touch") {
       return [
         new PointerActivationConstraints.Delay({ value: 250, tolerance: 5 }),
       ];
     }
+
     return [
       new PointerActivationConstraints.Delay({ value: 200, tolerance: 10 }),
       new PointerActivationConstraints.Distance({ value: 5 }),
@@ -236,6 +238,7 @@ function RecipeCardGrid({
       sensors={recipeSensors}
       onDragEnd={(event) => {
         const source = event.operation.source;
+
         if (
           !disabled &&
           !event.canceled &&
@@ -290,29 +293,42 @@ export function RecipeLibrary({
     [],
   );
   useAppHeaderRightComponent(headerRightComponent);
+
   const [recipes, result] = useQuery(
     queries.recipes.byHousehold({ householdId }),
   );
 
   async function move(from: number, to: number) {
-    if (!enabled || from === to || to < 0 || to >= recipes.length) return;
+    if (!enabled || from === to || to < 0 || to >= recipes.length) {
+      return;
+    }
+
     const reordered = [...recipes];
     const [moved] = reordered.splice(from, 1);
-    if (!moved) return;
+
+    if (!moved) {
+      return;
+    }
+
     reordered.splice(to, 0, moved);
     setError(undefined);
+
     try {
       const mutation = zero.mutate(
         mutators.recipes.reorder({
           householdId,
           recipeId: moved.id,
+
           orderedRecipeIds: reordered.map((recipe) => recipe.id),
+
           optimisticUpdatedAt: Date.now(),
         }),
       );
       const outcome = await acknowledgeMutation(mutation);
-      if (outcome.type === "error")
+
+      if (outcome.type === "error") {
         setError("The recipe order could not be saved.");
+      }
     } catch {
       setError("The recipe order could not be saved.");
     }

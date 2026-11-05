@@ -201,12 +201,18 @@ export function RecipeIngredientList({
   const draftIsPersisted =
     draft !== undefined &&
     ingredients.some((ingredient) => ingredient.id === draft.id);
+
   useEffect(() => {
-    if (draftIsPersisted) setDraft(undefined);
+    if (draftIsPersisted) {
+      setDraft(undefined);
+    }
   }, [draftIsPersisted]);
 
   function deleteIngredient(ingredientId: string) {
-    if (!mutationEnabled) return;
+    if (!mutationEnabled) {
+      return;
+    }
+
     zero.mutate(
       mutators.recipes.deleteIngredient({
         householdId,
@@ -219,20 +225,32 @@ export function RecipeIngredientList({
   return (
     <DragDropProvider
       onDragEnd={(event) => {
-        if (event.canceled || !mutationEnabled) return;
+        if (event.canceled || !mutationEnabled) {
+          return;
+        }
+
         const { source } = event.operation;
-        if (!isSortable(source) || source.initialIndex === source.index) return;
+
+        if (!isSortable(source) || source.initialIndex === source.index) {
+          return;
+        }
 
         const reordered = [...ingredients];
         const [moved] = reordered.splice(source.initialIndex, 1);
-        if (!moved) return;
+
+        if (!moved) {
+          return;
+        }
+
         reordered.splice(source.index, 0, moved);
         zero.mutate(
           mutators.recipes.reorderIngredients({
             householdId,
             recipeId,
             ingredientId: moved.id,
+
             orderedIngredientIds: reordered.map((ingredient) => ingredient.id),
+
             optimisticUpdatedAt: Date.now(),
           }),
         );

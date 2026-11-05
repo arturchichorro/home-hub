@@ -13,6 +13,7 @@ export const Route = createFileRoute(
       }),
     );
   },
+
   component: RecipeDetailRoute,
 });
 

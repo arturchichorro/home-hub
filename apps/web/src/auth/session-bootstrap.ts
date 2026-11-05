@@ -30,17 +30,23 @@ export function saveSessionBootstrap(user: AuthUser) {
 export function loadOfflineSession(): Session | null {
   try {
     const value = storage()?.getItem(storageKey);
-    if (!value) return null;
+
+    if (!value) {
+      return null;
+    }
 
     const user = authUserSchema.safeParse(JSON.parse(value));
+
     if (!user.success) {
       clearSessionBootstrap();
+
       return null;
     }
 
     return { user: user.data, accessToken: "" };
   } catch {
     clearSessionBootstrap();
+
     return null;
   }
 }

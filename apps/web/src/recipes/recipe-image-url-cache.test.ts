@@ -17,16 +17,22 @@ const identity = {
 
 function createMemoryStorage(): Storage {
   const values = new Map<string, string>();
+
   return {
     get length() {
       return values.size;
     },
+
     clear: () => values.clear(),
+
     getItem: (key) => values.get(key) ?? null,
+
     key: (index) => Array.from(values.keys())[index] ?? null,
+
     removeItem: (key) => {
       values.delete(key);
     },
+
     setItem: (key, value) => {
       values.set(key, value);
     },
@@ -84,6 +90,7 @@ describe("recipe image URL cache", () => {
 
   it("refreshes a URL near its expiry", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_000);
+
     const createUrl = vi.fn(async () => ({
       kind: "success" as const,
       url: "https://images.example/signed",
@@ -142,6 +149,7 @@ describe("recipe image URL cache", () => {
   it("restores an unexpired signed URL after a module reload", async () => {
     vi.stubGlobal("localStorage", createMemoryStorage());
     vi.resetModules();
+
     const initialCache = await import("./recipe-image-url-cache");
     const createUrl = vi.fn(async () => ({
       kind: "success" as const,
@@ -153,8 +161,10 @@ describe("recipe image URL cache", () => {
 
     vi.resetModules();
     expect(localStorage.length).toBe(1);
+
     const reloadedCache = await import("./recipe-image-url-cache");
     expect(reloadedCache.readCachedRecipeImageUrl(identity)).toBeDefined();
+
     const createAfterReload = vi.fn(async () => ({
       kind: "success" as const,
       url: "https://images.example/new",

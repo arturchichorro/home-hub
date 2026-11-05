@@ -29,14 +29,22 @@ export function HabitNameDialog({
 
   async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!enabled || saving) return;
-    const parsed = habitNameSchema.safeParse(name);
-    if (!parsed.success) {
-      setError("Enter a name of 1–100 characters.");
+
+    if (!enabled || saving) {
       return;
     }
+
+    const parsed = habitNameSchema.safeParse(name);
+
+    if (!parsed.success) {
+      setError("Enter a name of 1–100 characters.");
+
+      return;
+    }
+
     setSaving(true);
     setError(undefined);
+
     try {
       const scope = {
         householdId,
@@ -50,10 +58,13 @@ export function HabitNameDialog({
         }),
       );
       const result = await acknowledgeMutation(mutation);
+
       if (result.type === "error") {
         setError("The habit could not be saved.");
+
         return;
       }
+
       onClose();
     } catch {
       setError("The habit could not be saved.");
@@ -66,7 +77,9 @@ export function HabitNameDialog({
     <DialogRoot
       open
       onOpenChange={(open) => {
-        if (!open && !saving) onClose();
+        if (!open && !saving) {
+          onClose();
+        }
       }}
       disablePointerDismissal={saving}
     >

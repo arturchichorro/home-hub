@@ -29,6 +29,7 @@ import { categoryColors, LogCategoryChooser } from "./log-category";
 import { LogEntryEditor } from "./log-entry-editor";
 
 type Entry = LogEntry & { creator: User | undefined; editor: User | undefined };
+
 const snapshot = (e: Entry | undefined): LogEntrySnapshot | null =>
   e
     ? {
@@ -42,12 +43,15 @@ const snapshot = (e: Entry | undefined): LogEntrySnapshot | null =>
         updatedAt: e.updatedAt ?? 0,
       }
     : null;
+
 const today = () =>
   calendarDate(Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone);
+
 const label = (date: string) =>
   new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
     new Date(`${date}T12:00:00`),
   );
+
 export function LogDetail({
   householdId,
   logId,
@@ -57,81 +61,114 @@ export function LogDetail({
   logId: string;
   session: MediaSession;
 }) {
-  const zero = useZero(),
-    enabled = useZeroMutationEnabled(),
-    navigate = useNavigate();
-  const [currentDay, setToday] = useState(today),
-    [selectedDay, setSelectedDay] = useState(today),
-    [search, setSearch] = useState(""),
-    [cursors, setCursors] = useState<string[]>([]),
-    [work, setWork] = useState<Record<string, boolean>>({}),
-    [categoryOpen, setCategoryOpen] = useState(false),
-    [removeLog, setRemoveLog] = useState(false),
-    [removeEntry, setRemoveEntry] = useState<{
-      entry: Entry;
-      writeId: string;
-    }>(),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState<string>(),
-    [conflict, setConflict] = useState(false);
+  const zero = useZero();
+  const enabled = useZeroMutationEnabled();
+  const navigate = useNavigate();
+  const [currentDay, setToday] = useState(today);
+  const [selectedDay, setSelectedDay] = useState(today);
+  const [search, setSearch] = useState("");
+  const [cursors, setCursors] = useState<string[]>([]);
+  const [work, setWork] = useState<Record<string, boolean>>({});
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [removeLog, setRemoveLog] = useState(false);
+  const [removeEntry, setRemoveEntry] = useState<{
+    entry: Entry;
+    writeId: string;
+  }>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const [conflict, setConflict] = useState(false);
   const [log, logResult] = useQuery(
-      queries.logs.detail({ householdId, logId }),
-    ),
-    [categories] = useQuery(queries.logs.categories({ householdId })),
-    [selected, selectedResult] = useQuery(
-      queries.logs.entry({ householdId, logId, entryOn: selectedDay }),
-    ),
-    [history, historyResult] = useQuery(
-      queries.logs.history({
-        householdId,
-        logId,
-        search,
-        ...(cursors.at(-1) ? { before: cursors.at(-1) } : {}),
-      }),
-    );
-  const snapshots = useRef(new Map<string, Entry>()),
-    live = useRef<{ history: readonly Entry[]; selected: Entry | undefined }>({
-      history,
-      selected,
-    });
+    queries.logs.detail({ householdId, logId }),
+  );
+  const [categories] = useQuery(queries.logs.categories({ householdId }));
+  const [selected, selectedResult] = useQuery(
+    queries.logs.entry({ householdId, logId, entryOn: selectedDay }),
+  );
+  const [history, historyResult] = useQuery(
+    queries.logs.history({
+      householdId,
+      logId,
+      search,
+      ...(cursors.at(-1) ? { before: cursors.at(-1) } : {}),
+    }),
+  );
+  const snapshots = useRef(new Map<string, Entry>());
+  const live = useRef<{
+    history: readonly Entry[];
+    selected: Entry | undefined;
+  }>({
+    history,
+    selected,
+  });
   live.current = { history, selected };
+
   const onWork = useCallback((date: string, active: boolean) => {
     if (active) {
       const entry =
         live.current.selected?.entryOn === date
           ? live.current.selected
           : live.current.history.find((e) => e.entryOn === date);
-      if (entry) snapshots.current.set(date, entry);
-    } else snapshots.current.delete(date);
+
+      if (entry) {
+        snapshots.current.set(date, entry);
+      }
+    } else {
+      snapshots.current.delete(date);
+    }
+
     setWork((prev) => {
-      if (!!prev[date] === active) return prev;
+      if (!!prev[date] === active) {
+        return prev;
+      }
+
       const next = { ...prev };
-      if (active) next[date] = true;
-      else delete next[date];
+
+      if (active) {
+        next[date] = true;
+      } else {
+        delete next[date];
+      }
+
       return next;
     });
   }, []);
   const locked = Object.values(work).some(Boolean) || busy;
   const rows = history.slice(0, 20).filter((e) => e.entryOn !== selectedDay);
+
   for (const [date, active] of Object.entries(work)) {
-    if (!active || date === selectedDay || rows.some((e) => e.entryOn === date))
+    if (
+      !active ||
+      date === selectedDay ||
+      rows.some((e) => e.entryOn === date)
+    ) {
       continue;
+    }
+
     const pinned = snapshots.current.get(date);
-    if (pinned) rows.push(pinned);
+
+    if (pinned) {
+      rows.push(pinned);
+    }
   }
+
   rows.sort((a, b) => b.entryOn.localeCompare(a.entryOn));
+
   const selectedEntry =
     selected ??
     (work[selectedDay] ? snapshots.current.get(selectedDay) : undefined);
+
   useEffect(() => {
     const update = () => setToday(today());
     const timer = setInterval(update, 60000);
     window.addEventListener("focus", update);
+
     return () => {
       clearInterval(timer);
       window.removeEventListener("focus", update);
     };
   }, []);
+
   const header = useMemo(
     () => (
       <div className="flex gap-1">
@@ -166,15 +203,24 @@ export function LogDetail({
     [enabled, locked],
   );
   useAppHeaderRightComponent(header);
+
   async function deleteLog() {
-    if (!enabled || locked) return;
+    if (!enabled || locked) {
+      return;
+    }
+
     setBusy(true);
     setError(undefined);
+
     try {
       const r = await acknowledgeMutation(
         zero.mutate(mutators.logs.delete({ householdId, logId })),
       );
-      if (r.type !== "success") throw Error();
+
+      if (r.type !== "success") {
+        throw Error();
+      }
+
       setRemoveLog(false);
       await navigate({
         to: "/households/$householdId/logs",
@@ -186,10 +232,15 @@ export function LogDetail({
       setBusy(false);
     }
   }
+
   async function deleteEntry() {
-    if (!removeEntry || !enabled || locked || conflict) return;
+    if (!removeEntry || !enabled || locked || conflict) {
+      return;
+    }
+
     setBusy(true);
     setError(undefined);
+
     try {
       await writeLogEntry(session, {
         householdId,
@@ -213,13 +264,16 @@ export function LogDetail({
       setBusy(false);
     }
   }
-  if (logResult.type === "error")
+
+  if (logResult.type === "error") {
     return (
       <InlineAlert variant="danger" role="alert">
         Unable to load this log.
       </InlineAlert>
     );
-  if (!log)
+  }
+
+  if (!log) {
     return (
       <p className="text-sm text-muted">
         {logResult.type === "complete"
@@ -227,6 +281,8 @@ export function LogDetail({
           : "Loading log…"}
       </p>
     );
+  }
+
   function entryHeader(entry: Entry) {
     return (
       <header className="mb-2 flex items-center gap-2">
@@ -266,6 +322,7 @@ export function LogDetail({
       </header>
     );
   }
+
   function attribution(entry: Entry | undefined) {
     return entry ? (
       <p
@@ -277,6 +334,7 @@ export function LogDetail({
       </p>
     ) : null;
   }
+
   return (
     <section aria-label="Log entries" className="grid min-w-0 gap-5">
       {log.category ? (
@@ -295,7 +353,9 @@ export function LogDetail({
           disabled={locked}
           className="w-auto!"
           onChange={(e) => {
-            if (e.target.value) setSelectedDay(e.target.value);
+            if (e.target.value) {
+              setSelectedDay(e.target.value);
+            }
           }}
         />
         {selectedDay !== currentDay ? (
@@ -395,7 +455,10 @@ export function LogDetail({
             disabled={locked}
             onClick={() => {
               const last = history[19];
-              if (last) setCursors((stack) => [...stack, last.entryOn]);
+
+              if (last) {
+                setCursors((stack) => [...stack, last.entryOn]);
+              }
             }}
           >
             Older notes

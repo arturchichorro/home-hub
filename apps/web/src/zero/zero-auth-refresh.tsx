@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { refreshAccessToken } from "../auth/api";
 
 const initialRefreshRetryDelayMilliseconds = 5_000;
+
 const maximumRefreshRetryDelayMilliseconds = 30_000;
 
 type ZeroAuthRefreshProps = {
@@ -24,7 +25,9 @@ export function ZeroAuthRefresh({
   }, [connectionState.name, retryAttempt]);
 
   useEffect(() => {
-    if (connectionState.name !== "needs-auth") return;
+    if (connectionState.name !== "needs-auth") {
+      return;
+    }
 
     let active = true;
     let retryTimer: number | undefined;
@@ -35,17 +38,22 @@ export function ZeroAuthRefresh({
 
     void refreshAccessToken()
       .then((result) => {
-        if (!active) return;
+        if (!active) {
+          return;
+        }
 
         if (result.kind === "unauthorized") {
           onSessionExpired();
+
           return;
         }
 
         onAccessTokenRefreshed(result.accessToken);
       })
       .catch(() => {
-        if (!active) return;
+        if (!active) {
+          return;
+        }
 
         retryTimer = window.setTimeout(() => {
           setRetryAttempt((attempt) => attempt + 1);

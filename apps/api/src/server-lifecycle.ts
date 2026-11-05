@@ -29,6 +29,7 @@ export function closeHttpServer(
 
       if (error) {
         reject(error);
+
         return;
       }
 
@@ -45,7 +46,9 @@ export function createGracefulShutdown({
   let shutdownPromise: Promise<void> | undefined;
 
   return function shutdown(signal: ShutdownSignal): Promise<void> {
-    if (shutdownPromise) return shutdownPromise;
+    if (shutdownPromise) {
+      return shutdownPromise;
+    }
 
     logger.info({ event: "shutdown_started", signal });
 
@@ -56,6 +59,7 @@ export function createGracefulShutdown({
         } finally {
           await closeInfrastructure();
         }
+
         logger.info({ event: "shutdown_completed", signal });
       } catch (error) {
         logger.error({
@@ -65,6 +69,7 @@ export function createGracefulShutdown({
             error instanceof Error ? error : new Error("Unknown error"),
           ),
         });
+
         throw error;
       }
     })();

@@ -16,23 +16,33 @@ const { mutate, useZeroMutationEnabled, useDebouncedTextEditor } = vi.hoisted(
       >(),
   }),
 );
+
 vi.mock("@rocicorp/zero/react", () => ({ useZero: () => ({ mutate }) }));
+
 vi.mock("../zero/use-zero-mutation-enabled", () => ({
   useZeroMutationEnabled,
 }));
+
 vi.mock("../editing/use-debounced-text-editor", () => ({
   useDebouncedTextEditor,
 }));
+
 const props = {
   currentName: "Read",
   householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
   habitId: "671874b1-df9d-4a91-8f3c-8055473e8aa2",
 };
+
 function editorOptions() {
   const options = useDebouncedTextEditor.mock.calls[0]?.[0];
-  if (!options) throw new Error("Missing editor setup");
+
+  if (!options) {
+    throw new Error("Missing editor setup");
+  }
+
   return options;
 }
+
 beforeEach(() => {
   vi.clearAllMocks();
   useZeroMutationEnabled.mockReturnValue(true);
@@ -61,6 +71,7 @@ describe("seamless habit name", () => {
     expect(html).toContain("flex-initial!");
     expect(html).toContain("max-w-1/2");
     expect(html).not.toContain("Rename");
+
     const options = editorOptions();
     expect(options.currentValue).toBe("Read");
     expect(options.required).toBe(true);
@@ -71,6 +82,7 @@ describe("seamless habit name", () => {
     "disables both the input and editor when %s",
     (reason) => {
       useZeroMutationEnabled.mockReturnValue(reason !== "offline");
+
       const html = renderToStaticMarkup(
         <HabitNameInput {...props} disabled={reason === "pending archive"} />,
       );
@@ -82,6 +94,7 @@ describe("seamless habit name", () => {
     const server = vi.fn(async () => ({ type: "success" }));
     mutate.mockReturnValue({
       client: Promise.resolve({ type: "success" }),
+
       get server() {
         return server();
       },
@@ -101,17 +114,19 @@ describe("seamless habit name", () => {
   it.each(["client", "server", "exception"])(
     "returns %s rejection to the shared rollback/error-popover flow",
     async (failure) => {
-      if (failure === "exception")
+      if (failure === "exception") {
         mutate.mockImplementation(() => {
           throw new Error("Network failure");
         });
-      else
+      } else {
         mutate.mockReturnValue({
           client: Promise.resolve({
             type: failure === "client" ? "error" : "success",
           }),
           server: Promise.resolve({ type: "error" }),
         });
+      }
+
       renderToStaticMarkup(<HabitNameInput {...props} />);
       expect(await editorOptions().save("Read books")).toBe(false);
     },

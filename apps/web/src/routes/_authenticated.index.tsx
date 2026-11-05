@@ -7,6 +7,7 @@ export const Route = createFileRoute("/_authenticated/")({
     void context.zero?.run(queries.households.mine({}));
     void context.zero?.run(queries.householdMemberships.mine({}));
   },
+
   component: HomeRoute,
 });
 

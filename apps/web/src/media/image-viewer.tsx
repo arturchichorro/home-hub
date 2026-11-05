@@ -17,6 +17,7 @@ export type DisplayImage = {
   width: number | null;
   height: number | null;
 };
+
 export function ImageViewer<Image extends DisplayImage>({
   image,
   images,
@@ -49,12 +50,23 @@ export function ImageViewer<Image extends DisplayImage>({
   onViewerLoad?: (url: string) => void;
 }) {
   const navigate = (direction: number) => {
-    if (!image || images.length < 2) return;
+    if (!image || images.length < 2) {
+      return;
+    }
+
     const index = images.findIndex((item) => item.id === image.id);
-    if (index < 0) return;
+
+    if (index < 0) {
+      return;
+    }
+
     const next = images[(index + direction + images.length) % images.length];
-    if (next) onSelect(next);
+
+    if (next) {
+      onSelect(next);
+    }
   };
+
   return (
     <DialogRoot open={Boolean(image)} onOpenChange={onOpenChange}>
       <DialogPopup
@@ -93,7 +105,9 @@ export function ImageViewer<Image extends DisplayImage>({
               </IconButton>
             }
             onConfirm={() => {
-              if (!deleting) onDelete(image);
+              if (!deleting) {
+                onDelete(image);
+              }
             }}
           />
         )}

@@ -28,6 +28,7 @@ export function createSetHouseholdModuleEnabledRoute({
     const body = setHouseholdModuleEnabledRequestSchema.safeParse(
       await c.req.json().catch(() => undefined),
     );
+
     if (!householdId.success || !moduleKey.success || !body.success) {
       return c.json({ error: "Invalid request" }, 400);
     }
@@ -38,14 +39,21 @@ export function createSetHouseholdModuleEnabledRoute({
       moduleKey: moduleKey.data,
       enabled: body.data.enabled,
     });
+
     if (result.kind === "unauthorized") {
       c.header("WWW-Authenticate", "Bearer");
+
       return c.json({ error: "Unauthorized" }, 401);
     }
-    if (result.kind === "forbidden") return c.json({ error: "Forbidden" }, 403);
+
+    if (result.kind === "forbidden") {
+      return c.json({ error: "Forbidden" }, 403);
+    }
+
     if (result.kind === "module_not_configured") {
       return c.json({ error: "Module not configured" }, 409);
     }
+
     return c.json({ setting: result.setting }, 200);
   };
 }

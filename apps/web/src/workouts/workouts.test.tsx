@@ -16,19 +16,26 @@ const { useQuery, enabled, header, mutate } = vi.hoisted(() => ({
   header: vi.fn(),
   mutate: vi.fn(),
 }));
+
 vi.mock("@rocicorp/zero/react", () => ({
   useZero: () => ({ mutate }),
+
   useQuery,
 }));
+
 vi.mock("../zero/use-zero-mutation-enabled", () => ({
   useZeroMutationEnabled: enabled,
 }));
+
 vi.mock("../app-header-right-component", () => ({
   useAppHeaderRightComponent: header,
 }));
+
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
+
   useBlocker: () => ({ status: "idle", reset: vi.fn(), proceed: vi.fn() }),
+
   Link: ({
     children,
     params,
@@ -37,14 +44,22 @@ vi.mock("@tanstack/react-router", () => ({
     params: { workoutId: string };
   }) => createElement("a", { href: `/workouts/${params.workoutId}` }, children),
 }));
-const householdId = crypto.randomUUID(),
-  workoutId = crypto.randomUUID();
+
+const householdId = crypto.randomUUID();
+
+const workoutId = crypto.randomUUID();
+
 const starter = starterWorkouts[0];
-if (!starter) throw new Error("seed");
+
+if (!starter) {
+  throw new Error("seed");
+}
+
 const workout = {
   id: workoutId,
   householdId,
   ...starter,
+
   exercises: starter.exercises.map((e) => ({
     id: e.id,
     exerciseId: e.id,
@@ -53,6 +68,7 @@ const workout = {
     exercise: { ...e },
   })),
 };
+
 beforeEach(() => {
   vi.clearAllMocks();
   useQuery.mockReset();
@@ -63,25 +79,34 @@ beforeEach(() => {
     server: Promise.resolve({ type: "success" }),
   });
 });
+
 function loggingFixture(form: WorkoutLogForm) {
   const editor = new WorkoutLogEditor(form, {
     householdId,
     workoutId,
     timeZone: "UTC",
+
     enabled: () => true,
+
     save: async () => true,
+
     remove: async () => true,
   });
+
   return {
     form,
     state: editor.getSnapshot(),
     previous: new Map(),
     onChange: editor.change,
+
     onFlush: () => {},
+
     onAddSet: editor.addSet,
+
     onRemoveSet: () => {},
   };
 }
+
 describe("simple workouts", () => {
   it("shows the shared exercise catalog below the workouts", () => {
     useQuery
@@ -100,6 +125,7 @@ describe("simple workouts", () => {
         ],
         { type: "complete" },
       ]);
+
     const html = renderToStaticMarkup(
       <WorkoutsLibrary householdId={householdId} />,
     );
@@ -185,6 +211,7 @@ describe("simple workouts", () => {
 
   it("lists standalone linked workouts, without plans or instruction text", () => {
     useQuery.mockReturnValueOnce([[workout], { type: "complete" }]);
+
     const html = renderToStaticMarkup(
       <WorkoutsLibrary householdId={householdId} />,
     );
@@ -201,6 +228,7 @@ describe("simple workouts", () => {
     useQuery
       .mockReturnValueOnce([workout, { type: "complete" }])
       .mockReturnValueOnce([[], { type: "complete" }]);
+
     const html = renderToStaticMarkup(
       <WorkoutDetail householdId={householdId} workoutId={workoutId} />,
     );
@@ -222,6 +250,7 @@ describe("simple workouts", () => {
     expect(html).not.toContain("Done</span>");
     expect(html).toContain("Log workout");
     expect(html).not.toMatch(/<h2[^>]*>Exercises<\/h2>/);
+
     const heading = html.slice(
       html.indexOf("data-workout-heading"),
       html.indexOf("<fieldset"),
@@ -235,6 +264,7 @@ describe("simple workouts", () => {
     useQuery
       .mockReturnValueOnce([workout, { type: "complete" }])
       .mockReturnValueOnce([[], { type: "complete" }]);
+
     const html = renderToStaticMarkup(
       <WorkoutDetail householdId={householdId} workoutId={workoutId} />,
     );
@@ -248,6 +278,7 @@ describe("simple workouts", () => {
     useQuery
       .mockReturnValueOnce([workout, { type: "complete" }])
       .mockReturnValueOnce([[], { type: "complete" }]);
+
     const html = renderToStaticMarkup(
       <WorkoutDetail householdId={householdId} workoutId={workoutId} />,
     );
@@ -260,6 +291,7 @@ describe("simple workouts", () => {
     useQuery
       .mockReturnValueOnce([workout, { type: "complete" }])
       .mockReturnValueOnce([[], { type: "complete" }]);
+
     const html = renderToStaticMarkup(
       <WorkoutDetail householdId={householdId} workoutId={workoutId} />,
     );
@@ -332,12 +364,17 @@ describe("simple workouts", () => {
   });
   it("shows actual set details directly in history, including empty logs", () => {
     const exercise = starter.exercises[1];
-    if (!exercise) throw new Error("seed");
+
+    if (!exercise) {
+      throw new Error("seed");
+    }
+
     const entry = {
       id: "history",
       completedOn: "2026-10-25",
       createdAt: Date.now(),
       snapshot: { title: starter.title, exercises: starter.exercises },
+
       sets: [1, 2].map((round) => ({
         logId: "history",
         exerciseId: exercise.id,
@@ -370,17 +407,20 @@ describe("simple workouts", () => {
         ],
         { type: "complete" },
       ]);
+
     const html = renderToStaticMarkup(
       <WorkoutDetail householdId={householdId} workoutId={workoutId} />,
     );
     expect(html).toContain("2 × 10 reps · 8 kg/hand");
     expect(html).toContain("No sets logged.");
+
     const historyRows = [
       ...html.matchAll(
         /<button[^>]*aria-pressed="[^"]*"[^>]*>[\s\S]*?<\/button>/g,
       ),
     ].map((match) => match[0]);
     expect(historyRows).toHaveLength(2);
+
     for (const row of historyRows) {
       expect(row).not.toContain("hover:text-primary");
       expect(row).not.toContain("aria-pressed:text-primary");
@@ -390,6 +430,7 @@ describe("simple workouts", () => {
   });
   it("shows the starter option only for an empty library", () => {
     useQuery.mockReturnValue([[], { type: "complete" }]);
+
     const html = renderToStaticMarkup(
       <WorkoutsLibrary householdId={householdId} />,
     );

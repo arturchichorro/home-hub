@@ -30,6 +30,7 @@ export type CreateHouseholdResponse = z.infer<
 export const reorderHouseholdsMutationSchema = z
   .object({
     householdId: z.uuid(),
+
     orderedHouseholdIds: z
       .array(z.uuid())
       .min(1)
@@ -37,6 +38,7 @@ export const reorderHouseholdsMutationSchema = z
       .refine((ids) => new Set(ids).size === ids.length, {
         message: "Ordered household IDs must be unique",
       }),
+
     optimisticUpdatedAt: z.number().int().nonnegative(),
   })
   .strict();

@@ -7,6 +7,7 @@ import { workoutOrderingSensors } from "../workouts/workout-list";
 import type { HabitRow } from "./habit-days";
 
 type Habit = HabitRow;
+
 export function reorderedHabitIds(
   habits: readonly { id: string }[],
   from: number,
@@ -18,12 +19,19 @@ export function reorderedHabitIds(
     to < 0 ||
     from >= habits.length ||
     to >= habits.length
-  )
+  ) {
     return undefined;
+  }
+
   const ids = habits.map((habit) => habit.id);
   const [habitId] = ids.splice(from, 1);
-  if (!habitId) return undefined;
+
+  if (!habitId) {
+    return undefined;
+  }
+
   ids.splice(to, 0, habitId);
+
   return { habitId, orderedHabitIds: ids };
 }
 
@@ -47,6 +55,7 @@ function SortableHabit({
     accept: "household-habit",
     disabled,
   });
+
   return (
     <section
       ref={sortable.ref}
@@ -86,20 +95,29 @@ export function HabitGrid({
 }) {
   const [dragging, setDragging] = useState(false);
   useBlockAppUpdate(dragging);
+
   return (
     <DragDropProvider
       sensors={workoutOrderingSensors}
       onDragStart={() => setDragging(true)}
       onDragEnd={(event) => {
         setDragging(false);
+
         const source = event.operation.source;
-        if (disabled || event.canceled || !isSortable(source)) return;
+
+        if (disabled || event.canceled || !isSortable(source)) {
+          return;
+        }
+
         const move = reorderedHabitIds(
           habits,
           source.initialIndex,
           source.index,
         );
-        if (move) onMove(move.habitId, move.orderedHabitIds);
+
+        if (move) {
+          onMove(move.habitId, move.orderedHabitIds);
+        }
       }}
     >
       <div className="grid min-w-0 items-start" aria-busy={loading}>

@@ -6,16 +6,20 @@ export const workoutExerciseRoleSchema = z.enum([
   "workout",
   "stretching",
 ]);
+
 export type WorkoutExerciseRole = z.infer<typeof workoutExerciseRoleSchema>;
+
 export const workoutExerciseRolesSnapshotSchema = z.record(
   z.uuid(),
   workoutExerciseRoleSchema,
 );
+
 export const workoutExerciseRoleOptions = [
   { value: "warmup", label: "Warm-up" },
   { value: "workout", label: "Workout" },
   { value: "stretching", label: "Stretching" },
 ] as const;
+
 export const workoutExerciseRoleLabel = (
   role: WorkoutExerciseRole | undefined,
 ) =>
@@ -24,6 +28,7 @@ export const workoutExerciseRoleLabel = (
   )?.label ?? "Workout";
 
 const title = z.string().trim().min(1).max(150);
+
 export const workoutExerciseSchema = z
   .object({
     id: z.uuid(),
@@ -38,12 +43,16 @@ export const workoutExerciseSchema = z
     load: z.enum(["per-hand", "single", "bodyweight"]),
   })
   .strict();
+
 export const exerciseCatalogSchema = workoutExerciseSchema
   .pick({ name: true, unit: true, load: true, unilateral: true })
   .extend({ id: z.uuid() });
+
 export type CatalogExercise = z.infer<typeof exerciseCatalogSchema>;
+
 export const normalizeExerciseName = (name: string) =>
   name.normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
+
 export const createCatalogExerciseSchema = z
   .object({
     householdId: z.uuid(),
@@ -51,6 +60,7 @@ export const createCatalogExerciseSchema = z
     optimisticTimestamp: z.number().int().nonnegative(),
   })
   .strict();
+
 export const deleteCatalogExerciseSchema = z
   .object({
     householdId: z.uuid(),
@@ -58,6 +68,7 @@ export const deleteCatalogExerciseSchema = z
     optimisticTimestamp: z.number().int().nonnegative(),
   })
   .strict();
+
 export const reorderCatalogExercisesSchema = deleteCatalogExerciseSchema.extend(
   {
     orderedExerciseIds: z
@@ -69,17 +80,20 @@ export const reorderCatalogExercisesSchema = deleteCatalogExerciseSchema.extend(
       ),
   },
 );
+
 export const updateCatalogExerciseSchema = z
   .object({
     householdId: z.uuid(),
     exerciseId: z.uuid(),
     optimisticTimestamp: z.number().int().nonnegative(),
+
     changes: workoutExerciseSchema
       .pick({ name: true, unit: true, load: true, unilateral: true })
       .partial()
       .refine((value) => Object.keys(value).length > 0),
   })
   .strict();
+
 export const workoutExercisesSchema = z
   .array(workoutExerciseSchema)
   .max(40)
@@ -87,6 +101,7 @@ export const workoutExercisesSchema = z
     (rows) => new Set(rows.map((e) => e.id)).size === rows.length,
     "Exercise IDs must be unique",
   );
+
 export const workoutContentSchema = z
   .object({
     title,
@@ -94,6 +109,7 @@ export const workoutContentSchema = z
     exercises: workoutExercisesSchema,
   })
   .strict();
+
 // Ignore legacy copied notes when reading; new mutation payloads remain strict.
 export const workoutLogSnapshotSchema = workoutContentSchema
   .pick({
@@ -101,28 +117,36 @@ export const workoutLogSnapshotSchema = workoutContentSchema
     exercises: true,
   })
   .strip();
+
 // Keep persisted definition JSON readable by older clients' strict parsers.
 export function workoutSnapshotWithoutRoles(
   snapshot: z.infer<typeof workoutLogSnapshotSchema>,
 ) {
   return {
     ...snapshot,
+
     exercises: snapshot.exercises.map(
       ({ role: _role, ...exercise }) => exercise,
     ),
   };
 }
+
 export type WorkoutLogSnapshot = z.infer<typeof workoutLogSnapshotSchema>;
+
 export type WorkoutExercise = z.infer<typeof workoutExerciseSchema>;
+
 export type WorkoutContent = z.infer<typeof workoutContentSchema>;
+
 const scope = {
   householdId: z.uuid(),
   workoutId: z.uuid(),
   optimisticTimestamp: z.number().int().nonnegative(),
 };
+
 export const reorderWorkoutsSchema = z
   .object({
     ...scope,
+
     orderedWorkoutIds: z
       .array(z.uuid())
       .min(1)
@@ -137,16 +161,20 @@ export const reorderWorkoutsSchema = z
     (args) => args.orderedWorkoutIds.includes(args.workoutId),
     "Order must include the moved workout",
   );
+
 export const createWorkoutSchema = z.object({ ...scope, title }).strict();
+
 export const updateWorkoutSchema = z
   .object({
     ...scope,
+
     changes: workoutContentSchema
       .pick({ title: true, notes: true })
       .partial()
       .refine((v) => Object.keys(v).length > 0),
   })
   .strict();
+
 const workoutExercisePatchSchema = workoutExerciseSchema
   .omit({ id: true })
   .partial()
@@ -154,6 +182,7 @@ const workoutExercisePatchSchema = workoutExerciseSchema
     (value) => Object.keys(value).length > 0,
     "Exercise changes are required",
   );
+
 export const editWorkoutExercisesSchema = z
   .object({
     ...scope,
@@ -174,12 +203,15 @@ export const editWorkoutExercisesSchema = z
       ...args.updates.map((e) => e.exerciseId),
       ...args.deletes,
     ];
+
     return ids.length > 0 && new Set(ids).size === ids.length;
   }, "Exercise operations must be nonempty and unique");
+
 export type WorkoutExerciseEdits = Pick<
   z.infer<typeof editWorkoutExercisesSchema>,
   "creates" | "updates" | "deletes"
 >;
+
 export function planExerciseEdits(
   before: readonly WorkoutExercise[],
   after: readonly WorkoutExercise[],
@@ -189,28 +221,36 @@ export function planExerciseEdits(
   const result: WorkoutExerciseEdits = {
     creates: [],
     updates: [],
+
     deletes: before.filter((e) => !nextIds.has(e.id)).map((e) => e.id),
   };
+
   for (const exercise of after) {
     const previous = old.get(exercise.id);
+
     if (!previous) {
       result.creates.push(exercise);
       continue;
     }
+
     const { id: _id, ...fields } = exercise;
     const changes = Object.fromEntries(
       Object.entries(fields).filter(
         ([key, value]) => value !== previous[key as keyof WorkoutExercise],
       ),
     );
-    if (Object.keys(changes).length)
+
+    if (Object.keys(changes).length) {
       result.updates.push({
         exerciseId: exercise.id,
         changes: workoutExercisePatchSchema.parse(changes),
       });
+    }
   }
+
   return result;
 }
+
 // Related database rows include scope/order/timestamps; snapshots and form inputs do not.
 export function workoutExercisesFromRows(
   rows: readonly {
@@ -232,7 +272,10 @@ export function workoutExercisesFromRows(
 ): WorkoutExercise[] {
   return workoutExercisesSchema.parse(
     rows.map((row) => {
-      if (!row.exercise) throw new Error("Missing catalog exercise");
+      if (!row.exercise) {
+        throw new Error("Missing catalog exercise");
+      }
+
       return {
         id: row.id,
         catalogExerciseId: row.exercise.id,
@@ -247,6 +290,7 @@ export function workoutExercisesFromRows(
     }),
   );
 }
+
 export function workoutSetValuesFromRow(row: {
   amount: number;
   rightAmount: number | null;
@@ -258,16 +302,20 @@ export function workoutSetValuesFromRow(row: {
     weightKg: row.weightKg,
   });
 }
+
 export const importWorkoutsSchema = z
   .object({
     householdId: z.uuid(),
     catalogExerciseIds: z.array(z.uuid()).min(1).max(40),
+
     workoutIds: z
       .tuple([z.uuid(), z.uuid(), z.uuid()])
       .refine((ids) => new Set(ids).size === 3),
+
     optimisticTimestamp: z.number().int().nonnegative(),
   })
   .strict();
+
 export const workoutSetValuesSchema = z
   .object({
     weightKg: z.number().min(0).max(1000).nullable(),
@@ -275,7 +323,9 @@ export const workoutSetValuesSchema = z
     rightAmount: z.number().int().min(0).max(600).nullable(),
   })
   .strict();
+
 export type WorkoutSetValues = z.infer<typeof workoutSetValuesSchema>;
+
 export const workoutLogSetSchema = z
   .object({
     workoutExerciseId: z.uuid(),
@@ -283,6 +333,7 @@ export const workoutLogSetSchema = z
     values: workoutSetValuesSchema,
   })
   .strict();
+
 export const updateWorkoutLogNoteSchema = z
   .object({
     householdId: z.uuid(),
@@ -291,6 +342,7 @@ export const updateWorkoutLogNoteSchema = z
     note: z.string().trim().max(1000000),
   })
   .strict();
+
 export const saveWorkoutLogSchema = z
   .object({
     ...scope,
@@ -298,6 +350,7 @@ export const saveWorkoutLogSchema = z
     snapshot: workoutLogSnapshotSchema.strict(),
     note: z.string().max(1000000).optional(),
     timeZone: timeZoneSchema,
+
     sets: z
       .array(workoutLogSetSchema)
       .max(400)

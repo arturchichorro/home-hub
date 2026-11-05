@@ -5,6 +5,7 @@ import { config as loadEnv } from "dotenv";
 import { z } from "zod";
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
+
 const rootDirectory = resolve(currentDirectory, "../../..");
 
 loadEnv({ path: resolve(rootDirectory, ".env") });
@@ -13,6 +14,7 @@ const configSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
+
   API_PORT: z
     .string()
     .default("3000")
@@ -30,15 +32,18 @@ const configSchema = z.object({
 
       return port;
     }),
+
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   API_JWT_SECRET: z
     .string()
     .min(32, "API_JWT_SECRET must be at least 32 characters"),
+
   SIGNUP_ACCESS_CODE: z
     .string()
     .trim()
     .optional()
     .transform((value) => (value ? value : undefined)),
+
   R2_ENDPOINT: z.url(),
   R2_ACCESS_KEY_ID: z.string().min(1, "R2_ACCESS_KEY_ID is required"),
   R2_SECRET_ACCESS_KEY: z.string().min(1, "R2_SECRET_ACCESS_KEY is required"),

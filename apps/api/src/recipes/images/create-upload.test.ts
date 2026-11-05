@@ -14,8 +14,11 @@ import {
 } from "./create-upload";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+
 const cookLogId = "5944cb0d-931a-4723-b981-77eacb122314";
 
 const input = {
@@ -56,17 +59,24 @@ function createFakeDatabase({
       from: (table: unknown) => {
         tables.push(table);
         selectedTable = table;
+
         return builder;
       },
+
       where: (_condition: unknown) => builder,
+
       limit: (_limit: unknown) => builder,
+
       orderBy: (..._ordering: unknown[]) => builder,
+
       execute: async () =>
         selectedTable === recipeImages && bottomSortKey !== undefined
           ? [{ sortKey: bottomSortKey }]
           : [],
+
       for: async (strength: unknown) => {
         lockStrengths.push(strength);
+
         const result =
           selectedTable === householdMembers
             ? membershipExists
@@ -83,17 +93,21 @@ function createFakeDatabase({
                 : selectedTable === recipeCookLogs && cookLogExists
                   ? { id: cookLogId }
                   : undefined;
+
         return result ? [result] : [];
       },
     };
+
     return builder;
   });
 
   const insert = vi.fn((table: unknown) => {
     tables.push(table);
+
     return {
       values: (values: Record<string, unknown>) => {
         insertedValues.push(values);
+
         return {
           returning: async () =>
             insertReturnsRow ? [{ id: values.id as string }] : [],
@@ -144,7 +158,10 @@ describe("create recipe image upload service", () => {
       uploadUrl: "https://signed-upload.example",
       uploadUrlExpiresInSeconds: 300,
     });
-    if (result.kind !== "success") throw new Error("Expected success");
+
+    if (result.kind !== "success") {
+      throw new Error("Expected success");
+    }
 
     expect(tables).toEqual([
       householdMembers,
@@ -211,6 +228,7 @@ describe("create recipe image upload service", () => {
     });
     const createUpload = createRecipeImageUploadService({
       db,
+
       signUpload: async () => "https://signed-upload.example",
     });
 

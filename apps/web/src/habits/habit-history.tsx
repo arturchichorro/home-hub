@@ -76,6 +76,7 @@ export function HabitHistory({
   );
   const entry = selectedDate ? entries.get(selectedDate) : undefined;
   const loading = result.type !== "complete";
+
   return (
     <section
       className="grid min-w-0 gap-3 py-2 sm:max-w-md"

@@ -5,7 +5,9 @@ import { signAccessToken } from "./access-token";
 import { type AuthEnv, createBearerAuth } from "./bearer-auth";
 
 const jwtSecret = "test-jwt-secret-that-is-long-enough";
+
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const now = new Date("2026-07-24T12:00:00Z");
 
 function createAccessToken(input?: {

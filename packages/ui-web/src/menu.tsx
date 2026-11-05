@@ -4,6 +4,7 @@ import type { ComponentProps } from "react";
 import { Button, type ButtonVariant } from "./button";
 
 export const MenuRoot = BaseMenu.Root;
+
 export const MenuRadioGroup = BaseMenu.RadioGroup;
 
 type BaseMenuTriggerProps = ComponentProps<typeof BaseMenu.Trigger>;
@@ -52,6 +53,7 @@ export function MenuChevron({ className, ...props }: MenuChevronProps) {
 }
 
 type BaseMenuPopupProps = ComponentProps<typeof BaseMenu.Popup>;
+
 type BaseMenuPositionerProps = ComponentProps<typeof BaseMenu.Positioner>;
 
 export type MenuPopupProps = Omit<BaseMenuPopupProps, "className"> & {

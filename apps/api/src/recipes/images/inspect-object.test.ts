@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { inspectR2Object } from "./inspect-object";
 
 const bucket = "home-hub-dev";
+
 const objectKey = "households/household-id/recipes/recipe-id/image-id";
 
 function createClient(send: (command: unknown) => Promise<unknown>) {
@@ -22,6 +23,7 @@ describe("inspectR2Object", () => {
 
     const send = client.send as ReturnType<typeof vi.fn>;
     expect(send).toHaveBeenCalledOnce();
+
     const command = send.mock.calls[0]?.[0];
     expect(command).toBeInstanceOf(HeadObjectCommand);
     expect((command as HeadObjectCommand).input).toEqual({

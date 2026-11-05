@@ -19,6 +19,7 @@ type Scope = {
   userId: string;
   entryOn: string;
 };
+
 export class LogEntryError extends Error {
   constructor(
     readonly status: 401 | 403 | 404 | 409 | 422,
@@ -28,6 +29,7 @@ export class LogEntryError extends Error {
     super(message);
   }
 }
+
 export function entrySnapshot(
   row: typeof logEntries.$inferSelect | null | undefined,
 ): LogEntrySnapshot | null {
@@ -44,13 +46,16 @@ export function entrySnapshot(
       }
     : null;
 }
+
 async function authorize(
   tx: DatabaseTransaction,
   input: Scope,
   lock: "share" | "update",
 ) {
-  if (!(await findActiveUser(tx, input.userId)))
+  if (!(await findActiveUser(tx, input.userId))) {
     throw new LogEntryError(401, "Unauthorized");
+  }
+
   const [h] = await tx
     .select({ id: households.id })
     .from(households)
@@ -58,6 +63,7 @@ async function authorize(
       and(eq(households.id, input.householdId), isNull(households.deletedAt)),
     )
     .for("share");
+
   if (
     !h ||
     !(await findHouseholdMembershipForShare(tx, input)) ||
@@ -65,8 +71,10 @@ async function authorize(
       householdId: input.householdId,
       moduleKey: "logs",
     }))
-  )
+  ) {
     throw new LogEntryError(403, "Forbidden");
+  }
+
   const [l] = await tx
     .select({ id: logs.id })
     .from(logs)
@@ -78,8 +86,12 @@ async function authorize(
       ),
     )
     .for(lock);
-  if (!l) throw new LogEntryError(404, "Log unavailable");
+
+  if (!l) {
+    throw new LogEntryError(404, "Log unavailable");
+  }
 }
+
 function current(tx: DatabaseTransaction, input: Scope) {
   return tx
     .select()
@@ -94,6 +106,7 @@ function current(tx: DatabaseTransaction, input: Scope) {
     )
     .limit(1);
 }
+
 export function createLogEntryServices({
   db,
   now = () => new Date(),
@@ -105,18 +118,22 @@ export function createLogEntryServices({
     read: (input: Scope) =>
       db.transaction(async (tx) => {
         await authorize(tx, input, "share");
+
         return { entry: entrySnapshot((await current(tx, input))[0]) };
       }),
+
     write: (input: Scope & LogEntryWrite) =>
       db.transaction(async (tx) => {
         await authorize(tx, input, "update"); // Also serializes two first writes for the same day.
-        const active = (await current(tx, input))[0],
-          note = cleanLogNote(input.note);
+
+        const active = (await current(tx, input))[0];
+        const note = cleanLogNote(input.note);
         const [byId] = await tx
           .select()
           .from(logEntries)
           .where(eq(logEntries.id, input.entryId))
           .limit(1);
+
         if (
           byId &&
           byId.householdId === input.householdId &&
@@ -126,8 +143,10 @@ export function createLogEntryServices({
           ((!note && byId.deletedAt !== null) ||
             (note && byId.deletedAt === null && byId.note === note)) &&
           (!active || active.id === byId.id)
-        )
+        ) {
           return { entry: entrySnapshot(active) };
+        }
+
         const conflict = () => {
           throw new LogEntryError(
             409,
@@ -135,11 +154,20 @@ export function createLogEntryServices({
             entrySnapshot(active),
           );
         };
+
         if (input.expectedVersion === null) {
-          if (active || byId) return conflict();
-          if (!note) return { entry: null };
-          if (input.entryOn > calendarDate(now(), input.timeZone))
+          if (active || byId) {
+            return conflict();
+          }
+
+          if (!note) {
+            return { entry: null };
+          }
+
+          if (input.entryOn > calendarDate(now(), input.timeZone)) {
             throw new LogEntryError(422, "New entries cannot be future-dated.");
+          }
+
           const date = now();
           const [row] = await tx
             .insert(logEntries)
@@ -157,14 +185,18 @@ export function createLogEntryServices({
               updatedAt: date,
             })
             .returning();
+
           return { entry: entrySnapshot(row) };
         }
+
         if (
           !active ||
           active.id !== input.entryId ||
           active.version !== input.expectedVersion
-        )
+        ) {
           return conflict();
+        }
+
         const date = now();
         const [row] = await tx
           .update(logEntries)
@@ -177,8 +209,10 @@ export function createLogEntryServices({
           })
           .where(eq(logEntries.id, active.id))
           .returning();
+
         return { entry: note ? entrySnapshot(row) : null };
       }),
   };
 }
+
 export type LogEntryServices = ReturnType<typeof createLogEntryServices>;

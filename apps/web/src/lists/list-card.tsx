@@ -24,11 +24,13 @@ const listPointerSensor = PointerSensor.configure({
     if (event.pointerType === "mouse") {
       return [new PointerActivationConstraints.Distance({ value: 5 })];
     }
+
     if (event.pointerType === "touch") {
       return [
         new PointerActivationConstraints.Delay({ value: 250, tolerance: 5 }),
       ];
     }
+
     return [
       new PointerActivationConstraints.Delay({ value: 200, tolerance: 10 }),
       new PointerActivationConstraints.Distance({ value: 5 }),
@@ -73,6 +75,7 @@ export function ListCardGrid({
       sensors={listOrderingSensors}
       onDragEnd={(event) => {
         const source = event.operation.source;
+
         if (
           !disabled &&
           !event.canceled &&
@@ -136,6 +139,7 @@ export function ListCard({
           <ul className="grid gap-3">
             {list.items.map((item) => {
               const crossed = item.status === "crossed";
+
               return (
                 <li key={item.id} className="flex min-w-0 items-center gap-3">
                   <span

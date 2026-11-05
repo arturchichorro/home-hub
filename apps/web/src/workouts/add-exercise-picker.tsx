@@ -18,6 +18,7 @@ import { useQuery } from "@rocicorp/zero/react";
 import { useState } from "react";
 
 type Option = CatalogExercise & { create?: boolean };
+
 export function AddExercisePicker({
   householdId,
   disabled,
@@ -27,14 +28,14 @@ export function AddExercisePicker({
   disabled: boolean;
   onSelect: (exercise: CatalogExercise) => void;
 }) {
-  const [open, setOpen] = useState(false),
-    [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const [data, result] = useQuery(
     open ? queries.workouts.definitions({ householdId }) : undefined,
   );
   const rows = result.type === "complete" ? (data ?? []) : [];
-  const name = search.trim(),
-    normalized = normalizeExerciseName(name);
+  const name = search.trim();
+  const normalized = normalizeExerciseName(name);
   const options: Option[] = rows
     .filter((row) => row.normalizedName.includes(normalized))
     .map((row) =>
@@ -46,11 +47,12 @@ export function AddExercisePicker({
         unilateral: row.unilateral,
       }),
     );
+
   if (
     result.type === "complete" &&
     name &&
     !rows.some((row) => row.normalizedName === normalized)
-  )
+  ) {
     options.push({
       id: "__create__",
       name,
@@ -59,6 +61,8 @@ export function AddExercisePicker({
       unilateral: false,
       create: true,
     });
+  }
+
   return (
     <ComboboxRoot<Option>
       items={options}
@@ -69,12 +73,18 @@ export function AddExercisePicker({
       open={open}
       onOpenChange={(value) => {
         setOpen(value);
-        if (!value) setSearch("");
+
+        if (!value) {
+          setSearch("");
+        }
       }}
       disabled={disabled}
       itemToStringLabel={(option) => option.name}
       onValueChange={(option) => {
-        if (!option || disabled || result.type !== "complete") return;
+        if (!option || disabled || result.type !== "complete") {
+          return;
+        }
+
         onSelect({
           id: option.create ? crypto.randomUUID() : option.id,
           name: option.name,

@@ -25,7 +25,9 @@ import { createExerciseMediaRoutes } from "./workouts/routes";
 import { type CreateZeroRoutesInput, createZeroRoutes } from "./zero/routes";
 
 type AuthServices = Omit<CreateAuthRoutesInput, "isProduction" | "jwtSecret">;
+
 type HouseholdServices = Omit<CreateHouseholdRoutesInput, "jwtSecret">;
+
 type RecipeImageServices = Omit<CreateRecipeRoutesInput, "jwtSecret">;
 
 export type CreateAppInput = {
@@ -56,6 +58,7 @@ export function createApp(input: CreateAppInput) {
   app.get("/api/ready", async (c) => {
     try {
       await readinessCheck();
+
       return c.json({ ok: true });
     } catch {
       return c.json({ ok: false }, 503);
@@ -77,21 +80,28 @@ export function createApp(input: CreateAppInput) {
     "/api/households/:householdId/workouts/exercises",
     createExerciseMediaRoutes({ jwtSecret, services: input.exerciseMedia }),
   );
-  if (input.documents)
+
+  if (input.documents) {
     app.route(
       "/api/households/:householdId/documents",
       createDocumentRoutes({ jwtSecret, services: input.documents }),
     );
-  if (input.listMedia)
+  }
+
+  if (input.listMedia) {
     app.route(
       "/api/households/:householdId/lists",
       createListMediaRoutes({ jwtSecret, services: input.listMedia }),
     );
-  if (input.logs)
+  }
+
+  if (input.logs) {
     app.route(
       "/api/households/:householdId/logs",
       createLogRoutes({ jwtSecret, services: input.logs }),
     );
+  }
+
   app.route(
     "/api/zero",
     createZeroRoutes({ dbProvider: zeroDbProvider, jwtSecret }),

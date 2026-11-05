@@ -7,11 +7,17 @@ import { mutators } from "./mutators";
 import type { Schema } from "./schema.gen";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const recipeId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+
 const ingredientId = "5944cb0d-931a-4723-b981-77eacb122314";
+
 const cookLogId = "e467b00a-5f80-4c13-aa5b-d2e59996dd82";
+
 const imageId = "b5b8a5ea-89cb-4c31-a93d-33049ab11c73";
+
 const optimisticUpdatedAt = 1_786_000_000_000;
 
 const createRecipeArgs = {
@@ -95,6 +101,7 @@ function createFakeTransaction({
   const pendingResults = [...results];
   const run = vi.fn(async (query: unknown) => {
     queries.push(query);
+
     return pendingResults.shift();
   });
   const recipeInsert = vi.fn(async () => undefined);
@@ -277,6 +284,7 @@ describe("recipes.update mutator", () => {
   it("authorizes the recipe and uses the server timestamp", async () => {
     const authoritativeTimestamp = 1_786_000_001_000;
     vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
+
     const { queries, recipeUpdate, transaction } = createFakeTransaction({
       location: "server",
       results: [
@@ -371,6 +379,7 @@ describe("recipes.create mutator", () => {
   it("authorizes membership and uses the server timestamp", async () => {
     const authoritativeTimestamp = 1_786_000_001_000;
     vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
+
     const { queries, recipeInsert, transaction } = createFakeTransaction({
       location: "server",
       results: [
@@ -486,6 +495,7 @@ describe("recipes.delete mutator", () => {
   it("uses the authoritative server timestamp", async () => {
     const authoritativeTimestamp = 1_786_000_001_000;
     vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
+
     const { recipeUpdate, transaction } = createFakeTransaction({
       location: "server",
       results: [
@@ -605,6 +615,7 @@ describe("recipes.addIngredient mutator", () => {
   it("authorizes the referenced recipe and uses the server timestamp", async () => {
     const authoritativeTimestamp = 1_786_000_001_000;
     vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
+
     const { ingredientInsert, queries, transaction } = createFakeTransaction({
       location: "server",
       results: [
@@ -716,6 +727,7 @@ describe("recipes.updateIngredient mutator", () => {
   it("uses the authoritative server timestamp", async () => {
     const authoritativeTimestamp = 1_786_000_001_000;
     vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
+
     const { ingredientUpdate, transaction } = createFakeTransaction({
       location: "server",
       results: [
@@ -788,6 +800,7 @@ describe("recipes.addCookLog mutator", () => {
 
   it("rejects a cooking date in the future", async () => {
     vi.spyOn(Date, "now").mockReturnValue(optimisticUpdatedAt);
+
     const { cookLogInsert, queries, transaction } = createFakeTransaction({
       location: "client",
       results: [],
@@ -876,6 +889,7 @@ describe("recipes.addCookLog mutator", () => {
   it("uses server metadata time without replacing when cooking happened", async () => {
     const authoritativeTimestamp = 1_786_000_001_000;
     vi.spyOn(Date, "now").mockReturnValue(authoritativeTimestamp);
+
     const { cookLogInsert, queries, transaction } = createFakeTransaction({
       location: "server",
       results: [
@@ -949,6 +963,7 @@ describe("recipes.updateCookLog mutator", () => {
 describe("recipe organization mutators", () => {
   it("optimistically deletes only a scoped ingredient", async () => {
     vi.spyOn(Date, "now").mockReturnValue(optimisticUpdatedAt);
+
     const { ingredientUpdate, transaction } = createFakeTransaction({
       location: "client",
       results: [{ id: ingredientId, householdId, recipeId }],
@@ -1026,6 +1041,7 @@ describe("recipe organization mutators", () => {
 
   it("soft-deletes a cooking log while preserving its picture relationships", async () => {
     vi.spyOn(Date, "now").mockReturnValue(optimisticUpdatedAt);
+
     const { cookLogUpdate, imageUpdate, transaction } = createFakeTransaction({
       location: "client",
       results: [{ id: cookLogId, householdId, recipeId }],

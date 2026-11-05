@@ -24,7 +24,11 @@ export function summarizeExercisePerformance(
       workoutSetValuesFromRow(set),
     ),
   );
-  if (!descriptions.length) return "";
+
+  if (!descriptions.length) {
+    return "";
+  }
+
   return descriptions.every((value) => value === descriptions[0])
     ? `${sets.length > 1 ? `${sets.length} × ` : ""}${descriptions[0]}`
     : descriptions
@@ -42,8 +46,10 @@ function describeSet(exercise: WorkoutExercise, values: WorkoutSetValues) {
       : exercise.load === "bodyweight"
         ? " · bodyweight"
         : "";
+
   return amount + weight;
 }
+
 export function summarizeWorkoutLog(
   log: Pick<WorkoutLog, "snapshot" | "sets">,
 ) {
@@ -53,7 +59,11 @@ export function summarizeWorkoutLog(
       const sets = log.sets
         .filter((s) => s.workoutExerciseId === exercise.id)
         .sort((a, b) => a.round - b.round);
-      if (!sets.length) return [];
+
+      if (!sets.length) {
+        return [];
+      }
+
       const descriptions = sets.map((s) =>
         describeSet(exercise, workoutSetValuesFromRow(s)),
       );
@@ -63,6 +73,7 @@ export function summarizeWorkoutLog(
         : descriptions
             .map((value, index) => `Set ${sets[index]?.round}: ${value}`)
             .join("; ");
+
       return [
         {
           id: exercise.id,

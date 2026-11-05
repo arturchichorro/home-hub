@@ -16,6 +16,7 @@ import {
 } from "./api";
 
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const fetchMock = vi.fn<typeof fetch>();
 
 beforeEach(() => {

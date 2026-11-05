@@ -14,24 +14,34 @@ const { mutate, enabled, editor } = vi.hoisted(() => ({
       ) => ReturnType<typeof EditorHook>
     >(),
 }));
+
 vi.mock("@rocicorp/zero/react", () => ({ useZero: () => ({ mutate }) }));
+
 vi.mock("../zero/use-zero-mutation-enabled", () => ({
   useZeroMutationEnabled: enabled,
 }));
+
 vi.mock("../editing/use-debounced-text-editor", () => ({
   useDebouncedTextEditor: editor,
 }));
+
 const props = {
   householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
   habitId: "671874b1-df9d-4a91-8f3c-8055473e8aa2",
   habitName: "Read",
   currentNote: null,
 };
+
 function options() {
   const value = editor.mock.calls[0]?.[0];
-  if (!value) throw new Error("Missing editor options");
+
+  if (!value) {
+    throw new Error("Missing editor options");
+  }
+
   return value;
 }
+
 beforeEach(() => {
   vi.resetAllMocks();
   enabled.mockReturnValue(true);
@@ -101,6 +111,7 @@ describe("habit note editor", () => {
     expect(renderToStaticMarkup(<HabitNoteInput {...props} readOnly />)).toBe(
       "",
     );
+
     const html = renderToStaticMarkup(
       <HabitNoteInput {...props} currentNote="Retained" readOnly />,
     );
@@ -110,19 +121,26 @@ describe("habit note editor", () => {
   });
   it("does not enable editing while offline", () => {
     enabled.mockReturnValue(false);
+
     const html = renderToStaticMarkup(<HabitNoteInput {...props} />);
     expect(html).toContain('disabled=""');
     expect(options().mutationEnabled).toBe(false);
   });
   it("keeps drafts and errors anchored before a new note arrives in the query", () => {
     renderToStaticMarkup(<HabitNoteInput {...props} />);
+
     const result = editor.mock.results[0]?.value;
-    if (!result) throw new Error("Missing editor result");
+
+    if (!result) {
+      throw new Error("Missing editor result");
+    }
+
     editor.mockReturnValue({ ...result, value: "Pending draft" });
     expect(renderToStaticMarkup(<HabitNoteInput {...props} />)).toContain(
       "Pending draft",
     );
     editor.mockReturnValue({ ...result, value: "", error: "Save failed" });
+
     const html = renderToStaticMarkup(<HabitNoteInput {...props} />);
     expect(html).toContain("<textarea");
     expect(html).toContain('aria-invalid="true"');

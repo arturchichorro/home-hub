@@ -4,8 +4,11 @@ import { SignupForm } from "../auth/signup-form";
 
 export const Route = createFileRoute("/signup")({
   beforeLoad: ({ context }) => {
-    if (context.session) throw redirect({ to: "/" });
+    if (context.session) {
+      throw redirect({ to: "/" });
+    }
   },
+
   component: SignupRoute,
 });
 

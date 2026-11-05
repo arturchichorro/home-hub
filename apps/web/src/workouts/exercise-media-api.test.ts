@@ -15,7 +15,9 @@ const identity: ExerciseImageIdentity = {
   attachmentId: crypto.randomUUID(),
   variant: "thumbnail",
 };
+
 afterEach(() => vi.unstubAllGlobals());
+
 describe("exercise media API", () => {
   it("requests server-controlled uploads and validates the response", async () => {
     const response = {
@@ -71,6 +73,7 @@ describe("exercise media API", () => {
   it("batches thumbnails across exercises, bounds batches and omits missing entries", async () => {
     const fetch = vi.fn(async (_url: unknown, init: RequestInit) => {
       const { requests } = JSON.parse(init.body as string);
+
       return Response.json({
         reads: requests
           .filter((_: unknown, i: number) => i !== 0)
@@ -82,6 +85,7 @@ describe("exercise media API", () => {
       });
     });
     vi.stubGlobal("fetch", fetch);
+
     const results = await Promise.all(
       Array.from({ length: 101 }, (_, i) =>
         batchExerciseImageUrl({

@@ -43,6 +43,7 @@ describe("workouts", () => {
       "Workout B",
       "Workout C",
     ]);
+
     for (const workout of starterWorkouts) {
       expect(workoutContentSchema.parse(workout)).toEqual(workout);
       expect(Object.keys(workout).sort()).toEqual([
@@ -61,8 +62,13 @@ describe("workouts", () => {
         exercises: [],
       }).success,
     ).toBe(true);
+
     const e = starterWorkouts[0]?.exercises[0];
-    if (!e) throw new Error("seed");
+
+    if (!e) {
+      throw new Error("seed");
+    }
+
     expect(workoutExercisesSchema.safeParse([e, e]).success).toBe(false);
   });
   it("accepts scalar patches without requiring a whole workout", () => {
@@ -84,8 +90,8 @@ describe("workouts", () => {
     ).toBe(false);
   });
   it("rejects duplicate or incomplete workout orders", () => {
-    const moved = crypto.randomUUID(),
-      other = crypto.randomUUID();
+    const moved = crypto.randomUUID();
+    const other = crypto.randomUUID();
     const args = {
       householdId: crypto.randomUUID(),
       workoutId: moved,
@@ -146,6 +152,7 @@ describe("workouts", () => {
     expect(
       saveWorkoutLogSchema.safeParse({ ...request, sets: [set, set] }).success,
     ).toBe(false);
+
     for (const values of [
       { ...set.values, amount: -1 },
       { ...set.values, weightKg: -1 },

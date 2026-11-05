@@ -47,6 +47,7 @@ import {
 import { workoutOrderingSensors } from "./workout-list";
 
 type MediaRow = MediaLink & { asset?: Media | undefined };
+
 const CatalogMediaContext = createContext<
   | {
       householdId: string;
@@ -55,6 +56,7 @@ const CatalogMediaContext = createContext<
     }
   | undefined
 >(undefined);
+
 const emptyMediaRows: readonly MediaRow[] = [];
 
 // Same authorized rows as the individual galleries, one subscription per catalog.
@@ -70,13 +72,16 @@ export function CatalogMediaProvider({
   );
   const value = useMemo(() => {
     const grouped = new Map<string, MediaRow[]>();
+
     for (const row of rows) {
       const group = grouped.get(row.exerciseId) ?? [];
       group.push(row);
       grouped.set(row.exerciseId, group);
     }
+
     return { householdId, rows: grouped, complete: result.type === "complete" };
   }, [householdId, rows, result.type]);
+
   return <CatalogMediaContext value={value}>{children}</CatalogMediaContext>;
 }
 
@@ -87,10 +92,13 @@ type Props = {
   readOnly?: boolean;
   disabled?: boolean;
 };
+
 export const ExerciseMedia = memo(function ExerciseMedia(props: Props) {
   const session = useMediaSession();
+
   return session ? <ExerciseMediaGallery {...props} session={session} /> : null;
 });
+
 function ExerciseThumbnail({
   image,
   session,
@@ -122,6 +130,7 @@ function ExerciseThumbnail({
     attachmentId: image.id,
     variant: "thumbnail",
   });
+
   return (
     <li
       ref={sortable.ref}
@@ -140,7 +149,9 @@ function ExerciseThumbnail({
         }
         className={`size-full touch-pan-y select-none focus-visible:outline-2 focus-visible:outline-focus-ring ${sortingDisabled ? "cursor-zoom-in" : "cursor-grab active:cursor-grabbing"}`}
         onClick={() => {
-          if (!sortable.isDragging) onOpen();
+          if (!sortable.isDragging) {
+            onOpen();
+          }
         }}
       >
         {state.url ? (
@@ -163,6 +174,7 @@ function ExerciseThumbnail({
     </li>
   );
 }
+
 function ExerciseMediaGallery({
   householdId,
   exerciseId,
@@ -193,8 +205,8 @@ function ExerciseMediaGallery({
   const [reordering, setReordering] = useState(false);
   const [error, setError] = useState<string>();
   const [deleteError, setDeleteError] = useState<string>();
-  const button = useRef<HTMLButtonElement>(null),
-    input = useRef<HTMLInputElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const input = useRef<HTMLInputElement>(null);
   const images = exerciseImagesFromRows(rows).filter(
     (image) => !hiddenIds.has(image.id),
   );
@@ -215,13 +227,19 @@ function ExerciseMediaGallery({
     attachmentId: selected?.id,
     variant: "viewer",
   });
+
   // Warm adjacent full-size pictures without touching workout/log form state.
   useEffect(() => {
-    if (!selectedId || !viewer.url || images.length < 2) return;
+    if (!selectedId || !viewer.url || images.length < 2) {
+      return;
+    }
+
     const index = images.findIndex((image) => image.id === selectedId);
+
     for (const direction of [-1, 1]) {
       const next = images[(index + direction + images.length) % images.length];
-      if (next)
+
+      if (next) {
         void prefetchExerciseImage({
           ...session,
           householdId,
@@ -229,13 +247,18 @@ function ExerciseMediaGallery({
           attachmentId: next.id,
           variant: "viewer",
         }).catch(() => undefined);
+      }
     }
   }, [selectedId, viewer.url, images, session, householdId, exerciseId]);
 
   async function reorder(attachmentId: string, orderedAttachmentIds: string[]) {
-    if (sortingDisabled) return;
+    if (sortingDisabled) {
+      return;
+    }
+
     setReordering(true);
     setError(undefined);
+
     try {
       const mutation = zero.mutate(
         mutators.workouts.reorderExerciseMedia({
@@ -247,70 +270,100 @@ function ExerciseMediaGallery({
         }),
       );
       const outcome = await acknowledgeMutation(mutation);
-      if (outcome.type === "error") throw new Error("Reorder failed");
+
+      if (outcome.type === "error") {
+        throw new Error("Reorder failed");
+      }
     } catch {
       setError("Unable to reorder these pictures. Try again.");
     } finally {
       setReordering(false);
     }
   }
+
   async function upload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file || busy || !writable) return;
+
+    if (!file || busy || !writable) {
+      return;
+    }
+
     const allowUpdate = blockAppUpdate();
     setBusy(true);
     setError(undefined);
+
     try {
       const type = stillImageContentTypeSchema.safeParse(file.type);
+
       if (!type.success) {
         setError("Choose a still JPEG, PNG or WebP image.");
+
         return;
       }
+
       if (file.size > maxStillImageByteSize) {
         setError("Choose an image up to 10 MiB.");
+
         return;
       }
+
       const dimensions = await readImageDimensions(file);
       const metadata = stillImageUploadSchema.safeParse({
         contentType: type.data,
         byteSize: file.size,
         ...dimensions,
       });
+
       if (!metadata.success) {
         setError("Choose an image up to 16,384 pixels per side.");
+
         return;
       }
+
       const pending = await requestExerciseImageUpload({
         accessToken: session.accessToken,
         householdId,
         exerciseId,
         ...metadata.data,
       });
+
       if (pending.kind === "unauthorized") {
         session.onSessionExpired();
+
         return;
       }
-      if (pending.kind !== "success") throw new Error("Upload denied");
+
+      if (pending.kind !== "success") {
+        throw new Error("Upload denied");
+      }
+
       const uploaded = await fetch(pending.upload.url, {
         method: "PUT",
         headers: pending.upload.requiredHeaders,
         body: file,
       });
-      if (!uploaded.ok) throw new Error("Upload failed");
+
+      if (!uploaded.ok) {
+        throw new Error("Upload failed");
+      }
+
       const confirmed = await confirmExerciseImage({
         accessToken: session.accessToken,
         householdId,
         exerciseId,
         attachmentId: pending.attachmentId,
       });
-      if (confirmed.kind === "unauthorized") session.onSessionExpired();
-      else if (confirmed.kind === "invalid_upload")
+
+      if (confirmed.kind === "unauthorized") {
+        session.onSessionExpired();
+      } else if (confirmed.kind === "invalid_upload") {
         setError(
           "This image is invalid or animated. Choose a still JPEG, PNG or WebP image.",
         );
-      else if (confirmed.kind !== "success")
+      } else if (confirmed.kind !== "success") {
         throw new Error("Confirmation failed");
+      }
     } catch {
       setError("Unable to upload this picture. Try again.");
     } finally {
@@ -318,10 +371,15 @@ function ExerciseMediaGallery({
       setBusy(false);
     }
   }
+
   async function remove(image: ExerciseMediaImage) {
-    if (!writable || deleting) return;
+    if (!writable || deleting) {
+      return;
+    }
+
     setDeleting(true);
     setDeleteError(undefined);
+
     try {
       const result = await deleteExerciseImage({
         accessToken: session.accessToken,
@@ -329,11 +387,17 @@ function ExerciseMediaGallery({
         exerciseId,
         attachmentId: image.id,
       });
+
       if (result.kind === "unauthorized") {
         session.onSessionExpired();
+
         return;
       }
-      if (result.kind !== "success") throw new Error("Delete failed");
+
+      if (result.kind !== "success") {
+        throw new Error("Delete failed");
+      }
+
       invalidateExerciseImageUrl({
         ...session,
         householdId,
@@ -348,6 +412,7 @@ function ExerciseMediaGallery({
       setDeleting(false);
     }
   }
+
   return (
     <div data-exercise-media-id={exerciseId} className="min-w-0">
       {(images.length > 0 || !readOnly) && (
@@ -357,19 +422,25 @@ function ExerciseMediaGallery({
               sensors={workoutOrderingSensors}
               onDragEnd={(event) => {
                 const source = event.operation.source;
+
                 if (
                   sortingDisabled ||
                   event.canceled ||
                   !isSortable(source) ||
                   source.initialIndex === source.index
-                )
+                ) {
                   return;
+                }
+
                 const attachmentId = String(source.id);
-                const ids = images.map((image) => image.id),
-                  from = ids.indexOf(attachmentId),
-                  to = source.index;
-                if (from < 0 || to < 0 || to >= ids.length || from === to)
+                const ids = images.map((image) => image.id);
+                const from = ids.indexOf(attachmentId);
+                const to = source.index;
+
+                if (from < 0 || to < 0 || to >= ids.length || from === to) {
                   return;
+                }
+
                 ids.splice(from, 1);
                 ids.splice(to, 0, attachmentId);
                 void reorder(attachmentId, ids);
@@ -408,7 +479,11 @@ function ExerciseMediaGallery({
               disabled={!writable || busy || reordering}
               onClick={() => {
                 const fileInput = input.current;
-                if (!fileInput) return;
+
+                if (!fileInput) {
+                  return;
+                }
+
                 try {
                   fileInput.showPicker();
                 } catch {
@@ -453,7 +528,9 @@ function ExerciseMediaGallery({
         }}
         onDelete={(image) => void remove(image)}
         onOpenChange={(open) => {
-          if (!open) setSelectedId(undefined);
+          if (!open) {
+            setSelectedId(undefined);
+          }
         }}
       />
     </div>

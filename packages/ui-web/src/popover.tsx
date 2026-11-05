@@ -1,7 +1,10 @@
 import { Popover } from "@base-ui/react/popover";
 import type { ComponentProps } from "react";
+
 export const PopoverRoot = Popover.Root;
+
 export const PopoverTrigger = Popover.Trigger;
+
 export function PopoverPopup({
   children,
   className,

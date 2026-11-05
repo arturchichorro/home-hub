@@ -32,12 +32,15 @@ export function createRefreshService(input: CreateRefreshServiceInput) {
         .limit(1)
         .for("update");
 
-      if (!storedToken) return { kind: "invalid_token" };
+      if (!storedToken) {
+        return { kind: "invalid_token" };
+      }
 
       const now = new Date();
 
-      if (storedToken.expiresAt.getTime() <= now.getTime())
+      if (storedToken.expiresAt.getTime() <= now.getTime()) {
         return { kind: "invalid_token" };
+      }
 
       if (storedToken.revokedAt) {
         let replacementId: string | null = storedToken.replacedById;

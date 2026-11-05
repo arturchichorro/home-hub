@@ -12,10 +12,13 @@ export function createMeService({ db }: { db: Database }) {
         username: true,
         email: true,
       },
+
       where: (users, { eq }) => eq(users.id, userId),
     });
 
-    if (!user) return { kind: "not_found" };
+    if (!user) {
+      return { kind: "not_found" };
+    }
 
     return {
       kind: "success",

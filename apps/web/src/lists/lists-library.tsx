@@ -34,35 +34,49 @@ export function ListsLibrary({ householdId }: { householdId: string }) {
   useAppHeaderRightComponent(header);
 
   async function move(from: number, to: number) {
-    if (!enabled || from === to || to < 0 || to >= lists.length) return;
+    if (!enabled || from === to || to < 0 || to >= lists.length) {
+      return;
+    }
+
     const reordered = [...lists];
     const [moved] = reordered.splice(from, 1);
-    if (!moved) return;
+
+    if (!moved) {
+      return;
+    }
+
     reordered.splice(to, 0, moved);
     setError(undefined);
+
     try {
       const mutation = zero.mutate(
         mutators.lists.reorder({
           householdId,
           listId: moved.id,
+
           orderedListIds: reordered.map((list) => list.id),
+
           optimisticUpdatedAt: Date.now(),
         }),
       );
       const outcome = await acknowledgeMutation(mutation);
-      if (outcome.type === "error")
+
+      if (outcome.type === "error") {
         setError("The list order could not be saved.");
+      }
     } catch {
       setError("The list order could not be saved.");
     }
   }
 
-  if (result.type === "error")
+  if (result.type === "error") {
     return (
       <InlineAlert role="alert" variant="danger">
         Unable to load lists.
       </InlineAlert>
     );
+  }
+
   return (
     <section
       aria-label="Lists library"

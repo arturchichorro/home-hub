@@ -7,6 +7,7 @@ type DragEvent = {
   canceled: boolean;
   operation: { source: { initialIndex: number; index: number } | null };
 };
+
 const { provider } = vi.hoisted(() => ({
   provider:
     vi.fn<
@@ -16,22 +17,29 @@ const { provider } = vi.hoisted(() => ({
       }) => void
     >(),
 }));
+
 vi.mock("@dnd-kit/react", () => ({
   DragDropProvider: (props: Parameters<typeof provider>[0]) => {
     provider(props);
+
     return props.children;
   },
 }));
+
 vi.mock("@dnd-kit/react/sortable", () => ({
   isSortable: (source: unknown) => source != null,
+
   useSortable: () => ({ ref: vi.fn(), handleRef: vi.fn(), isDragging: false }),
 }));
+
 const habits = [
   { id: "a", name: "Read", entries: [] },
   { id: "b", name: "Walk", entries: [] },
   { id: "c", name: "Stretch", entries: [] },
 ];
+
 const onMove = vi.fn();
+
 function render(disabled = false, archived = false) {
   return renderToStaticMarkup(
     <HabitGrid
@@ -50,14 +58,20 @@ function render(disabled = false, archived = false) {
     </HabitGrid>,
   );
 }
+
 function drag(canceled = false, from = 0, to = 2) {
   const options = provider.mock.calls[0]?.[0];
-  if (!options) throw new Error("Missing provider");
+
+  if (!options) {
+    throw new Error("Missing provider");
+  }
+
   options.onDragEnd({
     canceled,
     operation: { source: { initialIndex: from, index: to } },
   });
 }
+
 beforeEach(() => vi.clearAllMocks());
 
 describe("habit reordering", () => {

@@ -35,6 +35,7 @@ export function HabitNameInput({
     mutationEnabled,
     normalize: cleanHabitName,
     required: true,
+
     save: async (name) => {
       try {
         const mutation = zero.mutate(
@@ -46,6 +47,7 @@ export function HabitNameInput({
           }),
         );
         const result = await acknowledgeMutation(mutation);
+
         return result.type === "success";
       } catch {
         return false;
@@ -53,6 +55,7 @@ export function HabitNameInput({
     },
   });
   useHabitDraftStatus(editor.hasChanges || editor.isSaving, onDirtyChange);
+
   return (
     <>
       <Input

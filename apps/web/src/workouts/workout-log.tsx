@@ -32,6 +32,7 @@ export type WorkoutLog = Omit<LogRow, "exerciseRoles"> & {
   readonly sets: readonly WorkoutLogSet[];
   readonly exerciseLogIds?: Readonly<Record<string, string>>;
 };
+
 export function WorkoutLogActions({ onClose }: { onClose: () => void }) {
   return (
     <IconButton
@@ -44,6 +45,7 @@ export function WorkoutLogActions({ onClose }: { onClose: () => void }) {
     </IconButton>
   );
 }
+
 export type WorkoutLogging = {
   form: WorkoutLogForm;
   state: WorkoutEditorState;
@@ -57,6 +59,7 @@ export type WorkoutLogging = {
   onAddSet: (exerciseId: string) => void;
   onRemoveSet: (exerciseId: string, round: number) => void;
 };
+
 export function WorkoutExerciseSets({
   exercise,
   logging,
@@ -79,6 +82,7 @@ export function WorkoutExerciseSets({
       completeSetValues(exercise, form.inputs[setInputKey(exercise.id, round)]),
     )
     .every(Boolean);
+
   return (
     <div ref={container} className="py-1">
       {rounds.map((round) => {
@@ -99,8 +103,8 @@ export function WorkoutExerciseSets({
         );
         const last = prior ? workoutSetValuesFromRow(prior) : undefined;
         const label = `${exercise.name}, set ${round}`;
-        const saving = state.saving.has(key),
-          error = state.errors[key];
+        const saving = state.saving.has(key);
+        const error = state.errors[key];
         const removable =
           state.recorded.has(key) ||
           round > exercise.sets ||
@@ -120,6 +124,7 @@ export function WorkoutExerciseSets({
             <Trash2 aria-hidden="true" className="size-3.5" />
           </IconButton>
         );
+
         return (
           <div key={round} data-round={round}>
             <fieldset
@@ -132,8 +137,9 @@ export function WorkoutExerciseSets({
                   !event.currentTarget.contains(
                     event.relatedTarget as Node | null,
                   )
-                )
+                ) {
                   onFlush(exercise.id, round);
+                }
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {

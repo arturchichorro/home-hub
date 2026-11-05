@@ -11,18 +11,26 @@ import {
 } from "./workout-log-summary";
 
 const snapshot = workoutContentSchema.parse(starterWorkouts[0]);
+
 const bench = snapshot.exercises.find((e) => e.name === "Dumbbell bench press");
+
 const row = snapshot.exercises.find(
   (e) => e.name === "Bench-supported one-arm row",
 );
-if (!bench || !row) throw new Error("seed");
+
+if (!bench || !row) {
+  throw new Error("seed");
+}
+
 const values: WorkoutSetValues = { amount: 10, rightAmount: null, weightKg: 8 };
+
 function log(
   exercise: WorkoutExercise,
   sets: { round: number; values: WorkoutSetValues }[],
 ) {
   return {
     snapshot: { title: "Earlier workout", exercises: [exercise] },
+
     sets: sets.map((s) => ({
       logId: "log",
       householdId: crypto.randomUUID(),
@@ -36,6 +44,7 @@ function log(
     })),
   };
 }
+
 describe("exercise occurrence summaries", () => {
   it("counts actual extra sets, not the two-set prescription", () => {
     const sets = log(
@@ -67,6 +76,7 @@ describe("exercise occurrence summaries", () => {
     );
   });
 });
+
 describe("workout history summaries", () => {
   it("shows the snapshotted placement role without changing measurements", () => {
     for (const role of ["warmup", "stretching"] as const) {
@@ -74,6 +84,7 @@ describe("workout history summaries", () => {
         summarizeWorkoutLog(log({ ...bench, role }, [{ round: 1, values }]))[0],
       ).toMatchObject({ role, details: "10 reps · 8 kg/hand" });
     }
+
     expect(
       summarizeWorkoutLog(
         log({ ...bench, role: "workout" }, [{ round: 1, values }]),
@@ -132,7 +143,11 @@ describe("workout history summaries", () => {
     const plank = workoutContentSchema
       .parse(starterWorkouts[1])
       .exercises.find((e) => e.name === "Forearm side plank");
-    if (!plank) throw new Error("seed");
+
+    if (!plank) {
+      throw new Error("seed");
+    }
+
     expect(
       summarizeWorkoutLog(
         log(plank, [

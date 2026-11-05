@@ -8,10 +8,15 @@ import { createRefreshService } from "./refresh";
 import { hashRefreshToken } from "./refresh-token";
 
 const jwtSecret = "test-jwt-secret";
+
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const rawRefreshToken = "raw-refresh-token";
+
 const now = new Date("2026-07-23T12:00:00Z");
+
 const futureExpiry = new Date("2026-08-22T12:00:00Z");
+
 const pastExpiry = new Date("2026-06-23T12:00:00Z");
 
 type StoredToken = {
@@ -32,14 +37,20 @@ function createFakeDatabase(selectResults: Array<StoredToken | undefined>) {
   const createSelectBuilder = () => {
     const builder = {
       from: () => builder,
+
       where: (clause: unknown) => {
         selectWhereClauses.push(clause);
+
         return builder;
       },
+
       limit: () => builder,
+
       for: async (strength: unknown) => {
         lockStrengths.push(strength);
+
         const result = selectResults[selectIndex++];
+
         return result ? [result] : [];
       },
     };
@@ -49,11 +60,13 @@ function createFakeDatabase(selectResults: Array<StoredToken | undefined>) {
 
   const tx = {
     select: () => createSelectBuilder(),
+
     insert: () => ({
       values: async (value: unknown) => {
         inserted.push(value);
       },
     }),
+
     update: () => ({
       set: (value: unknown) => ({
         where: async (clause: unknown) => {
@@ -74,6 +87,7 @@ function createFakeDatabase(selectResults: Array<StoredToken | undefined>) {
     lockStrengths,
     selectWhereClauses,
     updates,
+
     selectCallCount: () => selectIndex,
   };
 }
@@ -157,6 +171,7 @@ describe("refresh service", () => {
     const result = await refresh(rawRefreshToken);
 
     expect(result.kind).toBe("success");
+
     if (result.kind !== "success") {
       throw new Error("Expected a successful refresh");
     }
@@ -174,6 +189,7 @@ describe("refresh service", () => {
     expect(lockStrengths).toEqual(["update"]);
 
     expect(inserted).toHaveLength(1);
+
     const persistedToken = inserted[0] as
       | {
           id: string;
@@ -184,6 +200,7 @@ describe("refresh service", () => {
       | undefined;
 
     expect(persistedToken).toBeDefined();
+
     if (!persistedToken) {
       throw new Error("Expected a replacement refresh token to be persisted");
     }

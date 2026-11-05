@@ -17,6 +17,7 @@ import {
 } from "./habits";
 
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const habitId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 
 describe("habit calendar", () => {
@@ -158,6 +159,7 @@ describe("habit contracts", () => {
         optimisticTimestamp: 0,
       }).success,
     ).toBe(false);
+
     const args = {
       householdId,
       startOn: "2026-10-01",

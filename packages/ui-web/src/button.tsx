@@ -2,6 +2,7 @@ import { Button as BaseButton } from "@base-ui/react/button";
 import { forwardRef } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+
 export type ButtonSize = "default" | "compact";
 
 export type ButtonProps = Omit<

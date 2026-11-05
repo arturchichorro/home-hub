@@ -14,6 +14,7 @@ export function createZeroQueryRoute() {
       request: c.req.raw,
       schema,
       userID: userId,
+
       handler: (name, args) =>
         mustGetQuery(queries, name).fn({
           args,

@@ -19,7 +19,9 @@ import { useEffect, useState } from "react";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { DocumentWorkGuard } from "./work-guard";
+
 export type DocumentTag = Row<Schema["tables"]["documentTags"]>;
+
 export const tagClasses: Record<string, string> = {
   slate: "bg-slate-400/15 text-slate-200",
   red: "bg-red-400/15 text-red-200",
@@ -30,7 +32,9 @@ export const tagClasses: Record<string, string> = {
   blue: "bg-blue-400/15 text-blue-200",
   violet: "bg-violet-400/15 text-violet-200",
 };
+
 type Command = () => ReturnType<ReturnType<typeof useZero>["mutate"]>;
+
 export function DocumentTagPicker({
   householdId,
   documentId,
@@ -44,23 +48,26 @@ export function DocumentTagPicker({
   selected?: readonly string[];
   onWork?: (key: string, busy: boolean) => void;
 }) {
-  const zero = useZero(),
-    enabled = useZeroMutationEnabled();
-  const [open, setOpen] = useState(false),
-    [name, setName] = useState(""),
-    [color, setColor] = useState<DocumentColor>(
-      documentColors[tags.length % documentColors.length] ?? "slate",
-    ),
-    [editing, setEditing] = useState<string>(),
-    [error, setError] = useState<string>(),
-    [busy, setBusy] = useState(false),
-    [retry, setRetry] = useState<() => Promise<void>>();
+  const zero = useZero();
+  const enabled = useZeroMutationEnabled();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [color, setColor] = useState<DocumentColor>(
+    documentColors[tags.length % documentColors.length] ?? "slate",
+  );
+  const [editing, setEditing] = useState<string>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const [retry, setRetry] = useState<() => Promise<void>>();
   const dirty = !!name || !!editing || !!retry;
   const key = `${documentId ?? "catalogue"}:tags`;
+
   useEffect(() => {
     onWork?.(key, open || dirty || busy);
+
     return () => onWork?.(key, false);
   }, [onWork, key, open, dirty, busy]);
+
   function reset() {
     setName("");
     setEditing(undefined);
@@ -68,16 +75,25 @@ export function DocumentTagPicker({
     setRetry(undefined);
     setColor(documentColors[tags.length % documentColors.length] ?? "slate");
   }
+
   async function commit(
     command: Command,
     done: () => void | Promise<void> = () => {},
   ) {
-    if (busy || !enabled) return;
+    if (busy || !enabled) {
+      return;
+    }
+
     setBusy(true);
     setError(undefined);
+
     try {
       const outcome = await acknowledgeMutation(command());
-      if (outcome.type !== "success") throw Error();
+
+      if (outcome.type !== "success") {
+        throw Error();
+      }
+
       await done();
       setRetry(undefined);
     } catch {
@@ -89,17 +105,21 @@ export function DocumentTagPicker({
       setBusy(false);
     }
   }
+
   const usable = enabled && !busy && !retry;
+
   return (
     <>
       <PopoverRoot
         open={open}
         onOpenChange={(value) => {
           setOpen(value);
-          if (value && !dirty)
+
+          if (value && !dirty) {
             setColor(
               documentColors[tags.length % documentColors.length] ?? "slate",
             );
+          }
         }}
       >
         <PopoverTrigger
@@ -190,9 +210,13 @@ export function DocumentTagPicker({
             className="mt-3 grid gap-2 border-t border-border pt-3"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!name.trim() || !usable) return;
-              const tagId = editing ?? crypto.randomUUID(),
-                newTag = !editing;
+
+              if (!name.trim() || !usable) {
+                return;
+              }
+
+              const tagId = editing ?? crypto.randomUUID();
+              const newTag = !editing;
               void commit(
                 () =>
                   zero.mutate(
@@ -216,8 +240,12 @@ export function DocumentTagPicker({
                         }),
                       ),
                     );
-                    if (outcome.type !== "success") throw Error();
+
+                    if (outcome.type !== "success") {
+                      throw Error();
+                    }
                   }
+
                   reset();
                 },
               );

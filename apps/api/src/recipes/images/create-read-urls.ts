@@ -55,19 +55,28 @@ export function createRecipeImageReadUrlsService({
     );
     const authorizedImageIds = await db.transaction(async (tx) => {
       const user = await findActiveUser(tx, userId);
-      if (!user) return { kind: "unauthorized" as const };
+
+      if (!user) {
+        return { kind: "unauthorized" as const };
+      }
 
       const membership = await findHouseholdMembershipForShare(tx, {
         householdId,
         userId,
       });
-      if (!membership) return { kind: "forbidden" as const };
+
+      if (!membership) {
+        return { kind: "forbidden" as const };
+      }
 
       const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
         householdId,
         moduleKey: "recipes",
       });
-      if (!moduleSetting) return { kind: "forbidden" as const };
+
+      if (!moduleSetting) {
+        return { kind: "forbidden" as const };
+      }
 
       const images = await findConfirmedHouseholdRecipeImagesForShare(tx, {
         householdId,
@@ -75,6 +84,7 @@ export function createRecipeImageReadUrlsService({
           new Set(uniqueRequests.map((request) => request.imageId)),
         ),
       });
+
       return {
         kind: "images" as const,
         images: new Map(
@@ -83,16 +93,20 @@ export function createRecipeImageReadUrlsService({
       };
     });
 
-    if (authorizedImageIds.kind !== "images") return authorizedImageIds;
+    if (authorizedImageIds.kind !== "images") {
+      return authorizedImageIds;
+    }
 
     const readableRequests = uniqueRequests.flatMap((request) => {
       const image = authorizedImageIds.images.get(
         `${request.recipeId}:${request.imageId}`,
       );
+
       return image
         ? [{ ...request, mediaId: image.mediaId, objectKey: image.objectKey }]
         : [];
     });
+
     return {
       kind: "success",
       reads: await Promise.all(

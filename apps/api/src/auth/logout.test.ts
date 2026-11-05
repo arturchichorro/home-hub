@@ -7,8 +7,11 @@ import { createLogoutService } from "./logout";
 import { hashRefreshToken } from "./refresh-token";
 
 const rawRefreshToken = "raw-refresh-token";
+
 const now = new Date("2026-07-24T12:00:00Z");
+
 const futureExpiry = new Date("2026-08-23T12:00:00Z");
+
 const pastExpiry = new Date("2026-06-24T12:00:00Z");
 
 type StoredToken = {
@@ -27,14 +30,20 @@ function createFakeDatabase(selectResults: Array<StoredToken | undefined>) {
   const createSelectBuilder = () => {
     const builder = {
       from: () => builder,
+
       where: (clause: unknown) => {
         selectWhereClauses.push(clause);
+
         return builder;
       },
+
       limit: () => builder,
+
       for: async (strength: unknown) => {
         lockStrengths.push(strength);
+
         const result = selectResults[selectIndex++];
+
         return result ? [result] : [];
       },
     };
@@ -44,6 +53,7 @@ function createFakeDatabase(selectResults: Array<StoredToken | undefined>) {
 
   const tx = {
     select: () => createSelectBuilder(),
+
     update: () => ({
       set: (value: unknown) => ({
         where: async (clause: unknown) => {
@@ -61,7 +71,9 @@ function createFakeDatabase(selectResults: Array<StoredToken | undefined>) {
   return {
     db,
     lockStrengths,
+
     selectCallCount: () => selectIndex,
+
     selectWhereClauses,
     updates,
   };

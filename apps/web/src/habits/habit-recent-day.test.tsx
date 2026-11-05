@@ -3,6 +3,7 @@ import { expect, it } from "vitest";
 import { HabitRecentDay } from "./habit-days";
 
 const date = "2026-11-03";
+
 it("shows an X only for completion and labels the rightmost date Today", () => {
   const completed = renderToStaticMarkup(
     <HabitRecentDay
@@ -18,6 +19,7 @@ it("shows an X only for completion and labels the rightmost date Today", () => {
   expect(completed).toContain('aria-pressed="true"');
   expect(completed).toContain("lucide-x");
   expect(completed).toContain(">Today<");
+
   const blank = renderToStaticMarkup(
     <HabitRecentDay
       name="Read"
@@ -30,6 +32,7 @@ it("shows an X only for completion and labels the rightmost date Today", () => {
   expect(blank).not.toContain("lucide-x");
   expect(blank).toContain('aria-pressed="false"');
 });
+
 it("keeps note-only dates unmarked and readonly inspection available", () => {
   const html = renderToStaticMarkup(
     <HabitRecentDay
@@ -52,6 +55,7 @@ it("keeps note-only dates unmarked and readonly inspection available", () => {
   expect(html).toContain('aria-expanded="true"');
   expect(html).not.toContain('disabled=""');
 });
+
 it("shows an automatic X without exposing source workout data", () => {
   const html = renderToStaticMarkup(
     <HabitRecentDay
@@ -72,6 +76,7 @@ it("shows an automatic X without exposing source workout data", () => {
   expect(html).not.toContain("Mark done");
   expect(html).not.toContain("Clear completion");
 });
+
 it("disables a pending or offline today write", () => {
   expect(
     renderToStaticMarkup(

@@ -32,13 +32,16 @@ it("keeps the database gate aligned with the immutable migration journal", () =>
     ).when,
   );
 });
+
 it("refuses an old production launcher before invoking any migration", async () => {
-  const migrate = vi.fn(() => 0),
-    report = vi.fn();
+  const migrate = vi.fn(() => 0);
+  const report = vi.fn();
   expect(
     await runProductionMigrations({
       env: { HOME_HUB_REQUIRE_LOGGING_CUTOVER: "1" },
+
       pending: async () => true,
+
       migrate,
       report,
     }),
@@ -48,6 +51,7 @@ it("refuses an old production launcher before invoking any migration", async () 
     expect.stringContaining("no migrations applied"),
   );
 });
+
 it.each([
   {
     env: {
@@ -65,21 +69,26 @@ it.each([
     expect(
       await runProductionMigrations({
         env,
+
         pending: async () => pending,
+
         migrate,
       }),
     ).toBe(0);
     expect(migrate).toHaveBeenCalledOnce();
   },
 );
+
 it("preserves migration errors instead of turning them into a bootstrap retry", async () => {
   expect(await runProductionMigrations({ env: {}, migrate: () => 1 })).toBe(1);
 });
+
 it("runs the native production entrypoint without a pnpm 12 runtime reinstall", () => {
   const dir = mkdtempSync(join(tmpdir(), "home-hub-migrator-command-"));
+
   try {
-    const bin = join(dir, "bin"),
-      log = join(dir, "args.log");
+    const bin = join(dir, "bin");
+    const log = join(dir, "args.log");
     mkdirSync(bin);
     writeFileSync(
       join(bin, "pnpm"),
@@ -112,15 +121,20 @@ it("runs the native production entrypoint without a pnpm 12 runtime reinstall", 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
 it("checks metadata read-only, including an empty database", async () => {
   const empty = vi.fn().mockResolvedValueOnce({ rows: [{ present: false }] });
   expect(await loggingCutoverPending({ query: empty })).toBe(true);
   expect(empty).toHaveBeenCalledOnce();
+
   const query = vi
     .fn()
     .mockResolvedValueOnce({ rows: [{ present: true }] })
     .mockResolvedValueOnce({ rows: [{ pending: false }] });
   expect(await loggingCutoverPending({ query })).toBe(false);
   expect(query.mock.calls[1]?.[1]).toEqual([loggingMigrationWhen]);
-  for (const call of query.mock.calls) expect(call[0]).toMatch(/^SELECT /);
+
+  for (const call of query.mock.calls) {
+    expect(call[0]).toMatch(/^SELECT /);
+  }
 });

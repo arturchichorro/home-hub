@@ -49,6 +49,7 @@ const successfulRefresh: RefreshResult = {
 };
 
 const jwtSecret = "test-jwt-secret";
+
 const authenticatedUser = {
   id: "user-123",
   username: "artur chichorro",
@@ -128,6 +129,7 @@ describe("auth routes", () => {
     const app = createTestAuthRoutes({
       signup: async () => {
         wasInvoked = true;
+
         return { kind: "forbidden" };
       },
     });
@@ -143,6 +145,7 @@ describe("auth routes", () => {
     const app = createTestAuthRoutes({
       signup: async () => {
         wasInvoked = true;
+
         return { kind: "forbidden" };
       },
     });
@@ -187,6 +190,7 @@ describe("auth routes", () => {
     const app = createTestAuthRoutes({
       signup: async (request) => {
         receivedRequest = request;
+
         return successfulSignup;
       },
     });
@@ -215,6 +219,7 @@ describe("auth routes", () => {
     const app = createTestAuthRoutes({
       login: async () => {
         wasInvoked = true;
+
         return { kind: "invalid_credentials" };
       },
     });
@@ -230,6 +235,7 @@ describe("auth routes", () => {
     const app = createTestAuthRoutes({
       login: async () => {
         wasInvoked = true;
+
         return { kind: "invalid_credentials" };
       },
     });
@@ -261,6 +267,7 @@ describe("auth routes", () => {
     const app = createTestAuthRoutes({
       login: async (request) => {
         receivedRequest = request;
+
         return successfulLogin;
       },
     });
@@ -287,6 +294,7 @@ describe("auth routes", () => {
     const app = createTestAuthRoutes({
       refresh: async () => {
         wasInvoked = true;
+
         return { kind: "invalid_token" };
       },
     });
@@ -306,6 +314,7 @@ describe("auth routes", () => {
     const app = createTestAuthRoutes({
       refresh: async (rawRefreshToken) => {
         receivedRefreshToken = rawRefreshToken;
+
         return { kind: "invalid_token" };
       },
     });
@@ -325,6 +334,7 @@ describe("auth routes", () => {
     const app = createTestAuthRoutes({
       refresh: async (rawRefreshToken) => {
         receivedRefreshToken = rawRefreshToken;
+
         return successfulRefresh;
       },
     });
@@ -378,6 +388,7 @@ describe("auth routes", () => {
     const app = createTestAuthRoutes({
       getMe: async () => {
         wasInvoked = true;
+
         return { kind: "not_found" };
       },
     });
@@ -395,6 +406,7 @@ describe("auth routes", () => {
     const app = createTestAuthRoutes({
       getMe: async (userId) => {
         receivedUserId = userId;
+
         return { kind: "success", user: authenticatedUser };
       },
     });
