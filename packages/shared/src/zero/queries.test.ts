@@ -387,6 +387,30 @@ describe("Habits queries", () => {
 });
 
 describe("Lists queries", () => {
+  it("bounds expanded previews without changing either installed query shape", () => {
+    const context = { args: { householdId }, ctx: { userId } };
+    const oldLibrary = getAst(queries.lists.library.fn(context));
+    const preview = getAst(queries.lists.libraryPreview.fn(context));
+
+    expect(queries.lists.libraryPreview.queryName).toBe("lists.libraryPreview");
+    expect(
+      oldLibrary.related?.find(
+        (relation) => relation.subquery.alias === "items",
+      )?.subquery.limit,
+    ).toBe(4);
+    expect(
+      preview.related?.find((relation) => relation.subquery.alias === "items")
+        ?.subquery.limit,
+    ).toBe(22);
+    expect(
+      preview.related?.find(
+        (relation) => relation.subquery.alias === "attachments",
+      )?.subquery.limit,
+    ).toBe(4);
+    expect(preview.where).toEqual(oldLibrary.where);
+    expect(preview.orderBy).toEqual(oldLibrary.orderBy);
+  });
+
   it("previews only the first four current items in detail-list order", () => {
     const ast = getAst(
       queries.lists.byHousehold.fn({ args: { householdId }, ctx: { userId } }),

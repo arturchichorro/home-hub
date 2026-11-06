@@ -14,7 +14,9 @@ items/media are not part of this version.
   files remain until retry/discard. Pending work guards navigation, unload and
   PWA updates; list deletion is disabled until it is resolved.
 - Show media in responsive masonry: two columns on phones, three/four on wider
-  screens. Shrinkable grid tracks and bounded image/upload widths prevent
+  screens, based on the board container width. Explicit, height-balanced contiguous
+  columns preserve down-column order without CSS column balancing leaving an
+  empty right-hand track. Shrinkable grid tracks and bounded image/upload widths prevent
   horizontal page scrolling, including long filenames. Aspect ratios reserve layout space. Media opens from its image surface;
   a separate handle supports mouse drag, touch hold and Space/arrows/Escape.
 - Initially query/render 50 pins plus a lookahead; Show more adds 50. The current
@@ -22,8 +24,9 @@ items/media are not part of this version.
   ceiling. The active viewer has an independent authorized query so new uploads
   do not evict a playing clip from the loaded window.
 - Library cards show at most four thumbnails/posters and the title, without a
-  media-count caption or autoplay. `lists.library` is the new query; `lists.byHousehold`
-  retains its original shape for older clients. No tile subscribes independently
+  media-count caption or autoplay. The current `lists.libraryPreview` query expands
+  checklist previews while retaining four media tiles. Both `lists.library` and
+  `lists.byHousehold` retain their original shapes for older clients. No tile subscribes independently
   to Zero; signed read misses batch by user/household, at most 100 per request.
 - Images use the same shared bare viewer as Recipes: thumbnail-to-viewer fade,
   close/delete icon controls, and arrow/keyboard navigation. Failed removal keeps

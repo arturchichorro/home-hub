@@ -13,6 +13,7 @@ import { useZero } from "@rocicorp/zero/react";
 import { type SubmitEvent, useId, useState } from "react";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import { ListKindPicker } from "./list-kind-picker";
 
 type Props = {
   householdId: string;
@@ -100,22 +101,7 @@ export function ListNameDialog({ householdId, onClose, onSaved }: Props) {
         }
       >
         <form id={formId} onSubmit={submit} className="grid gap-4">
-          <Field label="Type">
-            <select
-              aria-label="List type"
-              className="h-10 rounded-md border border-border bg-canvas px-3"
-              disabled={saving}
-              value={kind}
-              onChange={(e) =>
-                setKind(
-                  e.target.value === "moodboard" ? "moodboard" : "checklist",
-                )
-              }
-            >
-              <option value="checklist">Checklist</option>
-              <option value="moodboard">Moodboard</option>
-            </select>
-          </Field>
+          <ListKindPicker value={kind} onChange={setKind} disabled={saving} />
           <Field label="Name">
             <FieldControl
               autoFocus
