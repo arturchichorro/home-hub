@@ -5,6 +5,7 @@ import { ListCard, type ListCardData } from "./list-card";
 
 vi.mock("@dnd-kit/react/sortable", () => ({
   isSortable: vi.fn(),
+
   useSortable: () => ({ ref: vi.fn(), handleRef: vi.fn(), isDragging: false }),
 }));
 

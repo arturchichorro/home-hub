@@ -29,6 +29,7 @@ import { InvalidMediaUploadError } from "./process-image";
 
 // Opt-in only, against databases created/discarded by verify-media-migration.sh.
 const databaseUrl = process.env.MEDIA_TEST_DATABASE_URL;
+
 describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
   let client: ReturnType<typeof createDbClient>;
   let userId: string;
@@ -39,12 +40,16 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
     if (
       !databaseUrl ||
       !new URL(databaseUrl).pathname.startsWith("/media_migration_")
-    )
+    ) {
       throw new Error("Disposable media migration database required");
+    }
+
     client = createDbClient(databaseUrl);
   });
   afterAll(async () => {
-    if (client) await client.close();
+    if (client) {
+      await client.close();
+    }
   });
   beforeEach(async () => {
     userId = randomUUID();
@@ -79,9 +84,11 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
       })),
     );
   });
+
   function command(imageId: string, parentId = recipeId) {
     return { userId, householdId, recipeId: parentId, imageId };
   }
+
   async function asset(confirmedAt: Date | null = new Date()) {
     const id = randomUUID();
     const objectKey = `households/${householdId}/recipes/${recipeId}/${id}`;
@@ -96,6 +103,7 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
       height: 600,
       confirmedAt,
     });
+
     const attachmentId = randomUUID();
     await client.db.insert(recipeMedia).values({
       id: attachmentId,
@@ -104,6 +112,7 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
       mediaId: id,
       sortKey: 0,
     });
+
     return { id, objectKey, attachmentId };
   }
 
@@ -123,7 +132,11 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
       height: 600,
     });
     expect(upload.kind).toBe("success");
-    if (upload.kind !== "success") throw new Error("Upload failed");
+
+    if (upload.kind !== "success") {
+      throw new Error("Upload failed");
+    }
+
     const [row] = await client.db
       .select()
       .from(media)
@@ -134,6 +147,7 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
       confirmedAt: null,
       animated: null,
     });
+
     const inspectObject = vi.fn(async () => ({
       contentType: "image/png",
       byteSize: 42,
@@ -157,12 +171,14 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
         objectKey: row?.objectKey,
       }),
     );
+
     const [confirmed] = await client.db
       .select()
       .from(media)
       .where(eq(media.id, upload.imageId));
     expect(confirmed?.animated).toBe(false);
     expect(confirmed?.confirmedAt).toBeInstanceOf(Date);
+
     const failed = vi.fn(async () => {
       throw new Error("Signing failed");
     });
@@ -206,6 +222,7 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
       .update(recipes)
       .set({ deletedAt: new Date() })
       .where(eq(recipes.id, recipeId));
+
     const signRead = vi.fn(async () => "https://images.example/signed");
     const read = createRecipeImageReadUrlService({ db: client.db, signRead });
     expect(
@@ -225,6 +242,7 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
     expect(
       await read({ ...command(image.attachmentId), variant: "viewer" }),
     ).toEqual({ kind: "not_found" });
+
     const batch = await createRecipeImageReadUrlsService({
       db: client.db,
       signRead,
@@ -245,7 +263,10 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
       kind: "success",
       reads: [{ imageId: attachmentId, recipeId: otherRecipeId }],
     });
-    if (batch.kind === "success") expect(batch.reads).toHaveLength(1);
+
+    if (batch.kind === "success") {
+      expect(batch.reads).toHaveLength(1);
+    }
   });
 
   it("unlinks only the selected attachment and keeps deleted-log photos readable", async () => {
@@ -266,6 +287,7 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
       cookLogId: logId,
       sortKey: 0,
     });
+
     const unlink = createDeleteRecipeImageService({ db: client.db });
     expect(await unlink(command(image.attachmentId))).toEqual({
       kind: "success",
@@ -273,6 +295,7 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
     expect(await unlink(command(image.attachmentId))).toEqual({
       kind: "success",
     });
+
     const [row] = await client.db
       .select()
       .from(media)
@@ -282,6 +305,7 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
       .update(recipeCookLogs)
       .set({ deletedAt: new Date() })
       .where(eq(recipeCookLogs.id, logId));
+
     const signRead = vi.fn(async () => "https://images.example/signed");
     const read = createRecipeImageReadUrlService({ db: client.db, signRead });
     expect(
@@ -304,6 +328,7 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
     const confirm = createConfirmRecipeImageUploadService({
       db: client.db,
       inspectObject,
+
       processDerivatives: async () => {
         throw new InvalidMediaUploadError();
       },
@@ -311,11 +336,13 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
     expect(await confirm(command(image.attachmentId))).toEqual({
       kind: "invalid_upload",
     });
+
     const [row] = await client.db
       .select()
       .from(media)
       .where(eq(media.id, image.id));
     expect(row?.confirmedAt).toBeNull();
+
     const signRead = vi.fn(async () => "https://images.example/signed");
     const read = createRecipeImageReadUrlService({ db: client.db, signRead });
     expect(

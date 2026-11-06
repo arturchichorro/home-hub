@@ -76,7 +76,10 @@ export function RecipeDetail({
   )?.id;
 
   useEffect(() => {
-    if (!firstVisibleImageId) return;
+    if (!firstVisibleImageId) {
+      return;
+    }
+
     return scheduleIdleRecipeImagePrefetch(() => {
       void prefetchRecipeImage({
         accessToken,
@@ -86,7 +89,9 @@ export function RecipeDetail({
         recipeId,
         variant: "viewer",
       }).then((prefetch) => {
-        if (prefetch.kind === "unauthorized") onSessionExpired();
+        if (prefetch.kind === "unauthorized") {
+          onSessionExpired();
+        }
       });
     });
   }, [
@@ -133,7 +138,10 @@ export function RecipeDetail({
   }
 
   function reorderImages(imageId: string, orderedImageIds: string[]) {
-    if (!mutationEnabled) return;
+    if (!mutationEnabled) {
+      return;
+    }
+
     zero.mutate(
       mutators.recipes.reorderImages({
         householdId,
@@ -146,9 +154,13 @@ export function RecipeDetail({
   }
 
   async function deleteRecipe() {
-    if (deleting || !mutationEnabled) return;
+    if (deleting || !mutationEnabled) {
+      return;
+    }
+
     setDeleting(true);
     setDeleteError(undefined);
+
     try {
       const mutation = zero.mutate(
         mutators.recipes.delete({
@@ -158,10 +170,13 @@ export function RecipeDetail({
         }),
       );
       const outcome = await acknowledgeMutation(mutation);
+
       if (outcome.type === "error") {
         setDeleteError("The recipe could not be deleted.");
+
         return;
       }
+
       await navigate({
         to: "/households/$householdId/recipes",
         params: { householdId },
@@ -175,7 +190,10 @@ export function RecipeDetail({
   }
 
   async function deleteImage(image: RecipeImage) {
-    if (!mutationEnabled) return;
+    if (!mutationEnabled) {
+      return;
+    }
+
     setHiddenImageIds((current) => new Set(current).add(image.id));
     setSelectedImage(undefined);
 
@@ -183,6 +201,7 @@ export function RecipeDetail({
       setHiddenImageIds((current) => {
         const next = new Set(current);
         next.delete(image.id);
+
         return next;
       });
 
@@ -193,7 +212,11 @@ export function RecipeDetail({
         recipeId,
         imageId: image.id,
       });
-      if (deletion.kind === "unauthorized") onSessionExpired();
+
+      if (deletion.kind === "unauthorized") {
+        onSessionExpired();
+      }
+
       if (deletion.kind === "success") {
         invalidateRecipeImageUrl({
           householdId,
@@ -328,7 +351,9 @@ export function RecipeDetail({
         onSessionExpired={onSessionExpired}
         onSelect={setSelectedImage}
         onOpenChange={(open) => {
-          if (!open) setSelectedImage(undefined);
+          if (!open) {
+            setSelectedImage(undefined);
+          }
         }}
         userId={userId}
       />

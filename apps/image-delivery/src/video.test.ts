@@ -7,8 +7,10 @@ import {
 import { expect, it, vi } from "vitest";
 import { handleVideoRequest } from "./video";
 
-const secret = "isolated-video-test-signing-secret-123456",
-  now = 1000;
+const secret = "isolated-video-test-signing-secret-123456";
+
+const now = 1000;
+
 const c: VideoReadCapability = {
   householdId: crypto.randomUUID(),
   mediaId: crypto.randomUUID(),
@@ -20,6 +22,7 @@ const c: VideoReadCapability = {
   contentType: "video/mp4",
   expiresAt: 1100,
 };
+
 async function request(headers?: HeadersInit, method = "GET") {
   return new Request(
     videoReadUrl(
@@ -30,12 +33,15 @@ async function request(headers?: HeadersInit, method = "GET") {
     { method, ...(headers ? { headers } : {}) },
   );
 }
+
 function environment() {
   const bytes = new TextEncoder().encode("abcdefghij");
+
   return {
     IMAGE_DELIVERY_SIGNING_SECRET: secret,
     RECIPE_IMAGES: {
       head: vi.fn(async () => ({ size: 10, httpEtag: '"fixture"' })),
+
       get: vi.fn(
         async (
           _key: string,
@@ -59,13 +65,14 @@ function environment() {
     },
   };
 }
+
 it("serves authenticated byte ranges without buffering/caching a complete clip", async () => {
-  const env = environment(),
-    response = await handleVideoRequest(
-      await request({ Range: "bytes=2-5" }),
-      env,
-      now,
-    );
+  const env = environment();
+  const response = await handleVideoRequest(
+    await request({ Range: "bytes=2-5" }),
+    env,
+    now,
+  );
   expect(response.status).toBe(206);
   expect(response.headers.get("Content-Range")).toBe("bytes 2-5/10");
   expect(response.headers.get("Content-Length")).toBe("4");
@@ -74,9 +81,14 @@ it("serves authenticated byte ranges without buffering/caching a complete clip",
     `/video/${"a".repeat(64)}/playback.mp4`,
   );
 });
+
 it("handles HEAD, suffix ranges, unsatisfiable and multi-range requests", async () => {
-  const env = environment(),
-    head = await handleVideoRequest(await request(undefined, "HEAD"), env, now);
+  const env = environment();
+  const head = await handleVideoRequest(
+    await request(undefined, "HEAD"),
+    env,
+    now,
+  );
   expect(head.status).toBe(200);
   expect(env.RECIPE_IMAGES.get).not.toHaveBeenCalled();
   expect(
@@ -84,6 +96,7 @@ it("handles HEAD, suffix ranges, unsatisfiable and multi-range requests", async 
       await handleVideoRequest(await request({ Range: "bytes=-2" }), env, now)
     ).text(),
   ).toBe("ij");
+
   for (const value of ["bytes=99-", "bytes=2-1", "bytes=0-1,3-4"]) {
     const response = await handleVideoRequest(
       await request({ Range: value }),
@@ -94,10 +107,11 @@ it("handles HEAD, suffix ranges, unsatisfiable and multi-range requests", async 
     expect(response.headers.get("Content-Range")).toBe("bytes */10");
   }
 });
+
 it("checks signature and expiry before any storage access", async () => {
-  const env = environment(),
-    good = await request(),
-    url = new URL(good.url);
+  const env = environment();
+  const good = await request();
+  const url = new URL(good.url);
   url.searchParams.set(
     "capability",
     JSON.stringify({ ...c, parentId: crypto.randomUUID() }),
@@ -109,15 +123,18 @@ it("checks signature and expiry before any storage access", async () => {
   expect(env.RECIPE_IMAGES.head).not.toHaveBeenCalled();
   expect(env.RECIPE_IMAGES.get).not.toHaveBeenCalled();
 });
+
 it("validates range arithmetic including unsafe integers", () => {
   expect(parseVideoRange("bytes=0-", 10)).toEqual({ offset: 0, length: 10 });
   expect(parseVideoRange("bytes=0-999", 10)).toEqual({ offset: 0, length: 10 });
+
   for (const range of [
     "bytes=-0",
     "bytes=-",
     "bytes=9007199254740992-",
     "banana",
     "bytes=3-2",
-  ])
+  ]) {
     expect(parseVideoRange(range, 10)).toBeUndefined();
+  }
 });

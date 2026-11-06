@@ -134,11 +134,13 @@ const householdPointerSensor = PointerSensor.configure({
     if (event.pointerType === "mouse") {
       return [new PointerActivationConstraints.Distance({ value: 5 })];
     }
+
     if (event.pointerType === "touch") {
       return [
         new PointerActivationConstraints.Delay({ value: 250, tolerance: 5 }),
       ];
     }
+
     return [
       new PointerActivationConstraints.Delay({ value: 200, tolerance: 10 }),
       new PointerActivationConstraints.Distance({ value: 5 }),
@@ -176,6 +178,7 @@ export function moduleIsActive(
   const householdPath = `/households/${householdId}`;
 
   const modulePath = `${householdPath}/${key}`;
+
   return (
     pathname === modulePath ||
     (key !== "settings" && pathname.startsWith(`${modulePath}/`))
@@ -282,18 +285,26 @@ function SidebarNavigation({
   const [memberships, result] = useQuery(queries.householdMemberships.mine({}));
 
   function moveHousehold(from: number, to: number) {
-    if (!mutationEnabled || from === to || to < 0 || to >= memberships.length)
+    if (!mutationEnabled || from === to || to < 0 || to >= memberships.length) {
       return;
+    }
+
     const reordered = [...memberships];
     const [moved] = reordered.splice(from, 1);
-    if (!moved) return;
+
+    if (!moved) {
+      return;
+    }
+
     reordered.splice(to, 0, moved);
     zero.mutate(
       mutators.householdMemberships.reorder({
         householdId: moved.householdId,
+
         orderedHouseholdIds: reordered.map(
           (membership) => membership.householdId,
         ),
+
         optimisticUpdatedAt: Date.now(),
       }),
     );
@@ -339,6 +350,7 @@ function SidebarNavigation({
           sensors={householdSensors}
           onDragEnd={(event) => {
             const source = event.operation.source;
+
             if (
               !event.canceled &&
               isSortable(source) &&

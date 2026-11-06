@@ -17,6 +17,7 @@ import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
 import { type Schema, zql } from "./schema.gen";
 
 const define = defineMutatorWithType<Schema, ZeroAuthContext>();
+
 export const exerciseLogMutators = {
   saveSet: define(saveExerciseSetSchema, async ({ tx, ctx, args }) => {
     await requireServerHouseholdModuleAccess({
@@ -25,23 +26,31 @@ export const exerciseLogMutators = {
       userId: ctx.userId,
       moduleKey: "workouts",
     });
+
     const workout = await tx.run(
       zql.workouts
         .where("id", args.workoutId)
         .where("householdId", args.householdId)
         .one(),
     );
-    if (!workout) throw Error("Workout logging not allowed");
+
+    if (!workout) {
+      throw Error("Workout logging not allowed");
+    }
+
     const proposed = await tx.run(
       zql.workoutLogs.where("id", args.logId).one(),
     );
+
     if (
       proposed &&
       (proposed.userId !== ctx.userId ||
         proposed.householdId !== args.householdId ||
         proposed.workoutId !== args.workoutId)
-    )
+    ) {
       throw Error("Workout log not allowed");
+    }
+
     const existing =
       proposed ??
       (await tx.run(
@@ -55,6 +64,7 @@ export const exerciseLogMutators = {
     const snapshot = workoutLogSnapshotSchema.parse(
       existing?.snapshot ?? args.snapshot,
     );
+
     if (
       !existing &&
       snapshot.exercises.some((exercise) => exercise.role === undefined)
@@ -74,6 +84,7 @@ export const exerciseLogMutators = {
           workoutExerciseRoleSchema.parse(roles.get(exercise.id) ?? "workout"),
       }));
     }
+
     if (existing) {
       const roles = workoutExerciseRolesSnapshotSchema.parse(
         existing.exerciseRoles ?? {},
@@ -83,10 +94,15 @@ export const exerciseLogMutators = {
         role: roles[exercise.id] ?? "workout",
       }));
     }
+
     const definition = snapshot.exercises.find(
       (e) => e.id === args.workoutExerciseId,
     );
-    if (!definition) throw Error("Unknown historical exercise");
+
+    if (!definition) {
+      throw Error("Unknown historical exercise");
+    }
+
     const logId = existing?.id ?? args.logId;
     const link = await tx.run(
       zql.workoutLogExercises
@@ -105,24 +121,33 @@ export const exerciseLogMutators = {
             .one(),
         )
       : undefined;
-    if (link && !occurrence) throw Error("Exercise log not allowed");
+
+    if (link && !occurrence) {
+      throw Error("Exercise log not allowed");
+    }
+
     const historical = workoutExerciseSchema.parse(
       occurrence?.snapshot ?? definition,
     );
     const submitted = args.snapshot.exercises.find(
       (e) => e.id === args.workoutExerciseId,
     );
+
     if (
       !submitted ||
       submitted.unit !== historical.unit ||
       submitted.load !== historical.load ||
       submitted.unilateral !== historical.unilateral
-    )
+    ) {
       throw Error(
         "Exercise logging settings changed; reopen logging before continuing",
       );
-    if (!isCompleteExerciseSet(historical, args.values))
+    }
+
+    if (!isCompleteExerciseSet(historical, args.values)) {
       throw Error("Complete every required set value");
+    }
+
     const slot = await tx.run(
       zql.workoutExercises
         .where("householdId", args.householdId)
@@ -130,37 +155,51 @@ export const exerciseLogMutators = {
         .where("id", args.workoutExerciseId)
         .one(),
     );
+
     if (
       !existing &&
       (!slot ||
         (historical.catalogExerciseId &&
           historical.catalogExerciseId !== slot.exerciseId))
-    )
+    ) {
       throw Error("Workout exercise not allowed");
+    }
+
     const exerciseId =
       occurrence?.exerciseId ??
       historical.catalogExerciseId ??
       slot?.exerciseId;
-    if (!exerciseId) throw Error("Missing catalog identity");
+
+    if (!exerciseId) {
+      throw Error("Missing catalog identity");
+    }
+
     const exercise = await tx.run(
       zql.exercises
         .where("id", exerciseId)
         .where("householdId", args.householdId)
         .one(),
     );
-    if (!exercise || (!existing && exercise.deletedAt !== null))
+
+    if (!exercise || (!existing && exercise.deletedAt !== null)) {
       throw Error("Exercise no longer available");
+    }
+
     if (
       !existing &&
       calendarDate(args.optimisticTimestamp, args.timeZone) !== args.completedOn
-    )
+    ) {
       throw Error("Invalid logging day");
+    }
+
     if (
       !occurrence &&
       (await tx.run(zql.exerciseLogs.where("id", args.exerciseLogId).one()))
-    )
+    ) {
       throw Error("Exercise occurrence already belongs to another context");
-    if (!existing)
+    }
+
+    if (!existing) {
       await tx.mutate.workoutLogs.insert({
         id: logId,
         householdId: args.householdId,
@@ -179,8 +218,11 @@ export const exerciseLogMutators = {
         createdAt:
           tx.location === "server" ? Date.now() : args.optimisticTimestamp,
       });
+    }
+
     const exerciseLogId = occurrence?.id ?? args.exerciseLogId;
     const { role: _role, ...historicalDefinition } = historical;
+
     if (!occurrence) {
       await tx.mutate.exerciseLogs.insert({
         id: exerciseLogId,
@@ -197,11 +239,13 @@ export const exerciseLogMutators = {
         exerciseLogId,
         householdId: args.householdId,
         userId: ctx.userId,
+
         position: snapshot.exercises.findIndex(
           (e) => e.id === args.workoutExerciseId,
         ),
       });
     }
+
     await tx.mutate.exerciseLogSets.upsert({
       exerciseLogId,
       round: args.round,
@@ -211,6 +255,7 @@ export const exerciseLogMutators = {
       unilateral: historical.unilateral,
     });
   }),
+
   removeSet: define(removeExerciseSetSchema, async ({ tx, ctx, args }) => {
     await requireServerHouseholdModuleAccess({
       tx,
@@ -218,16 +263,20 @@ export const exerciseLogMutators = {
       userId: ctx.userId,
       moduleKey: "workouts",
     });
+
     const proposed = await tx.run(
       zql.workoutLogs.where("id", args.logId).one(),
     );
+
     if (
       proposed &&
       (proposed.householdId !== args.householdId ||
         proposed.workoutId !== args.workoutId ||
         proposed.userId !== ctx.userId)
-    )
+    ) {
       throw Error("Workout log not allowed");
+    }
+
     const log =
       proposed ??
       (args.completedOn
@@ -240,7 +289,11 @@ export const exerciseLogMutators = {
               .one(),
           )
         : undefined);
-    if (!log) throw Error("Workout log not allowed");
+
+    if (!log) {
+      throw Error("Workout log not allowed");
+    }
+
     const link = await tx.run(
       zql.workoutLogExercises
         .where("workoutLogId", log.id)
@@ -249,10 +302,12 @@ export const exerciseLogMutators = {
         .where("userId", ctx.userId)
         .one(),
     );
-    if (link)
+
+    if (link) {
       await tx.mutate.exerciseLogSets.delete({
         exerciseLogId: link.exerciseLogId,
         round: args.round,
       });
+    }
   }),
 };

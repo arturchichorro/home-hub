@@ -6,7 +6,9 @@ import { describe, expect, it, vi } from "vitest";
 import { createListHouseholdMembersService } from "./list-members";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const joinedAt = new Date("2026-08-01T12:00:00Z");
 
 const memberRows = [
@@ -43,18 +45,25 @@ function createFakeDatabase({
   const authorizationBuilder = {
     from: (table: unknown) => {
       fromTables.push(table);
+
       return authorizationBuilder;
     },
+
     where: (condition: unknown) => {
       whereClauses.push(condition);
+
       return authorizationBuilder;
     },
+
     limit: (limit: unknown) => {
       limits.push(limit);
+
       return authorizationBuilder;
     },
+
     for: async (strength: unknown) => {
       lockStrengths.push(strength);
+
       return callerMembershipExists ? [{ id: "caller-membership-id" }] : [];
     },
   };
@@ -62,18 +71,25 @@ function createFakeDatabase({
   const rosterBuilder = {
     from: (table: unknown) => {
       fromTables.push(table);
+
       return rosterBuilder;
     },
+
     innerJoin: (table: unknown, condition: unknown) => {
       joins.push({ table, condition });
+
       return rosterBuilder;
     },
+
     where: (condition: unknown) => {
       whereClauses.push(condition);
+
       return rosterBuilder;
     },
+
     orderBy: async (...ordering: unknown[]) => {
       orderings.push(ordering);
+
       return memberRows;
     },
   };
@@ -84,8 +100,10 @@ function createFakeDatabase({
         findFirst: findUser,
       },
     },
+
     select: (selection: unknown) => {
       selections.push(selection);
+
       return selections.length === 1 ? authorizationBuilder : rosterBuilder;
     },
   };

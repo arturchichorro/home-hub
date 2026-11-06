@@ -1,22 +1,38 @@
 export function documentFileType(contentType: string) {
-  if (contentType === "application/pdf")
+  if (contentType === "application/pdf") {
     return { label: "PDF", tone: "text-red-300" };
-  if (contentType.includes("wordprocessingml"))
+  }
+
+  if (contentType.includes("wordprocessingml")) {
     return { label: "DOCX", tone: "text-blue-300" };
-  if (contentType.includes("spreadsheetml"))
+  }
+
+  if (contentType.includes("spreadsheetml")) {
     return { label: "XLSX", tone: "text-green-300" };
-  if (contentType.includes("presentationml"))
+  }
+
+  if (contentType.includes("presentationml")) {
     return { label: "PPTX", tone: "text-orange-300" };
-  if (contentType === "text/csv")
+  }
+
+  if (contentType === "text/csv") {
     return { label: "CSV", tone: "text-teal-300" };
-  if (contentType === "text/markdown")
+  }
+
+  if (contentType === "text/markdown") {
     return { label: "MD", tone: "text-violet-300" };
-  if (contentType.startsWith("image/"))
+  }
+
+  if (contentType.startsWith("image/")) {
     return { label: "IMG", tone: "text-muted" };
+  }
+
   return { label: "TXT", tone: "text-slate-300" };
 }
+
 export function DocumentFileTypeIcon({ contentType }: { contentType: string }) {
   const { label, tone } = documentFileType(contentType);
+
   return (
     <span
       className={`relative flex size-12 shrink-0 items-center justify-center ${tone}`}

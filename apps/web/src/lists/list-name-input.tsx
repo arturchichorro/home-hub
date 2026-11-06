@@ -31,6 +31,7 @@ export function ListNameInput({
     mutationEnabled,
     normalize: cleanListName,
     required: true,
+
     save: async (name) => {
       const mutation = zero.mutate(
         mutators.lists.rename({
@@ -41,6 +42,7 @@ export function ListNameInput({
         }),
       );
       const result = await acknowledgeMutation(mutation);
+
       return result.type === "success";
     },
   });

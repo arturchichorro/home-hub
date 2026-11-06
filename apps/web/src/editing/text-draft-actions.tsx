@@ -13,14 +13,19 @@ type Draft = {
 export function TextDraftGuard({ editor }: { editor: Draft }) {
   const blocker = useBlocker({
     shouldBlockFn: () => editor.hasChanges,
+
     enableBeforeUnload: () => editor.hasChanges,
+
     withResolver: true,
   });
+
   return (
     <DialogRoot
       open={blocker.status === "blocked"}
       onOpenChange={(open) => {
-        if (!open && blocker.status === "blocked") blocker.reset();
+        if (!open && blocker.status === "blocked") {
+          blocker.reset();
+        }
       }}
     >
       <DialogPopup
@@ -30,7 +35,9 @@ export function TextDraftGuard({ editor }: { editor: Draft }) {
             <Button
               variant="ghost"
               onClick={() => {
-                if (blocker.status === "blocked") blocker.reset();
+                if (blocker.status === "blocked") {
+                  blocker.reset();
+                }
               }}
             >
               Keep editing
@@ -39,7 +46,10 @@ export function TextDraftGuard({ editor }: { editor: Draft }) {
               disabled={editor.isSaving}
               onClick={() => {
                 editor.discard();
-                if (blocker.status === "blocked") blocker.proceed();
+
+                if (blocker.status === "blocked") {
+                  blocker.proceed();
+                }
               }}
             >
               Discard unsaved text

@@ -9,10 +9,15 @@ import {
 } from "./image-api";
 
 const accessToken = "access-token";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+
 const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+
 const commandInput = { accessToken, householdId, recipeId, imageId };
+
 const fetchMock = vi.fn<typeof fetch>();
 
 beforeEach(() => {
@@ -91,6 +96,7 @@ describe("recipe image API", () => {
 
   it("uploads the original file with exactly the signed headers", async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+
     const file = new File(["image"], "recipe.webp", {
       type: "image/webp",
     });

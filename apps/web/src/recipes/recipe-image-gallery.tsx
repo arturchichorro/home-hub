@@ -18,11 +18,13 @@ const recipeImagePointerSensor = PointerSensor.configure({
     if (event.pointerType === "mouse") {
       return [new PointerActivationConstraints.Distance({ value: 5 })];
     }
+
     if (event.pointerType === "touch") {
       return [
         new PointerActivationConstraints.Delay({ value: 250, tolerance: 5 }),
       ];
     }
+
     return [
       new PointerActivationConstraints.Delay({ value: 200, tolerance: 10 }),
       new PointerActivationConstraints.Distance({ value: 5 }),
@@ -163,13 +165,23 @@ export function RecipeImageGallery({
       <DragDropProvider
         sensors={recipeImageSensors}
         onDragEnd={(event) => {
-          if (event.canceled) return;
-          const { source } = event.operation;
-          if (!isSortable(source) || source.initialIndex === source.index)
+          if (event.canceled) {
             return;
+          }
+
+          const { source } = event.operation;
+
+          if (!isSortable(source) || source.initialIndex === source.index) {
+            return;
+          }
+
           const reordered = [...images];
           const [moved] = reordered.splice(source.initialIndex, 1);
-          if (!moved) return;
+
+          if (!moved) {
+            return;
+          }
+
           reordered.splice(source.index, 0, moved);
           onReorder(
             moved.id,
@@ -241,13 +253,20 @@ export function RecipeImageViewer({
   const viewerLoaded = viewerUrl !== undefined && loadedViewerUrl === viewerUrl;
 
   useEffect(() => {
-    if (!image || !viewerLoaded) return;
+    if (!image || !viewerLoaded) {
+      return;
+    }
+
     const adjacentImages = [
       getAdjacentRecipeImage(images, image.id, -1),
       getAdjacentRecipeImage(images, image.id, 1),
     ];
+
     for (const adjacentImage of adjacentImages) {
-      if (!adjacentImage) continue;
+      if (!adjacentImage) {
+        continue;
+      }
+
       void prefetchRecipeImage({
         accessToken,
         userId,
@@ -256,7 +275,9 @@ export function RecipeImageViewer({
         recipeId,
         variant: "viewer",
       }).then((prefetch) => {
-        if (prefetch.kind === "unauthorized") onSessionExpired();
+        if (prefetch.kind === "unauthorized") {
+          onSessionExpired();
+        }
       });
     }
   }, [

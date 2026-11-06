@@ -7,6 +7,7 @@ import { mutateWithHabitWorkouts } from "../mutate-with-habit-workouts";
 import { safeMutationProvider } from "../safe-mutation-provider";
 
 export type CreateZeroMutateRouteInput = { dbProvider: ZeroDbProvider };
+
 export function createZeroMutateRoute({
   dbProvider,
 }: CreateZeroMutateRouteInput) {
@@ -20,13 +21,16 @@ export function createZeroMutateRoute({
           code,
         });
       }),
+
       request: c.req.raw,
       userID: userId,
+
       handler: (transact) =>
         transact((tx, name, args) =>
           mutateWithHabitWorkouts(tx, userId, name, args),
         ),
     });
+
     return c.json(response);
   };
 }

@@ -14,18 +14,24 @@ const source = readFileSync(
   new URL("./deploy-release.sh", import.meta.url),
   "utf8",
 );
+
 const directories: string[] = [];
+
 afterEach(() => {
-  for (const dir of directories.splice(0))
+  for (const dir of directories.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
+  }
 });
+
 function rehearse(hasTable: boolean, applied: boolean) {
   const directory = mkdtempSync(join(tmpdir(), "home-hub-cutover-"));
   directories.push(directory);
-  const bin = join(directory, "bin"),
-    log = join(directory, "commands.log");
+
+  const bin = join(directory, "bin");
+  const log = join(directory, "commands.log");
   mkdirSync(bin);
   mkdirSync(join(directory, "scripts"));
+
   const mock = (name: string, body: string) =>
     writeFileSync(
       join(bin, name),
@@ -47,6 +53,7 @@ function rehearse(hasTable: boolean, applied: boolean) {
     '#!/usr/bin/env bash\nprintf "backup\\n" >> "$TEST_LOG"\n',
     { mode: 0o755 },
   );
+
   const script = source
     .replace('"/opt/home-hub"', JSON.stringify(directory))
     .replace(
@@ -64,8 +71,10 @@ function rehearse(hasTable: boolean, applied: boolean) {
     },
     stdio: "pipe",
   });
+
   return readFileSync(log, "utf8").trim().split("\n");
 }
+
 it("keeps the one-time writer cutover aligned with the actual migration journal", () => {
   const journal = JSON.parse(
     readFileSync(
@@ -82,28 +91,32 @@ it("keeps the one-time writer cutover aligned with the actual migration journal"
   expect(migration).toBeDefined();
   expect(source).toContain(`created_at >= ${migration?.when}`);
 });
+
 it.each([
   { hasTable: true, applied: false },
   { hasTable: false, applied: false },
   { hasTable: true, applied: true },
 ])("orders the real deployment script safely: %j", ({ hasTable, applied }) => {
-  const commands = rehearse(hasTable, applied),
-    stop = commands.findIndex((line) => line.endsWith("stop api zero-cache")),
-    migrate = commands.findIndex((line) =>
-      /run --rm(?: -e HOME_HUB_LOGGING_CUTOVER_READY=1)? migrate$/.test(line),
-    ),
-    backend = commands.findIndex((line) =>
-      line.endsWith("up -d --no-build --wait api zero-cache"),
-    ),
-    web = commands.findIndex((line) =>
-      line.endsWith("up -d --no-build --wait web"),
-    );
+  const commands = rehearse(hasTable, applied);
+  const stop = commands.findIndex((line) =>
+    line.endsWith("stop api zero-cache"),
+  );
+  const migrate = commands.findIndex((line) =>
+    /run --rm(?: -e HOME_HUB_LOGGING_CUTOVER_READY=1)? migrate$/.test(line),
+  );
+  const backend = commands.findIndex((line) =>
+    line.endsWith("up -d --no-build --wait api zero-cache"),
+  );
+  const web = commands.findIndex((line) =>
+    line.endsWith("up -d --no-build --wait web"),
+  );
   expect(migrate).toBeGreaterThan(-1);
   expect(backend).toBeGreaterThan(migrate);
   expect(web).toBeGreaterThan(backend);
   expect(commands[migrate]?.includes("HOME_HUB_LOGGING_CUTOVER_READY=1")).toBe(
     !applied,
   );
+
   if (applied) {
     expect(stop).toBe(-1);
     // The locked bootstrap takes the routine pre-update backup.

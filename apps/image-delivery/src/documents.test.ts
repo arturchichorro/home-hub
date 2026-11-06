@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { handleDocumentRequest } from "./documents";
 
 const secret = "isolated-document-test-secret-32bytes";
+
 const cap: DocumentRead = {
   householdId: crypto.randomUUID(),
   documentId: crypto.randomUUID(),
@@ -16,46 +17,51 @@ const cap: DocumentRead = {
   disposition: "inline",
   expiresAt: Math.floor(Date.now() / 1000) + 900,
 };
+
 const bytes = new TextEncoder().encode("%PDF-document");
-const head = vi.fn(async () => ({ size: bytes.length, httpEtag: '"etag"' })),
-  get = vi.fn(
-    async (
-      _key: string,
-      opts?: { range: { offset: number; length: number } },
-    ) => ({
-      body: new Blob([
-        opts
-          ? bytes.slice(
-              opts.range.offset,
-              opts.range.offset + opts.range.length,
-            )
-          : bytes,
-      ]).stream(),
-    }),
-  );
+
+const head = vi.fn(async () => ({ size: bytes.length, httpEtag: '"etag"' }));
+
+const get = vi.fn(
+  async (
+    _key: string,
+    opts?: { range: { offset: number; length: number } },
+  ) => ({
+    body: new Blob([
+      opts
+        ? bytes.slice(opts.range.offset, opts.range.offset + opts.range.length)
+        : bytes,
+    ]).stream(),
+  }),
+);
+
 const env = {
   IMAGE_DELIVERY_SIGNING_SECRET: secret,
   RECIPE_IMAGES: { head, get },
 };
+
 async function request(
   headers?: HeadersInit,
   method = "GET",
   override: Partial<DocumentRead> = {},
   tamper = false,
 ) {
-  const c = { ...cap, ...override },
-    url = new URL("https://files.example/documents/files");
+  const c = { ...cap, ...override };
+  const url = new URL("https://files.example/documents/files");
   url.searchParams.set("capability", JSON.stringify(c));
   url.searchParams.set(
     "signature",
     await signDocumentRead(tamper ? cap : c, secret),
   );
+
   return handleDocumentRequest(
     new Request(url, { method, ...(headers ? { headers } : {}) }),
     env,
   );
 }
+
 beforeEach(() => vi.clearAllMocks());
+
 describe("signed document delivery", () => {
   it("serves isolated PDFs, no-store and native ranges", async () => {
     const r = await request({ Range: "bytes=1-4" });
@@ -99,6 +105,7 @@ describe("signed document delivery", () => {
     const url = new URL("https://files.example/documents/files");
     url.searchParams.set("capability", JSON.stringify(c));
     url.searchParams.set("signature", await signDocumentRead(c, secret));
+
     for (const get of [
       async () => null,
       async () => {
@@ -133,18 +140,27 @@ describe("signed document delivery", () => {
     const url = new URL("https://files.example/documents/files");
     url.searchParams.set("capability", JSON.stringify(c));
     url.searchParams.set("signature", await signDocumentRead(c, secret));
-    const stored = new Map<string, ArrayBuffer>(),
-      transform = vi.fn(),
-      output = vi.fn(async () => ({
-        response: () => new Response("small-webp"),
-      }));
+
+    const stored = new Map<string, ArrayBuffer>();
+    const transform = vi.fn();
+    const output = vi.fn(async () => ({
+      response: () => new Response("small-webp"),
+    }));
     const bucket = {
       get: vi.fn(async (key: string) => {
         const cached = stored.get(key);
-        if (cached) return { body: new Blob([cached]).stream() };
-        if (key.endsWith(".webp")) return null;
+
+        if (cached) {
+          return { body: new Blob([cached]).stream() };
+        }
+
+        if (key.endsWith(".webp")) {
+          return null;
+        }
+
         return { body: new Blob(["large-original"]).stream() };
       }),
+
       put: vi.fn(async (key: string, data: ArrayBuffer) => {
         stored.set(key, data);
       }),
@@ -153,6 +169,7 @@ describe("signed document delivery", () => {
       input: () => ({
         transform: (options: unknown) => {
           transform(options);
+
           return { output };
         },
       }),
@@ -179,6 +196,7 @@ describe("signed document delivery", () => {
       ).text(),
     ).toBe("small-webp");
     expect(transform).toHaveBeenCalledTimes(1);
+
     const unavailable = await handleDocumentRequest(new Request(url), {
       IMAGE_DELIVERY_SIGNING_SECRET: secret,
       RECIPE_IMAGES: { get: async () => null },
@@ -204,7 +222,8 @@ describe("signed document delivery", () => {
       { contentType: "image/png" },
       { hash: "b".repeat(64) },
       { disposition: "attachment" as const },
-    ])
+    ]) {
       expect((await request(undefined, "GET", value, true)).status).toBe(403);
+    }
   });
 });

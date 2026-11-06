@@ -30,17 +30,24 @@ function createFakeDatabase({
         findFirst: findUser,
       },
     },
+
     select: (_selection: unknown) => {
       const rows = topSortKey === undefined ? [] : [{ sortKey: topSortKey }];
       const builder = {
         from: (_table: unknown) => builder,
+
         where: (_condition: unknown) => builder,
+
         orderBy: (..._order: unknown[]) => builder,
+
         limit: (_limit: number) => builder,
+
         execute: async () => rows,
       };
+
       return builder;
     },
+
     insert: (table: unknown) => ({
       values: async (values: unknown) => {
         inserted.push({ table, values });
@@ -80,6 +87,7 @@ describe("create household service", () => {
     });
 
     expect(result.kind).toBe("success");
+
     if (result.kind !== "success") {
       throw new Error("Expected household creation to succeed");
     }

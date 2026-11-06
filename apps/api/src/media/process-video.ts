@@ -21,12 +21,15 @@ import {
 import { InvalidMediaUploadError } from "./process-image";
 
 const exec = promisify(execFile);
+
 const options = {
   timeout: 30_000,
   killSignal: "SIGKILL" as const,
   maxBuffer: 1024 * 1024,
 };
+
 const invalid = () => new InvalidMediaUploadError();
+
 type Probe = {
   streams?: {
     codec_type?: string;
@@ -39,26 +42,42 @@ type Probe = {
   }[];
   format?: { duration?: string; format_name?: string };
 };
+
 export function validateVideoProbe(
   raw: unknown,
   contentType: VideoContentType,
 ) {
-  if (!raw || typeof raw !== "object") throw invalid();
-  const p = raw as Probe,
-    streams = p.streams;
+  if (!raw || typeof raw !== "object") {
+    throw invalid();
+  }
+
+  const p = raw as Probe;
+  const streams = p.streams;
+
   if (
     !Array.isArray(streams) ||
     streams.length > 2 ||
     streams.some((s) => s.codec_type !== "video" && s.codec_type !== "audio")
-  )
+  ) {
     throw invalid();
-  const video = streams.filter((s) => s.codec_type === "video"),
-    audio = streams.filter((s) => s.codec_type === "audio");
-  if (video.length !== 1 || audio.length > 1) throw invalid();
+  }
+
+  const video = streams.filter((s) => s.codec_type === "video");
+  const audio = streams.filter((s) => s.codec_type === "audio");
+
+  if (video.length !== 1 || audio.length > 1) {
+    throw invalid();
+  }
+
   const v = video[0];
-  if (!v) throw invalid();
+
+  if (!v) {
+    throw invalid();
+  }
+
   const durationMs = Math.round(Number(p.format?.duration) * 1000);
   const mp4 = contentType === "video/mp4";
+
   if (
     !p.format?.format_name?.includes(mp4 ? "mov" : "matroska") ||
     !(mp4 ? ["h264"] : ["vp8", "vp9"]).includes(v.codec_name ?? "") ||
@@ -67,8 +86,10 @@ export function validateVideoProbe(
         audio[0]?.codec_name ?? "",
       )) ||
     !["yuv420p", "yuvj420p"].includes(v.pix_fmt ?? "")
-  )
+  ) {
     throw invalid();
+  }
+
   if (
     !Number.isFinite(durationMs) ||
     durationMs < 1 ||
@@ -79,23 +100,32 @@ export function validateVideoProbe(
     (v.height ?? 0) < 1 ||
     (v.width ?? 0) > 4096 ||
     (v.height ?? 0) > 4096
-  )
+  ) {
     throw invalid();
+  }
+
   const rotation = Number(
     v.side_data_list?.find((s) => s.rotation !== undefined)?.rotation ??
       v.tags?.rotate ??
       0,
   );
-  if (!Number.isFinite(rotation) || rotation % 90 !== 0) throw invalid();
+
+  if (!Number.isFinite(rotation) || rotation % 90 !== 0) {
+    throw invalid();
+  }
+
   return {
     width: (Math.abs(rotation) % 180 ? v.height : v.width) as number,
     height: (Math.abs(rotation) % 180 ? v.width : v.height) as number,
     durationMs,
   };
 }
+
 // Two independent, bounded jobs; concurrent confirmations cannot consume unlimited RAM/CPU.
 let active = 0;
+
 export class VideoProcessingBusyError extends Error {}
+
 export async function processMediaVideo({
   client,
   bucket,
@@ -109,16 +139,26 @@ export async function processMediaVideo({
   contentType: VideoContentType;
   byteSize: number;
 }) {
-  if (active >= 2) throw new VideoProcessingBusyError("Video processor busy");
+  if (active >= 2) {
+    throw new VideoProcessingBusyError("Video processor busy");
+  }
+
   active++;
+
   let directory: string | undefined;
+
   try {
-    if (byteSize < 1 || byteSize > maxVideoByteSize) throw invalid();
+    if (byteSize < 1 || byteSize > maxVideoByteSize) {
+      throw invalid();
+    }
+
     directory = await mkdtemp(join(tmpdir(), "home-hub-video-"));
-    const input = join(directory, "input"),
-      handle = await open(input, "wx", 0o600);
+
+    const input = join(directory, "input");
+    const handle = await open(input, "wx", 0o600);
     const hash = createHash("sha256");
     let size = 0;
+
     try {
       const response = await client.send(
         new GetObjectCommand({
@@ -127,15 +167,27 @@ export async function processMediaVideo({
         }),
         { abortSignal: AbortSignal.timeout(30000) },
       );
-      if (!response.Body || response.ContentLength !== byteSize)
+
+      if (!response.Body || response.ContentLength !== byteSize) {
         throw invalid();
+      }
+
       const reader = response.Body.transformToWebStream().getReader();
+
       try {
         for (;;) {
           const chunk = await reader.read();
-          if (chunk.done) break;
+
+          if (chunk.done) {
+            break;
+          }
+
           size += chunk.value.length;
-          if (size > byteSize) throw invalid();
+
+          if (size > byteSize) {
+            throw invalid();
+          }
+
           hash.update(chunk.value);
           await handle.writeFile(chunk.value);
         }
@@ -145,8 +197,13 @@ export async function processMediaVideo({
     } finally {
       await handle.close();
     }
-    if (size !== byteSize) throw invalid();
+
+    if (size !== byteSize) {
+      throw invalid();
+    }
+
     let probe: unknown;
+
     try {
       const result = await exec(
         "ffprobe",
@@ -171,11 +228,12 @@ export async function processMediaVideo({
     } catch {
       throw invalid();
     }
-    const metadata = validateVideoProbe(probe, contentType),
-      videoVersion = hash.digest("hex"),
-      prefix = `${mediaOriginalObjectKey(identity)}/video/${videoVersion}`;
-    const extension = contentType === "video/mp4" ? "mp4" : "webm",
-      playback = join(directory, `playback.${extension}`);
+
+    const metadata = validateVideoProbe(probe, contentType);
+    const videoVersion = hash.digest("hex");
+    const prefix = `${mediaOriginalObjectKey(identity)}/video/${videoVersion}`;
+    const extension = contentType === "video/mp4" ? "mp4" : "webm";
+    const playback = join(directory, `playback.${extension}`);
     const common = [
       "-nostdin",
       "-v",
@@ -193,6 +251,7 @@ export async function processMediaVideo({
       "-i",
       input,
     ];
+
     try {
       // Copy encoded streams, not a transcode. The signed playback object is never
       // writable through the original's PUT capability. Hash-versioned paths also
@@ -214,8 +273,11 @@ export async function processMediaVideo({
         ],
         options,
       );
-      if ((await stat(playback)).size > maxVideoByteSize + 1024 * 1024)
+
+      if ((await stat(playback)).size > maxVideoByteSize + 1024 * 1024) {
         throw invalid();
+      }
+
       for (const [variant, width] of [
         ["thumbnail", 768],
         ["viewer", 1920],
@@ -244,8 +306,9 @@ export async function processMediaVideo({
     } catch {
       throw invalid();
     }
+
     // Storage failures remain retryable infrastructure failures, not codec errors.
-    for (const variant of ["thumbnail", "viewer"] as const)
+    for (const variant of ["thumbnail", "viewer"] as const) {
       await client.send(
         new PutObjectCommand({
           Bucket: bucket,
@@ -255,6 +318,8 @@ export async function processMediaVideo({
         }),
         { abortSignal: AbortSignal.timeout(30000) },
       );
+    }
+
     const body = await readFile(playback);
     await client.send(
       new PutObjectCommand({
@@ -265,10 +330,13 @@ export async function processMediaVideo({
       }),
       { abortSignal: AbortSignal.timeout(30000) },
     );
+
     return { ...metadata, videoVersion };
   } finally {
     try {
-      if (directory) await rm(directory, { recursive: true, force: true });
+      if (directory) {
+        await rm(directory, { recursive: true, force: true });
+      }
     } finally {
       active--;
     }

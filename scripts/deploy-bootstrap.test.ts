@@ -12,12 +12,14 @@ import { expect, it } from "vitest";
 
 it("boots from the installed legacy script, refuses unsafe migration, then reconnects into the fresh locked release procedure", () => {
   const dir = mkdtempSync(join(tmpdir(), "home-hub-bootstrap-"));
+
   try {
-    const bin = join(dir, "bin"),
-      scripts = join(dir, "scripts"),
-      log = join(dir, "commands.log");
+    const bin = join(dir, "bin");
+    const scripts = join(dir, "scripts");
+    const log = join(dir, "commands.log");
     mkdirSync(bin);
     mkdirSync(scripts);
+
     const local = (text: string) =>
       text
         .replace('"/opt/home-hub"', JSON.stringify(dir))
@@ -26,13 +28,13 @@ it("boots from the installed legacy script, refuses unsafe migration, then recon
           JSON.stringify(join(dir, "deploy.lock")),
         );
     const entry = readFileSync(
-        new URL("./deploy-production.sh", import.meta.url),
-        "utf8",
-      ),
-      release = readFileSync(
-        new URL("./deploy-release.sh", import.meta.url),
-        "utf8",
-      );
+      new URL("./deploy-production.sh", import.meta.url),
+      "utf8",
+    );
+    const release = readFileSync(
+      new URL("./deploy-release.sh", import.meta.url),
+      "utf8",
+    );
     writeFileSync(
       join(scripts, "deploy-production.sh"),
       local(
@@ -63,6 +65,7 @@ it("boots from the installed legacy script, refuses unsafe migration, then recon
       '#!/usr/bin/env bash\nprintf "backup\\n" >> "$TEST_LOG"\n',
       { mode: 0o755 },
     );
+
     const mock = (name: string, body: string) =>
       writeFileSync(
         join(bin, name),
@@ -118,16 +121,19 @@ it("boots from the installed legacy script, refuses unsafe migration, then recon
         stdio: "pipe",
       },
     );
-    const commands = readFileSync(log, "utf8").trim().split("\n"),
-      refused = commands.indexOf("migration-refused-before-sql"),
-      stop = commands.findIndex((line) => line.endsWith("stop api zero-cache")),
-      applied = commands.indexOf("migration-applied"),
-      backend = commands.findIndex((line) =>
-        line.endsWith("up -d --no-build --wait api zero-cache"),
-      ),
-      web = commands.findIndex((line) =>
-        line.endsWith("up -d --no-build --wait web"),
-      );
+
+    const commands = readFileSync(log, "utf8").trim().split("\n");
+    const refused = commands.indexOf("migration-refused-before-sql");
+    const stop = commands.findIndex((line) =>
+      line.endsWith("stop api zero-cache"),
+    );
+    const applied = commands.indexOf("migration-applied");
+    const backend = commands.findIndex((line) =>
+      line.endsWith("up -d --no-build --wait api zero-cache"),
+    );
+    const web = commands.findIndex((line) =>
+      line.endsWith("up -d --no-build --wait web"),
+    );
     expect(commands.filter((line) => line === "ssh")).toHaveLength(2);
     expect(commands.filter((line) => line === "lock")).toHaveLength(2);
     expect(refused).toBeGreaterThan(-1);

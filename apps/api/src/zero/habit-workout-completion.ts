@@ -1,6 +1,7 @@
 import { type SQL, sql } from "drizzle-orm";
 
 type Executor = { execute: (query: SQL) => PromiseLike<unknown> };
+
 export async function lockHabitWorkoutCompletion(
   db: Executor,
   householdId: string,

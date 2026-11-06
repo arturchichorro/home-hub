@@ -12,6 +12,7 @@ export const Route = createFileRoute("/_authenticated/households/$householdId")(
         queries.modules.byHousehold({ householdId: params.householdId }),
       );
     },
+
     component: HouseholdRoute,
   },
 );

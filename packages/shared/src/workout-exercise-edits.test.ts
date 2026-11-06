@@ -8,13 +8,19 @@ import {
 } from "./workouts";
 
 const before = starterWorkouts[0]?.exercises ?? [];
+
 const first = before[0];
-if (!first) throw new Error("seed");
+
+if (!first) {
+  throw new Error("seed");
+}
+
 const scope = {
   householdId: crypto.randomUUID(),
   workoutId: crypto.randomUUID(),
   optimisticTimestamp: 1,
 };
+
 describe("normalized workout exercise edits", () => {
   it("sends only locally changed fields, never untouched exercise values", () => {
     const after = before.map((e) =>
@@ -66,6 +72,7 @@ describe("normalized workout exercise edits", () => {
         changes: { exercises: before },
       }).success,
     ).toBe(false);
+
     const args = {
       ...scope,
       creates: [],
@@ -73,6 +80,7 @@ describe("normalized workout exercise edits", () => {
       deletes: [],
     };
     expect(editWorkoutExercisesSchema.safeParse(args).success).toBe(true);
+
     for (const patch of [
       { updates: [{ exerciseId: first.id, changes: {} }] },
       {
@@ -88,9 +96,10 @@ describe("normalized workout exercise edits", () => {
       { deletes: [first.id] },
       { creates: [{ ...first }] },
       { updates: [], creates: [], deletes: [] },
-    ])
+    ]) {
       expect(
         editWorkoutExercisesSchema.safeParse({ ...args, ...patch }).success,
       ).toBe(false);
+    }
   });
 });

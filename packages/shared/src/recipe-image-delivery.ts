@@ -17,6 +17,7 @@ export const recipeImageVariantTransforms = {
 >;
 
 export const recipeImageDeliveryCapabilityLifetimeSeconds = 3_600;
+
 export const recipeImageProcessingCapabilityLifetimeSeconds = 300;
 
 export type RecipeImageIdentity = {
@@ -88,6 +89,7 @@ function processingCapabilityPayload({
 
 async function importSigningKey(secret: string) {
   const secretBytes = new TextEncoder().encode(secret);
+
   if (secretBytes.byteLength < 32) {
     throw new Error("Image delivery signing secret must be at least 32 bytes");
   }
@@ -108,12 +110,16 @@ function bytesToHex(bytes: ArrayBuffer): string {
 }
 
 function hexToBytes(hex: string): Uint8Array<ArrayBuffer> | undefined {
-  if (!/^[0-9a-f]{64}$/u.test(hex)) return undefined;
+  if (!/^[0-9a-f]{64}$/u.test(hex)) {
+    return undefined;
+  }
 
   const bytes = new Uint8Array(hex.length / 2);
+
   for (let index = 0; index < bytes.length; index += 1) {
     bytes[index] = Number.parseInt(hex.slice(index * 2, index * 2 + 2), 16);
   }
+
   return bytes;
 }
 
@@ -130,6 +136,7 @@ export async function signRecipeImageDeliveryCapability({
     key,
     new TextEncoder().encode(capabilityPayload(capability)),
   );
+
   return bytesToHex(signature);
 }
 
@@ -154,9 +161,13 @@ export async function verifyRecipeImageDeliveryCapability({
   }
 
   const signatureBytes = hexToBytes(signature);
-  if (!signatureBytes) return false;
+
+  if (!signatureBytes) {
+    return false;
+  }
 
   const key = await importSigningKey(secret);
+
   return crypto.subtle.verify(
     "HMAC",
     key,
@@ -178,6 +189,7 @@ export async function signRecipeImageProcessingCapability({
     key,
     new TextEncoder().encode(processingCapabilityPayload(capability)),
   );
+
   return bytesToHex(signature);
 }
 
@@ -202,9 +214,13 @@ export async function verifyRecipeImageProcessingCapability({
   }
 
   const signatureBytes = hexToBytes(signature);
-  if (!signatureBytes) return false;
+
+  if (!signatureBytes) {
+    return false;
+  }
 
   const key = await importSigningKey(secret);
+
   return crypto.subtle.verify(
     "HMAC",
     key,

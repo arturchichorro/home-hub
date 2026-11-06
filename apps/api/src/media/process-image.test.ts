@@ -8,7 +8,9 @@ import { InvalidMediaUploadError, processMediaImage } from "./process-image";
 import { signMediaRead } from "./sign-read";
 
 const now = new Date("2026-08-25T12:00:00Z");
+
 const secret = "media-service-secret-at-least-32-bytes-long";
+
 const input = {
   householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
   recipeId: "8d46a4c4-4845-4a6d-a937-139633ae1bb9",
@@ -17,6 +19,7 @@ const input = {
   objectKey:
     "households/d92e5c4e-1c68-4942-9cc9-710207661bca/recipes/671874b1-df9d-4a91-8f3c-8055473e8aa2/671874b1-df9d-4a91-8f3c-8055473e8aa2",
 };
+
 const identity = recipeImageMediaIdentity(input);
 
 describe("feature-neutral media services", () => {
@@ -61,11 +64,13 @@ describe("feature-neutral media services", () => {
       byteSize: 42,
       fetchRequest,
     });
+
     const [url, options] = fetchRequest.mock.calls[0] as unknown as [
       URL,
       RequestInit,
     ];
     expect(url.pathname).toBe("/internal/media/images/process");
+
     const { signature, ...capability } = JSON.parse(options.body as string);
     expect(
       await verifyMediaCapability({
@@ -89,12 +94,14 @@ describe("feature-neutral media services", () => {
     await expect(
       processMediaImage({
         ...base,
+
         fetchRequest: async () => new Response(null, { status: 422 }),
       }),
     ).rejects.toBeInstanceOf(InvalidMediaUploadError);
     await expect(
       processMediaImage({
         ...base,
+
         fetchRequest: async () => new Response(null, { status: 500 }),
       }),
     ).rejects.toThrow("processing failed");

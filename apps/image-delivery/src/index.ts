@@ -35,6 +35,7 @@ function originalObjectKey(identity: RecipeImageIdentity | MediaIdentity) {
     ? mediaOriginalObjectKey(identity)
     : recipeImageOriginalObjectKey(identity);
 }
+
 function derivativeObjectKey(
   identity: RecipeImageIdentity | (MediaIdentity & { videoVersion?: string }),
   variant: RecipeImageStoredVariant,
@@ -101,7 +102,9 @@ type CacheLike = Pick<Cache, "match" | "put">;
 
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
 const webpQuality = 82;
+
 const transformVersion = "webp-q82-v3";
 
 function isRecipeImageVariant(value: string): value is RecipeImageVariant {
@@ -116,9 +119,13 @@ function isStoredVariant(
 
 function parseCapability(url: URL): RecipeImageDeliveryCapability | undefined {
   const path = url.pathname.split("/").filter(Boolean);
-  if (path.length !== 5 || path[0] !== "recipe-images") return undefined;
+
+  if (path.length !== 5 || path[0] !== "recipe-images") {
+    return undefined;
+  }
 
   const [, variant, householdId, recipeId, imageId] = path;
+
   if (
     !variant ||
     !isRecipeImageVariant(variant) ||
@@ -133,7 +140,10 @@ function parseCapability(url: URL): RecipeImageDeliveryCapability | undefined {
   }
 
   const expiresAt = Number(url.searchParams.get("expires"));
-  if (!Number.isSafeInteger(expiresAt)) return undefined;
+
+  if (!Number.isSafeInteger(expiresAt)) {
+    return undefined;
+  }
 
   return { expiresAt, householdId, imageId, recipeId, variant };
 }
@@ -146,12 +156,14 @@ function privateDeliveryResponse(
   headers.set("Cache-Control", `private, max-age=${maxAgeSeconds}`);
   headers.set("Content-Disposition", "inline");
   headers.set("X-Content-Type-Options", "nosniff");
+
   return new Response(response.body, { headers, status: response.status });
 }
 
 function edgeCacheResponse(response: Response): Response {
   const headers = new Headers(response.headers);
   headers.set("Cache-Control", "public, max-age=31536000, immutable");
+
   return new Response(response.body, { headers, status: response.status });
 }
 
@@ -164,6 +176,7 @@ function errorResponse(status: 400 | 403 | 404 | 405 | 422 | 500): Response {
     422: "Unsupported or invalid image upload",
     500: "Image unavailable",
   } as const;
+
   return new Response(messages[status], {
     status,
     headers: {
@@ -188,16 +201,21 @@ async function transformOriginal({
   const original = source
     ? { body: new Blob([source]).stream() }
     : await env.RECIPE_IMAGES.get(originalObjectKey(identity));
-  if (!original) return undefined;
+
+  if (!original) {
+    return undefined;
+  }
 
   const transformed = (
     await env.IMAGES.input(original.body)
       .transform(recipeImageVariantTransforms[variant])
       .output({ format: "image/webp", quality: webpQuality })
   ).response();
+
   if (!transformed.ok || !transformed.body) {
     throw new Error("Image transform returned an invalid response");
   }
+
   return transformed;
 }
 
@@ -221,7 +239,11 @@ async function generateAndStoreDerivative(
   variant: RecipeImageStoredVariant,
 ): Promise<void> {
   const transformed = await transformOriginal({ env, identity, variant });
-  if (!transformed) throw new Error("Original image not found");
+
+  if (!transformed) {
+    throw new Error("Original image not found");
+  }
+
   await storeDerivative(
     env,
     identity,
@@ -235,8 +257,12 @@ function parseProcessingRequest(
 ):
   | { capability: RecipeImageProcessingCapability; signature: string }
   | undefined {
-  if (!value || typeof value !== "object") return undefined;
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
   const body = value as Record<string, unknown>;
+
   if (
     typeof body.householdId !== "string" ||
     !uuidPattern.test(body.householdId) ||
@@ -249,6 +275,7 @@ function parseProcessingRequest(
   ) {
     return undefined;
   }
+
   return {
     capability: {
       expiresAt: body.expiresAt as number,
@@ -269,22 +296,31 @@ export async function handleRecipeImageProcessingRequest({
   nowSeconds?: number;
   request: Request;
 }): Promise<Response> {
-  if (request.method !== "POST") return errorResponse(405);
+  if (request.method !== "POST") {
+    return errorResponse(405);
+  }
 
   let parsed: ReturnType<typeof parseProcessingRequest>;
+
   try {
     parsed = parseProcessingRequest(await request.json());
   } catch {
     return errorResponse(400);
   }
-  if (!parsed) return errorResponse(400);
+
+  if (!parsed) {
+    return errorResponse(400);
+  }
 
   const authorized = await verifyRecipeImageProcessingCapability({
     ...parsed,
     nowSeconds,
     secret: env.IMAGE_DELIVERY_SIGNING_SECRET,
   });
-  if (!authorized) return errorResponse(403);
+
+  if (!authorized) {
+    return errorResponse(403);
+  }
 
   try {
     await Promise.all(
@@ -292,9 +328,11 @@ export async function handleRecipeImageProcessingRequest({
         generateAndStoreDerivative(env, parsed.capability, variant),
       ),
     );
+
     return new Response(null, { status: 204 });
   } catch {
     console.error(JSON.stringify({ event: "recipe_image_processing_failed" }));
+
     return errorResponse(500);
   }
 }
@@ -312,12 +350,17 @@ export async function handleRecipeImageDeliveryRequest({
   nowSeconds?: number;
   request: Request;
 }): Promise<Response> {
-  if (request.method !== "GET") return errorResponse(405);
+  if (request.method !== "GET") {
+    return errorResponse(405);
+  }
 
   const url = new URL(request.url);
   const capability = parseCapability(url);
   const signature = url.searchParams.get("signature");
-  if (!capability || !signature) return errorResponse(400);
+
+  if (!capability || !signature) {
+    return errorResponse(400);
+  }
 
   const authorized = await verifyRecipeImageDeliveryCapability({
     capability,
@@ -325,7 +368,11 @@ export async function handleRecipeImageDeliveryRequest({
     secret: env.IMAGE_DELIVERY_SIGNING_SECRET,
     signature,
   });
-  if (!authorized) return errorResponse(403);
+
+  if (!authorized) {
+    return errorResponse(403);
+  }
+
   const privateMaxAgeSeconds = Math.min(
     recipeImageDeliveryCapabilityLifetimeSeconds,
     capability.expiresAt - nowSeconds,
@@ -333,6 +380,7 @@ export async function handleRecipeImageDeliveryRequest({
 
   const cacheKeyUrl = new URL(`${url.origin}${url.pathname}`);
   cacheKeyUrl.searchParams.set("transform", transformVersion);
+
   return serveImage({
     cache,
     context,
@@ -365,13 +413,17 @@ async function serveImage({
     method: "GET",
   });
   const cached = await cache.match(cacheKey);
-  if (cached) return privateDeliveryResponse(cached, privateMaxAgeSeconds);
+
+  if (cached) {
+    return privateDeliveryResponse(cached, privateMaxAgeSeconds);
+  }
 
   try {
     if (isStoredVariant(variant)) {
       const stored = await env.RECIPE_IMAGES.get(
         derivativeObjectKey(identity, variant),
       );
+
       if (stored) {
         const response = new Response(stored.body, {
           headers: { "Content-Type": "image/webp" },
@@ -379,22 +431,32 @@ async function serveImage({
         context.waitUntil(
           cache.put(cacheKey, edgeCacheResponse(response.clone())),
         );
+
         return privateDeliveryResponse(response, privateMaxAgeSeconds);
       }
     }
 
-    if ("videoVersion" in identity && identity.videoVersion)
+    if ("videoVersion" in identity && identity.videoVersion) {
       return errorResponse(404);
+    }
+
     const transformed = await transformOriginal({
       env,
       identity,
       variant: variant,
     });
-    if (!transformed) return errorResponse(404);
+
+    if (!transformed) {
+      return errorResponse(404);
+    }
 
     if (isStoredVariant(variant)) {
       const derivativeBody = transformed.clone().body;
-      if (!derivativeBody) return errorResponse(500);
+
+      if (!derivativeBody) {
+        return errorResponse(500);
+      }
+
       context.waitUntil(
         storeDerivative(env, identity, variant, derivativeBody),
       );
@@ -402,9 +464,11 @@ async function serveImage({
 
     const cachedResponse = edgeCacheResponse(transformed.clone());
     context.waitUntil(cache.put(cacheKey, cachedResponse));
+
     return privateDeliveryResponse(transformed, privateMaxAgeSeconds);
   } catch {
     console.error(JSON.stringify({ event: "recipe_image_transform_failed" }));
+
     return errorResponse(500);
   }
 }
@@ -422,19 +486,33 @@ export async function handleMediaImageDeliveryRequest({
   request: Request;
   nowSeconds?: number;
 }): Promise<Response> {
-  if (request.method !== "GET") return errorResponse(405);
+  if (request.method !== "GET") {
+    return errorResponse(405);
+  }
+
   const url = new URL(request.url);
-  if (url.pathname !== "/media/images") return errorResponse(400);
+
+  if (url.pathname !== "/media/images") {
+    return errorResponse(400);
+  }
+
   let raw: unknown;
+
   try {
     raw = JSON.parse(url.searchParams.get("capability") ?? "");
   } catch {
     return errorResponse(400);
   }
+
   const parsed = mediaReadCapabilitySchema.safeParse(raw);
   const signature = url.searchParams.get("signature");
-  if (!parsed.success || !signature) return errorResponse(400);
+
+  if (!parsed.success || !signature) {
+    return errorResponse(400);
+  }
+
   const capability = parsed.data;
+
   if (
     !(await verifyMediaCapability({
       capability,
@@ -443,8 +521,10 @@ export async function handleMediaImageDeliveryRequest({
       secret: env.IMAGE_DELIVERY_SIGNING_SECRET,
       signature,
     }))
-  )
+  ) {
     return errorResponse(403);
+  }
+
   // Partition by immutable storage identity + transform, not the shared route or
   // a caller's unsigned query parameters. Authorization always precedes cache.
   const cacheKeyUrl = new URL(
@@ -455,9 +535,13 @@ export async function handleMediaImageDeliveryRequest({
     "storage",
     capability.storageRecipeId ?? "media",
   );
-  if (capability.videoVersion)
+
+  if (capability.videoVersion) {
     cacheKeyUrl.searchParams.set("video", capability.videoVersion);
+  }
+
   cacheKeyUrl.searchParams.set("transform", transformVersion);
+
   return serveImage({
     cache,
     context,
@@ -481,19 +565,31 @@ export async function handleMediaImageProcessingRequest({
   request: Request;
   nowSeconds?: number;
 }): Promise<Response> {
-  if (request.method !== "POST") return errorResponse(405);
+  if (request.method !== "POST") {
+    return errorResponse(405);
+  }
+
   let raw: unknown;
+
   try {
     raw = await request.json();
   } catch {
     return errorResponse(400);
   }
-  if (!raw || typeof raw !== "object") return errorResponse(400);
+
+  if (!raw || typeof raw !== "object") {
+    return errorResponse(400);
+  }
+
   const { signature, ...unsigned } = raw as Record<string, unknown>;
   const parsed = mediaProcessingCapabilitySchema.safeParse(unsigned);
-  if (!parsed.success || typeof signature !== "string")
+
+  if (!parsed.success || typeof signature !== "string") {
     return errorResponse(400);
+  }
+
   const capability = parsed.data;
+
   if (
     !(await verifyMediaCapability({
       capability,
@@ -502,13 +598,19 @@ export async function handleMediaImageProcessingRequest({
       secret: env.IMAGE_DELIVERY_SIGNING_SECRET,
       signature,
     }))
-  )
+  ) {
     return errorResponse(403);
+  }
+
   try {
     const original = await env.RECIPE_IMAGES.get(
       mediaOriginalObjectKey(capability),
     );
-    if (!original) return errorResponse(404);
+
+    if (!original) {
+      return errorResponse(404);
+    }
+
     const source = await readImageBytes(original.body, capability.byteSize);
     validateStillImage(source, capability.contentType);
     // Both variants decode the same validated snapshot, not re-fetchable PUT bytes.
@@ -520,7 +622,11 @@ export async function handleMediaImageProcessingRequest({
           variant,
           source,
         });
-        if (!transformed) throw new Error("Original media missing");
+
+        if (!transformed) {
+          throw new Error("Original media missing");
+        }
+
         await storeDerivative(
           env,
           capability,
@@ -529,10 +635,15 @@ export async function handleMediaImageProcessingRequest({
         );
       }),
     );
+
     return new Response(null, { status: 204 });
   } catch (error) {
-    if (error instanceof InvalidStillImageError) return errorResponse(422);
+    if (error instanceof InvalidStillImageError) {
+      return errorResponse(422);
+    }
+
     console.error(JSON.stringify({ event: "media_image_processing_failed" }));
+
     return errorResponse(500);
   }
 }
@@ -544,18 +655,29 @@ export default {
     context: ExecutionContextLike,
   ) {
     const path = new URL(request.url).pathname;
-    if (path === "/documents/files") return handleDocumentRequest(request, env);
-    if (path === "/media/videos") return handleVideoRequest(request, env);
-    if (path === "/internal/media/images/process")
+
+    if (path === "/documents/files") {
+      return handleDocumentRequest(request, env);
+    }
+
+    if (path === "/media/videos") {
+      return handleVideoRequest(request, env);
+    }
+
+    if (path === "/internal/media/images/process") {
       return handleMediaImageProcessingRequest({ env, request });
+    }
+
     if (path === "/internal/recipe-images/process") {
       return handleRecipeImageProcessingRequest({ env, request });
     }
+
     const defaultCache = (caches as CacheStorage & { default: Cache }).default;
     const handler =
       path === "/media/images"
         ? handleMediaImageDeliveryRequest
         : handleRecipeImageDeliveryRequest;
+
     return handler({
       cache: defaultCache,
       context,

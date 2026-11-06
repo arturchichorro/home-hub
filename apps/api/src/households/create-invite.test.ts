@@ -7,8 +7,11 @@ import { createHouseholdInviteService } from "./create-invite";
 import { hashInviteToken } from "./invite-token";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const now = new Date("2026-07-28T12:00:00Z");
+
 const expiresAt = new Date("2026-08-04T12:00:00Z");
 
 function createFakeDatabase({
@@ -29,18 +32,25 @@ function createFakeDatabase({
   const selectBuilder = {
     from: (table: unknown) => {
       fromTables.push(table);
+
       return selectBuilder;
     },
+
     where: (condition: unknown) => {
       whereClauses.push(condition);
+
       return selectBuilder;
     },
+
     limit: (limit: unknown) => {
       limits.push(limit);
+
       return selectBuilder;
     },
+
     for: async (strength: unknown) => {
       lockStrengths.push(strength);
+
       return ownerMembershipExists ? [{ id: "membership-id" }] : [];
     },
   };
@@ -51,10 +61,13 @@ function createFakeDatabase({
         findFirst: findUser,
       },
     },
+
     select: (selection: unknown) => {
       selections.push(selection);
+
       return selectBuilder;
     },
+
     insert: (table: unknown) => ({
       values: async (values: unknown) => {
         inserted.push({ table, values });
@@ -143,6 +156,7 @@ describe("create household invite service", () => {
     const result = await createInvite({ userId, householdId });
 
     expect(result.kind).toBe("success");
+
     if (result.kind !== "success") {
       throw new Error("Expected invite creation to succeed");
     }

@@ -60,6 +60,7 @@ describe("public database search path", () => {
 
   it("uses the same policy for Drizzle migrations", async () => {
     vi.stubEnv("DATABASE_URL", databaseUrl);
+
     const { default: config } = await import("../drizzle.config");
 
     expect(config).toMatchObject({

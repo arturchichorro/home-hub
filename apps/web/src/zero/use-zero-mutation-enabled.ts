@@ -5,6 +5,7 @@ export function useZeroMutationEnabled() {
   const connectionState = useConnectionState();
 
   const updateRequired = useUpdateRequired();
+
   return (
     !updateRequired &&
     (connectionState.name === "connected" ||

@@ -9,16 +9,22 @@ function getConnectionPresentation(connectionState: ConnectionState): {
   switch (connectionState.name) {
     case "connected":
       return { label: "Connected", variant: "success" };
+
     case "initializing":
       return { label: "Loading local data…", variant: "warning" };
+
     case "connecting":
       return { label: "Connecting…", variant: "warning" };
+
     case "disconnected":
       return { label: "Offline", variant: "danger" };
+
     case "needs-auth":
       return { label: "Authentication required", variant: "danger" };
+
     case "error":
       return { label: "Synchronization error", variant: "danger" };
+
     case "closed":
       return { label: "Synchronization stopped", variant: "danger" };
   }

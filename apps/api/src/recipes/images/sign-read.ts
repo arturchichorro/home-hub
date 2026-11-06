@@ -47,5 +47,6 @@ export async function signRecipeImageRead({
   );
   url.searchParams.set("expires", String(expiresAt));
   url.searchParams.set("signature", signature);
+
   return url.toString();
 }

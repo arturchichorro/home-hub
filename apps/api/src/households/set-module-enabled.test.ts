@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createSetHouseholdModuleEnabledService } from "./set-module-enabled";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 
 function fakeDb({ user = true, owner = true, setting = true } = {}) {
@@ -17,16 +18,21 @@ function fakeDb({ user = true, owner = true, setting = true } = {}) {
   const selectBuilder = {
     from(table: unknown) {
       tables.push(table);
+
       return selectBuilder;
     },
+
     where() {
       return selectBuilder;
     },
+
     limit() {
       return selectBuilder;
     },
+
     async for(lock: unknown) {
       locks.push(lock);
+
       return tables.at(-1) === householdMembers
         ? owner
           ? [{ id: "owner" }]
@@ -39,11 +45,14 @@ function fakeDb({ user = true, owner = true, setting = true } = {}) {
   const updateBuilder = {
     set(value: unknown) {
       updates.push(value);
+
       return updateBuilder;
     },
+
     where() {
       return updateBuilder;
     },
+
     async returning() {
       return [{ moduleKey: "lists", enabled: false }];
     },
@@ -52,9 +61,12 @@ function fakeDb({ user = true, owner = true, setting = true } = {}) {
     query: {
       users: { findFirst: async () => (user ? { id: userId } : undefined) },
     },
+
     select: () => selectBuilder,
+
     update: () => updateBuilder,
   };
+
   return {
     db: { transaction: vi.fn(async (fn) => fn(tx)) } as unknown as Database,
     locks,

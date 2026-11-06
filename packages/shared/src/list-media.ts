@@ -5,6 +5,7 @@ import {
   stillImageUploadSchema,
   videoContentTypeSchema,
 } from "./media";
+
 export const createListMediaUploadSchema = z.union([
   stillImageUploadSchema,
   z
@@ -16,6 +17,7 @@ export const createListMediaUploadSchema = z.union([
     })
     .strict(),
 ]);
+
 export const listMediaReadRequestSchema = z
   .object({
     requests: z
@@ -32,6 +34,7 @@ export const listMediaReadRequestSchema = z
       .max(100),
   })
   .strict();
+
 export const listMediaUploadResponseSchema = z
   .object({
     attachmentId: z.uuid(),
@@ -54,6 +57,7 @@ export const listMediaUploadResponseSchema = z
       .strict(),
   })
   .strict();
+
 export const confirmListMediaResponseSchema = z
   .object({
     attachment: z
@@ -61,6 +65,7 @@ export const confirmListMediaResponseSchema = z
       .strict(),
   })
   .strict();
+
 export const listMediaReadResponseSchema = z
   .object({
     reads: z.array(
@@ -76,9 +81,11 @@ export const listMediaReadResponseSchema = z
     ),
   })
   .strict();
+
 export const listMediaPageSchema = listDetailArgsSchema
   .extend({ limit: z.number().int().min(1).max(10001) })
   .strict();
+
 export const reorderListMediaSchema = listDetailArgsSchema
   .extend({
     attachmentId: z.uuid(),

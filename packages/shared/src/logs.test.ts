@@ -14,6 +14,7 @@ it("normalizes shared titles and preserves multiline note content", () => {
   expect(cleanLogNote(" \n\t ")).toBe("");
   expect(logTitleSchema.safeParse("   ").success).toBe(false);
 });
+
 it("validates genuine calendar dates, revisions, timezone and note bounds", () => {
   const valid = {
     householdId: crypto.randomUUID(),
@@ -26,18 +27,22 @@ it("validates genuine calendar dates, revisions, timezone and note bounds", () =
     timeZone: "Europe/Lisbon",
   };
   expect(logEntryWriteSchema.safeParse(valid).success).toBe(true);
+
   for (const change of [
     { entryOn: "2026-02-29" },
     { timeZone: "invalid" },
     { note: "x".repeat(20001) },
     { expectedVersion: 0 },
-  ])
+  ]) {
     expect(logEntryWriteSchema.safeParse({ ...valid, ...change }).success).toBe(
       false,
     );
+  }
 });
+
 it("keeps server retry identifiers unpublished and bounds history with membership/module guards", () => {
   expect(schema.tables.logEntries.columns).not.toHaveProperty("lastWriteId");
+
   const query = queries.logs.history.fn({
     ctx: { userId: crypto.randomUUID() },
     args: { householdId: crypto.randomUUID(), logId: crypto.randomUUID() },

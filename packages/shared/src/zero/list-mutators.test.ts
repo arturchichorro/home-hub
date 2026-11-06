@@ -7,16 +7,27 @@ import type { Schema } from "./schema.gen";
 const mutators = defineMutatorsWithType<Schema>()({
   lists: listMutatorDefinitions,
 }).lists;
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const listId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+
 const otherListId = "5944cb0d-931a-4723-b981-77eacb122314";
+
 const foreignHouseholdId = "e467b00a-5f80-4c13-aa5b-d2e59996dd82";
+
 const itemId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+
 const otherItemId = "b5b8a5ea-89cb-4c31-a93d-33049ab11c73";
+
 const ctx = { userId: "9f8a6942-f721-499d-957d-7bb3ed1158db" };
+
 const scope = { householdId, listId };
+
 const times = { optimisticTimestamp: 1000, optimisticUpdatedAt: 1000 };
+
 type Row = Record<string, unknown>;
+
 type Table =
   | "households"
   | "householdMembers"
@@ -24,10 +35,15 @@ type Table =
   | "lists"
   | "listItems"
   | "listMedia";
+
 function required<T>(value: T | undefined): T {
-  if (value === undefined) throw new Error("Missing test fixture");
+  if (value === undefined) {
+    throw new Error("Missing test fixture");
+  }
+
   return value;
 }
+
 type Condition =
   | { type: "and"; conditions: Condition[] }
   | {
@@ -50,23 +66,35 @@ function matches(
   condition: Condition | undefined,
   data: Record<Table, Row[]>,
 ): boolean {
-  if (!condition) return true;
-  if (condition.type === "and")
+  if (!condition) {
+    return true;
+  }
+
+  if (condition.type === "and") {
     return condition.conditions.every((entry) => matches(row, entry, data));
+  }
+
   if (condition.type === "correlatedSubquery") {
     const { correlation, subquery } = condition.related;
+
     return data[subquery.table].some((candidate) => {
       const fieldsMatch = correlation.parentField.every(
         (parentField, index) =>
           row[parentField] === candidate[correlation.childField[index] ?? ""],
       );
+
       return fieldsMatch && matches(candidate, subquery.where, data);
     });
   }
-  if (condition.op === "IS" && condition.right.value === null)
+
+  if (condition.op === "IS" && condition.right.value === null) {
     return row[condition.left.name] == null;
-  if (condition.op === "=")
+  }
+
+  if (condition.op === "=") {
     return row[condition.left.name] === condition.right.value;
+  }
+
   throw new Error(`Unsupported test operator ${condition.op}`);
 }
 
@@ -97,11 +125,17 @@ function setup(location: "server" | "client" = "server") {
       writes(table, "insert", row);
       data[table].push({ ...row });
     },
+
     update: async (patch: Row) => {
       writes(table, "update", patch);
+
       const row = data[table].find((entry) => entry.id === patch.id);
-      if (row) Object.assign(row, patch);
+
+      if (row) {
+        Object.assign(row, patch);
+      }
     },
+
     delete: async ({ id }: Row) => {
       writes(table, "delete", { id });
       data[table] = data[table].filter((entry) => entry.id !== id);
@@ -114,6 +148,7 @@ function setup(location: "server" | "client" = "server") {
       listItems: crud("listItems"),
       listMedia: crud("listMedia"),
     },
+
     run: async (query: unknown) => {
       const { ast, format } = query as {
         ast: {
@@ -125,19 +160,26 @@ function setup(location: "server" | "client" = "server") {
         format: { singular: boolean };
       };
       let rows = data[ast.table].filter((row) => matches(row, ast.where, data));
+
       for (const [key, direction] of [...(ast.orderBy ?? [])].reverse()) {
         rows.sort((a, b) => {
           const av = a[key] as string | number;
           const bv = b[key] as string | number;
+
           return (
             (av < bv ? -1 : av > bv ? 1 : 0) * (direction === "asc" ? 1 : -1)
           );
         });
       }
-      if (ast.limit !== undefined) rows = rows.slice(0, ast.limit);
+
+      if (ast.limit !== undefined) {
+        rows = rows.slice(0, ast.limit);
+      }
+
       return format.singular ? rows[0] : rows;
     },
   } as unknown as Transaction<Schema>;
+
   return { tx, data, writes };
 }
 
@@ -240,6 +282,7 @@ describe("Moodboard mutations", () => {
     ).rejects.toThrow("not allowed");
   });
 });
+
 describe("Lists mutators", () => {
   it("activates Lists and removes legacy Shopping writes", () => {
     expect(mutators.create.mutatorName).toBe("lists.create");
@@ -250,6 +293,7 @@ describe("Lists mutators", () => {
     "creates at the top with %s timestamps",
     async (location) => {
       vi.spyOn(Date, "now").mockReturnValue(9000);
+
       const { tx, data } = setup(location);
       await mutators.create.fn({
         tx,
@@ -367,6 +411,7 @@ describe("Lists mutators", () => {
     "soft-deletes only the selected list using the %s timestamp",
     async (location) => {
       vi.spyOn(Date, "now").mockReturnValue(9000);
+
       const { tx, data } = setup(location);
       data.lists.push({ id: otherListId, householdId });
       data.listItems = [item(), item({ id: otherItemId, listId: otherListId })];
@@ -404,6 +449,7 @@ describe("Lists mutators", () => {
   const operations = [
     {
       name: "create",
+
       run: (tx: Transaction<Schema>) =>
         mutators.create.fn({
           tx,
@@ -413,6 +459,7 @@ describe("Lists mutators", () => {
     },
     {
       name: "rename",
+
       run: (tx: Transaction<Schema>) =>
         mutators.rename.fn({
           tx,
@@ -422,6 +469,7 @@ describe("Lists mutators", () => {
     },
     {
       name: "delete",
+
       run: (tx: Transaction<Schema>) =>
         mutators.delete.fn({
           tx,
@@ -431,6 +479,7 @@ describe("Lists mutators", () => {
     },
     {
       name: "reorder",
+
       run: (tx: Transaction<Schema>) =>
         mutators.reorder.fn({
           tx,
@@ -444,6 +493,7 @@ describe("Lists mutators", () => {
     },
     {
       name: "addItem",
+
       run: (tx: Transaction<Schema>) =>
         mutators.addItem.fn({
           tx,
@@ -453,6 +503,7 @@ describe("Lists mutators", () => {
     },
     {
       name: "renameItem",
+
       run: (tx: Transaction<Schema>) =>
         mutators.renameItem.fn({
           tx,
@@ -462,6 +513,7 @@ describe("Lists mutators", () => {
     },
     {
       name: "setItemStatus",
+
       run: (tx: Transaction<Schema>) =>
         mutators.setItemStatus.fn({
           tx,
@@ -476,6 +528,7 @@ describe("Lists mutators", () => {
     },
     {
       name: "reorderItems",
+
       run: (tx: Transaction<Schema>) =>
         mutators.reorderItems.fn({
           tx,
@@ -495,14 +548,20 @@ describe("Lists mutators", () => {
       "rejects %s without writing",
       async (failure) => {
         const { tx, data, writes } = setup();
-        if (failure === "nonmember") data.householdMembers = [];
-        else if (failure === "disabled")
+
+        if (failure === "nonmember") {
+          data.householdMembers = [];
+        } else if (failure === "disabled") {
           required(data.householdModuleSettings[0]).enabled = false;
-        else data.householdModuleSettings = [];
+        } else {
+          data.householdModuleSettings = [];
+        }
+
         await expect(run(tx)).rejects.toThrow("not allowed");
         expect(writes).not.toHaveBeenCalled();
       },
     );
+
     if (name !== "create") {
       it("rejects a parent list from another household", async () => {
         const { tx, data, writes } = setup();
@@ -590,6 +649,7 @@ describe("Lists mutators", () => {
     "sets %s using authoritative server time",
     async (status) => {
       vi.spyOn(Date, "now").mockReturnValue(9000);
+
       const { tx, data } = setup();
       data.listItems = [item()];
       await mutators.setItemStatus.fn({
@@ -616,6 +676,7 @@ describe("Lists mutators", () => {
   it("reorders items only within the selected status", async () => {
     const { tx, data } = setup("client");
     data.listItems = [item(), item({ id: otherItemId, sortKey: 2048 })];
+
     const args = {
       ...scope,
       itemId,

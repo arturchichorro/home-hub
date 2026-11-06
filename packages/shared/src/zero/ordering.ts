@@ -1,18 +1,28 @@
 const gap = 1024;
+
 const maxSortKey = 2_147_483_647;
+
 const minSortKey = -2_147_483_648;
 
 type OrderedRow = { id: string; sortKey: number };
 
 export function nextSortKey(topSortKey = 0): number {
   const next = topSortKey + gap;
-  if (next > maxSortKey) throw new Error("Ordering requires rebalancing");
+
+  if (next > maxSortKey) {
+    throw new Error("Ordering requires rebalancing");
+  }
+
   return next;
 }
 
 export function appendSortKey(bottomSortKey = gap): number {
   const next = bottomSortKey - gap;
-  if (next < minSortKey) throw new Error("Ordering requires rebalancing");
+
+  if (next < minSortKey) {
+    throw new Error("Ordering requires rebalancing");
+  }
+
   return next;
 }
 
@@ -22,9 +32,11 @@ export function planReorder(
   movedId: string,
 ): OrderedRow[] {
   const byId = new Map(rows.map((row) => [row.id, row]));
+
   if (!orderedIds.includes(movedId) || orderedIds.some((id) => !byId.has(id))) {
     throw new Error("Reorder not allowed");
   }
+
   const index = orderedIds.indexOf(movedId);
   const previousId = orderedIds[index - 1];
   const nextId = orderedIds[index + 1];
@@ -38,6 +50,7 @@ export function planReorder(
         : next
           ? next.sortKey + gap
           : 0;
+
   if (
     sortKey >= minSortKey &&
     sortKey <= maxSortKey &&
@@ -47,6 +60,7 @@ export function planReorder(
   ) {
     return [{ id: movedId, sortKey }];
   }
+
   // A stale client may omit rows added since its last sync. Rebalance the full
   // current scope, moving only the requested row and retaining all other rows.
   const remaining = [...rows]
@@ -58,10 +72,17 @@ export function planReorder(
       ? remaining.findIndex((row) => row.id === previous.id) + 1
       : 0;
   const moved = byId.get(movedId);
-  if (!moved) throw new Error("Reorder not allowed");
+
+  if (!moved) {
+    throw new Error("Reorder not allowed");
+  }
+
   remaining.splice(position, 0, moved);
-  if (remaining.length * gap > maxSortKey)
+
+  if (remaining.length * gap > maxSortKey) {
     throw new Error("Too many rows to reorder");
+  }
+
   return remaining.map((row, i) => ({
     id: row.id,
     sortKey: (remaining.length - i) * gap,

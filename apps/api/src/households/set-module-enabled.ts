@@ -35,19 +35,28 @@ export function createSetHouseholdModuleEnabledService({
   }: SetHouseholdModuleEnabledInput): Promise<SetHouseholdModuleEnabledResult> {
     return db.transaction(async (tx) => {
       const user = await findActiveUser(tx, userId);
-      if (!user) return { kind: "unauthorized" };
+
+      if (!user) {
+        return { kind: "unauthorized" };
+      }
 
       const owner = await findHouseholdOwnerForShare(tx, {
         householdId,
         userId,
       });
-      if (!owner) return { kind: "forbidden" };
+
+      if (!owner) {
+        return { kind: "forbidden" };
+      }
 
       const setting = await findHouseholdModuleSettingForUpdate(tx, {
         householdId,
         moduleKey,
       });
-      if (!setting) return { kind: "module_not_configured" };
+
+      if (!setting) {
+        return { kind: "module_not_configured" };
+      }
 
       const [updated] = await tx
         .update(householdModuleSettings)
@@ -62,8 +71,10 @@ export function createSetHouseholdModuleEnabledService({
           moduleKey: householdModuleSettings.moduleKey,
           enabled: householdModuleSettings.enabled,
         });
-      if (!updated)
+
+      if (!updated) {
         throw new Error("Locked module setting could not be updated");
+      }
 
       return {
         kind: "success",

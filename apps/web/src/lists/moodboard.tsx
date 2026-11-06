@@ -14,7 +14,7 @@ import {
   Trash2,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { ImageViewer } from "../media/image-viewer";
 import { type MediaSession, useMediaSession } from "../media/session";
 import { useBlockAppUpdate } from "../updates/activity";
@@ -23,6 +23,7 @@ import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { listOrderingSensors } from "./list-card";
 import { deleteListImage } from "./list-media-api";
 import { invalidateListImageUrl, useListImageUrl } from "./list-media-url";
+import { MoodboardLayout } from "./moodboard-layout";
 import { type MoodboardPin, MoodboardThumbnail } from "./moodboard-preview";
 import { MoodboardUploads } from "./moodboard-uploads";
 
@@ -46,6 +47,7 @@ function Tile({
     accept: "moodboard-media",
     disabled,
   });
+
   return (
     <li
       ref={sortable.ref}
@@ -71,6 +73,7 @@ function Tile({
       </button>
       <IconButton
         ref={sortable.handleRef}
+        data-moodboard-handle
         disabled={disabled}
         aria-label={`Move media ${index + 1}`}
         title="Drag to reorder, or press Space and arrow keys"
@@ -81,6 +84,7 @@ function Tile({
     </li>
   );
 }
+
 function Viewer({
   pin,
   pins,
@@ -99,6 +103,7 @@ function Viewer({
   onDelete: () => Promise<void>;
 }) {
   useBlockAppUpdate(true);
+
   const [deleting, setDeleting] = useState(false);
   const [errorFor, setErrorFor] = useState<string>();
   const error = errorFor === pin.id;
@@ -118,20 +123,26 @@ function Viewer({
     attachmentId: pin.id,
     variant: pin.asset?.kind === "video" ? "video" : "viewer",
   });
+
   function remove() {
-    if (deleting || !enabled) return;
+    if (deleting || !enabled) {
+      return;
+    }
+
     setDeleting(true);
     setErrorFor(undefined);
     void onDelete()
       .catch(() => setErrorFor(pin.id))
       .finally(() => setDeleting(false));
   }
+
   if (pin.asset?.kind !== "video") {
     const images = pins.map((item) => ({
       id: item.id,
       width: item.asset?.width ?? null,
       height: item.asset?.height ?? null,
     }));
+
     return (
       <ImageViewer
         image={images.find((item) => item.id === pin.id)}
@@ -149,16 +160,21 @@ function Viewer({
         onSelect={(item) => onSelect(item.id)}
         onDelete={remove}
         onOpenChange={(open) => {
-          if (!open && !deleting) onClose();
+          if (!open && !deleting) {
+            onClose();
+          }
         }}
       />
     );
   }
+
   return (
     <DialogRoot
       open
       onOpenChange={(open) => {
-        if (!open && !deleting) onClose();
+        if (!open && !deleting) {
+          onClose();
+        }
       }}
     >
       <DialogPopup
@@ -171,7 +187,10 @@ function Viewer({
               disabled={index === 0 || deleting}
               onClick={() => {
                 const previous = pins[index - 1];
-                if (previous) onSelect(previous.id);
+
+                if (previous) {
+                  onSelect(previous.id);
+                }
               }}
             >
               Previous
@@ -181,7 +200,10 @@ function Viewer({
               disabled={index >= pins.length - 1 || deleting}
               onClick={() => {
                 const next = pins[index + 1];
-                if (next) onSelect(next.id);
+
+                if (next) {
+                  onSelect(next.id);
+                }
               }}
             >
               Next
@@ -227,6 +249,7 @@ function Viewer({
     </DialogRoot>
   );
 }
+
 export function Moodboard({
   householdId,
   listId,
@@ -236,14 +259,17 @@ export function Moodboard({
   listId: string;
   onBusy: (busy: boolean) => void;
 }) {
-  const session = useMediaSession(),
-    zero = useZero(),
-    enabled = useZeroMutationEnabled();
-  const [limit, setLimit] = useState(51),
-    [selected, setSelected] = useState<string>(),
-    [error, setError] = useState<string>(),
-    [dragging, setDragging] = useState(false),
-    [reordering, setReordering] = useState(false);
+  const session = useMediaSession();
+  const zero = useZero();
+  const enabled = useZeroMutationEnabled();
+  const container = useRef<HTMLElement>(null);
+  const keyboardDragPin = useRef<string | undefined>(undefined);
+  const [focusAfterReorder, setFocusAfterReorder] = useState<string>();
+  const [limit, setLimit] = useState(51);
+  const [selected, setSelected] = useState<string>();
+  const [error, setError] = useState<string>();
+  const [dragging, setDragging] = useState(false);
+  const [reordering, setReordering] = useState(false);
   const [rows, result] = useQuery(
     queries.lists.mediaPage({ householdId, listId, limit }),
   );
@@ -253,6 +279,7 @@ export function Moodboard({
       : undefined,
   );
   useBlockAppUpdate(dragging || reordering);
+
   const visible = rows.slice(0, limit - 1);
   const pinned = selectedRow?.id === selected ? selectedRow : undefined;
   const viewerRows =
@@ -260,14 +287,50 @@ export function Moodboard({
       ? [...visible, pinned]
       : visible;
   const current = pinned ?? visible.find((row) => row.id === selected);
+
+  useLayoutEffect(() => {
+    if (!focusAfterReorder || reordering) {
+      return;
+    }
+
+    // A moved pin can change columns. Restore its handle after it is enabled,
+    // unless the user has already focused a different control while saving.
+    const active = document.activeElement;
+    const focusedPin = active
+      ?.closest("[data-moodboard-pin]")
+      ?.getAttribute("data-moodboard-pin");
+
+    if (
+      active === document.body ||
+      active === document.documentElement ||
+      focusedPin === focusAfterReorder
+    ) {
+      container.current
+        ?.querySelector<HTMLElement>(
+          `[data-moodboard-pin="${CSS.escape(focusAfterReorder)}"] [data-moodboard-handle]`,
+        )
+        ?.focus({ preventScroll: true });
+    }
+
+    setFocusAfterReorder(undefined);
+  }, [focusAfterReorder, reordering]);
+
   async function move(from: number, to: number) {
-    if (!enabled || from === to || to < 0 || to >= visible.length) return;
-    const order = [...visible],
-      moved = order.splice(from, 1)[0];
-    if (!moved) return;
+    if (!enabled || from === to || to < 0 || to >= visible.length) {
+      return;
+    }
+
+    const order = [...visible];
+    const moved = order.splice(from, 1)[0];
+
+    if (!moved) {
+      return;
+    }
+
     order.splice(to, 0, moved);
     setReordering(true);
     setError(undefined);
+
     try {
       const result = await acknowledgeMutation(
         zero.mutate(
@@ -281,7 +344,10 @@ export function Moodboard({
           }),
         ),
       );
-      if (result.type === "error") throw Error("reorder");
+
+      if (result.type === "error") {
+        throw Error("reorder");
+      }
     } catch {
       setError(
         "Unable to save media order. The confirmed order has been restored.",
@@ -290,12 +356,31 @@ export function Moodboard({
       setReordering(false);
     }
   }
-  if (!session)
+
+  if (!session) {
     return (
       <p className="text-muted">Sign in online to load moodboard media.</p>
     );
+  }
+
   return (
     <section
+      ref={container}
+      onKeyDownCapture={(event) => {
+        if (
+          event.code === "Space" &&
+          event.target instanceof Element &&
+          event.target.hasAttribute("data-moodboard-handle")
+        ) {
+          keyboardDragPin.current =
+            event.target
+              .closest("[data-moodboard-pin]")
+              ?.getAttribute("data-moodboard-pin") ?? undefined;
+        }
+      }}
+      onPointerDownCapture={() => {
+        keyboardDragPin.current = undefined;
+      }}
       aria-label="Moodboard"
       className="grid min-w-0 max-w-full grid-cols-[minmax(0,1fr)] gap-4 overflow-x-clip"
     >
@@ -325,26 +410,29 @@ export function Moodboard({
         onDragStart={() => setDragging(true)}
         onDragEnd={(event) => {
           setDragging(false);
+
           const source = event.operation.source;
-          if (!event.canceled && isSortable(source))
+
+          setFocusAfterReorder(keyboardDragPin.current);
+          keyboardDragPin.current = undefined;
+
+          if (!event.canceled && isSortable(source)) {
             void move(source.initialIndex, source.index);
+          }
         }}
       >
-        <ul
-          aria-label="Moodboard media"
-          className="min-w-0 max-w-full columns-2 gap-3 sm:columns-3 lg:columns-4"
-        >
-          {visible.map((pin, i) => (
+        <MoodboardLayout pins={visible}>
+          {(pin, index) => (
             <Tile
               key={pin.id}
               pin={pin}
-              index={i}
+              index={index}
               session={session}
               disabled={!enabled || reordering}
               onOpen={() => setSelected(pin.id)}
             />
-          ))}
-        </ul>
+          )}
+        </MoodboardLayout>
       </DragDropProvider>
       {rows.length >= limit &&
         (limit < 10001 ? (
@@ -372,8 +460,15 @@ export function Moodboard({
               listId,
               attachmentId: current.id,
             });
-            if (result.kind === "unauthorized") session.onSessionExpired();
-            if (result.kind !== "success") throw Error("delete");
+
+            if (result.kind === "unauthorized") {
+              session.onSessionExpired();
+            }
+
+            if (result.kind !== "success") {
+              throw Error("delete");
+            }
+
             invalidateListImageUrl({
               ...session,
               householdId,

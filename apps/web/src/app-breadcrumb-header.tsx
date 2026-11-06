@@ -28,7 +28,10 @@ type BreadcrumbLocation = {
 
 export function getBreadcrumbLocation(pathname: string): BreadcrumbLocation {
   const segments = pathname.split("/").filter(Boolean);
-  if (segments[0] !== "households" || !segments[1]) return {};
+
+  if (segments[0] !== "households" || !segments[1]) {
+    return {};
+  }
 
   const module =
     segments[2] === "recipes" ||
@@ -42,11 +45,27 @@ export function getBreadcrumbLocation(pathname: string): BreadcrumbLocation {
       : undefined;
 
   const location: BreadcrumbLocation = { householdId: segments[1] };
-  if (module) location.module = module;
-  if (module === "recipes" && segments[3]) location.recipeId = segments[3];
-  if (module === "lists" && segments[3]) location.listId = segments[3];
-  if (module === "workouts" && segments[3]) location.workoutId = segments[3];
-  if (module === "logs" && segments[3]) location.logId = segments[3];
+
+  if (module) {
+    location.module = module;
+  }
+
+  if (module === "recipes" && segments[3]) {
+    location.recipeId = segments[3];
+  }
+
+  if (module === "lists" && segments[3]) {
+    location.listId = segments[3];
+  }
+
+  if (module === "workouts" && segments[3]) {
+    location.workoutId = segments[3];
+  }
+
+  if (module === "logs" && segments[3]) {
+    location.logId = segments[3];
+  }
+
   return location;
 }
 
@@ -91,6 +110,7 @@ function ListBreadcrumb({
   listId: string;
 }) {
   const [list] = useQuery(queries.lists.detail({ householdId, listId }));
+
   return (
     <>
       <BreadcrumbSeparator />
@@ -113,6 +133,7 @@ function WorkoutBreadcrumb({
   const [workout] = useQuery(
     queries.workouts.detail({ householdId, workoutId }),
   );
+
   return (
     <>
       <BreadcrumbSeparator />
@@ -133,6 +154,7 @@ function LogBreadcrumb({
   logId: string;
 }) {
   const [log] = useQuery(queries.logs.detail({ householdId, logId }));
+
   return (
     <>
       <BreadcrumbSeparator />

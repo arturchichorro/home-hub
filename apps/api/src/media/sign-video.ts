@@ -5,6 +5,7 @@ import {
   signVideoCapability,
   videoReadUrl,
 } from "@home-hub/shared/video-delivery";
+
 export async function signVideoRead(input: {
   baseUrl: string;
   secret: string;
@@ -19,6 +20,7 @@ export async function signVideoRead(input: {
     contentType: input.contentType,
     expiresAt: Math.floor(Date.now() / 1000) + mediaReadLifetimeSeconds,
   };
+
   return videoReadUrl(
     input.baseUrl,
     capability,

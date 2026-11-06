@@ -10,6 +10,7 @@ export class InvalidMediaUploadError extends Error {
     super("Unsupported or invalid image upload");
   }
 }
+
 export async function processMediaImage({
   baseUrl,
   identity,
@@ -48,7 +49,12 @@ export async function processMediaImage({
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...capability, signature }),
   });
-  if (response.status === 422) throw new InvalidMediaUploadError();
-  if (!response.ok)
+
+  if (response.status === 422) {
+    throw new InvalidMediaUploadError();
+  }
+
+  if (!response.ok) {
     throw new Error(`Media image processing failed (${response.status})`);
+  }
 }

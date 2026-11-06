@@ -27,17 +27,22 @@ export function ModuleSettings({
   const [error, setError] = useState<string>();
   const mutationEnabled = useZeroMutationEnabled();
 
-  if (result.type === "error")
+  if (result.type === "error") {
     return (
       <InlineAlert role="alert" variant="danger">
         Unable to load module settings.
       </InlineAlert>
     );
+  }
 
   async function toggle(moduleKey: HouseholdModuleKey, enabled: boolean) {
-    if (!mutationEnabled) return;
+    if (!mutationEnabled) {
+      return;
+    }
+
     setPendingKey(moduleKey);
     setError(undefined);
+
     try {
       const command = await setHouseholdModuleEnabled({
         accessToken,
@@ -45,11 +50,18 @@ export function ModuleSettings({
         moduleKey,
         enabled,
       });
-      if (command.kind === "unauthorized") return onSessionExpired();
-      if (command.kind === "forbidden")
+
+      if (command.kind === "unauthorized") {
+        return onSessionExpired();
+      }
+
+      if (command.kind === "forbidden") {
         setError("You are no longer allowed to configure modules.");
-      if (command.kind === "module_not_configured")
+      }
+
+      if (command.kind === "module_not_configured") {
         setError("This module is not configured for the household.");
+      }
     } catch {
       setError("Unable to update the module setting.");
     } finally {
@@ -69,6 +81,7 @@ export function ModuleSettings({
           const setting = settings.find(
             ({ moduleKey }) => moduleKey === module.key,
           );
+
           return (
             <li key={module.key} className="py-3">
               <Switch

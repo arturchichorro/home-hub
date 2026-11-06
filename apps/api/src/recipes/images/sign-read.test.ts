@@ -5,8 +5,11 @@ import {
 } from "./sign-read";
 
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+
 const imageId = "5944cb0d-931a-4723-b981-77eacb122314";
+
 const secret = "test-image-delivery-secret-at-least-32-bytes";
 
 describe("signRecipeImageRead", () => {

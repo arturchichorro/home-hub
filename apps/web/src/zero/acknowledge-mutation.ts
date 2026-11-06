@@ -10,5 +10,6 @@ export async function acknowledgeMutation<
   server: PromiseLike<S>;
 }): Promise<C | S> {
   const client = await mutation.client;
+
   return client.type === "error" ? client : await mutation.server;
 }

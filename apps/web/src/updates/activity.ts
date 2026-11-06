@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 const blockers = new Set<symbol>();
+
 export function hasUpdateBlockers() {
   return blockers.size > 0;
 }
@@ -9,6 +10,7 @@ export function hasUpdateBlockers() {
 export function blockAppUpdate() {
   const token = Symbol();
   blockers.add(token);
+
   return () => {
     blockers.delete(token);
   };

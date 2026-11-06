@@ -11,6 +11,7 @@ type DragEvent = {
   canceled: boolean;
   operation: { source: { initialIndex: number; index: number } | null };
 };
+
 const { provider, sortable } = vi.hoisted(() => ({
   provider:
     vi.fn<
@@ -21,19 +22,25 @@ const { provider, sortable } = vi.hoisted(() => ({
     >(),
   sortable: vi.fn(),
 }));
+
 vi.mock("@dnd-kit/react", () => ({
   DragDropProvider: (props: Parameters<typeof provider>[0]) => {
     provider(props);
+
     return props.children;
   },
 }));
+
 vi.mock("@dnd-kit/react/sortable", () => ({
   isSortable: (source: unknown) => source != null,
+
   useSortable: (options: unknown) => {
     sortable(options);
+
     return { ref: vi.fn(), handleRef: vi.fn(), isDragging: false };
   },
 }));
+
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
@@ -55,31 +62,42 @@ vi.mock("@tanstack/react-router", () => ({
     </a>
   ),
 }));
+
 const workouts = ["A", "B", "C"].map((id) => ({
   id,
   householdId: "home",
   title: `Workout ${id}`,
 }));
+
 const onMove = vi.fn();
+
 function render(disabled = false) {
   return renderToStaticMarkup(
     <WorkoutList workouts={workouts} disabled={disabled} onMove={onMove} />,
   );
 }
+
 function drag(canceled = false, from = 0, to = 2) {
   const props = provider.mock.calls[0]?.[0];
-  if (!props) throw new Error("provider");
+
+  if (!props) {
+    throw new Error("provider");
+  }
+
   props.onDragEnd({
     canceled,
     operation: { source: { initialIndex: from, index: to } },
   });
 }
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-27T12:00:00Z"));
 });
+
 afterEach(() => vi.useRealTimers());
+
 describe("last completed workout", () => {
   it("shows a subdued right-hand date including weekday inside the existing row link", () => {
     const html = renderToStaticMarkup(
@@ -123,6 +141,7 @@ describe("last completed workout", () => {
     },
   );
 });
+
 describe("workout reordering", () => {
   it("reorders without mutating or dropping IDs", () => {
     expect(reorderedWorkoutIds(workouts, 0, 2)).toEqual({

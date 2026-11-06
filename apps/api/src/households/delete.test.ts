@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createDeleteHouseholdService } from "./delete";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 
 function createFakeDatabase({
@@ -22,27 +23,36 @@ function createFakeDatabase({
 
   const selectBuilder = {
     from: () => selectBuilder,
+
     where: () => selectBuilder,
+
     limit: () => selectBuilder,
+
     for: async () => (isOwner ? [{ id: "membership-id", role: "owner" }] : []),
   };
   const updateBuilder = {
     set(patch: unknown) {
       patches.push(patch);
+
       return updateBuilder;
     },
+
     where() {
       return updateBuilder;
     },
+
     async returning() {
       return householdExists ? [{ id: householdId }] : [];
     },
   };
   const tx = {
     query: { users: { findFirst: findUser } },
+
     select: () => selectBuilder,
+
     update(table: unknown) {
       updatedTables.push(table);
+
       return updateBuilder;
     },
   };

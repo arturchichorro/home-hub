@@ -29,8 +29,11 @@ export function HouseholdNameInput({
     emptyError: "The household name cannot be empty.",
     failureError: "The household name could not be saved.",
     mutationEnabled,
+
     normalize: (value) => value.trim(),
+
     required: true,
+
     save: async (name) => {
       try {
         const result = await renameHousehold({

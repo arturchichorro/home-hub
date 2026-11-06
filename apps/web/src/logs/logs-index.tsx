@@ -31,28 +31,30 @@ import {
   LogCategoryChooser,
   LogCategoryDialog,
 } from "./log-category";
+
 export function LogsIndex({ householdId }: { householdId: string }) {
-  const zero = useZero(),
-    enabled = useZeroMutationEnabled(),
-    navigate = useNavigate();
-  const [search, setSearch] = useState(""),
-    [limit, setLimit] = useState(50),
-    [creating, setCreating] = useState(false),
-    [name, setName] = useState(""),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState<string>(),
-    [categoryEditor, setCategoryEditor] = useState<{
-      initial: LogCategory | undefined;
-    }>(),
-    [categoryLog, setCategoryLog] = useState<Log>(),
-    [removeTarget, setRemoveTarget] = useState<Log>();
+  const zero = useZero();
+  const enabled = useZeroMutationEnabled();
+  const navigate = useNavigate();
+  const [search, setSearch] = useState("");
+  const [limit, setLimit] = useState(50);
+  const [creating, setCreating] = useState(false);
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const [categoryEditor, setCategoryEditor] = useState<{
+    initial: LogCategory | undefined;
+  }>();
+  const [categoryLog, setCategoryLog] = useState<Log>();
+  const [removeTarget, setRemoveTarget] = useState<Log>();
   const [createdId, setCreatedId] = useState<string>();
-  const creatingId = useRef<string | undefined>(undefined),
-    [rows, result] = useQuery(
-      queries.logs.index({ householdId, search, limit: limit + 1 }),
-    ),
-    [categories] = useQuery(queries.logs.categories({ householdId }));
+  const creatingId = useRef<string | undefined>(undefined);
+  const [rows, result] = useQuery(
+    queries.logs.index({ householdId, search, limit: limit + 1 }),
+  );
+  const [categories] = useQuery(queries.logs.categories({ householdId }));
   useBlockAppUpdate(busy || !!name);
+
   const header = useMemo(
     () => (
       <div className="flex items-center gap-1">
@@ -79,19 +81,27 @@ export function LogsIndex({ householdId }: { householdId: string }) {
     [enabled, busy, creating],
   );
   useAppHeaderRightComponent(header);
+
   useEffect(() => {
-    if (createdId)
+    if (createdId) {
       void navigate({
         to: "/households/$householdId/logs/$logId",
         params: { householdId, logId: createdId },
       });
+    }
   }, [createdId, householdId, navigate]);
+
   async function create() {
-    if (!enabled || busy || !name.trim()) return;
+    if (!enabled || busy || !name.trim()) {
+      return;
+    }
+
     setBusy(true);
     setError(undefined);
+
     const id = creatingId.current ?? crypto.randomUUID();
     creatingId.current = id;
+
     try {
       const r = await acknowledgeMutation(
         zero.mutate(
@@ -103,7 +113,11 @@ export function LogsIndex({ householdId }: { householdId: string }) {
           }),
         ),
       );
-      if (r.type !== "success") throw Error();
+
+      if (r.type !== "success") {
+        throw Error();
+      }
+
       setName("");
       setCreating(false);
       setCreatedId(id);
@@ -114,17 +128,26 @@ export function LogsIndex({ householdId }: { householdId: string }) {
       setBusy(false);
     }
   }
+
   async function remove() {
-    if (!removeTarget || !enabled || busy) return;
+    if (!removeTarget || !enabled || busy) {
+      return;
+    }
+
     setBusy(true);
     setError(undefined);
+
     try {
       const r = await acknowledgeMutation(
         zero.mutate(
           mutators.logs.delete({ householdId, logId: removeTarget.id }),
         ),
       );
-      if (r.type !== "success") throw Error();
+
+      if (r.type !== "success") {
+        throw Error();
+      }
+
       setRemoveTarget(undefined);
     } catch {
       setError("Unable to remove this log.");
@@ -132,6 +155,7 @@ export function LogsIndex({ householdId }: { householdId: string }) {
       setBusy(false);
     }
   }
+
   const availableCategories = Array.from(
     new Map(
       [
@@ -141,22 +165,23 @@ export function LogsIndex({ householdId }: { householdId: string }) {
     ).values(),
   ).sort((a, b) => a.normalizedName.localeCompare(b.normalizedName));
   const visible = rows
-      .slice(0, limit)
-      .filter((l) => l.id !== creatingId.current),
-    groups = [
-      ...availableCategories.map((c) => ({
-        id: c.id,
-        name: c.name,
-        color: c.color,
-        category: c,
-      })),
-      {
-        id: "none",
-        name: "Uncategorized",
-        color: "slate",
-        category: undefined,
-      },
-    ];
+    .slice(0, limit)
+    .filter((l) => l.id !== creatingId.current);
+  const groups = [
+    ...availableCategories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      color: c.color,
+      category: c,
+    })),
+    {
+      id: "none",
+      name: "Uncategorized",
+      color: "slate",
+      category: undefined,
+    },
+  ];
+
   return (
     <section aria-label="Logs" className="grid min-w-0 gap-5">
       {creating ? (
@@ -175,6 +200,7 @@ export function LogsIndex({ householdId }: { householdId: string }) {
                 e.preventDefault();
                 void create();
               }
+
               if (e.key === "Escape" && !busy) {
                 setCreating(false);
                 setName("");
@@ -223,7 +249,11 @@ export function LogsIndex({ householdId }: { householdId: string }) {
         const items = visible.filter(
           (l) => (l.category?.id ?? "none") === group.id,
         );
-        if (!items.length) return null;
+
+        if (!items.length) {
+          return null;
+        }
+
         return (
           <section
             key={group.id}
@@ -366,7 +396,9 @@ export function LogsIndex({ householdId }: { householdId: string }) {
       <DialogRoot
         open={!!removeTarget}
         onOpenChange={(open) => {
-          if (!open && !busy) setRemoveTarget(undefined);
+          if (!open && !busy) {
+            setRemoveTarget(undefined);
+          }
         }}
       >
         <DialogPopup
@@ -401,7 +433,9 @@ export function LogsIndex({ householdId }: { householdId: string }) {
             hasChanges: true,
             isSaving: busy,
             error,
+
             retry: () => void create(),
+
             discard: () => {
               setName("");
               setCreating(false);

@@ -9,21 +9,28 @@ function setup() {
     visible: true,
     online: true,
   };
-  const activate = vi.fn(async () => {}),
-    reload = vi.fn(),
-    check = vi.fn(async () => {});
+  const activate = vi.fn(async () => {});
+  const reload = vi.fn();
+  const check = vi.fn(async () => {});
   const controller = createUpdateController({
     now: () => flags.now,
+
     blocked: () => flags.blocked,
+
     focused: () => flags.focused,
+
     visible: () => flags.visible,
+
     online: () => flags.online,
+
     activate,
     reload,
     check,
   });
+
   return { controller, flags, activate, reload, check };
 }
+
 describe("safe PWA updates", () => {
   it("activates downloaded updates after ten quiet seconds, then reloads exactly once", async () => {
     const { controller, flags, activate, reload } = setup();
@@ -45,10 +52,23 @@ describe("safe PWA updates", () => {
     (reason) => {
       const { controller, flags, activate, reload } = setup();
       flags.now = 10_000;
-      if (reason === "blocked") flags.blocked = true;
-      if (reason === "focused") flags.focused = true;
-      if (reason === "offline") flags.online = false;
-      if (reason === "hidden") flags.visible = false;
+
+      if (reason === "blocked") {
+        flags.blocked = true;
+      }
+
+      if (reason === "focused") {
+        flags.focused = true;
+      }
+
+      if (reason === "offline") {
+        flags.online = false;
+      }
+
+      if (reason === "hidden") {
+        flags.visible = false;
+      }
+
       controller.waiting();
       controller.tick();
       expect(activate).not.toHaveBeenCalled();

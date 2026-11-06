@@ -7,6 +7,7 @@ export const Route = createFileRoute(
 
 function ListsLayout() {
   const { householdId } = Route.useParams();
+
   return (
     <HouseholdModuleGate householdId={householdId} moduleKey="lists">
       <Outlet />

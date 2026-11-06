@@ -32,7 +32,10 @@ export function JoinHouseholdDialog({
   const mutationEnabled = useZeroMutationEnabled();
 
   function changeOpen(nextOpen: boolean) {
-    if (isSubmitting) return;
+    if (isSubmitting) {
+      return;
+    }
+
     onOpenChange(nextOpen);
 
     if (!nextOpen) {
@@ -43,7 +46,11 @@ export function JoinHouseholdDialog({
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!mutationEnabled) return;
+
+    if (!mutationEnabled) {
+      return;
+    }
+
     setError(undefined);
     setIsSubmitting(true);
 
@@ -52,16 +59,19 @@ export function JoinHouseholdDialog({
 
       if (result.kind === "unauthorized") {
         onSessionExpired();
+
         return;
       }
 
       if (result.kind === "invalid_invite") {
         setError("That invite is invalid or no longer available.");
+
         return;
       }
 
       if (result.kind === "already_member") {
         setError("You already belong to that household.");
+
         return;
       }
 

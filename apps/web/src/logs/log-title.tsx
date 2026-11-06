@@ -10,6 +10,7 @@ import {
 import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+
 export function LogTitle({
   householdId,
   logId,
@@ -19,9 +20,9 @@ export function LogTitle({
   logId: string;
   title: string;
 }) {
-  const zero = useZero(),
-    enabled = useZeroMutationEnabled(),
-    ref = useRef<HTMLInputElement>(null);
+  const zero = useZero();
+  const enabled = useZeroMutationEnabled();
+  const ref = useRef<HTMLInputElement>(null);
   const editor = useDebouncedTextEditor({
     currentValue: title,
     required: true,
@@ -30,6 +31,7 @@ export function LogTitle({
     mutationEnabled: enabled,
     preserveOnFailure: true,
     normalize: cleanLogTitle,
+
     save: async (title) =>
       (
         await acknowledgeMutation(
@@ -44,6 +46,7 @@ export function LogTitle({
         )
       ).type === "success",
   });
+
   return (
     <>
       <Input

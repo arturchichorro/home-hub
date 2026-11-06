@@ -23,8 +23,10 @@ import { DocumentUpload } from "./uploads";
 import { DocumentViewer, downloadDocument } from "./viewer";
 
 type Work = (key: string, busy: boolean) => void;
+
 export function DocumentsPage({ householdId }: { householdId: string }) {
   const session = useMediaSession();
+
   return session ? (
     <DocumentsWorkspace
       key={householdId}
@@ -33,6 +35,7 @@ export function DocumentsPage({ householdId }: { householdId: string }) {
     />
   ) : null;
 }
+
 function DocumentsWorkspace({
   householdId,
   session,
@@ -40,27 +43,27 @@ function DocumentsWorkspace({
   householdId: string;
   session: MediaSession;
 }) {
-  const [search, setSearch] = useState(""),
-    [tagIds, setTags] = useState<string[]>([]),
-    [untagged, setUntagged] = useState(false),
-    [sort, setSort] = useState<"title" | "uploadedAt">("uploadedAt"),
-    [direction, setDirection] = useState<"asc" | "desc">("desc"),
-    [limit, setLimit] = useState(50),
-    [focused, setFocused] = useState<string>(),
-    [work, setWork] = useState<Record<string, boolean>>({}),
-    [selected, setSelected] = useState<{ id: string; title: string }>();
+  const [search, setSearch] = useState("");
+  const [tagIds, setTags] = useState<string[]>([]);
+  const [untagged, setUntagged] = useState(false);
+  const [sort, setSort] = useState<"title" | "uploadedAt">("uploadedAt");
+  const [direction, setDirection] = useState<"asc" | "desc">("desc");
+  const [limit, setLimit] = useState(50);
+  const [focused, setFocused] = useState<string>();
+  const [work, setWork] = useState<Record<string, boolean>>({});
+  const [selected, setSelected] = useState<{ id: string; title: string }>();
   const [rows, result] = useQuery(
-      queries.documents.page({
-        householdId,
-        search,
-        tagIds,
-        untagged,
-        sort,
-        direction,
-        limit: limit + 1,
-      }),
-    ),
-    [tags, tagResult] = useQuery(queries.documents.tags({ householdId }));
+    queries.documents.page({
+      householdId,
+      search,
+      tagIds,
+      untagged,
+      sort,
+      direction,
+      limit: limit + 1,
+    }),
+  );
+  const [tags, tagResult] = useQuery(queries.documents.tags({ householdId }));
   const cached = useRef(
     new Map<string, { row: (typeof rows)[number]; index: number }>(),
   );
@@ -69,7 +72,11 @@ function DocumentsWorkspace({
       .filter(([, v]) => v)
       .map(([key]) => key.split(":")[0] ?? ""),
   );
-  if (focused) dirtyIds.add(focused);
+
+  if (focused) {
+    dirtyIds.add(focused);
+  }
+
   rows.slice(0, limit).forEach((row, index) => {
     cached.current.set(row.id, {
       row,
@@ -78,33 +85,53 @@ function DocumentsWorkspace({
         : index,
     });
   });
+
   const display = rows.slice(0, limit).filter((row) => !dirtyIds.has(row.id));
+
   for (const id of dirtyIds) {
     const cachedRow = cached.current.get(id);
-    if (cachedRow)
+
+    if (cachedRow) {
       display.splice(
         Math.min(cachedRow.index, display.length),
         0,
         cachedRow.row,
       );
+    }
   }
-  for (const id of cached.current.keys())
-    if (!dirtyIds.has(id) && !display.some((d) => d.id === id))
+
+  for (const id of cached.current.keys()) {
+    if (!dirtyIds.has(id) && !display.some((d) => d.id === id)) {
       cached.current.delete(id);
+    }
+  }
+
   const onWork = useCallback<Work>(
     (key, busy) =>
       setWork((prev) => {
-        if (!!prev[key] === busy) return prev;
+        if (!!prev[key] === busy) {
+          return prev;
+        }
+
         const next = { ...prev };
-        if (busy) next[key] = true;
-        else delete next[key];
+
+        if (busy) {
+          next[key] = true;
+        } else {
+          delete next[key];
+        }
+
         return next;
       }),
     [],
   );
   const busy = Object.values(work).some(Boolean);
+
   function changeOrder(field: "title" | "uploadedAt") {
-    if (busy) return;
+    if (busy) {
+      return;
+    }
+
     setSort(field);
     setDirection(
       sort === field
@@ -117,13 +144,17 @@ function DocumentsWorkspace({
     );
     setLimit(50);
   }
+
   useEffect(() => {
-    if (tagResult.type === "complete")
+    if (tagResult.type === "complete") {
       setTags((ids) => {
         const next = ids.filter((id) => tags.some((t) => t.id === id));
+
         return next.length === ids.length ? ids : next;
       });
+    }
   }, [tags, tagResult.type]);
+
   return (
     <DocumentThumbnailProvider session={session} householdId={householdId}>
       <section aria-label="Documents" className="grid min-w-0 gap-5">
@@ -280,12 +311,14 @@ function DocumentsWorkspace({
     </DocumentThumbnailProvider>
   );
 }
+
 type PageRow = Row<Schema["tables"]["documents"]> & {
   file: Row<Schema["tables"]["documentFiles"]> | undefined;
   tags: readonly (Row<Schema["tables"]["documentTagAssignments"]> & {
     tag: DocumentTag | undefined;
   })[];
 };
+
 function DocumentRow({
   row,
   tags,
@@ -307,11 +340,11 @@ function DocumentRow({
   onBlur: () => void;
   onPreview: () => void;
 }) {
-  const zero = useZero(),
-    enabled = useZeroMutationEnabled();
-  const [note, setNote] = useState(false),
-    [error, setError] = useState<string>(),
-    [busy, setBusy] = useState(false);
+  const zero = useZero();
+  const enabled = useZeroMutationEnabled();
+  const [note, setNote] = useState(false);
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
   const blocked =
     busy ||
     Object.entries(work).some(([key, v]) => v && key.startsWith(`${row.id}:`));
@@ -322,32 +355,45 @@ function DocumentRow({
     file &&
     (file.contentType === "application/pdf" ||
       file.contentType.startsWith("image/"));
+
   async function remove() {
-    if (blocked || !enabled) return;
+    if (blocked || !enabled) {
+      return;
+    }
+
     setBusy(true);
     setError(undefined);
+
     try {
       const result = await acknowledgeMutation(
         zero.mutate(
           mutators.documents.delete({ householdId, documentId: row.id }),
         ),
       );
-      if (result.type !== "success") throw Error();
+
+      if (result.type !== "success") {
+        throw Error();
+      }
     } catch {
       setError("Unable to remove this document.");
     } finally {
       setBusy(false);
     }
   }
+
   return (
     <li
       className="min-w-0 py-3"
       data-document-id={row.id}
       onFocusCapture={(e) => {
-        if (e.target instanceof HTMLInputElement) onFocus();
+        if (e.target instanceof HTMLInputElement) {
+          onFocus();
+        }
       }}
       onBlurCapture={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onBlur();
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          onBlur();
+        }
       }}
     >
       <div className="flex min-w-0 flex-wrap items-start gap-2">
@@ -358,11 +404,13 @@ function DocumentRow({
           disabled={!file}
           className="relative size-12 shrink-0 overflow-hidden rounded-sm bg-surface outline-none hover:bg-raised focus-visible:ring-2 focus-visible:ring-focus-ring"
           onClick={() => {
-            if (preview) onPreview();
-            else
+            if (preview) {
+              onPreview();
+            } else {
               void downloadDocument(session, householdId, row.id).catch(() =>
                 setError("Unable to open this document."),
               );
+            }
           }}
         >
           <DocumentFileTypeIcon contentType={file?.contentType ?? ""} />

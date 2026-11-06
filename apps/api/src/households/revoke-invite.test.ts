@@ -6,8 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRevokeHouseholdInviteService } from "./revoke-invite";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const inviteId = "e467b00a-5f80-4c13-aa5b-d2e59996dd82";
+
 const now = new Date("2026-08-07T12:00:00.000Z");
 
 function createFakeDatabase({
@@ -30,17 +33,23 @@ function createFakeDatabase({
   const selectBuilder = {
     from(table: unknown) {
       selectedTables.push(table);
+
       return selectBuilder;
     },
+
     where(condition: unknown) {
       selectionWhereClauses.push(condition);
+
       return selectBuilder;
     },
+
     limit() {
       return selectBuilder;
     },
+
     async for(strength: unknown) {
       lockStrengths.push(strength);
+
       if (selectedTables.at(-1) === householdMembers) {
         return ownerExists ? [{ id: "membership-id" }] : [];
       }
@@ -52,19 +61,25 @@ function createFakeDatabase({
   const updateBuilder = {
     set(values: unknown) {
       updatedValues.push(values);
+
       return updateBuilder;
     },
+
     async where(condition: unknown) {
       updateWhereClauses.push(condition);
+
       return [];
     },
   };
 
   const tx = {
     query: { users: { findFirst: findUser } },
+
     select: () => selectBuilder,
+
     update(table: unknown) {
       updatedTables.push(table);
+
       return updateBuilder;
     },
   };

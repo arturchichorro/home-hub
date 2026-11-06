@@ -9,7 +9,9 @@ import {
 } from "./media-delivery";
 
 const secret = "a-shared-media-test-secret-of-at-least-32-bytes";
+
 const nowSeconds = 1_787_625_600;
+
 const identity = {
   householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
   mediaId: "671874b1-df9d-4a91-8f3c-8055473e8aa2",
@@ -18,6 +20,7 @@ const identity = {
   parentId: "8d46a4c4-4845-4a6d-a937-139633ae1bb9",
   attachmentId: "5944cb0d-931a-4723-b981-77eacb122314",
 };
+
 const capability = {
   ...identity,
   expiresAt: nowSeconds + 3600,
@@ -124,6 +127,7 @@ describe("media capabilities", () => {
       secret,
       purpose: "process",
     });
+
     for (const patch of [
       {},
       { byteSize: 43 },
@@ -161,8 +165,9 @@ describe("media storage and initial upload scope", () => {
       mediaOriginalObjectKey({ ...identity, householdId: identity.parentId }),
       mediaOriginalObjectKey({ ...identity, mediaId: identity.parentId }),
       `${mediaOriginalObjectKey(identity)}/derivatives/viewer.webp`,
-    ])
+    ]) {
       expect(() => mediaStorageIdentity({ ...identity, objectKey })).toThrow();
+    }
   });
   it.each(["video/mp4", "video/webm", "image/gif", "image/svg+xml"])(
     "does not enable unsupported uploads: %s",

@@ -20,7 +20,9 @@ export function ErrorPopover({
     <Popover.Root
       open={open}
       onOpenChange={(nextOpen) => {
-        if (!nextOpen) onDismiss?.();
+        if (!nextOpen) {
+          onDismiss?.();
+        }
       }}
     >
       <Popover.Portal>

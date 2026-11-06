@@ -22,6 +22,7 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
 
       if (result.kind === "invalid_credentials") {
         setError("Invalid email or password");
+
         return;
       }
 

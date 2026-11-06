@@ -19,6 +19,7 @@ const content = (open: boolean) =>
       </AccordionItem>
     </AccordionRoot>,
   );
+
 describe("Accordion", () => {
   it("renders an accessible collapsed trigger and keeps the panel mounted", () => {
     const html = content(false);

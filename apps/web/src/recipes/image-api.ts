@@ -89,10 +89,21 @@ export async function requestRecipeImageUpload({
     },
   );
 
-  if (response.status === 401) return { kind: "unauthorized" };
-  if (response.status === 403) return { kind: "forbidden" };
-  if (response.status === 404) return { kind: "not_found" };
-  if (!response.ok) throw new Error("Failed to create recipe image upload");
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (response.status === 404) {
+    return { kind: "not_found" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to create recipe image upload");
+  }
 
   return {
     kind: "success",
@@ -132,14 +143,32 @@ export async function confirmRecipeImageUpload({
     },
   );
 
-  if (response.status === 401) return { kind: "unauthorized" };
-  if (response.status === 403) return { kind: "forbidden" };
-  if (response.status === 404) return { kind: "not_found" };
-  if (response.status === 409) return { kind: "upload_not_found" };
-  if (response.status === 422) return { kind: "invalid_upload" };
-  if (!response.ok) throw new Error("Failed to confirm recipe image upload");
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (response.status === 404) {
+    return { kind: "not_found" };
+  }
+
+  if (response.status === 409) {
+    return { kind: "upload_not_found" };
+  }
+
+  if (response.status === 422) {
+    return { kind: "invalid_upload" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to confirm recipe image upload");
+  }
 
   confirmRecipeImageUploadResponseSchema.parse(await response.json());
+
   return { kind: "success" };
 }
 
@@ -164,14 +193,26 @@ export async function createRecipeImageReadUrl({
     },
   );
 
-  if (response.status === 401) return { kind: "unauthorized" };
-  if (response.status === 403) return { kind: "forbidden" };
-  if (response.status === 404) return { kind: "not_found" };
-  if (!response.ok) throw new Error("Failed to create recipe image read URL");
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (response.status === 404) {
+    return { kind: "not_found" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to create recipe image read URL");
+  }
 
   const { read } = createRecipeImageReadUrlResponseSchema.parse(
     await response.json(),
   );
+
   return { kind: "success", ...read };
 }
 
@@ -193,13 +234,22 @@ export async function createRecipeImageReadUrls({
     },
   );
 
-  if (response.status === 401) return { kind: "unauthorized" };
-  if (response.status === 403) return { kind: "forbidden" };
-  if (!response.ok) throw new Error("Failed to create recipe image read URLs");
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to create recipe image read URLs");
+  }
 
   const result = createRecipeImageReadUrlsResponseSchema.parse(
     await response.json(),
   );
+
   return { kind: "success", reads: result.reads };
 }
 
@@ -214,9 +264,17 @@ export async function deleteRecipeImage({
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
-  if (response.status === 401) return { kind: "unauthorized" };
-  if (response.status === 403) return { kind: "forbidden" };
-  if (!response.ok) throw new Error("Failed to delete recipe image");
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to delete recipe image");
+  }
 
   return { kind: "success" };
 }

@@ -7,8 +7,8 @@ import {
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import type { List, ListItem } from "@home-hub/shared/zero/schema";
-import { Check } from "@home-hub/ui-web";
 import { Link } from "@tanstack/react-router";
+import { ChecklistPreview } from "./checklist-preview";
 import { type MoodboardPin, MoodboardPreview } from "./moodboard-preview";
 
 export type ListCardData = Pick<List, "id" | "householdId" | "name"> & {
@@ -24,11 +24,13 @@ const listPointerSensor = PointerSensor.configure({
     if (event.pointerType === "mouse") {
       return [new PointerActivationConstraints.Distance({ value: 5 })];
     }
+
     if (event.pointerType === "touch") {
       return [
         new PointerActivationConstraints.Delay({ value: 250, tolerance: 5 }),
       ];
     }
+
     return [
       new PointerActivationConstraints.Delay({ value: 200, tolerance: 10 }),
       new PointerActivationConstraints.Distance({ value: 5 }),
@@ -73,6 +75,7 @@ export function ListCardGrid({
       sensors={listOrderingSensors}
       onDragEnd={(event) => {
         const source = event.operation.source;
+
         if (
           !disabled &&
           !event.canceled &&
@@ -133,29 +136,7 @@ export function ListCard({
         {list.kind === "moodboard" ? (
           <MoodboardPreview pins={list.attachments ?? []} />
         ) : (
-          <ul className="grid gap-3">
-            {list.items.map((item) => {
-              const crossed = item.status === "crossed";
-              return (
-                <li key={item.id} className="flex min-w-0 items-center gap-3">
-                  <span
-                    aria-hidden="true"
-                    className="flex size-4 shrink-0 items-center justify-center rounded-xs border-2 border-muted text-muted"
-                  >
-                    {crossed ? <Check className="size-3" /> : null}
-                  </span>
-                  <span className="sr-only">
-                    {crossed ? "Completed: " : "Active: "}
-                  </span>
-                  <span
-                    className={`truncate ${crossed ? "text-muted line-through" : "text-foreground"}`}
-                  >
-                    {item.name}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+          <ChecklistPreview items={list.items} />
         )}
       </Link>
     </li>

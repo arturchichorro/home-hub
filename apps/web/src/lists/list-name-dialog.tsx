@@ -13,6 +13,7 @@ import { useZero } from "@rocicorp/zero/react";
 import { type SubmitEvent, useId, useState } from "react";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import { ListKindPicker } from "./list-kind-picker";
 
 type Props = {
   householdId: string;
@@ -32,10 +33,16 @@ export function ListNameDialog({ householdId, onClose, onSaved }: Props) {
 
   async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (saving || !enabled) return;
+
+    if (saving || !enabled) {
+      return;
+    }
+
     setSaving(true);
     setError(undefined);
+
     const listId = crypto.randomUUID();
+
     try {
       const mutation = zero.mutate(
         mutators.lists.create({
@@ -47,14 +54,17 @@ export function ListNameDialog({ householdId, onClose, onSaved }: Props) {
         }),
       );
       const result = await acknowledgeMutation(mutation);
+
       if (result.type === "error") {
         setError(
           result.error.message === listNameAlreadyExistsError
             ? "A list with this name already exists."
             : "The list could not be saved.",
         );
+
         return;
       }
+
       onSaved(listId);
       onClose();
     } catch {
@@ -68,7 +78,9 @@ export function ListNameDialog({ householdId, onClose, onSaved }: Props) {
     <DialogRoot
       open
       onOpenChange={(open) => {
-        if (!open && !saving) onClose();
+        if (!open && !saving) {
+          onClose();
+        }
       }}
       disablePointerDismissal={saving}
     >
@@ -89,22 +101,7 @@ export function ListNameDialog({ householdId, onClose, onSaved }: Props) {
         }
       >
         <form id={formId} onSubmit={submit} className="grid gap-4">
-          <Field label="Type">
-            <select
-              aria-label="List type"
-              className="h-10 rounded-md border border-border bg-canvas px-3"
-              disabled={saving}
-              value={kind}
-              onChange={(e) =>
-                setKind(
-                  e.target.value === "moodboard" ? "moodboard" : "checklist",
-                )
-              }
-            >
-              <option value="checklist">Checklist</option>
-              <option value="moodboard">Moodboard</option>
-            </select>
-          </Field>
+          <ListKindPicker value={kind} onChange={setKind} disabled={saving} />
           <Field label="Name">
             <FieldControl
               autoFocus

@@ -9,6 +9,7 @@ import {
 import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+
 export function DocumentText({
   householdId,
   documentId,
@@ -24,9 +25,9 @@ export function DocumentText({
   onWork: (key: string, busy: boolean) => void;
   focus?: boolean;
 }) {
-  const zero = useZero(),
-    enabled = useZeroMutationEnabled(),
-    ref = useRef<HTMLInputElement>(null);
+  const zero = useZero();
+  const enabled = useZeroMutationEnabled();
+  const ref = useRef<HTMLInputElement>(null);
   const editor = useDebouncedTextEditor({
     currentValue: value,
     required: field === "title",
@@ -34,7 +35,9 @@ export function DocumentText({
     failureError: "The change could not be saved.",
     mutationEnabled: enabled,
     preserveOnFailure: true,
+
     normalize: (v) => v.trim(),
+
     save: async (value) =>
       (
         await acknowledgeMutation(
@@ -50,13 +53,19 @@ export function DocumentText({
         )
       ).type === "success",
   });
+
   useEffect(() => {
     onWork(`${documentId}:${field}`, editor.hasChanges || editor.isSaving);
+
     return () => onWork(`${documentId}:${field}`, false);
   }, [documentId, field, editor.hasChanges, editor.isSaving, onWork]);
+
   useEffect(() => {
-    if (focus) ref.current?.focus();
+    if (focus) {
+      ref.current?.focus();
+    }
   }, [focus]);
+
   return (
     <>
       <Input

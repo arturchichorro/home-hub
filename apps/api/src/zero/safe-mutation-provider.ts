@@ -5,6 +5,7 @@ function databaseFailure(error: unknown): { code?: string } | undefined {
   const seen = new Set<unknown>();
   let found = false;
   let code: string | undefined;
+
   for (
     let depth = 0;
     depth < 12 && error instanceof Error && !seen.has(error);
@@ -12,6 +13,7 @@ function databaseFailure(error: unknown): { code?: string } | undefined {
   ) {
     seen.add(error);
     found ||= error instanceof DrizzleQueryError;
+
     if (
       "code" in error &&
       typeof error.code === "string" &&
@@ -20,8 +22,10 @@ function databaseFailure(error: unknown): { code?: string } | undefined {
       code = error.code;
       found = true;
     }
+
     error = error.cause;
   }
+
   return found ? (code ? { code } : {}) : undefined;
 }
 
@@ -34,14 +38,23 @@ export function safeMutationProvider(
   return new Proxy(provider, {
     get(target, property, receiver) {
       const value = Reflect.get(target, property, receiver);
-      if (property !== "transaction") return value;
+
+      if (property !== "transaction") {
+        return value;
+      }
+
       return async (...args: unknown[]) => {
         try {
           return await Reflect.apply(value, target, args);
         } catch (error) {
           const failure = databaseFailure(error);
-          if (!failure) throw error;
+
+          if (!failure) {
+            throw error;
+          }
+
           report(failure);
+
           throw new Error("Unable to save changes. Please retry.");
         }
       };

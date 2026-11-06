@@ -10,6 +10,7 @@ const args = {
   habitId: crypto.randomUUID(),
   optimisticTimestamp: 1,
 };
+
 it("validates selected-list semantics and rejects invalid link modes", () => {
   expect(
     linkHabitWorkoutsMutationSchema.safeParse({
@@ -18,15 +19,18 @@ it("validates selected-list semantics and rejects invalid link modes", () => {
       workoutIds: [],
     }).success,
   ).toBe(true);
+
   for (const payload of [
     { ...args, mode: "selected", workoutIds: [] },
     { ...args, mode: "none", workoutIds: [crypto.randomUUID()] },
     { ...args, mode: "invalid", workoutIds: [] },
-  ])
+  ]) {
     expect(linkHabitWorkoutsMutationSchema.safeParse(payload).success).toBe(
       false,
     );
+  }
 });
+
 it("manual OR automatic completion works without conflating their sources", () => {
   expect(habitCompleted({ completed: false, workoutCompleted: true })).toBe(
     true,
@@ -39,6 +43,7 @@ it("manual OR automatic completion works without conflating their sources", () =
   );
   expect(habitCompleted(undefined)).toBe(false);
 });
+
 it("manual requests cannot spoof a derived flag", () => {
   expect(
     setHabitCompletedMutationSchema.safeParse({

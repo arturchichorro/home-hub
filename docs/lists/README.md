@@ -9,16 +9,18 @@ module settings.
 ## Interface
 
 The sidebar opens `/households/:householdId/lists`, a responsive card library
-similar to Recipes. Each Checklist card shows only its title and the first four current
-items, with active items first and checked, struck-through completed items after
-them. Archived items are excluded; item order matches the detail screen. Status
-indicators are read-only previews, not toggle controls. The library query fetches
-at most four items per list. Moodboard cards instead show up to four media
-thumbnails/posters and a confirmed-media count, with no autoplay. Their list detail
-uses responsive masonry and a viewer; see [Moodboards](./moodboards.md).
+similar to Recipes. Checklist previews fill their grid-row height, including extra
+space beside taller Moodboard mosaics. They show active items first and crossed
+items after them; archived items are excluded. A clipped preview reserves its last
+row for `…`, with at least two items hidden. Status indicators remain read-only.
+The versioned `lists.libraryPreview` query fetches at most 22 current items per
+list (up to 20 preview rows plus lookahead); both older library query shapes stay
+unchanged. Moodboard cards show up to four thumbnails/posters without counts or
+autoplay; see [Moodboards](./moodboards.md).
 
-Cards use one compact fixed height rather than scaling to square tiles, so they
-stay aligned without adding large empty areas on wide screens.
+New list creation uses two labeled, keyboard-accessible icon radio choices for
+Checklist and Moodboard, rather than a select. Cards align by grid row; previews
+do not force every card to a square or grow to fit the complete item history.
 
 Clicking anywhere on a card opens the list; dragging the card reorders it, with
 no separate handles or arrow buttons. Touch uses a short hold to begin dragging,
@@ -44,7 +46,10 @@ each status, and an archive toggle with restore and immediate delete controls.
 Deleting an archived item sets its status to `deleted`; detail queries omit that
 status entirely. Re-adding a name reactivates its existing item in that list.
 Ordinary item actions change status rather than hard-delete records. Connection
-state disables mutations as before.
+state disables mutations as before. Status changes preserve a neighboring visible
+row in the document or scrolling panel, rather than following the moved item to
+the top. Focus advances to a neighboring action with `preventScroll`; subsequent
+user input cancels pending scroll restoration.
 Creation drafts ending in whitespace wait for more typing or an explicit blur or
 submission before transitioning to a saved row.
 

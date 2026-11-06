@@ -6,7 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRenameHouseholdService } from "./rename";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const now = new Date("2026-08-07T12:00:00Z");
 
 function createFakeDatabase({
@@ -30,18 +32,25 @@ function createFakeDatabase({
   const selectBuilder = {
     from: (table: unknown) => {
       fromTables.push(table);
+
       return selectBuilder;
     },
+
     where: (condition: unknown) => {
       selectionWhereClauses.push(condition);
+
       return selectBuilder;
     },
+
     limit: (limit: unknown) => {
       limits.push(limit);
+
       return selectBuilder;
     },
+
     for: async (strength: unknown) => {
       lockStrengths.push(strength);
+
       return ownerMembershipExists ? [{ id: "membership-id" }] : [];
     },
   };
@@ -49,14 +58,19 @@ function createFakeDatabase({
   const updateBuilder = {
     set: (values: unknown) => {
       updatedValues.push(values);
+
       return updateBuilder;
     },
+
     where: (condition: unknown) => {
       updateWhereClauses.push(condition);
+
       return updateBuilder;
     },
+
     returning: async (selection: unknown) => {
       returningSelections.push(selection);
+
       return [{ id: householdId, name: "Renamed Home" }];
     },
   };
@@ -67,12 +81,16 @@ function createFakeDatabase({
         findFirst: findUser,
       },
     },
+
     select: (selection: unknown) => {
       selections.push(selection);
+
       return selectBuilder;
     },
+
     update: (table: unknown) => {
       updatedTables.push(table);
+
       return updateBuilder;
     },
   };

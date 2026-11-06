@@ -6,21 +6,28 @@ const { useQuery, enabled } = vi.hoisted(() => ({
   useQuery: vi.fn(),
   enabled: vi.fn(),
 }));
+
 vi.mock("@rocicorp/zero/react", () => ({
   useZero: () => ({ userID: "me", mutate: vi.fn() }),
+
   useQuery,
 }));
+
 vi.mock("../app-header-right-component", () => ({
   useAppHeaderRightComponent: vi.fn(),
 }));
+
 vi.mock("../zero/use-zero-mutation-enabled", () => ({
   useZeroMutationEnabled: enabled,
 }));
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const members = [
   { userId: "me", user: { username: "Alice" } },
   { userId: "other", user: { username: "Bob" } },
 ];
+
 const habit = {
   id: "habit-1",
   name: "Read",
@@ -39,11 +46,13 @@ const habit = {
     },
   ],
 };
+
 function setup(rows = [habit], type = "complete") {
   useQuery
     .mockReturnValueOnce([members, { type: "complete" }])
     .mockReturnValueOnce([rows, { type }]);
 }
+
 beforeEach(() => {
   vi.clearAllMocks();
   useQuery.mockReset();
@@ -51,12 +60,16 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
 });
+
 afterEach(() => vi.useRealTimers());
+
 const render = () =>
   renderToStaticMarkup(<HabitsPage householdId={householdId} />);
+
 describe("today-first habits", () => {
   it("renders seven adjacent boxes with today last and no separate header toggle or mounted calendars", () => {
     setup();
+
     const html = render();
     expect(html).toContain('aria-label="Read, 2026-10-15. Mark done"');
     expect(html).toContain(
@@ -85,6 +98,7 @@ describe("today-first habits", () => {
   it("keeps the seven boxes chronological across a month boundary, with today last", () => {
     vi.setSystemTime(new Date("2026-11-03T12:00:00Z"));
     setup();
+
     const html = render();
     const dates = [...html.matchAll(/aria-label="Read, ([0-9-]+)\./g)].map(
       (match) => match[1],
@@ -101,6 +115,7 @@ describe("today-first habits", () => {
   });
   it("defaults to me, lists the roster, and does not mix another person's completion or note into the row", () => {
     setup();
+
     const html = render();
     expect(html).toContain('value="me" selected="">Me');
     expect(html).toContain(">Bob<");
@@ -109,6 +124,7 @@ describe("today-first habits", () => {
   });
   it("exposes note-only dates without falsely marking them completed", () => {
     setup();
+
     const html = render();
     expect(html).toContain(
       "Read, 2026-10-14. Not recorded. Note: Tram reading",
@@ -118,6 +134,7 @@ describe("today-first habits", () => {
   it("keeps inspection available offline while disabling today's write", () => {
     enabled.mockReturnValue(false);
     setup();
+
     const html = render();
     expect(
       html.match(

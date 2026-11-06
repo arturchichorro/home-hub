@@ -33,9 +33,13 @@ export function ListDetail({
   const [error, setError] = useState<string>();
 
   async function remove() {
-    if (deleting || mediaBusy || !enabled) return;
+    if (deleting || mediaBusy || !enabled) {
+      return;
+    }
+
     setDeleting(true);
     setError(undefined);
+
     try {
       const mutation = zero.mutate(
         mutators.lists.delete({
@@ -45,10 +49,13 @@ export function ListDetail({
         }),
       );
       const outcome = await acknowledgeMutation(mutation);
+
       if (outcome.type === "error") {
         setError("The list could not be deleted.");
+
         return;
       }
+
       await navigate({
         to: "/households/$householdId/lists",
         params: { householdId },
@@ -61,13 +68,15 @@ export function ListDetail({
     }
   }
 
-  if (result.type === "error")
+  if (result.type === "error") {
     return (
       <InlineAlert role="alert" variant="danger">
         Unable to load this list.
       </InlineAlert>
     );
-  if (!list)
+  }
+
+  if (!list) {
     return (
       <div
         className="grid gap-3"
@@ -96,6 +105,7 @@ export function ListDetail({
         ) : null}
       </div>
     );
+  }
 
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">

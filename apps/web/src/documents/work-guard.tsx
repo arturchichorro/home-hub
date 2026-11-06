@@ -1,6 +1,7 @@
 import { Button, DialogPopup, DialogRoot } from "@home-hub/ui-web";
 import { useBlocker } from "@tanstack/react-router";
 import { useBlockAppUpdate } from "../updates/activity";
+
 export function DocumentWorkGuard({
   dirty,
   busy,
@@ -11,16 +12,22 @@ export function DocumentWorkGuard({
   discard: () => void;
 }) {
   useBlockAppUpdate(dirty || busy);
+
   const blocker = useBlocker({
     shouldBlockFn: () => dirty,
+
     enableBeforeUnload: () => dirty,
+
     withResolver: true,
   });
+
   return (
     <DialogRoot
       open={blocker.status === "blocked"}
       onOpenChange={(open) => {
-        if (!open && blocker.status === "blocked") blocker.reset();
+        if (!open && blocker.status === "blocked") {
+          blocker.reset();
+        }
       }}
     >
       <DialogPopup
@@ -30,7 +37,9 @@ export function DocumentWorkGuard({
             <Button
               variant="ghost"
               onClick={() => {
-                if (blocker.status === "blocked") blocker.reset();
+                if (blocker.status === "blocked") {
+                  blocker.reset();
+                }
               }}
             >
               Keep editing
@@ -39,7 +48,10 @@ export function DocumentWorkGuard({
               disabled={busy}
               onClick={() => {
                 discard();
-                if (blocker.status === "blocked") blocker.proceed();
+
+                if (blocker.status === "blocked") {
+                  blocker.proceed();
+                }
               }}
             >
               Discard and leave

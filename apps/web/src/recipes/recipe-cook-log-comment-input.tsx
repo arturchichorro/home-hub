@@ -38,7 +38,9 @@ export function RecipeCookLogCommentInput({
     currentValue: currentComment ?? "",
     failureError: "The cooking log comment could not be saved.",
     mutationEnabled,
+
     normalize: (value) => cleanRecipeCookLogComment(value) ?? "",
+
     save: async (comment) => {
       const mutation = zero.mutate(
         mutators.recipes.updateCookLog({
@@ -50,12 +52,15 @@ export function RecipeCookLogCommentInput({
         }),
       );
       const result = await acknowledgeMutation(mutation);
+
       return result.type === "success";
     },
   });
 
   useEffect(() => {
-    if (focusOnMount) inputRef.current?.focus();
+    if (focusOnMount) {
+      inputRef.current?.focus();
+    }
   }, [focusOnMount]);
 
   return (

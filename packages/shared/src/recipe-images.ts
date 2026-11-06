@@ -17,6 +17,7 @@ import type { Media, RecipeMedia } from "./zero/schema.gen";
 export type RecipeImageContentType = z.infer<
   typeof recipeImageContentTypeSchema
 >;
+
 export const createRecipeImageUploadRequestSchema = z
   .object({
     cookLogId: z.uuid().nullable(),
@@ -27,6 +28,7 @@ export const createRecipeImageUploadRequestSchema = z
 // Recipe UI identity is the attachment ID, not the reusable asset ID.
 export type RecipeImage = RecipeMedia &
   Pick<Media, "contentType" | "byteSize" | "confirmedAt" | "width" | "height">;
+
 export function recipeImagesFromRows(
   rows: readonly (RecipeMedia & { asset?: Media | undefined })[],
 ): RecipeImage[] {

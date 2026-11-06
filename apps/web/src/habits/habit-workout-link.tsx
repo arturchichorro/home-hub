@@ -27,8 +27,10 @@ type Props = {
   linked: boolean;
   disabled: boolean;
 };
+
 export function HabitWorkoutLink(props: Props) {
   const [open, setOpen] = useState(false);
+
   return (
     <>
       <IconButton
@@ -49,6 +51,7 @@ export function HabitWorkoutLink(props: Props) {
     </>
   );
 }
+
 function HabitWorkoutLinkDialog({
   householdId,
   habitId,
@@ -65,6 +68,7 @@ function HabitWorkoutLinkDialog({
     queries.modules.byHousehold({ householdId }),
   );
   useBlockAppUpdate(true);
+
   const loaded =
     settingsResult.type === "complete" &&
     workoutResult.type === "complete" &&
@@ -74,20 +78,26 @@ function HabitWorkoutLinkDialog({
     ids: string[];
     workouts: readonly { id: string; title: string }[];
   }>();
+
   useEffect(() => {
-    if (!initial && loaded && settings)
+    if (!initial && loaded && settings) {
       setInitial({
         mode: settings.workoutMode ?? "none",
+
         ids: settings.workoutLinks.map((link) => link.workoutId),
+
         workouts,
       });
+    }
   }, [initial, loaded, settings, workouts]);
+
   const failed = [
     settingsResult.type,
     workoutResult.type,
     moduleResult.type,
   ].includes("error");
-  if (initial)
+
+  if (initial) {
     return (
       <WorkoutLinkEditor
         householdId={householdId}
@@ -104,11 +114,15 @@ function HabitWorkoutLinkDialog({
         onClose={onClose}
       />
     );
+  }
+
   return (
     <DialogRoot
       open
       onOpenChange={(open) => {
-        if (!open) onClose();
+        if (!open) {
+          onClose();
+        }
       }}
     >
       <DialogPopup
@@ -128,11 +142,13 @@ function HabitWorkoutLinkDialog({
     </DialogRoot>
   );
 }
+
 const modes = [
   { value: "none", label: "Manual only" },
   { value: "any", label: "Any workout" },
   { value: "selected", label: "Selected workouts" },
 ];
+
 function WorkoutLinkEditor({
   householdId,
   habitId,
@@ -155,20 +171,27 @@ function WorkoutLinkEditor({
   const zero = useZero();
   const connection = useConnectionState();
   const enabled = useZeroMutationEnabled() && connection.name === "connected";
-  const [mode, setMode] = useState(initialMode),
-    [ids, setIds] = useState(initialIds);
-  const [saving, setSaving] = useState(false),
-    [error, setError] = useState<string>();
+  const [mode, setMode] = useState(initialMode);
+  const [ids, setIds] = useState(initialIds);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string>();
   useBlockAppUpdate(saving);
   useBlocker({
     shouldBlockFn: () => saving,
+
     enableBeforeUnload: () => saving,
+
     withResolver: false,
   });
+
   async function save() {
-    if (saving || !enabled) return;
+    if (saving || !enabled) {
+      return;
+    }
+
     setSaving(true);
     setError(undefined);
+
     try {
       const result = await acknowledgeMutation(
         zero.mutate(
@@ -181,7 +204,11 @@ function WorkoutLinkEditor({
           }),
         ),
       );
-      if (result.type === "error") throw Error("save");
+
+      if (result.type === "error") {
+        throw Error("save");
+      }
+
       onClose();
     } catch {
       setError("Unable to save workout links. Your selection is still here.");
@@ -189,11 +216,14 @@ function WorkoutLinkEditor({
       setSaving(false);
     }
   }
+
   return (
     <DialogRoot
       open
       onOpenChange={(open) => {
-        if (!open && !saving) onClose();
+        if (!open && !saving) {
+          onClose();
+        }
       }}
     >
       <DialogPopup
@@ -225,7 +255,10 @@ function WorkoutLinkEditor({
             disabled={saving}
             onValueChange={(value) => {
               const parsed = habitWorkoutModeSchema.safeParse(value);
-              if (parsed.success) setMode(parsed.data);
+
+              if (parsed.success) {
+                setMode(parsed.data);
+              }
             }}
           >
             <SelectTrigger aria-label="Complete this habit from" />

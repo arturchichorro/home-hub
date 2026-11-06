@@ -28,7 +28,10 @@ export function DeleteHouseholdControl({
   const mutationEnabled = useZeroMutationEnabled();
 
   async function remove() {
-    if (!mutationEnabled) return;
+    if (!mutationEnabled) {
+      return;
+    }
+
     setDeleting(true);
     setError(undefined);
 
@@ -37,11 +40,13 @@ export function DeleteHouseholdControl({
 
       if (result.kind === "unauthorized") {
         onSessionExpired();
+
         return;
       }
 
       if (result.kind === "forbidden") {
         setError("You are no longer allowed to delete this household.");
+
         return;
       }
 

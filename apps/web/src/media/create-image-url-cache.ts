@@ -47,13 +47,21 @@ export function createImageUrlCache<
 
   function persistUserUrls(userId: string, now = Date.now()) {
     const storage = browserStorage();
-    if (!storage) return;
+
+    if (!storage) {
+      return;
+    }
+
     const entries = Array.from(cachedUrls.entries()).filter(
       ([, cached]) => cached.userId === userId && cached.refreshAt > now,
     );
+
     try {
-      if (entries.length === 0) storage.removeItem(userStorageKey(userId));
-      else storage.setItem(userStorageKey(userId), JSON.stringify(entries));
+      if (entries.length === 0) {
+        storage.removeItem(userStorageKey(userId));
+      } else {
+        storage.setItem(userStorageKey(userId), JSON.stringify(entries));
+      }
     } catch {
       // URL persistence is optional; memory caching still works.
     }
@@ -61,31 +69,57 @@ export function createImageUrlCache<
 
   function schedulePersistUserUrls(userId: string) {
     pendingPersistenceUsers.add(userId);
-    if (persistenceScheduled) return;
+
+    if (persistenceScheduled) {
+      return;
+    }
+
     persistenceScheduled = true;
     queueMicrotask(() => {
       persistenceScheduled = false;
+
       const userIds = Array.from(pendingPersistenceUsers);
       pendingPersistenceUsers.clear();
-      for (const pendingUserId of userIds) persistUserUrls(pendingUserId);
+
+      for (const pendingUserId of userIds) {
+        persistUserUrls(pendingUserId);
+      }
     });
   }
 
   function hydrateUserUrls(userId: string, now = Date.now()) {
-    if (hydratedUsers.has(userId)) return;
+    if (hydratedUsers.has(userId)) {
+      return;
+    }
+
     hydratedUsers.add(userId);
+
     const storage = browserStorage();
-    if (!storage) return;
+
+    if (!storage) {
+      return;
+    }
 
     try {
       const stored = storage.getItem(userStorageKey(userId));
-      if (!stored) return;
+
+      if (!stored) {
+        return;
+      }
+
       const entries: unknown = JSON.parse(stored);
-      if (!Array.isArray(entries)) return;
+
+      if (!Array.isArray(entries)) {
+        return;
+      }
 
       for (const entry of entries) {
-        if (!Array.isArray(entry) || entry.length !== 2) continue;
+        if (!Array.isArray(entry) || entry.length !== 2) {
+          continue;
+        }
+
         const [key, value] = entry;
+
         if (
           typeof key !== "string" ||
           !value ||
@@ -102,8 +136,10 @@ export function createImageUrlCache<
         ) {
           continue;
         }
+
         cachedUrls.set(key, value as CachedImageUrl);
       }
+
       persistUserUrls(userId, now);
     } catch {
       storage.removeItem(userStorageKey(userId));
@@ -112,14 +148,21 @@ export function createImageUrlCache<
 
   function readCachedImageUrl(identity: Identity, now = Date.now()) {
     hydrateUserUrls(identity.userId, now);
+
     const key = imageUrlCacheKey(identity);
     const cached = cachedUrls.get(key);
-    if (!cached) return undefined;
+
+    if (!cached) {
+      return undefined;
+    }
+
     if (cached.refreshAt <= now) {
       cachedUrls.delete(key);
       schedulePersistUserUrls(identity.userId);
+
       return undefined;
     }
+
     return cached;
   }
 
@@ -128,6 +171,7 @@ export function createImageUrlCache<
     createUrl: () => Promise<ImageReadResult>,
   ) {
     const cached = readCachedImageUrl(identity);
+
     if (cached) {
       return Promise.resolve({
         kind: "success" as const,
@@ -141,7 +185,10 @@ export function createImageUrlCache<
 
     const key = imageUrlCacheKey(identity);
     const pending = pendingUrls.get(key);
-    if (pending) return pending.promise;
+
+    if (pending) {
+      return pending.promise;
+    }
 
     const imageResourceKey = resourceKey(identity);
     const promise = createUrl()
@@ -163,13 +210,17 @@ export function createImageUrlCache<
           });
           schedulePersistUserUrls(identity.userId);
         }
+
         return result;
       })
       .finally(() => {
-        if (pendingUrls.get(key)?.promise === promise) pendingUrls.delete(key);
+        if (pendingUrls.get(key)?.promise === promise) {
+          pendingUrls.delete(key);
+        }
       });
 
     pendingUrls.set(key, { promise, resourceKey: imageResourceKey });
+
     return promise;
   }
 
@@ -177,6 +228,7 @@ export function createImageUrlCache<
     identity: Omit<Identity, "accessToken" | "variant">,
   ) {
     const imageResourceKey = resourceKey(identity);
+
     for (const [key, cached] of cachedUrls) {
       if (
         cached.userId === identity.userId &&
@@ -185,36 +237,57 @@ export function createImageUrlCache<
         cachedUrls.delete(key);
       }
     }
+
     for (const [key, pending] of pendingUrls) {
-      if (pending.resourceKey === imageResourceKey) pendingUrls.delete(key);
+      if (pending.resourceKey === imageResourceKey) {
+        pendingUrls.delete(key);
+      }
     }
+
     schedulePersistUserUrls(identity.userId);
   }
 
   function clearImageUrlCache(userId?: string) {
     if (userId) {
       for (const [key, cached] of cachedUrls) {
-        if (cached.userId === userId) cachedUrls.delete(key);
+        if (cached.userId === userId) {
+          cachedUrls.delete(key);
+        }
       }
+
       hydratedUsers.delete(userId);
     } else {
       cachedUrls.clear();
       hydratedUsers.clear();
     }
+
     pendingUrls.clear();
-    if (userId) pendingPersistenceUsers.delete(userId);
-    else pendingPersistenceUsers.clear();
+
+    if (userId) {
+      pendingPersistenceUsers.delete(userId);
+    } else {
+      pendingPersistenceUsers.clear();
+    }
 
     const storage = browserStorage();
-    if (!storage) return;
+
+    if (!storage) {
+      return;
+    }
+
     try {
       if (userId) {
         storage.removeItem(userStorageKey(userId));
+
         return;
       }
+
       for (let index = storage.length - 1; index >= 0; index -= 1) {
         const key = storage.key(index);
-        if (key?.startsWith(storageKeyPrefix)) storage.removeItem(key);
+
+        if (key?.startsWith(storageKeyPrefix)) {
+          storage.removeItem(key);
+        }
       }
     } catch {
       // Clearing memory is sufficient when storage is unavailable.

@@ -38,8 +38,11 @@ export function WorkoutLogNoteInput({
     preserveOnFailure: true,
     currentValue: note,
     mutationEnabled: enabled && !disabled,
+
     normalize: (value) => value.trim(),
+
     failureError: "The workout log note could not be saved.",
+
     save: async (note) => {
       const mutation = zero.mutate(
         mutators.workouts.updateLogNote({
@@ -50,16 +53,23 @@ export function WorkoutLogNoteInput({
         }),
       );
       const result = await acknowledgeMutation(mutation);
+
       return result.type === "success";
     },
   });
+
   useEffect(() => {
     onDirtyChange?.(editor.hasChanges);
+
     return () => onDirtyChange?.(false);
   }, [editor.hasChanges, onDirtyChange]);
+
   useEffect(() => {
-    if (focusOnMount) input.current?.focus();
+    if (focusOnMount) {
+      input.current?.focus();
+    }
   }, [focusOnMount]);
+
   return (
     <>
       <Input

@@ -22,11 +22,13 @@ it("redacts query parameters, nested causes and commit errors before SDK logging
   } as unknown as ZeroDbProvider;
   const safe = safeMutationProvider(provider, report);
   let result: unknown;
+
   try {
     await Reflect.apply(safe.transaction, safe, []);
   } catch (error) {
     result = error;
   }
+
   expect(result).toBeInstanceOf(Error);
   expect((result as Error).message).toBe(
     "Unable to save changes. Please retry.",
@@ -35,10 +37,11 @@ it("redacts query parameters, nested causes and commit errors before SDK logging
   expect(JSON.stringify(report.mock.calls)).toBe('[[{"code":"23514"}]]');
   expect(JSON.stringify(result)).not.toContain(secret);
 });
+
 it("preserves intentional authorization and reload errors", async () => {
   for (const message of ["Access denied", "Reload Home Hub before logging."]) {
-    const error = new Error(message),
-      report = vi.fn();
+    const error = new Error(message);
+    const report = vi.fn();
     const provider = {
       transaction: async () => {
         throw error;
@@ -49,9 +52,11 @@ it("preserves intentional authorization and reload errors", async () => {
     expect(report).not.toHaveBeenCalled();
   }
 });
+
 it("preserves provider metadata, this binding and successful transaction values", async () => {
   const provider = {
     marker: 7,
+
     async transaction() {
       return this.marker;
     },
