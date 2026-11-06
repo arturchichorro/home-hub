@@ -162,9 +162,119 @@ try {
     return result.result.value;
   }
 
+  async function watchMotion(sourceId, allowInstant = false) {
+    await evaluate(`(() => {
+      const motion = { active: true, allowInstant: ${allowInstant}, hold: false, jumps: [], canceled: [], ghostJumps: [] };
+      window.moodboardMotion = motion;
+      const previous = new Map();
+      const seen = new WeakSet();
+      let ghost;
+
+      function sample() {
+        if (!motion.active) {
+          return;
+        }
+
+        for (const node of document.querySelectorAll('[data-moodboard-pin]:not([data-dnd-placeholder])')) {
+          const id = node.dataset.moodboardPin;
+          const rect = node.getBoundingClientRect();
+
+          if (id === ${JSON.stringify(sourceId)}) {
+            const feedback = document.querySelector('.moodboard-drag-overlay[data-dnd-dragging]')?.getBoundingClientRect() ?? rect;
+
+            if (motion.hold && ghost && Math.hypot(feedback.x - ghost.x, feedback.y - ghost.y) > 4) {
+              motion.ghostJumps.push(id);
+            }
+
+            ghost = feedback;
+            continue;
+          }
+
+          // Error banners/scrolling can move the whole board legitimately.
+          // Detect snaps between slots, relative to the board rather than page.
+          const board = node.parentElement.getBoundingClientRect();
+          const x = rect.x - board.x;
+          const y = rect.y - board.y;
+          const transitions = node.getAnimations().filter(animation => animation.playState === 'running' && animation.transitionProperty === 'translate');
+          const old = previous.get(id);
+          const animated = transitions.length > 0;
+
+          if (old && !animated && !old.animated && Math.hypot(x - old.x, y - old.y) > 4) {
+            motion.jumps.push({ id, distance: Math.round(Math.hypot(x - old.x, y - old.y)) });
+          }
+
+          previous.set(id, { x, y, animated });
+
+          for (const animation of transitions) {
+            if (seen.has(animation)) {
+              continue;
+            }
+
+            seen.add(animation);
+            const target = \`\${node.style.left}/\${node.style.top}\`;
+            void animation.finished.catch(() => {
+              // A changed target legitimately interrupts a tween. Reinserting a
+              // tile must not cancel a tween whose target has not changed.
+              if (motion.active && node.isConnected && node.style.translate === target) {
+                motion.canceled.push(id);
+              }
+            });
+          }
+        }
+
+        requestAnimationFrame(sample);
+      }
+
+      requestAnimationFrame(sample);
+    })()`);
+  }
+
+  async function finishMotion() {
+    const motion = await evaluate(`(() => {
+      const motion = window.moodboardMotion;
+
+      if (motion) {
+        motion.active = false;
+      }
+
+      return motion;
+    })()`);
+
+    if (!motion) {
+      return;
+    }
+
+    if (!motion.allowInstant) {
+      assert.deepEqual(
+        motion.jumps,
+        [],
+        "Every displaced peer must animate, not just one",
+      );
+    }
+
+    assert.deepEqual(
+      motion.canceled,
+      [],
+      "Drop/DOM reconciliation must not cancel in-flight peer transitions",
+    );
+    assert.deepEqual(
+      motion.ghostJumps,
+      [],
+      "The dragged photo must stay still while the pointer is paused",
+    );
+  }
+
   async function healthy() {
     const errors = await evaluate("window.moodboardTest?.errors ?? []");
     assert.deepEqual(errors, [], `React crashed: ${JSON.stringify(errors)}`);
+    await until(
+      () =>
+        evaluate(
+          "[...document.querySelectorAll('[data-moodboard-pin]')].every(node => node.getAnimations().every(animation => animation.playState !== 'running')) && JSON.stringify([...document.querySelectorAll('[data-moodboard-pin]')].map(node => node.dataset.moodboardPin)) === JSON.stringify(window.moodboardTest.order())",
+        ),
+      "tile transitions and semantic DOM order settle",
+    );
+
     const order = await evaluate("window.moodboardTest.order()");
     const actual = await evaluate(
       "[...document.querySelectorAll('[data-moodboard-pin]')].map(node => node.dataset.moodboardPin)",
@@ -178,14 +288,6 @@ try {
       new Set(actual).size,
       actual.length,
       "No duplicate pin or leftover drag placeholder",
-    );
-
-    await until(
-      () =>
-        evaluate(
-          "[...document.querySelectorAll('[data-moodboard-pin]')].every(node => node.getAnimations().every(animation => animation.playState !== 'running'))",
-        ),
-      "tile transitions settle",
     );
 
     const geometry = await evaluate(`(() => {
@@ -218,9 +320,18 @@ try {
         );
       }
     }
+
+    assert.equal(
+      await evaluate(
+        "document.querySelector('.moodboard-drag-overlay[data-dnd-dragging]') === null",
+      ),
+      true,
+      "No floating image remains after the drag",
+    );
+    await finishMotion();
   }
 
-  async function open(width = 1280) {
+  async function open(width = 1280, { count = 9, uniform = false } = {}) {
     await client.call("Emulation.setDeviceMetricsOverride", {
       width,
       height: 1000,
@@ -235,7 +346,18 @@ try {
         ),
       "fixture pins",
     );
+    await evaluate(
+      `window.moodboardTest.configure(${count}, ${uniform}); true`,
+    );
+    await until(
+      () =>
+        evaluate(
+          `document.querySelectorAll('[data-moodboard-pin]').length === ${count}`,
+        ),
+      "configured fixture pins",
+    );
     await wait(150);
+    await healthy();
   }
 
   async function key(key, code, virtualKey) {
@@ -267,21 +389,30 @@ try {
     await healthy();
   }
 
-  async function drag(touch = false, expectAnimation = true) {
+  async function drag({
+    touch = false,
+    expectAnimation = true,
+    sourceIndex = 0,
+    targetIndex,
+    hold = 0,
+    reverse = false,
+    requireInFlightDrop = false,
+  } = {}) {
     let sawPeerAnimation = false;
     const requestsBefore = await evaluate(
       "window.moodboardTest.mutations.length",
     );
     const points = await evaluate(`(() => {
       const nodes = [...document.querySelectorAll('[data-moodboard-pin]')];
-      const source = nodes[0];
+      const source = nodes.at(${sourceIndex});
       const sourceBox = source.getBoundingClientRect();
-      const target = nodes.find(node => Math.abs(node.getBoundingClientRect().left - sourceBox.left) > 40);
+      const target = ${targetIndex === undefined ? "nodes.find(node => Math.abs(node.getBoundingClientRect().left - sourceBox.left) > 40)" : `nodes.at(${targetIndex})`};
       const a = source.querySelector('[data-moodboard-handle]').getBoundingClientRect();
-      const b = target.getBoundingClientRect();
-      return { a: { x: a.x + a.width / 2, y: a.y + a.height / 2 }, b: { x: b.x + b.width / 2, y: b.y + 40 } };
+      const b = target.querySelector('[data-moodboard-handle]').getBoundingClientRect();
+      return { id: source.dataset.moodboardPin, order: nodes.map(node => node.dataset.moodboardPin), offset: { x: a.x + a.width / 2 - sourceBox.x, y: a.y + a.height / 2 - sourceBox.y }, a: { x: a.x + a.width / 2, y: a.y + a.height / 2 }, b: { x: b.x + b.width / 2, y: b.y + b.height / 2 } };
     })()`);
     const { a, b } = points;
+    await watchMotion(points.id, !expectAnimation);
 
     if (touch) {
       await client.call("Input.dispatchTouchEvent", {
@@ -302,10 +433,16 @@ try {
       });
     }
 
-    for (let step = 1; step <= 14; step++) {
+    const path = reverse ? [a, b, a, b] : [a, b];
+
+    for (let step = 1; step <= 14 * (path.length - 1); step++) {
+      const segment = Math.floor((step - 1) / 14);
+      const from = path[segment];
+      const to = path[segment + 1];
+      const progress = (((step - 1) % 14) + 1) / 14;
       const point = {
-        x: a.x + ((b.x - a.x) * step) / 14,
-        y: a.y + ((b.y - a.y) * step) / 14,
+        x: from.x + (to.x - from.x) * progress,
+        y: from.y + (to.y - from.y) * progress,
       };
       await client.call(
         touch ? "Input.dispatchTouchEvent" : "Input.dispatchMouseEvent",
@@ -315,8 +452,27 @@ try {
       );
       await wait(25);
 
+      const ghost = await evaluate(`(() => {
+        const node = document.querySelector('.moodboard-drag-overlay[data-dnd-dragging]');
+        return node?.getBoundingClientRect().toJSON();
+      })()`);
+
+      if (ghost) {
+        assert(
+          Math.hypot(
+            ghost.x - (point.x - points.offset.x),
+            ghost.y - (point.y - points.offset.y),
+          ) < 3,
+          `The dragged photo must track the grabbed point without jumping: ${JSON.stringify({ point, offset: points.offset, ghost })}`,
+        );
+      }
+
       sawPeerAnimation ||= await evaluate(`(() => {
-        return [...document.querySelectorAll("[data-moodboard-pin]:not([data-dnd-dragging]):not([data-dnd-placeholder])")].some(node => {
+        return [...document.querySelectorAll("[data-moodboard-pin]:not([data-dnd-placeholder])")].some(node => {
+          if (node.dataset.moodboardPin === ${JSON.stringify(points.id)}) {
+            return false;
+          }
+
           const moving = node.getAnimations().some(animation => animation.playState === "running" && animation.transitionProperty === "translate");
           const current = getComputedStyle(node).translate.split(" ").map(parseFloat);
           const target = node.style.translate.split(" ").map(parseFloat);
@@ -338,6 +494,29 @@ try {
         : "Reduced motion must not animate neighbor tiles",
     );
 
+    assert.deepEqual(
+      await evaluate(
+        "[...document.querySelectorAll('[data-moodboard-pin]:not([data-dnd-placeholder])')].map(node => node.dataset.moodboardPin)",
+      ),
+      points.order,
+      "Keep DOM order stable during dragging, including backward moves",
+    );
+
+    if (hold) {
+      await evaluate("window.moodboardMotion.hold = true; true");
+      await wait(hold);
+      await evaluate("window.moodboardMotion.hold = false; true");
+    }
+
+    if (requireInFlightDrop) {
+      assert(
+        await evaluate(
+          "[...document.querySelectorAll('[data-moodboard-pin]:not([data-dnd-dragging]):not([data-dnd-placeholder])')].some(node => node.getAnimations().some(animation => animation.playState === 'running' && animation.transitionProperty === 'translate'))",
+        ),
+        "This case must drop before peer transitions finish",
+      );
+    }
+
     await client.call(
       touch ? "Input.dispatchTouchEvent" : "Input.dispatchMouseEvent",
       touch
@@ -349,6 +528,37 @@ try {
   await client.call("Emulation.setEmulatedMedia", {
     features: [{ name: "prefers-reduced-motion", value: "no-preference" }],
   });
+  // Recording regression: eight portrait photos; move a later photo backward.
+  // The first-photo-forward case alone misses React moving the crossed peers.
+  await open(1280, { count: 8, uniform: true });
+  await drag({ sourceIndex: 5, targetIndex: 2, hold: 700 });
+  await settled(1);
+  await drag({
+    sourceIndex: 7,
+    targetIndex: 0,
+    reverse: true,
+    requireInFlightDrop: true,
+  });
+  await settled(2);
+  await drag({ sourceIndex: 2, targetIndex: 6 });
+  await settled(3);
+  await drag({ sourceIndex: 3, targetIndex: 2 });
+  await settled(4);
+  const uniformConfirmed = await evaluate("window.moodboardTest.order()");
+  await evaluate("window.moodboardTest.rejectNext(); true");
+  await drag({ sourceIndex: 5, targetIndex: 1 });
+  await settled(5);
+  assert.deepEqual(
+    await evaluate("window.moodboardTest.order()"),
+    uniformConfirmed,
+  );
+
+  await open();
+  await drag({ sourceIndex: 8, targetIndex: 0 });
+  await settled(1);
+  await drag({ sourceIndex: 5, targetIndex: 2 });
+  await settled(2);
+
   await open();
   await drag();
   await settled(1);
@@ -392,10 +602,71 @@ try {
   await settled(3);
   assert.deepEqual(await evaluate("window.moodboardTest.order()"), confirmed);
 
+  await open(1280, { count: 50 });
+  await drag();
+  await settled(1);
+
+  await open(1280, { count: 8, uniform: true });
+  await evaluate(
+    "document.querySelector('[data-moodboard-pin=\"pin-5\"] [data-moodboard-handle]').focus(); true",
+  );
+  await watchMotion("pin-5");
+  await key(" ", "Space", 32);
+  await key("ArrowLeft", "ArrowLeft", 37);
+  assert.equal(
+    await evaluate(
+      "document.querySelector('[data-moodboard-pin=pin-5] button').getAttribute('aria-label')",
+    ),
+    "Open image 4",
+    "Left from the third column must preview the second column, not do nothing",
+  );
+  await key("ArrowRight", "ArrowRight", 39);
+  assert.equal(
+    await evaluate(
+      "document.querySelector('[data-moodboard-pin=pin-5] button').getAttribute('aria-label')",
+    ),
+    "Open image 6",
+    "Right must return the photo to its starting column",
+  );
+  await key("ArrowLeft", "ArrowLeft", 37);
+  await key(" ", "Space", 32);
+  await settled(1);
+  assert(
+    await evaluate(
+      "document.activeElement?.closest('[data-moodboard-pin]')?.dataset.moodboardPin === 'pin-5'",
+    ),
+    "Backward keyboard moves retain focus after semantic ordering",
+  );
+
+  // Keep a peer tween alive beyond dnd-kit's own 250ms drop/focus cleanup.
+  // Then change focus before our delayed semantic DOM reconciliation.
+  await evaluate(
+    "const timing = document.createElement('style'); timing.textContent = '[data-moodboard-pin]:not([data-dnd-dragging]) { transition-duration: 700ms !important; }'; document.head.append(timing); true",
+  );
+  await key(" ", "Space", 32);
+  await key("ArrowRight", "ArrowRight", 39);
+  await key(" ", "Space", 32);
+  await wait(300);
+  assert(
+    await evaluate(
+      "[...document.querySelectorAll('[data-moodboard-pin]')].some(node => node.getAnimations().some(animation => animation.playState === 'running'))",
+    ),
+    "Focus change must precede semantic DOM reconciliation",
+  );
+  await evaluate(
+    "const outside = document.createElement('button'); outside.textContent = 'Outside board'; document.body.append(outside); outside.focus(); window.outsideFocus = outside; true",
+  );
+  await settled(2);
+  assert(
+    await evaluate("document.activeElement === window.outsideFocus"),
+    "Delayed DOM ordering must not steal outside focus",
+  );
+
   await open();
   await evaluate(
     "document.querySelector('[data-moodboard-handle]').focus(); true",
   );
+  await watchMotion("pin-0");
   await key(" ", "Space", 32);
   await key("ArrowRight", "ArrowRight", 39);
   await key("ArrowLeft", "ArrowLeft", 37);
@@ -409,7 +680,19 @@ try {
   await key(" ", "Space", 32);
   await settled(1);
 
+  assert(
+    await evaluate(
+      "document.activeElement?.hasAttribute('data-moodboard-handle') && document.activeElement.closest('[data-moodboard-pin]')?.dataset.moodboardPin === window.moodboardTest.mutations[0].args.attachmentId",
+    ),
+    "Keyboard focus survives delayed semantic DOM moves",
+  );
+
   const keyboardOrder = await evaluate("window.moodboardTest.order()");
+  await watchMotion(
+    await evaluate(
+      "document.activeElement.closest('[data-moodboard-pin]').dataset.moodboardPin",
+    ),
+  );
   await key(" ", "Space", 32);
   await key("ArrowRight", "ArrowRight", 39);
   await key("Escape", "Escape", 27);
@@ -452,17 +735,17 @@ try {
   }
 
   await open(390);
-  await drag(true);
+  await drag({ touch: true });
   await settled(1);
   await client.call("Emulation.setEmulatedMedia", {
     features: [{ name: "prefers-reduced-motion", value: "reduce" }],
   });
   await open();
-  await drag(false, false);
+  await drag({ expectAnimation: false });
   await settled(1);
 
   console.log(
-    "Moodboard browser regression passed: animated live preview, reduced motion, live optimistic cross-column moves, repeat, rollback, keyboard/drop/cancel, touch, stable parents and 5 widths.",
+    "Moodboard browser regression passed: forward/backward/middle/last-item motion, eight-portrait recording case, paused pointer, in-flight drop, rollback, keyboard focus/reversal/cancel, touch, reduced motion, live updates, stable parents and 5 widths.",
   );
 } finally {
   client?.close();

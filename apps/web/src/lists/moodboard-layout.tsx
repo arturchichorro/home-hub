@@ -2,9 +2,11 @@ import {
   type CSSProperties,
   type ReactNode,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
+import { applyMoodboardOrder } from "./moodboard-order";
 import type { MoodboardPin } from "./moodboard-preview";
 
 export function moodboardColumnCount(width: number) {
@@ -58,9 +60,11 @@ export function moodboardColumns<T extends Pick<MoodboardPin, "asset">>(
 
 export function MoodboardLayout({
   pins,
+  deferDomOrder = false,
   children,
 }: {
   pins: readonly MoodboardPin[];
+  deferDomOrder?: boolean;
   children: (
     pin: MoodboardPin,
     index: number,
@@ -70,7 +74,84 @@ export function MoodboardLayout({
   const container = useRef<HTMLUListElement>(null);
   const [width, setWidth] = useState(0);
   const previousWidth = useRef(0);
+  const focusedBeforeMove = useRef<
+    { element: HTMLElement; order: readonly string[] } | undefined
+  >(undefined);
+  const order = useMemo(() => pins.map((pin) => pin.id), [pins]);
+  const [domOrder, setDomOrder] = useState(order);
   const animate = width > 0 && previousWidth.current === width;
+
+  useLayoutEffect(() => {
+    const pending = focusedBeforeMove.current;
+
+    if (!pending || pending.order !== domOrder) {
+      return;
+    }
+
+    focusedBeforeMove.current = undefined;
+    const focused = pending.element;
+
+    if (
+      focused.isConnected &&
+      (document.activeElement === document.body ||
+        document.activeElement === document.documentElement)
+    ) {
+      focused.focus({ preventScroll: true });
+    }
+  }, [domOrder]);
+
+  useLayoutEffect(() => {
+    const element = container.current;
+
+    if (
+      !element ||
+      deferDomOrder ||
+      (order.length === domOrder.length &&
+        order.every((id, index) => id === domOrder[index]))
+    ) {
+      return;
+    }
+
+    let canceled = false;
+
+    function commitOrder() {
+      if (canceled || !element) {
+        return;
+      }
+
+      const focused = element.ownerDocument.activeElement;
+      focusedBeforeMove.current =
+        focused instanceof HTMLElement && element.contains(focused)
+          ? { element: focused, order }
+          : undefined;
+      setDomOrder(order);
+    }
+
+    // React's insertBefore cancels CSS transitions even within the same parent.
+    // Move slots first; reconcile semantic DOM order only once they have settled.
+    // Observe the actual animations, not a timer: reversals, reduced motion and
+    // responsive changes can shorten or cancel a transition.
+    const transitions = Array.from(element.children)
+      .flatMap((child) => child.getAnimations())
+      .filter(
+        (animation) =>
+          "transitionProperty" in animation &&
+          animation.transitionProperty === "translate" &&
+          animation.playState === "running",
+      );
+
+    if (transitions.length) {
+      void Promise.allSettled(
+        transitions.map((animation) => animation.finished),
+      ).then(commitOrder);
+    } else {
+      commitOrder();
+    }
+
+    return () => {
+      canceled = true;
+    };
+  }, [order, domOrder, deferDomOrder]);
 
   useLayoutEffect(() => {
     previousWidth.current = width;
@@ -99,6 +180,7 @@ export function MoodboardLayout({
       Math.max(1, columns.length),
   );
   const positions = new Map<string, CSSProperties>();
+  const indices = new Map(order.map((id, index) => [id, index]));
 
   let height = 0;
 
@@ -135,10 +217,10 @@ export function MoodboardLayout({
       className="relative min-w-0 max-w-full"
       style={{ height }}
     >
-      {/* One stable parent lets React reconcile every pin without fighting the
-          sortable plugin when a pin crosses a visual column boundary. */}
-      {pins.map((pin, index) =>
-        children(pin, index, positions.get(pin.id) ?? {}),
+      {/* Visual order can advance while DOM order waits for transitions. The
+          sortable index must still describe the current visual slot. */}
+      {applyMoodboardOrder(pins, domOrder).map((pin) =>
+        children(pin, indices.get(pin.id) ?? 0, positions.get(pin.id) ?? {}),
       )}
     </ul>
   );

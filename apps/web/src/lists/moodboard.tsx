@@ -1,5 +1,5 @@
 import { SortableKeyboardPlugin } from "@dnd-kit/dom/sortable";
-import { DragDropProvider } from "@dnd-kit/react";
+import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
@@ -479,7 +479,10 @@ export function Moodboard({
           );
         }}
       >
-        <MoodboardLayout pins={displayed}>
+        <MoodboardLayout
+          pins={displayed}
+          deferDomOrder={dragging || reordering}
+        >
           {(pin, index, style) => (
             <Tile
               key={pin.id}
@@ -492,6 +495,15 @@ export function Moodboard({
             />
           )}
         </MoodboardLayout>
+        <DragOverlay className="moodboard-drag-overlay overflow-hidden rounded-sm bg-raised opacity-50">
+          {(source) => {
+            const pin = visible.find((item) => item.id === source.id);
+
+            return pin ? (
+              <MoodboardThumbnail pin={pin} session={session} cover />
+            ) : null;
+          }}
+        </DragOverlay>
       </DragDropProvider>
       {rows.length >= limit &&
         (limit < 10001 ? (
