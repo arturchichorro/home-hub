@@ -17,9 +17,13 @@ items/media are not part of this version.
   screens, based on the board container width. Explicit, height-balanced contiguous
   columns preserve down-column order without CSS column balancing leaving an
   empty right-hand track. All keyed tiles stay under one flat list parent; visual
-  positioning must not reparent tiles when optimistic reorder/query updates arrive,
-  because the sortable plugin also moves DOM nodes. The browser regression exercises
-  live updates, rollback and drag cancellation. Bounded tile and upload widths prevent
+  positioning must not reparent tiles when optimistic reorder/query updates arrive.
+  React owns the local drag-preview order; native 250ms translate transitions use
+  the Recipes easing. Imperative optimistic DOM sorting is disabled for this board,
+  while keyboard navigation and drag feedback remain enabled. Only drop writes a
+  reorder; cancellation/rejection restores current query order. Reduced motion
+  skips the tween, and initial layout/resizing does not animate. The manual browser
+  diagnostic exercises visible in-drag animation, live updates, rollback and cancellation. Bounded tile and upload widths prevent
   horizontal page scrolling, including long filenames. Aspect ratios reserve layout space. Media opens from its image surface;
   a separate handle supports mouse drag, touch hold and Space/arrows/Escape.
 - Initially query/render 50 pins plus a lookahead; Show more adds 50. The current
