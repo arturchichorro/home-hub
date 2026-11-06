@@ -6,8 +6,8 @@ import {
   findEnabledHouseholdModuleForShare,
   findHouseholdMembershipForShare,
 } from "../../authorization/household-access";
+import type { InspectR2ObjectResult } from "../../media/inspect-object";
 import { InvalidMediaUploadError } from "../../media/process-image";
-import type { InspectR2ObjectResult } from "./inspect-object";
 import {
   findRecipeImageForShare,
   findRecipeImageForUpdate,

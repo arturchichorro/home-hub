@@ -130,7 +130,7 @@ export async function deleteExerciseImage(
   return { kind: "success" as const };
 }
 
-export async function readExerciseImageUrls(input: {
+async function readExerciseImageUrls(input: {
   accessToken: string;
   householdId: string;
   requests: {

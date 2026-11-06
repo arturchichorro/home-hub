@@ -9,6 +9,16 @@
 - Workout history displays 20 entries plus a bounded lookahead, with exclusive `(completedOn, completedAt, id)` cursors. “Load older history” and “Newer history” change pages. Selected and current-day logs have independent author-scoped subscriptions, so historical editing and today's logging do not depend on the visible page. Legacy readers remain compatible.
 - `workouts.saveLog` remains an explicit rejection, not an archive writer. Applied migrations, historical archive tables and populated migration fixtures must remain intact.
 
+## Dead-code checks
+
+Run `pnpm knip` locally before removing unused files, exports or dependencies.
+`knip.jsonc` includes workspace entry exports, the manual browser fixture and
+Docker/database CLI entry points. Its narrow exceptions cover Vite-injected test
+adapters, drizzle-zero’s reflective default export and the intentional shared
+Logs validation alias. Do not remove applied migrations, generated files,
+historical fixtures or compatibility endpoints just because a static scan cannot
+see their runtime callers. Knip is not an additional CI/deployment gate.
+
 ## Local verification, 2 November 2026
 
 Official Zero 1.11.3, Node 26, PostgreSQL 17, Chrome 156 on an M2 Pro; disposable synthetic households, production-mode builds. Three samples per timing cell; these are loopback observations, not production latency guarantees.

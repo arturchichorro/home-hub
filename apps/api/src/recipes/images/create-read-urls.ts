@@ -1,5 +1,6 @@
 import type { Database } from "@home-hub/database";
 import type { RecipeImageVariant } from "@home-hub/shared/recipe-image-delivery";
+import { recipeImageDeliveryCapabilityLifetimeSeconds as recipeImageReadUrlLifetimeSeconds } from "@home-hub/shared/recipe-image-delivery";
 import { findActiveUser } from "../../authorization/active-user";
 import {
   findEnabledHouseholdModuleForShare,
@@ -7,7 +8,6 @@ import {
 } from "../../authorization/household-access";
 import type { SignRead } from "./create-read-url";
 import { findConfirmedHouseholdRecipeImagesForShare } from "./scoped-entities";
-import { recipeImageReadUrlLifetimeSeconds } from "./sign-read";
 
 export type CreateRecipeImageReadUrlsInput = {
   userId: string;

@@ -130,7 +130,7 @@ export async function deleteListImage(
   return { kind: "success" as const };
 }
 
-export async function readListImageUrls(input: {
+async function readListImageUrls(input: {
   accessToken: string;
   householdId: string;
   requests: {

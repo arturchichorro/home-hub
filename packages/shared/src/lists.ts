@@ -6,14 +6,14 @@ export const listPreviewMaxRows = 20;
 
 export const listPreviewItemLimit = listPreviewMaxRows + 2;
 
-export const listKindSchema = z.enum(["checklist", "moodboard"]);
+const listKindSchema = z.enum(["checklist", "moodboard"]);
 
 export const listNameSchema = z
   .string()
   .transform(cleanListName)
   .pipe(z.string().min(1).max(100));
 
-export const listItemNameSchema = z
+const listItemNameSchema = z
   .string()
   .transform(cleanListItemName)
   .pipe(z.string().min(1).max(100));
@@ -114,29 +114,3 @@ export const reorderListItemsMutationSchema = z
     message: "Ordered IDs must contain the moved item",
     path: ["orderedItemIds"],
   });
-
-export type CreateListMutationInput = z.infer<typeof createListMutationSchema>;
-
-export type RenameListMutationInput = z.infer<typeof renameListMutationSchema>;
-
-export type DeleteListMutationInput = z.infer<typeof deleteListMutationSchema>;
-
-export type ReorderListsMutationInput = z.infer<
-  typeof reorderListsMutationSchema
->;
-
-export type AddListItemMutationInput = z.infer<
-  typeof addListItemMutationSchema
->;
-
-export type RenameListItemMutationInput = z.infer<
-  typeof renameListItemMutationSchema
->;
-
-export type SetListItemStatusMutationInput = z.infer<
-  typeof setListItemStatusMutationSchema
->;
-
-export type ReorderListItemsMutationInput = z.infer<
-  typeof reorderListItemsMutationSchema
->;

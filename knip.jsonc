@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/knip/schema.json",
+  "includeEntryExports": true,
+  "workspaces": {
+    "apps/web": {
+      // The second Vite app is an intentional, manual browser diagnostic.
+      "entry": ["src/main.tsx", "test/moodboard-reorder/main.tsx"]
+    },
+    "packages/database": {
+      // CLI/Docker entry points and drizzle-zero's explicit --config argument.
+      "entry": ["scripts/migrate-production.mjs", "drizzle-zero.config.ts"]
+    }
+  },
+  "ignoreIssues": {
+    // Vite resolveId supplies these exports in place of real SDK modules.
+    "apps/web/test/moodboard-reorder/adapters.tsx": ["exports"],
+    // drizzle-zero loads the default export reflectively via --config.
+    "packages/database/drizzle-zero.config.ts": ["exports"],
+    // Create/rename deliberately share one validation shape, with distinct names.
+    "packages/shared/src/logs.ts": ["duplicates"]
+  }
+}

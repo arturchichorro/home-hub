@@ -326,7 +326,7 @@ export const workoutSetValuesSchema = z
 
 export type WorkoutSetValues = z.infer<typeof workoutSetValuesSchema>;
 
-export const workoutLogSetSchema = z
+const workoutLogSetSchema = z
   .object({
     workoutExerciseId: z.uuid(),
     round: z.number().int().min(1).max(10),

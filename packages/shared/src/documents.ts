@@ -44,7 +44,7 @@ export const documentColors = [
   "violet",
 ] as const;
 
-export const documentColorSchema = z.enum(documentColors);
+const documentColorSchema = z.enum(documentColors);
 
 export function documentContentType(filename: string): string | undefined {
   const ext = filename.split(".").pop()?.toLowerCase();

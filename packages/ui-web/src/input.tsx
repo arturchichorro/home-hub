@@ -1,7 +1,7 @@
 import { Input as BaseInput } from "@base-ui/react/input";
 import { type ComponentProps, forwardRef } from "react";
 
-export type InputAppearance = "field" | "inline" | "seamless";
+type InputAppearance = "field" | "inline" | "seamless";
 
 export type InputProps = Omit<
   ComponentProps<typeof BaseInput>,

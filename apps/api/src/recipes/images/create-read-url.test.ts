@@ -5,9 +5,9 @@ import {
   recipeMedia as recipeImages,
   recipes,
 } from "@home-hub/database/schema";
+import { recipeImageDeliveryCapabilityLifetimeSeconds as recipeImageReadUrlLifetimeSeconds } from "@home-hub/shared/recipe-image-delivery";
 import { describe, expect, it, vi } from "vitest";
 import { createRecipeImageReadUrlService } from "./create-read-url";
-import { recipeImageReadUrlLifetimeSeconds } from "./sign-read";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
 

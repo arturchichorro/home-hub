@@ -9,7 +9,7 @@ export type ListHouseholdInvitesInput = {
   householdId: string;
 };
 
-export type PendingHouseholdInviteSummary = {
+type PendingHouseholdInviteSummary = {
   id: string;
   createdAt: Date;
   expiresAt: Date;

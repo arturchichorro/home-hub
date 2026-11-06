@@ -4,7 +4,6 @@ import {
   type CreateRecipeImageUploadRequest,
   type CreateRecipeImageUploadResponse,
   confirmRecipeImageUploadResponseSchema,
-  createRecipeImageReadUrlResponseSchema,
   createRecipeImageReadUrlsResponseSchema,
   createRecipeImageUploadRequestSchema,
   createRecipeImageUploadResponseSchema,
@@ -170,50 +169,6 @@ export async function confirmRecipeImageUpload({
   confirmRecipeImageUploadResponseSchema.parse(await response.json());
 
   return { kind: "success" };
-}
-
-export async function createRecipeImageReadUrl({
-  accessToken,
-  householdId,
-  recipeId,
-  imageId,
-  variant,
-}: RecipeImageCommandInput & {
-  variant: RecipeImageVariant;
-}): Promise<CreateRecipeImageReadUrlResult> {
-  const response = await fetch(
-    `${imageUrl({ householdId, recipeId, imageId })}/read-url`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ variant }),
-    },
-  );
-
-  if (response.status === 401) {
-    return { kind: "unauthorized" };
-  }
-
-  if (response.status === 403) {
-    return { kind: "forbidden" };
-  }
-
-  if (response.status === 404) {
-    return { kind: "not_found" };
-  }
-
-  if (!response.ok) {
-    throw new Error("Failed to create recipe image read URL");
-  }
-
-  const { read } = createRecipeImageReadUrlResponseSchema.parse(
-    await response.json(),
-  );
-
-  return { kind: "success", ...read };
 }
 
 export async function createRecipeImageReadUrls({

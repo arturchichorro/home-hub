@@ -87,19 +87,11 @@ export const confirmRecipeImageUploadResponseSchema = z
   })
   .strict();
 
-export type ConfirmRecipeImageUploadResponse = z.infer<
-  typeof confirmRecipeImageUploadResponseSchema
->;
-
-export const recipeImageVariantSchema = z.enum(recipeImageVariants);
+const recipeImageVariantSchema = z.enum(recipeImageVariants);
 
 export const createRecipeImageReadUrlRequestSchema = z
   .object({ variant: recipeImageVariantSchema })
   .strict();
-
-export type CreateRecipeImageReadUrlRequest = z.infer<
-  typeof createRecipeImageReadUrlRequestSchema
->;
 
 export const createRecipeImageReadUrlResponseSchema = z
   .object({
@@ -111,10 +103,6 @@ export const createRecipeImageReadUrlResponseSchema = z
       .strict(),
   })
   .strict();
-
-export type CreateRecipeImageReadUrlResponse = z.infer<
-  typeof createRecipeImageReadUrlResponseSchema
->;
 
 export const createRecipeImageReadUrlsRequestSchema = z
   .object({
@@ -152,7 +140,3 @@ export const createRecipeImageReadUrlsResponseSchema = z
     ),
   })
   .strict();
-
-export type CreateRecipeImageReadUrlsResponse = z.infer<
-  typeof createRecipeImageReadUrlsResponseSchema
->;

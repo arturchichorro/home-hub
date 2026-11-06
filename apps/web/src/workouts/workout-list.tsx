@@ -166,7 +166,7 @@ export function WorkoutList({
   );
 }
 
-export function WorkoutRow({
+function WorkoutRow({
   workout,
   index,
   disabled,
