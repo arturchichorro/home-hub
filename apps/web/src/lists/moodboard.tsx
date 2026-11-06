@@ -62,7 +62,7 @@ function Tile({
     <li
       ref={sortable.ref}
       style={style}
-      className={`relative mb-3 break-inside-avoid overflow-hidden rounded-sm bg-raised transition-[translate] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none ${sortable.isDragging ? "opacity-50" : ""}`}
+      className={`relative mb-3 break-inside-avoid overflow-hidden rounded-sm bg-raised transition-[translate] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none ${sortable.isDragging || sortable.isDropping ? "opacity-0" : ""}`}
       data-moodboard-pin={pin.id}
     >
       <button
@@ -495,7 +495,7 @@ export function Moodboard({
             />
           )}
         </MoodboardLayout>
-        <DragOverlay className="moodboard-drag-overlay overflow-hidden rounded-sm bg-raised opacity-50">
+        <DragOverlay className="moodboard-drag-overlay overflow-hidden rounded-sm bg-raised">
           {(source) => {
             const pin = visible.find((item) => item.id === source.id);
 
