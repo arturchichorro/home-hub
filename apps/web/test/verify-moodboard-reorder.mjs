@@ -328,6 +328,12 @@ try {
       true,
       "No floating image remains after the drag",
     );
+    assert(
+      await evaluate(
+        "[...document.querySelectorAll('[data-moodboard-pin]')].every(node => getComputedStyle(node).opacity === '1')",
+      ),
+      "Every original photo is visible again after drop, cancellation or rollback",
+    );
     await finishMotion();
   }
 
@@ -454,10 +460,25 @@ try {
 
       const ghost = await evaluate(`(() => {
         const node = document.querySelector('.moodboard-drag-overlay[data-dnd-dragging]');
-        return node?.getBoundingClientRect().toJSON();
+        if (!node) {
+          return;
+        }
+
+        const original = document.querySelector('[data-moodboard-pin="${points.id}"]');
+        return { ...node.getBoundingClientRect().toJSON(), opacity: getComputedStyle(node).opacity, originalOpacity: getComputedStyle(original).opacity };
       })()`);
 
       if (ghost) {
+        assert.equal(
+          ghost.opacity,
+          "1",
+          "The held photo must be solid, not translucent",
+        );
+        assert.equal(
+          ghost.originalOpacity,
+          "0",
+          "Hide the original so only one photo is visible in hand",
+        );
         assert(
           Math.hypot(
             ghost.x - (point.x - points.offset.x),
