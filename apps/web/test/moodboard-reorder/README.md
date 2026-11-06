@@ -1,6 +1,6 @@
 # Moodboard reorder regression
 
-Run `pnpm --filter @home-hub/web test:moodboard-reorder` with a local Chrome installation (`CHROME_BIN` may override its path). CI runs it automatically. No browser or npm dependency is downloaded.
+Run `pnpm --filter @home-hub/web test:moodboard-reorder` with a local Chrome installation (`CHROME_BIN` may override its path). This is a manual diagnostic, not a CI/deployment gate. No browser or npm dependency is downloaded.
 
 The fixture mounts the real Moodboard, sortable hooks and layout, with inert adapters for authentication, media reads and Zero. Unlike a request-only mock, a reorder immediately publishes the optimistic query result; rejected requests publish the previous order again. Tests compare rendered order, geometry and DOM ownership after native mouse/touch/keyboard gestures and resizing.
 

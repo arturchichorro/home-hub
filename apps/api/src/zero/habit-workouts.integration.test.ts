@@ -20,7 +20,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createZeroDbProvider } from "./db-provider";
 import { mutateWithHabitWorkouts } from "./mutate-with-habit-workouts";
 
-const databaseUrl = process.env.MEDIA_TEST_DATABASE_URL;
+const databaseUrl = process.env.TEST_DATABASE_URL;
 
 describe.runIf(Boolean(databaseUrl))(
   "workout-linked habits on PostgreSQL",
@@ -38,9 +38,9 @@ describe.runIf(Boolean(databaseUrl))(
     beforeAll(() => {
       if (
         !databaseUrl ||
-        !new URL(databaseUrl).pathname.startsWith("/media_migration_")
+        !new URL(databaseUrl).pathname.startsWith("/home_hub_test_")
       ) {
-        throw Error("Disposable database required");
+        throw Error("Disposable home_hub_test_ database required");
       }
 
       client = createDbClient(databaseUrl);
