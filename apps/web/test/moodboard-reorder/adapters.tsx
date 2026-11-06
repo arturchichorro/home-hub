@@ -31,6 +31,25 @@ export const control = {
     rejectNext = true;
   },
   order: () => rows.map((pin) => pin.id),
+  configure(count: number, uniform: boolean) {
+    const next: MoodboardPin[] = [];
+
+    for (let index = 0; index < count; index++) {
+      const pin = initial[index % initial.length];
+
+      if (!pin) {
+        throw Error("Missing fixture pin");
+      }
+
+      next.push({
+        ...pin,
+        id: `pin-${index}`,
+        asset: uniform && pin.asset ? { ...pin.asset, height: 800 } : pin.asset,
+      });
+    }
+
+    publish(next);
+  },
   append() {
     publish([
       ...rows,

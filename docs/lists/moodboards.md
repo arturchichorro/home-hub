@@ -19,8 +19,12 @@ items/media are not part of this version.
   empty right-hand track. All keyed tiles stay under one flat list parent; visual
   positioning must not reparent tiles when optimistic reorder/query updates arrive.
   React owns the local drag-preview order; native 250ms translate transitions use
-  the Recipes easing. Imperative optimistic DOM sorting is disabled for this board,
-  while keyboard navigation and drag feedback remain enabled. Only drop writes a
+  the Recipes easing. DOM order stays stable through drag/save; after the current
+  tile transitions finish, React synchronizes semantic order and preserves focus.
+  This avoids canceling CSS transitions when moving later photos backward. The
+  standard dnd-kit `DragOverlay` owns the floating image separately from tile motion.
+  Imperative optimistic DOM sorting is disabled for this board, while keyboard
+  navigation remains enabled. Only drop writes a
   reorder; cancellation/rejection restores current query order. Reduced motion
   skips the tween, and initial layout/resizing does not animate. The manual browser
   diagnostic exercises visible in-drag animation, live updates, rollback and cancellation. Bounded tile and upload widths prevent
