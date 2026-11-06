@@ -404,6 +404,10 @@ Open review work remains in [Tasks](./tasks.md#work-in-review).
 
 - [x] Implement opt-in household topics, colored categories and one shared multiline entry per calendar date, with inline creation, conflict-safe autosave, backfill/search/paged history and retained soft deletion. See [Logs](./logs/README.md) for date/conflict rules and migration coordination. Implementation history is not deployment approval.
 
+## Agent-accessible operational logs
+
+- [x] Implement opt-in Alloy privacy projection for API/Zero/PostgreSQL/Caddy, safe deployment/backup outcomes, bounded local rotation and a restricted, audited read-only MCP log search. Add source-first stable error codes/operations, controlled messages and validated source locations for unfamiliar application failures. Real synthetic Alloy → Loki → MCP verification checks pre-export redaction and cited evidence. See [Operations](./operations/) for deliberate Cloud activation and remaining production acceptance; no deployment is implied.
+
 ## Moodboard UI refinement
 
 - [x] Share the Recipes image viewer with Moodboards, replace the upload CTA/helper copy with a small header `+`, remove media-count captions and constrain masonry/upload grid widths to prevent horizontal page scrolling. Preserve failed uploads, retry/discard, ordering and paused video previews.

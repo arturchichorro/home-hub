@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./diagnostics": "./src/diagnostics.ts",
     "./still-image-validation": "./src/still-image-validation.ts",
     "./documents": "./src/documents.ts",
     "./document-delivery": "./src/document-delivery.ts",

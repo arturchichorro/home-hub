@@ -1,0 +1,17 @@
+{
+  "name": "@home-hub/ops",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@home-hub/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.32.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5"
+  }
+}

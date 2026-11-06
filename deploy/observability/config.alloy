@@ -1,0 +1,282 @@
+// No Docker socket. Only Docker json-file records for this Compose project,
+// plus fixed-schema host operation events, are accepted. Never forward raw lines.
+logging {
+	level = "warn"
+}
+
+local.file_match "docker" {
+	path_targets = [{
+		"__path__" = "/docker-logs/*/*-json.log", "source" = "docker",
+	}]
+
+	sync_period = "5s"
+}
+
+local.file_match "operations" {
+	path_targets = [{
+		"__path__" = "/operations/events.jsonl", "source" = "operations",
+	}]
+
+	sync_period = "5s"
+}
+
+loki.source.file "docker" {
+	targets = local.file_match.docker.targets
+
+	forward_to = [loki.process.private_projection.receiver]
+}
+
+loki.source.file "operations" {
+	targets = local.file_match.operations.targets
+
+	forward_to = [loki.process.private_projection.receiver]
+}
+
+loki.process "private_projection" {
+	forward_to = [loki.write.cloud.receiver]
+
+	stage.drop {
+		longer_than = "64KiB"
+	}
+
+	stage.match {
+		selector = "{source=\"docker\"}"
+
+		stage.json {
+			drop_malformed = true
+
+			expressions = {
+				body           = "log", dockerTime = "time",
+				project        = "attrs.\"com.docker.compose.project\"",
+				sourceService  = "attrs.\"com.docker.compose.service\"",
+				sourceRevision = "attrs.\"org.opencontainers.image.revision\"",
+			}
+		}
+
+		stage.labels {
+			values = {
+				project = "",
+				service = "sourceService",
+			}
+		}
+
+		stage.match {
+			selector            = "{project!=\"home-hub-production\"}"
+			action              = "drop"
+			drop_counter_reason = "other_project"
+		}
+
+		stage.match {
+			selector            = "{service!~\"api|zero-cache|postgres|web\"}"
+			action              = "drop"
+			drop_counter_reason = "other_service"
+		}
+
+		stage.timestamp {
+			source            = "dockerTime"
+			format            = "RFC3339Nano"
+			action_on_failure = "skip"
+		}
+
+		stage.output {
+			source = "body"
+		}
+	}
+
+	stage.json {
+		expressions = {
+			diagnosticCode = "errorCode", diagnosticOperation = "operation", diagnosticLocations = "locations",
+			phase       = "phase",
+			zeroMessage = "message",
+			event       = "event",
+			level       = "level", requestId = "requestId",
+			method      = "method",
+			route       = "route",
+			status      = "status", durationMs = "durationMs",
+			code        = "code",
+			errorType   = "error.name", serviceValue = "service", recordRevision = "revision",
+			exitCode    = "exitCode", operationTime  = "timestamp",
+		}
+	}
+
+	stage.match {
+		selector = "{source=\"operations\"}"
+
+		stage.template {
+			source   = "sourceService"
+			template = `{{ if regexMatch "^(deploy|backup)$" (toString .serviceValue) }}{{ .serviceValue }}{{ else }}rejected{{ end }}`
+		}
+
+		stage.template {
+			source   = "sourceRevision"
+			template = `{{ if regexMatch "^[a-f0-9]{40}$" (toString .recordRevision) }}{{ .recordRevision }}{{ else }}unknown{{ end }}`
+		}
+
+		stage.labels {
+			values = {
+				service = "sourceService",
+			}
+		}
+
+		stage.match {
+			selector            = "{service=\"rejected\"}"
+			action              = "drop"
+			drop_counter_reason = "invalid_operation"
+		}
+
+		stage.timestamp {
+			source            = "operationTime"
+			format            = "RFC3339Nano"
+			action_on_failure = "skip"
+		}
+	}
+
+	stage.match {
+		selector = "{service=\"postgres\"}"
+
+		stage.regex {
+			expression = `\[[0-9]+\] (?:(?P<pgCode>[0-9A-Z]{5}) )?(?P<pgSeverity>LOG|ERROR|FATAL|PANIC|WARNING):`
+		}
+	}
+
+	stage.template {
+		source = "safe"
+
+		template = `{{- $o := dict "event" "operational_log" "severity" "unknown" -}}
+{{- $level := lower (toString .level) -}}
+{{- if regexMatch "^(debug|info|warn|error|fatal)$" $level -}}{{- $_ := set $o "severity" $level -}}{{- end -}}
+{{- if eq (toString .sourceService) "api" -}}
+  {{- if regexMatch "^(http_request|mutation_database_error|zero_query_error|zero_mutation_error|server_started|shutdown_started|shutdown_completed|shutdown_failed)$" (toString .event) -}}
+  {{- $_ := set $o "event" .event -}}
+  {{- if regexMatch "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$" (toString .requestId) -}}{{- $_ := set $o "requestId" .requestId -}}{{- end -}}
+  {{- if regexMatch "^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$" (toString .method) -}}{{- $_ := set $o "method" .method -}}{{- end -}}
+  {{- if and (le (len (toString .route)) 180) (regexMatch "^(unmatched|/api(/([a-z-]+|:[A-Za-z]+))*)$" (toString .route)) -}}{{- $_ := set $o "route" .route -}}{{- end -}}
+  {{- if regexMatch "^[1-5][0-9]{2}$" (toString .status) -}}{{- $_ := set $o "status" (toString .status) -}}{{- $_ := set $o "severity" "info" -}}{{- end -}}
+  {{- if regexMatch "^5[0-9]{2}$" (toString .status) -}}{{- $_ := set $o "severity" "error" -}}{{- end -}}
+  {{- if regexMatch "^[0-9]{1,7}$" (toString .durationMs) -}}{{- $_ := set $o "durationMs" (toString .durationMs) -}}{{- end -}}
+  {{- if regexMatch "^[0-9A-Z]{5}$" (toString .code) -}}{{- $_ := set $o "code" .code -}}{{- end -}}
+  {{- if regexMatch "^(Error|TypeError|RangeError|SyntaxError|DatabaseError|AbortError|TimeoutError|ZodError)$" (toString .errorType) -}}{{- $_ := set $o "errorType" .errorType -}}{{- end -}}
+  {{- /* BEGIN GENERATED DIAGNOSTICS: scripts/generate-diagnostics.mjs */ -}}
+  {{- $messages := dict "HH_MUTATION_REJECTED" "A mutation did not complete. Inspect the operation, SQLSTATE and source locations." "HH_UNEXPECTED" "An unexpected application error interrupted this operation." "HH_DATABASE_CONSTRAINT" "A database integrity constraint rejected the operation." "HH_DATABASE_RETRY" "A database transaction failed with a retryable concurrency error." "HH_DATABASE_UNAVAILABLE" "The database connection was unavailable or interrupted." "HH_DATABASE_FAILURE" "A database operation failed. Inspect SQLSTATE and source locations." "HH_DEPENDENCY_TIMEOUT" "An upstream operation exceeded its deadline." "HH_DEPENDENCY_UNAVAILABLE" "An upstream connection was unavailable or interrupted." "HH_REQUEST_INVALID" "Request validation rejected the supplied input." "HH_AUTH_REQUIRED" "The operation requires an authenticated session." "HH_ACCESS_DENIED" "The operation was denied by its access policy." "HH_NOT_FOUND" "The requested resource or route was not available." "HH_CONFLICT" "The operation conflicted with the current saved state." "HH_SERVICE_UNAVAILABLE" "The service could not complete the operation at this time." "HH_REQUEST_REJECTED" "The server rejected the request." "HH_SHUTDOWN_FAILED" "Graceful shutdown did not complete successfully." -}}
+  {{- $operationValid := regexMatch "^(http\\.request|http\\.health|database\\.readiness|server\\.shutdown|auth\\.signup|auth\\.login|auth\\.refresh|auth\\.logout|auth\\.me|households\\.create|households\\.list|households\\.manage|zero\\.query|zero\\.mutate|zero\\.transaction|documents\\.create_upload|documents\\.confirm_upload|documents\\.read_file|documents\\.storage_read|documents\\.storage_write|documents\\.storage_sign|logs\\.read_entry|logs\\.write_entry|recipes\\.media_upload|recipes\\.media_confirm|recipes\\.media_read|recipes\\.media_remove|lists\\.media_upload|lists\\.media_confirm|lists\\.media_read|lists\\.media_remove|workouts\\.media_upload|workouts\\.media_confirm|workouts\\.media_read|workouts\\.media_remove|media\\.inspect_object|media\\.process_image|media\\.process_video)$" (toString .diagnosticOperation) -}}
+  {{- if $operationValid -}}{{- $_ := set $o "operation" .diagnosticOperation -}}{{- end -}}
+  {{- if and (hasKey $messages (toString .diagnosticCode)) $operationValid -}}
+    {{- $_ := set $o "errorCode" .diagnosticCode -}}
+    {{- $_ := set $o "operation" .diagnosticOperation -}}
+    {{- $_ := set $o "diagnosticMessage" (get $messages .diagnosticCode) -}}
+    {{- $locations := list -}}
+    {{- $limits := dict "apps/api/src/app.ts" 113 "apps/api/src/auth/access-token.ts" 167 "apps/api/src/auth/bearer-auth.ts" 43 "apps/api/src/auth/login.ts" 79 "apps/api/src/auth/logout.ts" 81 "apps/api/src/auth/me.ts" 33 "apps/api/src/auth/password.ts" 15 "apps/api/src/auth/refresh-token.ts" 7 "apps/api/src/auth/refresh.ts" 114 "apps/api/src/auth/routes/index.ts" 33 "apps/api/src/auth/routes/login.ts" 41 "apps/api/src/auth/routes/logout.ts" 30 "apps/api/src/auth/routes/me.ts" 23 "apps/api/src/auth/routes/refresh-cookie.ts" 28 "apps/api/src/auth/routes/refresh.ts" 42 "apps/api/src/auth/routes/signup.ts" 45 "apps/api/src/auth/signup.ts" 115 "apps/api/src/authorization/active-user.ts" 14 "apps/api/src/authorization/household-access.ts" 152 "apps/api/src/config.ts" 58 "apps/api/src/diagnostics.ts" 259 "apps/api/src/documents/routes.ts" 76 "apps/api/src/documents/service.ts" 345 "apps/api/src/documents/storage.ts" 131 "apps/api/src/documents/validate-file.ts" 216 "apps/api/src/households/accept-invite.ts" 98 "apps/api/src/households/create-invite.ts" 78 "apps/api/src/households/create.ts" 65 "apps/api/src/households/delete.ts" 51 "apps/api/src/households/invite-token.ts" 7 "apps/api/src/households/leave.ts" 56 "apps/api/src/households/list-invites.ts" 66 "apps/api/src/households/list-members.ts" 61 "apps/api/src/households/list.ts" 45 "apps/api/src/households/membership-order.ts" 28 "apps/api/src/households/remove-member.ts" 71 "apps/api/src/households/rename.ts" 54 "apps/api/src/households/revoke-invite.ts" 62 "apps/api/src/households/routes/accept-invite.ts" 53 "apps/api/src/households/routes/create-invite.ts" 44 "apps/api/src/households/routes/create.ts" 42 "apps/api/src/households/routes/delete.ts" 40 "apps/api/src/households/routes/index.ts" 141 "apps/api/src/households/routes/leave.ts" 43 "apps/api/src/households/routes/list-invites.ts" 44 "apps/api/src/households/routes/list-members.ts" 44 "apps/api/src/households/routes/list.ts" 25 "apps/api/src/households/routes/remove-member.ts" 50 "apps/api/src/households/routes/rename.ts" 49 "apps/api/src/households/routes/revoke-invite.ts" 50 "apps/api/src/households/routes/set-module-enabled.ts" 60 "apps/api/src/households/routes/transfer-ownership.ts" 57 "apps/api/src/households/scoped-entities.ts" 96 "apps/api/src/households/set-module-enabled.ts" 86 "apps/api/src/households/transfer-ownership.ts" 92 "apps/api/src/http-operations.ts" 88 "apps/api/src/index.ts" 278 "apps/api/src/lists/media.ts" 567 "apps/api/src/lists/routes.ts" 168 "apps/api/src/logs/entries.ts" 219 "apps/api/src/logs/routes.ts" 58 "apps/api/src/media/inspect-object.ts" 46 "apps/api/src/media/process-image.ts" 67 "apps/api/src/media/process-video.ts" 351 "apps/api/src/media/r2-client.ts" 23 "apps/api/src/media/sign-read.ts" 38 "apps/api/src/media/sign-upload.ts" 33 "apps/api/src/media/sign-video.ts" 30 "apps/api/src/observability.ts" 104 "apps/api/src/readiness.ts" 15 "apps/api/src/recipes/images/confirm-upload.ts" 221 "apps/api/src/recipes/images/create-read-url.ts" 108 "apps/api/src/recipes/images/create-read-urls.ts" 133 "apps/api/src/recipes/images/create-upload.ts" 188 "apps/api/src/recipes/images/delete.ts" 87 "apps/api/src/recipes/images/inspect-object.ts" 5 "apps/api/src/recipes/images/media-identity.ts" 21 "apps/api/src/recipes/images/process-derivatives.ts" 48 "apps/api/src/recipes/images/r2-client.ts" 5 "apps/api/src/recipes/images/scoped-entities.ts" 171 "apps/api/src/recipes/images/sign-read.ts" 52 "apps/api/src/recipes/images/sign-upload.ts" 5 "apps/api/src/recipes/routes/confirm-image-upload.ts" 64 "apps/api/src/recipes/routes/create-image-read-url.ts" 69 "apps/api/src/recipes/routes/create-image-read-urls.ts" 49 "apps/api/src/recipes/routes/create-image-upload.ts" 74 "apps/api/src/recipes/routes/delete-image.ts" 52 "apps/api/src/recipes/routes/index.ts" 68 "apps/api/src/server-lifecycle.ts" 82 "apps/api/src/workouts/exercise-media.ts" 495 "apps/api/src/workouts/routes.ts" 149 "apps/api/src/zero/db-provider.ts" 10 "apps/api/src/zero/habit-workout-completion.ts" 74 "apps/api/src/zero/mutate-with-habit-workouts.ts" 102 "apps/api/src/zero/routes/index.ts" 31 "apps/api/src/zero/routes/mutate.ts" 84 "apps/api/src/zero/routes/query.ts" 44 "apps/api/src/zero/safe-mutation-provider.ts" 55 "packages/database/src/client.ts" 27 "packages/database/src/connection-url.ts" 14 "packages/database/src/index.ts" 2 "packages/database/src/schema.ts" 1609 "packages/shared/src/auth.ts" 61 "packages/shared/src/diagnostics.ts" 114 "packages/shared/src/document-delivery.ts" 84 "packages/shared/src/documents.ts" 144 "packages/shared/src/exercise-logs.ts" 51 "packages/shared/src/exercise-media.ts" 111 "packages/shared/src/habits.ts" 202 "packages/shared/src/households.ts" 147 "packages/shared/src/list-media.ts" 107 "packages/shared/src/lists.ts" 117 "packages/shared/src/logs.ts" 119 "packages/shared/src/media-delivery.ts" 238 "packages/shared/src/media.ts" 36 "packages/shared/src/modules.ts" 40 "packages/shared/src/normalization.ts" 60 "packages/shared/src/recipe-image-delivery.ts" 231 "packages/shared/src/recipe-images.ts" 157 "packages/shared/src/recipes.ts" 216 "packages/shared/src/still-image-validation.ts" 118 "packages/shared/src/video-delivery.ts" 133 "packages/shared/src/workout-seed.ts" 188 "packages/shared/src/workouts.ts" 365 "packages/shared/src/zero/context.ts" 10 "packages/shared/src/zero/document-mutators.ts" 173 "packages/shared/src/zero/document-queries.ts" 87 "packages/shared/src/zero/exercise-log-mutators.ts" 314 "packages/shared/src/zero/habit-mutators.ts" 281 "packages/shared/src/zero/list-mutators.ts" 315 "packages/shared/src/zero/log-mutators.ts" 212 "packages/shared/src/zero/log-queries.ts" 109 "packages/shared/src/zero/mutation-authorization.ts" 74 "packages/shared/src/zero/mutators.ts" 539 "packages/shared/src/zero/ordering.ts" 91 "packages/shared/src/zero/queries.ts" 733 "packages/shared/src/zero/workout-mutators.ts" 656 -}}
+    {{- $inputLocations := .diagnosticLocations -}}
+    {{- if kindIs "string" $inputLocations -}}{{- $inputLocations = fromJson $inputLocations -}}{{- end -}}
+    {{- if kindIs "slice" $inputLocations -}}
+      {{- range $inputLocations -}}
+        {{- if and (lt (len $locations) 3) (regexMatch "^(apps/api/src/app\\.ts|apps/api/src/auth/access-token\\.ts|apps/api/src/auth/bearer-auth\\.ts|apps/api/src/auth/login\\.ts|apps/api/src/auth/logout\\.ts|apps/api/src/auth/me\\.ts|apps/api/src/auth/password\\.ts|apps/api/src/auth/refresh-token\\.ts|apps/api/src/auth/refresh\\.ts|apps/api/src/auth/routes/index\\.ts|apps/api/src/auth/routes/login\\.ts|apps/api/src/auth/routes/logout\\.ts|apps/api/src/auth/routes/me\\.ts|apps/api/src/auth/routes/refresh-cookie\\.ts|apps/api/src/auth/routes/refresh\\.ts|apps/api/src/auth/routes/signup\\.ts|apps/api/src/auth/signup\\.ts|apps/api/src/authorization/active-user\\.ts|apps/api/src/authorization/household-access\\.ts|apps/api/src/config\\.ts|apps/api/src/diagnostics\\.ts|apps/api/src/documents/routes\\.ts|apps/api/src/documents/service\\.ts|apps/api/src/documents/storage\\.ts|apps/api/src/documents/validate-file\\.ts|apps/api/src/households/accept-invite\\.ts|apps/api/src/households/create-invite\\.ts|apps/api/src/households/create\\.ts|apps/api/src/households/delete\\.ts|apps/api/src/households/invite-token\\.ts|apps/api/src/households/leave\\.ts|apps/api/src/households/list-invites\\.ts|apps/api/src/households/list-members\\.ts|apps/api/src/households/list\\.ts|apps/api/src/households/membership-order\\.ts|apps/api/src/households/remove-member\\.ts|apps/api/src/households/rename\\.ts|apps/api/src/households/revoke-invite\\.ts|apps/api/src/households/routes/accept-invite\\.ts|apps/api/src/households/routes/create-invite\\.ts|apps/api/src/households/routes/create\\.ts|apps/api/src/households/routes/delete\\.ts|apps/api/src/households/routes/index\\.ts|apps/api/src/households/routes/leave\\.ts|apps/api/src/households/routes/list-invites\\.ts|apps/api/src/households/routes/list-members\\.ts|apps/api/src/households/routes/list\\.ts|apps/api/src/households/routes/remove-member\\.ts|apps/api/src/households/routes/rename\\.ts|apps/api/src/households/routes/revoke-invite\\.ts|apps/api/src/households/routes/set-module-enabled\\.ts|apps/api/src/households/routes/transfer-ownership\\.ts|apps/api/src/households/scoped-entities\\.ts|apps/api/src/households/set-module-enabled\\.ts|apps/api/src/households/transfer-ownership\\.ts|apps/api/src/http-operations\\.ts|apps/api/src/index\\.ts|apps/api/src/lists/media\\.ts|apps/api/src/lists/routes\\.ts|apps/api/src/logs/entries\\.ts|apps/api/src/logs/routes\\.ts|apps/api/src/media/inspect-object\\.ts|apps/api/src/media/process-image\\.ts|apps/api/src/media/process-video\\.ts|apps/api/src/media/r2-client\\.ts|apps/api/src/media/sign-read\\.ts|apps/api/src/media/sign-upload\\.ts|apps/api/src/media/sign-video\\.ts|apps/api/src/observability\\.ts|apps/api/src/readiness\\.ts|apps/api/src/recipes/images/confirm-upload\\.ts|apps/api/src/recipes/images/create-read-url\\.ts|apps/api/src/recipes/images/create-read-urls\\.ts|apps/api/src/recipes/images/create-upload\\.ts|apps/api/src/recipes/images/delete\\.ts|apps/api/src/recipes/images/inspect-object\\.ts|apps/api/src/recipes/images/media-identity\\.ts|apps/api/src/recipes/images/process-derivatives\\.ts|apps/api/src/recipes/images/r2-client\\.ts|apps/api/src/recipes/images/scoped-entities\\.ts|apps/api/src/recipes/images/sign-read\\.ts|apps/api/src/recipes/images/sign-upload\\.ts|apps/api/src/recipes/routes/confirm-image-upload\\.ts|apps/api/src/recipes/routes/create-image-read-url\\.ts|apps/api/src/recipes/routes/create-image-read-urls\\.ts|apps/api/src/recipes/routes/create-image-upload\\.ts|apps/api/src/recipes/routes/delete-image\\.ts|apps/api/src/recipes/routes/index\\.ts|apps/api/src/server-lifecycle\\.ts|apps/api/src/workouts/exercise-media\\.ts|apps/api/src/workouts/routes\\.ts|apps/api/src/zero/db-provider\\.ts|apps/api/src/zero/habit-workout-completion\\.ts|apps/api/src/zero/mutate-with-habit-workouts\\.ts|apps/api/src/zero/routes/index\\.ts|apps/api/src/zero/routes/mutate\\.ts|apps/api/src/zero/routes/query\\.ts|apps/api/src/zero/safe-mutation-provider\\.ts|packages/database/src/client\\.ts|packages/database/src/connection-url\\.ts|packages/database/src/index\\.ts|packages/database/src/schema\\.ts|packages/shared/src/auth\\.ts|packages/shared/src/diagnostics\\.ts|packages/shared/src/document-delivery\\.ts|packages/shared/src/documents\\.ts|packages/shared/src/exercise-logs\\.ts|packages/shared/src/exercise-media\\.ts|packages/shared/src/habits\\.ts|packages/shared/src/households\\.ts|packages/shared/src/list-media\\.ts|packages/shared/src/lists\\.ts|packages/shared/src/logs\\.ts|packages/shared/src/media-delivery\\.ts|packages/shared/src/media\\.ts|packages/shared/src/modules\\.ts|packages/shared/src/normalization\\.ts|packages/shared/src/recipe-image-delivery\\.ts|packages/shared/src/recipe-images\\.ts|packages/shared/src/recipes\\.ts|packages/shared/src/still-image-validation\\.ts|packages/shared/src/video-delivery\\.ts|packages/shared/src/workout-seed\\.ts|packages/shared/src/workouts\\.ts|packages/shared/src/zero/context\\.ts|packages/shared/src/zero/document-mutators\\.ts|packages/shared/src/zero/document-queries\\.ts|packages/shared/src/zero/exercise-log-mutators\\.ts|packages/shared/src/zero/habit-mutators\\.ts|packages/shared/src/zero/list-mutators\\.ts|packages/shared/src/zero/log-mutators\\.ts|packages/shared/src/zero/log-queries\\.ts|packages/shared/src/zero/mutation-authorization\\.ts|packages/shared/src/zero/mutators\\.ts|packages/shared/src/zero/ordering\\.ts|packages/shared/src/zero/queries\\.ts|packages/shared/src/zero/workout-mutators\\.ts):[1-9][0-9]{0,6}:[1-9][0-9]{0,3}$" (toString .)) -}}
+          {{- $parts := splitList ":" . -}}
+          {{- if and (le (atoi (index $parts 1)) (get $limits (index $parts 0))) (le (atoi (index $parts 2)) 4096) -}}
+            {{- $locations = append $locations . -}}
+          {{- end -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $_ := set $o "locations" $locations -}}
+  {{- end -}}
+  {{- /* END GENERATED DIAGNOSTICS */ -}}
+  {{- end -}}
+{{- else if regexMatch "^(deploy|backup)$" (toString .sourceService) -}}
+  {{- if regexMatch "^(deployment_started|deployment_succeeded|deployment_failed|backup_started|backup_succeeded|backup_failed|collector_canary)$" (toString .event) -}}{{- $_ := set $o "event" .event -}}{{- $_ := set $o "severity" "info" -}}{{- end -}}
+  {{- if regexMatch "failed$" (toString .event) -}}{{- $_ := set $o "severity" "error" -}}{{- end -}}
+  {{- if regexMatch "^[a-f0-9]{40}$" (toString .recordRevision) -}}{{- $_ := set $o "revision" .recordRevision -}}{{- end -}}
+  {{- if regexMatch "^(preflight|build|cutover|migrate|backend|web|health|configuration|dump|archive|upload|verify_upload|unknown)$" (toString .phase) -}}{{- $_ := set $o "phase" .phase -}}{{- end -}}
+  {{- if regexMatch "^[0-9]{1,3}$" (toString .exitCode) -}}{{- $_ := set $o "exitCode" (toString .exitCode) -}}{{- end -}}
+{{- else if eq (toString .sourceService) "postgres" -}}
+  {{- if regexMatch "^(ERROR|FATAL|PANIC)$" (toString .pgSeverity) -}}{{- $_ := set $o "event" "postgres_error" -}}{{- $_ := set $o "severity" "error" -}}{{- end -}}
+  {{- if regexMatch "LOG:  database system is ready to accept connections" .Entry -}}{{- $_ := set $o "event" "postgres_ready" -}}{{- $_ := set $o "severity" "info" -}}{{- end -}}
+  {{- if regexMatch "^[0-9A-Z]{5}$" (toString .pgCode) -}}{{- $_ := set $o "code" .pgCode -}}{{- end -}}
+{{- else if eq (toString .sourceService) "zero-cache" -}}
+  {{- if regexMatch "Cannot replicate table .[a-z_]+. without a PRIMARY KEY or UNIQUE INDEX" (toString (coalesce .zeroMessage .Entry)) -}}{{- $_ := set $o "event" "zero_replica_missing_key" -}}{{- $_ := set $o "severity" "error" -}}{{- end -}}
+{{- end -}}
+{{- toJson $o -}}`
+	}
+
+	stage.template {
+		source   = "sourceRevision"
+		template = `{{ if regexMatch "^[a-f0-9]{40}$" (toString .Value) }}{{ .Value }}{{ else }}unknown{{ end }}`
+	}
+
+	stage.labels {
+		values = {
+			revision = "sourceRevision",
+		}
+	}
+
+	stage.static_labels {
+		values = {
+			app         = "home-hub",
+			environment = "production",
+		}
+	}
+
+	stage.output {
+		source = "safe"
+	}
+
+	stage.drop {
+		longer_than         = "2KiB"
+		drop_counter_reason = "projection_too_large"
+	}
+
+	stage.drop {
+		older_than          = "24h"
+		drop_counter_reason = "outside_replay_window"
+	}
+	// Two global priority buckets, never per service/revision. Routine traffic
+	// cannot consume the error/outcome/canary budget. Total <=2 lines/sec.
+	stage.json {
+		source      = "safe"
+		expressions = {safeSeverity = "severity", safeEvent = "event"}
+	}
+
+	stage.template {
+		source   = "priority"
+		template = `{{ if or (regexMatch "^(error|fatal)$" (toString .safeSeverity)) (regexMatch "^(deployment_|backup_|collector_canary|mutation_database_error|zero_query_error|zero_mutation_error|shutdown_failed)" (toString .safeEvent)) }}critical{{ else }}normal{{ end }}`
+	}
+
+	stage.labels {
+		values = {priority = "priority"}
+	}
+
+	stage.limit {
+		rate                = 1
+		burst               = 20
+		by_label_name       = "priority"
+		drop                = true
+	}
+
+	stage.label_keep {
+		values = ["app", "environment", "service", "revision"]
+	}
+}
+
+loki.write "cloud" {
+	endpoint {
+		url = sys.env("LOKI_WRITE_URL")
+
+		basic_auth {
+			username = sys.env("LOKI_TENANT")
+			password = sys.env("LOKI_WRITE_TOKEN")
+		}
+
+		batch_size = "64KiB"
+
+		batch_wait = "1s"
+
+		remote_timeout = "5s"
+
+		min_backoff_period = "500ms"
+
+		max_backoff_period = "5s"
+
+		max_backoff_retries = 3
+		retry_on_http_429   = false
+	}
+}

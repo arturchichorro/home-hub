@@ -169,6 +169,7 @@ describe("app", () => {
       requestId: "browser-request-123",
       method: "GET",
       route: "/api/health",
+      operation: "http.health",
       status: 200,
       durationMs: expect.any(Number),
     });

@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { type CreateAuthRoutesInput, createAuthRoutes } from "./auth/routes";
+import { withDiagnosticOperation } from "./diagnostics";
 import { createDocumentRoutes } from "./documents/routes";
 import type { DocumentServices } from "./documents/service";
 import {
@@ -57,7 +58,7 @@ export function createApp(input: CreateAppInput) {
   app.get("/api/health", (c) => c.json({ ok: true }));
   app.get("/api/ready", async (c) => {
     try {
-      await readinessCheck();
+      await withDiagnosticOperation("database.readiness", readinessCheck);
 
       return c.json({ ok: true });
     } catch {
@@ -104,7 +105,7 @@ export function createApp(input: CreateAppInput) {
 
   app.route(
     "/api/zero",
-    createZeroRoutes({ dbProvider: zeroDbProvider, jwtSecret }),
+    createZeroRoutes({ dbProvider: zeroDbProvider, jwtSecret, logger }),
   );
 
   return app;

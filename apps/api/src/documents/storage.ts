@@ -7,6 +7,7 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { signDocumentRead } from "@home-hub/shared/document-delivery";
 import { documentMaxBytes } from "@home-hub/shared/documents";
+import { instrumentOperation } from "../diagnostics";
 import type { DocumentStorage } from "./service";
 import { InvalidDocumentFileError } from "./validate-file";
 
@@ -30,8 +31,7 @@ export function createDocumentStorage({
     ...(client.config.endpoint ? { endpoint: client.config.endpoint } : {}),
     requestChecksumCalculation: "WHEN_REQUIRED",
   });
-
-  return {
+  const storage: DocumentStorage = {
     signUpload: (key, byteSize) =>
       getSignedUrl(
         uploadClient,
@@ -110,5 +110,21 @@ export function createDocumentStorage({
 
       return url.toString();
     },
+  };
+
+  return {
+    signUpload: instrumentOperation(
+      "documents.storage_sign",
+      storage.signUpload,
+    ),
+    readUpload: instrumentOperation(
+      "documents.storage_read",
+      storage.readUpload,
+    ),
+    putVerified: instrumentOperation(
+      "documents.storage_write",
+      storage.putVerified,
+    ),
+    signRead: instrumentOperation("documents.storage_sign", storage.signRead),
   };
 }
