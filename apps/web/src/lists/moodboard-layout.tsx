@@ -69,6 +69,12 @@ export function MoodboardLayout({
 }) {
   const container = useRef<HTMLUListElement>(null);
   const [width, setWidth] = useState(0);
+  const previousWidth = useRef(0);
+  const animate = width > 0 && previousWidth.current === width;
+
+  useLayoutEffect(() => {
+    previousWidth.current = width;
+  }, [width]);
 
   useLayoutEffect(() => {
     const element = container.current;
@@ -107,8 +113,12 @@ export function MoodboardLayout({
       const tileHeight = tileWidth * ratio;
       positions.set(pin.id, {
         position: "absolute",
-        left: columnIndex * (tileWidth + 12),
-        top,
+        left: 0,
+        top: 0,
+        translate: `${columnIndex * (tileWidth + 12)}px ${top}px`,
+        // Native transitions interpolate interrupted moves. Do not animate the
+        // initial measurement or a responsive width/breakpoint change.
+        transitionDuration: animate ? "250ms" : "0ms",
         width: tileWidth,
         height: tileHeight,
       });

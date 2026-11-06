@@ -180,6 +180,14 @@ try {
       "No duplicate pin or leftover drag placeholder",
     );
 
+    await until(
+      () =>
+        evaluate(
+          "[...document.querySelectorAll('[data-moodboard-pin]')].every(node => node.getAnimations().every(animation => animation.playState !== 'running'))",
+        ),
+      "tile transitions settle",
+    );
+
     const geometry = await evaluate(`(() => {
       const board = document.querySelector('[aria-label="Moodboard media"]');
       return { bounds: board.getBoundingClientRect().toJSON(), tiles: [...board.children].filter(node => node.hasAttribute("data-moodboard-pin")).map(node => node.getBoundingClientRect().toJSON()) };
@@ -259,7 +267,11 @@ try {
     await healthy();
   }
 
-  async function drag(touch = false) {
+  async function drag(touch = false, expectAnimation = true) {
+    let sawPeerAnimation = false;
+    const requestsBefore = await evaluate(
+      "window.moodboardTest.mutations.length",
+    );
     const points = await evaluate(`(() => {
       const nodes = [...document.querySelectorAll('[data-moodboard-pin]')];
       const source = nodes[0];
@@ -302,7 +314,29 @@ try {
           : { type: "mouseMoved", ...point, button: "left", buttons: 1 },
       );
       await wait(25);
+
+      sawPeerAnimation ||= await evaluate(`(() => {
+        return [...document.querySelectorAll("[data-moodboard-pin]:not([data-dnd-dragging]):not([data-dnd-placeholder])")].some(node => {
+          const moving = node.getAnimations().some(animation => animation.playState === "running" && animation.transitionProperty === "translate");
+          const current = getComputedStyle(node).translate.split(" ").map(parseFloat);
+          const target = node.style.translate.split(" ").map(parseFloat);
+          return moving && (Math.abs(current[0] - target[0]) > 1 || Math.abs((current[1] || 0) - (target[1] || 0)) > 1);
+        });
+      })()`);
     }
+
+    assert.equal(
+      await evaluate("window.moodboardTest.mutations.length"),
+      requestsBefore,
+      "Hover previews must not write mutations",
+    );
+    assert.equal(
+      sawPeerAnimation,
+      expectAnimation,
+      expectAnimation
+        ? "Neighbor tiles must visibly animate while hovering, before drop"
+        : "Reduced motion must not animate neighbor tiles",
+    );
 
     await client.call(
       touch ? "Input.dispatchTouchEvent" : "Input.dispatchMouseEvent",
@@ -312,6 +346,9 @@ try {
     );
   }
 
+  await client.call("Emulation.setEmulatedMedia", {
+    features: [{ name: "prefers-reduced-motion", value: "no-preference" }],
+  });
   await open();
   await drag();
   await settled(1);
@@ -361,6 +398,14 @@ try {
   );
   await key(" ", "Space", 32);
   await key("ArrowRight", "ArrowRight", 39);
+  await key("ArrowLeft", "ArrowLeft", 37);
+  await key("ArrowRight", "ArrowRight", 39);
+  assert(
+    await evaluate(
+      "[...document.querySelectorAll('[data-moodboard-pin]:not([data-dnd-dragging])')].some(node => node.getAnimations().some(animation => animation.playState === 'running' && animation.transitionProperty === 'translate'))",
+    ),
+    "Keyboard preview must animate too",
+  );
   await key(" ", "Space", 32);
   await settled(1);
 
@@ -409,8 +454,15 @@ try {
   await open(390);
   await drag(true);
   await settled(1);
+  await client.call("Emulation.setEmulatedMedia", {
+    features: [{ name: "prefers-reduced-motion", value: "reduce" }],
+  });
+  await open();
+  await drag(false, false);
+  await settled(1);
+
   console.log(
-    "Moodboard browser regression passed: live optimistic cross-column moves, repeat, rollback, keyboard/drop/cancel, touch, stable parents and 5 widths.",
+    "Moodboard browser regression passed: animated live preview, reduced motion, live optimistic cross-column moves, repeat, rollback, keyboard/drop/cancel, touch, stable parents and 5 widths.",
   );
 } finally {
   client?.close();

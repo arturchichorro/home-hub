@@ -1,3 +1,4 @@
+import { SortableKeyboardPlugin } from "@dnd-kit/dom/sortable";
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { mutators } from "@home-hub/shared/zero/mutators";
@@ -24,8 +25,13 @@ import { listOrderingSensors } from "./list-card";
 import { deleteListImage } from "./list-media-api";
 import { invalidateListImageUrl, useListImageUrl } from "./list-media-url";
 import { MoodboardLayout } from "./moodboard-layout";
+import { applyMoodboardOrder, moveMoodboardPin } from "./moodboard-order";
 import { type MoodboardPin, MoodboardThumbnail } from "./moodboard-preview";
 import { MoodboardUploads } from "./moodboard-uploads";
+
+// React owns the preview order and tile parents. Keep keyboard navigation, but
+// do not let OptimisticSortingPlugin independently mutate that same DOM order.
+const moodboardSortingPlugins = [SortableKeyboardPlugin];
 
 function Tile({
   pin,
@@ -48,13 +54,15 @@ function Tile({
     type: "moodboard-media",
     accept: "moodboard-media",
     disabled,
+    plugins: moodboardSortingPlugins,
+    transition: null,
   });
 
   return (
     <li
       ref={sortable.ref}
       style={style}
-      className={`relative mb-3 break-inside-avoid overflow-hidden rounded-sm bg-raised ${sortable.isDragging ? "opacity-50" : ""}`}
+      className={`relative mb-3 break-inside-avoid overflow-hidden rounded-sm bg-raised transition-[translate] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none ${sortable.isDragging ? "opacity-50" : ""}`}
       data-moodboard-pin={pin.id}
     >
       <button
@@ -275,6 +283,8 @@ export function Moodboard({
   const [error, setError] = useState<string>();
   const [dragging, setDragging] = useState(false);
   const [reordering, setReordering] = useState(false);
+  const [previewOrder, setPreviewOrder] = useState<readonly string[]>();
+  const previewOrderRef = useRef<readonly string[] | undefined>(undefined);
   const [rows, result] = useQuery(
     queries.lists.mediaPage({ householdId, listId, limit }),
   );
@@ -286,6 +296,7 @@ export function Moodboard({
   useBlockAppUpdate(dragging || reordering);
 
   const visible = rows.slice(0, limit - 1);
+  const displayed = applyMoodboardOrder(visible, previewOrder);
   const pinned = selectedRow?.id === selected ? selectedRow : undefined;
   const viewerRows =
     pinned && !visible.some((row) => row.id === pinned.id)
@@ -320,19 +331,23 @@ export function Moodboard({
     setFocusAfterReorder(undefined);
   }, [focusAfterReorder, reordering]);
 
-  async function move(from: number, to: number) {
-    if (!enabled || from === to || to < 0 || to >= visible.length) {
+  function clearPreview() {
+    previewOrderRef.current = undefined;
+    setPreviewOrder(undefined);
+  }
+
+  async function move(attachmentId: string, order: readonly MoodboardPin[]) {
+    const to = order.findIndex((pin) => pin.id === attachmentId);
+    const unchanged = order.every(
+      (pin, index) => pin.id === visible[index]?.id,
+    );
+
+    if (!enabled || to < 0 || unchanged) {
+      clearPreview();
+
       return;
     }
 
-    const order = [...visible];
-    const moved = order.splice(from, 1)[0];
-
-    if (!moved) {
-      return;
-    }
-
-    order.splice(to, 0, moved);
     setReordering(true);
     setError(undefined);
 
@@ -342,7 +357,7 @@ export function Moodboard({
           mutators.lists.reorderMedia({
             householdId,
             listId,
-            attachmentId: moved.id,
+            attachmentId,
             previousId: order[to - 1]?.id ?? null,
             nextId: order[to + 1]?.id ?? null,
             optimisticTimestamp: Date.now(),
@@ -358,6 +373,7 @@ export function Moodboard({
         "Unable to save media order. The confirmed order has been restored.",
       );
     } finally {
+      clearPreview();
       setReordering(false);
     }
   }
@@ -412,7 +428,37 @@ export function Moodboard({
       )}
       <DragDropProvider
         sensors={listOrderingSensors}
-        onDragStart={() => setDragging(true)}
+        onDragStart={() => {
+          const order = visible.map((pin) => pin.id);
+          previewOrderRef.current = order;
+          setPreviewOrder(order);
+          setDragging(true);
+        }}
+        onDragOver={(event) => {
+          const { source, target } = event.operation;
+
+          if (
+            !isSortable(source) ||
+            !isSortable(target) ||
+            source.id === target.id
+          ) {
+            return;
+          }
+
+          event.preventDefault();
+
+          const order = applyMoodboardOrder(
+            visible,
+            previewOrderRef.current,
+          ).map((pin) => pin.id);
+          const next = moveMoodboardPin(
+            order,
+            String(source.id),
+            String(target.id),
+          );
+          previewOrderRef.current = next;
+          setPreviewOrder(next);
+        }}
         onDragEnd={(event) => {
           setDragging(false);
 
@@ -421,12 +467,19 @@ export function Moodboard({
           setFocusAfterReorder(keyboardDragPin.current);
           keyboardDragPin.current = undefined;
 
-          if (!event.canceled && isSortable(source)) {
-            void move(source.initialIndex, source.index);
+          if (event.canceled || !isSortable(source)) {
+            clearPreview();
+
+            return;
           }
+
+          void move(
+            String(source.id),
+            applyMoodboardOrder(visible, previewOrderRef.current),
+          );
         }}
       >
-        <MoodboardLayout pins={visible}>
+        <MoodboardLayout pins={displayed}>
           {(pin, index, style) => (
             <Tile
               key={pin.id}
