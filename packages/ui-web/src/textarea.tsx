@@ -1,6 +1,6 @@
 import { type ComponentProps, forwardRef } from "react";
 
-export type TextareaAppearance = "field" | "inline" | "seamless";
+type TextareaAppearance = "field" | "inline" | "seamless";
 
 export type TextareaProps = Omit<
   ComponentProps<"textarea">,

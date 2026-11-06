@@ -3,7 +3,7 @@ import { forwardRef } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
-export type ButtonSize = "default" | "compact";
+type ButtonSize = "default" | "compact";
 
 export type ButtonProps = Omit<
   BaseButton.Props,

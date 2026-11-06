@@ -12,7 +12,7 @@ export const logColors = [
   "violet",
 ] as const;
 
-export const logColorSchema = z.enum(logColors);
+const logColorSchema = z.enum(logColors);
 
 export const cleanLogTitle = (s: string) =>
   s.normalize("NFKC").trim().replace(/\s+/gu, " ");
@@ -91,7 +91,7 @@ export const logEntryWriteSchema = logEntryScopeSchema
   })
   .strict();
 
-export const logEntrySnapshotSchema = z.object({
+const logEntrySnapshotSchema = z.object({
   id: z.uuid(),
   entryOn: calendarDateSchema,
   note: z.string(),

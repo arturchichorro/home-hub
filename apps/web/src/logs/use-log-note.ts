@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import type { MediaSession } from "../media/session";
 import { LogConflict, readLogEntry, writeLogEntry } from "./api";
 
-export const entryKey = (entry: LogEntrySnapshot | null) =>
+const entryKey = (entry: LogEntrySnapshot | null) =>
   entry ? `${entry.id}:${entry.version}` : "none";
 
 type State = {

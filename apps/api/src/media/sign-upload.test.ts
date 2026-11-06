@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createR2Client } from "./r2-client";
-import {
-  recipeImageUploadUrlLifetimeSeconds,
-  signRecipeImageUpload,
-} from "./sign-upload";
+import { mediaUploadUrlLifetimeSeconds, signMediaUpload } from "./sign-upload";
 
 const accessKeyId = "test-access-key-id";
 
@@ -15,7 +12,7 @@ const bucket = "home-hub-dev";
 const objectKey =
   "households/d92e5c4e-1c68-4942-9cc9-710207661bca/recipes/8d46a4c4-4845-4a6d-a937-139633ae1bb9/5944cb0d-931a-4723-b981-77eacb122314";
 
-describe("signRecipeImageUpload", () => {
+describe("signMediaUpload", () => {
   it("targets one object for five minutes and binds the declared content type", async () => {
     const client = createR2Client({
       endpoint: "https://example-account.r2.cloudflarestorage.com",
@@ -24,7 +21,7 @@ describe("signRecipeImageUpload", () => {
     });
 
     try {
-      const signedUrl = await signRecipeImageUpload({
+      const signedUrl = await signMediaUpload({
         client,
         bucket,
         objectKey,
@@ -33,7 +30,7 @@ describe("signRecipeImageUpload", () => {
       const url = new URL(signedUrl);
 
       expect(url.searchParams.get("X-Amz-Expires")).toBe(
-        String(recipeImageUploadUrlLifetimeSeconds),
+        String(mediaUploadUrlLifetimeSeconds),
       );
       expect(url.searchParams.get("X-Amz-SignedHeaders")?.split(";")).toContain(
         "content-type",

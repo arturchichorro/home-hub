@@ -93,7 +93,7 @@ export function MenuPopup({
   );
 }
 
-export type MenuItemVariant = "default" | "danger";
+type MenuItemVariant = "default" | "danger";
 
 type BaseMenuItemProps = ComponentProps<typeof BaseMenu.Item>;
 

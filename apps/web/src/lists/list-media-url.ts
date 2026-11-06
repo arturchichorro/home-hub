@@ -24,7 +24,7 @@ export const clearListImageUrlCache = cache.clear;
 
 export const invalidateListImageUrl = cache.invalidate;
 
-export function prefetchListImage(identity: ListImageIdentity) {
+function prefetchListImage(identity: ListImageIdentity) {
   return cache.getOrCreate(identity, () => batchListImageUrl(identity));
 }
 

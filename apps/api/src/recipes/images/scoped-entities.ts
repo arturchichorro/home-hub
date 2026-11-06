@@ -168,7 +168,3 @@ export async function findRecipeImageForUpdate(
 
   return image;
 }
-
-export const findRecipeImageObjectForShare = findRecipeImageForShare;
-
-export const findRecipeImageObjectForUpdate = findRecipeImageForUpdate;

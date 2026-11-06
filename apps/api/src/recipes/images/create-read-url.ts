@@ -1,12 +1,12 @@
 import type { Database } from "@home-hub/database";
 import type { RecipeImageVariant } from "@home-hub/shared/recipe-image-delivery";
+import { recipeImageDeliveryCapabilityLifetimeSeconds as recipeImageReadUrlLifetimeSeconds } from "@home-hub/shared/recipe-image-delivery";
 import { findActiveUser } from "../../authorization/active-user";
 import {
   findEnabledHouseholdModuleForShare,
   findHouseholdMembershipForShare,
 } from "../../authorization/household-access";
 import { findConfirmedRecipeImageForShare } from "./scoped-entities";
-import { recipeImageReadUrlLifetimeSeconds } from "./sign-read";
 
 export type SignRead = (input: {
   mediaId: string;

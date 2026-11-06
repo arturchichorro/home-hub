@@ -33,7 +33,3 @@ export const setHouseholdModuleEnabledRequestSchema = z
     enabled: z.boolean(),
   })
   .strict();
-
-export type SetHouseholdModuleEnabledRequest = z.infer<
-  typeof setHouseholdModuleEnabledRequestSchema
->;

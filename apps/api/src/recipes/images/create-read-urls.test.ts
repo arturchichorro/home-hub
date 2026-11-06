@@ -1,7 +1,7 @@
 import type { Database } from "@home-hub/database";
+import { recipeImageDeliveryCapabilityLifetimeSeconds as recipeImageReadUrlLifetimeSeconds } from "@home-hub/shared/recipe-image-delivery";
 import { describe, expect, it, vi } from "vitest";
 import { createRecipeImageReadUrlsService } from "./create-read-urls";
-import { recipeImageReadUrlLifetimeSeconds } from "./sign-read";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
 

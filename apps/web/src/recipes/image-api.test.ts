@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   confirmRecipeImageUpload,
-  createRecipeImageReadUrl,
   createRecipeImageReadUrls,
   deleteRecipeImage,
   requestRecipeImageUpload,
@@ -142,33 +141,6 @@ describe("recipe image API", () => {
     await expect(confirmRecipeImageUpload(commandInput)).resolves.toEqual({
       kind: "success",
     });
-  });
-
-  it("returns a validated signed read URL", async () => {
-    fetchMock.mockResolvedValueOnce(
-      Response.json({
-        read: { url: "https://read.example/image", expiresInSeconds: 300 },
-      }),
-    );
-
-    await expect(
-      createRecipeImageReadUrl({ ...commandInput, variant: "viewer" }),
-    ).resolves.toEqual({
-      kind: "success",
-      url: "https://read.example/image",
-      expiresInSeconds: 300,
-    });
-    expect(fetchMock).toHaveBeenCalledWith(
-      `/api/households/${householdId}/recipes/${recipeId}/images/${imageId}/read-url`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ variant: "viewer" }),
-      },
-    );
   });
 
   it("returns validated signed read URLs in one batch", async () => {

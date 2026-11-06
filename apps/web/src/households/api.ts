@@ -8,9 +8,7 @@ import {
   createHouseholdRequestSchema,
   createHouseholdResponseSchema,
   type ListHouseholdInvitesResponse,
-  type ListHouseholdMembersResponse,
   listHouseholdInvitesResponseSchema,
-  listHouseholdMembersResponseSchema,
   renameHouseholdRequestSchema,
   transferHouseholdOwnershipRequestSchema,
 } from "@home-hub/shared/households";
@@ -118,11 +116,6 @@ export async function createHousehold({
 
   return { kind: "success", household };
 }
-
-export type ListHouseholdMembersCommandResult =
-  | { kind: "success"; members: ListHouseholdMembersResponse["members"] }
-  | { kind: "unauthorized" }
-  | { kind: "forbidden" };
 
 export type ListHouseholdInvitesCommandResult =
   | { kind: "success"; invites: ListHouseholdInvitesResponse["invites"] }
@@ -295,38 +288,6 @@ export async function deleteHousehold({
   }
 
   return { kind: "success" };
-}
-
-export async function listHouseholdMembers({
-  accessToken,
-  householdId,
-}: HouseholdReadCommandInput): Promise<ListHouseholdMembersCommandResult> {
-  const response = await fetch(
-    `/api/households/${encodeURIComponent(householdId)}/members`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    },
-  );
-
-  if (response.status === 401) {
-    return { kind: "unauthorized" };
-  }
-
-  if (response.status === 403) {
-    return { kind: "forbidden" };
-  }
-
-  if (!response.ok) {
-    throw new Error("Failed to list household members");
-  }
-
-  const { members } = listHouseholdMembersResponseSchema.parse(
-    await response.json(),
-  );
-
-  return { kind: "success", members };
 }
 
 export async function listHouseholdInvites({

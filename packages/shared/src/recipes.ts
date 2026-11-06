@@ -28,10 +28,6 @@ export const createRecipeMutationSchema = z
   })
   .strict();
 
-export type CreateRecipeMutationInput = z.infer<
-  typeof createRecipeMutationSchema
->;
-
 export const updateRecipeMutationSchema = z
   .object({
     householdId: z.uuid(),
@@ -41,10 +37,6 @@ export const updateRecipeMutationSchema = z
     optimisticUpdatedAt: z.number().int().nonnegative(),
   })
   .strict();
-
-export type UpdateRecipeMutationInput = z.infer<
-  typeof updateRecipeMutationSchema
->;
 
 export const deleteRecipeMutationSchema = z
   .object({
@@ -90,10 +82,6 @@ export const createRecipeIngredientMutationSchema = z
   })
   .strict();
 
-export type CreateRecipeIngredientMutationInput = z.infer<
-  typeof createRecipeIngredientMutationSchema
->;
-
 export const updateRecipeIngredientMutationSchema = z
   .object({
     ingredientId: z.uuid(),
@@ -107,10 +95,6 @@ export const updateRecipeIngredientMutationSchema = z
   .refine((value) => value.amount !== undefined || value.note !== undefined, {
     message: "An ingredient amount or note update is required",
   });
-
-export type UpdateRecipeIngredientMutationInput = z.infer<
-  typeof updateRecipeIngredientMutationSchema
->;
 
 export const renameRecipeIngredientMutationSchema = z
   .object({
@@ -140,10 +124,6 @@ export const createRecipeCookLogMutationSchema = z
     optimisticTimestamp: z.number().int().nonnegative(),
   })
   .strict();
-
-export type CreateRecipeCookLogMutationInput = z.infer<
-  typeof createRecipeCookLogMutationSchema
->;
 
 export const updateRecipeCookLogMutationSchema = z
   .object({

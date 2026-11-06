@@ -8,7 +8,7 @@ import type { MediaSession } from "../media/session";
 
 export type UploadSession = { documentId: string; fileId: string; url: string };
 
-export async function documentRequest<T>(
+async function documentRequest<T>(
   session: MediaSession,
   householdId: string,
   path: string,

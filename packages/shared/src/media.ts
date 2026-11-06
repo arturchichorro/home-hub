@@ -1,10 +1,6 @@
 import * as z from "zod";
 
 // Recipe/exercise uploads remain still-image only. Moodboards additionally accept validated clips.
-export const mediaKindSchema = z.enum(["image", "video"]);
-
-export type MediaKind = z.infer<typeof mediaKindSchema>;
-
 export const stillImageContentTypes = [
   "image/jpeg",
   "image/png",
