@@ -394,7 +394,15 @@ try {
       ),
       "Resizing must not reparent React-owned tiles",
     );
-    assert.equal(await evaluate("document.documentElement.scrollWidth"), width);
+    // Linux may reserve scrollbar width; macOS typically uses overlay scrollbars.
+    const dimensions = await evaluate(
+      "({ scroll: document.documentElement.scrollWidth, available: document.documentElement.clientWidth })",
+    );
+    assert.equal(
+      dimensions.scroll,
+      dimensions.available,
+      "No horizontal page overflow",
+    );
     await healthy();
   }
 
