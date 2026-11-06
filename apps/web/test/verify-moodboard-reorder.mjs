@@ -346,6 +346,9 @@ try {
     );
   }
 
+  await client.call("Emulation.setEmulatedMedia", {
+    features: [{ name: "prefers-reduced-motion", value: "no-preference" }],
+  });
   await open();
   await drag();
   await settled(1);
