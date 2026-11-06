@@ -15,7 +15,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createZeroDbProvider } from "../zero/db-provider";
 import { createLogEntryServices } from "./entries";
 
-const url = process.env.MEDIA_TEST_DATABASE_URL;
+const url = process.env.TEST_DATABASE_URL;
 
 describe.runIf(!!url)("household logs on PostgreSQL", () => {
   let client: ReturnType<typeof createDbClient>;
@@ -48,8 +48,8 @@ describe.runIf(!!url)("household logs on PostgreSQL", () => {
     ) => Promise<unknown>,
   ) => provider().transaction(fn);
   beforeAll(() => {
-    if (!url || !new URL(url).pathname.startsWith("/media_migration_")) {
-      throw Error("Disposable database required");
+    if (!url || !new URL(url).pathname.startsWith("/home_hub_test_")) {
+      throw Error("Disposable home_hub_test_ database required");
     }
 
     client = createDbClient(url);

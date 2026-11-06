@@ -27,8 +27,8 @@ import { createRecipeImageUploadService } from "../recipes/images/create-upload"
 import { createDeleteRecipeImageService } from "../recipes/images/delete";
 import { InvalidMediaUploadError } from "./process-image";
 
-// Opt-in only, against databases created/discarded by verify-media-migration.sh.
-const databaseUrl = process.env.MEDIA_TEST_DATABASE_URL;
+// Opt-in only, against disposable home_hub_test_ databases.
+const databaseUrl = process.env.TEST_DATABASE_URL;
 
 describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
   let client: ReturnType<typeof createDbClient>;
@@ -39,9 +39,9 @@ describe.runIf(Boolean(databaseUrl))("recipe media on PostgreSQL", () => {
   beforeAll(() => {
     if (
       !databaseUrl ||
-      !new URL(databaseUrl).pathname.startsWith("/media_migration_")
+      !new URL(databaseUrl).pathname.startsWith("/home_hub_test_")
     ) {
-      throw new Error("Disposable media migration database required");
+      throw new Error("Disposable home_hub_test_ database required");
     }
 
     client = createDbClient(databaseUrl);

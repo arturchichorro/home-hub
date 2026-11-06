@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 
 container="${1:?Usage: scripts/verify-media-migration.sh <postgres-container>}"
 user="${POSTGRES_USER:-home_hub}"
-prefix="media_migration_${RANDOM}_$$"
+prefix="home_hub_test_${RANDOM}_$$"
 databases=()
 
 cleanup() {
@@ -44,8 +44,8 @@ for scenario in empty populated; do
       "DO \$\$ BEGIN IF EXISTS (SELECT FROM media) OR EXISTS (SELECT FROM recipe_media) OR to_regclass('recipe_images') IS NOT NULL THEN RAISE EXCEPTION 'Invalid empty media migration'; END IF; END \$\$;" >/dev/null
   fi
   if [[ "$scenario" == empty && -n "${DATABASE_URL:-}" ]]; then
-    runtime_url="$(MEDIA_TEST_DATABASE_NAME="$database" node -e 'const u = new URL(process.env.DATABASE_URL); u.pathname = "/" + process.env.MEDIA_TEST_DATABASE_NAME; process.stdout.write(u.toString());')"
-    MEDIA_TEST_DATABASE_URL="$runtime_url" pnpm exec vitest run \
+    runtime_url="$(TEST_DATABASE_NAME="$database" node -e 'const u = new URL(process.env.DATABASE_URL); u.pathname = "/" + process.env.TEST_DATABASE_NAME; process.stdout.write(u.toString());')"
+    TEST_DATABASE_URL="$runtime_url" pnpm exec vitest run \
       apps/api/src/media/recipes.integration.test.ts \
       apps/api/src/workouts/exercise-media.integration.test.ts \
       apps/api/src/zero/habit-workouts.integration.test.ts \

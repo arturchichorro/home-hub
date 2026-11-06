@@ -427,5 +427,12 @@ try {
   }
 
   await server?.close();
-  await rm(profile, { recursive: true, force: true });
+  // Chrome cache helpers can finish writes just after the browser exits.
+  // Retry transient ENOTEMPTY/EBUSY races, but still fail if cleanup stays broken.
+  await rm(profile, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 100,
+  });
 }
