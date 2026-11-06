@@ -5,25 +5,36 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useWorkoutExercisesEditor } from "./use-workout-exercises-editor";
 
 const current = starterWorkouts[0]?.exercises ?? [];
+
 function setup(
   save = vi.fn(async (_exercises: readonly WorkoutExercise[]) => true),
   enabled = true,
 ) {
   let editor: ReturnType<typeof useWorkoutExercisesEditor> | undefined;
+
   // biome-ignore lint/correctness/noComponentHookFactories: One-off SSR harness; no mounted subtree is recreated.
   function Capture() {
     editor = useWorkoutExercisesEditor({ current, enabled, save });
+
     return null;
   }
+
   renderToStaticMarkup(<Capture />);
-  if (!editor) throw new Error("editor");
+
+  if (!editor) {
+    throw new Error("editor");
+  }
+
   return { editor, save };
 }
+
 beforeEach(() => vi.useFakeTimers());
+
 afterEach(() => {
   vi.clearAllTimers();
   vi.useRealTimers();
 });
+
 describe("exercise autosave", () => {
   it("debounces typing and saves the latest draft without confirmation", async () => {
     const { editor, save } = setup();

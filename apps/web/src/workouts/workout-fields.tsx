@@ -49,14 +49,18 @@ export function WorkoutText({
     preserveOnFailure: true,
     currentValue: value,
     mutationEnabled: !disabled && !readOnly,
+
     normalize: (v) => v.trim(),
+
     required: !multiline,
     failureError: "Unable to save.",
     save: onSave,
   });
+
   useEffect(() => {
     onDraftChange?.(editor.value);
   }, [editor.value, onDraftChange]);
+
   const props = {
     appearance: "seamless" as const,
     "aria-label": label,
@@ -68,6 +72,7 @@ export function WorkoutText({
     value: editor.value,
     onBlur: readOnly ? undefined : editor.handleBlur,
   };
+
   return (
     <>
       {multiline ? (
@@ -79,7 +84,9 @@ export function WorkoutText({
           maxLength={1000000}
           onChange={(e) => editor.changeValue(e.target.value)}
           onKeyDown={(e) => {
-            if (!readOnly) editor.handleKeyDown(e, false);
+            if (!readOnly) {
+              editor.handleKeyDown(e, false);
+            }
           }}
         />
       ) : (
@@ -90,7 +97,9 @@ export function WorkoutText({
           className="text-2xl font-semibold text-primary"
           onValueChange={editor.changeValue}
           onKeyDown={(e) => {
-            if (!readOnly) editor.handleKeyDown(e, true);
+            if (!readOnly) {
+              editor.handleKeyDown(e, true);
+            }
           }}
         />
       )}
@@ -147,6 +156,7 @@ export function WorkoutExercises({
     save: onSave,
   });
   const exercises = editor.exercises;
+
   function change(
     id: string,
     patch: Partial<WorkoutExercise>,
@@ -162,6 +172,7 @@ export function WorkoutExercises({
           ? {}
           : { unilateral: patch.unilateral }),
       };
+
       return rows.map((row) =>
         row.id === id
           ? { ...row, ...patch }
@@ -171,13 +182,16 @@ export function WorkoutExercises({
       );
     }, immediate);
   }
+
   return (
     <section
       aria-label="Workout exercises"
       className="grid min-w-0 gap-0"
       aria-busy={editor.isSaving || starting || undefined}
       onBlurCapture={() => {
-        if (!logging) void editor.flush();
+        if (!logging) {
+          void editor.flush();
+        }
       }}
       onKeyDown={(event) => {
         if (
@@ -186,7 +200,10 @@ export function WorkoutExercises({
           event.target instanceof HTMLInputElement
         ) {
           event.preventDefault();
-          if (!disabled && !starting) void editor.flush();
+
+          if (!disabled && !starting) {
+            void editor.flush();
+          }
         }
       }}
     >
@@ -213,8 +230,11 @@ export function WorkoutExercises({
                 disabled={disabled || starting}
                 onClick={async () => {
                   setStarting(true);
+
                   try {
-                    if (await editor.flush()) await onStartLogging();
+                    if (await editor.flush()) {
+                      await onStartLogging();
+                    }
                   } finally {
                     setStarting(false);
                   }
@@ -327,8 +347,10 @@ export function WorkoutExercises({
                 items={workoutExerciseRoleOptions}
                 onValueChange={(value) => {
                   const role = workoutExerciseRoleSchema.safeParse(value);
-                  if (role.success)
+
+                  if (role.success) {
                     change(exercise.id, { role: role.data }, true);
+                  }
                 }}
               >
                 <SelectTrigger
@@ -351,8 +373,9 @@ export function WorkoutExercises({
                   { value: "seconds", label: "Seconds" },
                 ]}
                 onValueChange={(unit) => {
-                  if (unit === "reps" || unit === "seconds")
+                  if (unit === "reps" || unit === "seconds") {
                     change(exercise.id, { unit }, true);
+                  }
                 }}
               >
                 <SelectTrigger

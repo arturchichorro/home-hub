@@ -5,7 +5,9 @@ import type { DeleteHouseholdInput, DeleteHouseholdResult } from "../delete";
 import { createHouseholdRoutes } from "./index";
 
 const jwtSecret = "test-jwt-secret";
+
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
 
 function createAccessToken() {
@@ -23,18 +25,31 @@ function createTestRoutes(
 ) {
   return createHouseholdRoutes({
     acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
+
     createHousehold: async () => ({ kind: "unauthorized" }),
+
     createHouseholdInvite: async () => ({ kind: "forbidden" }),
+
     deleteHousehold,
+
     leaveHousehold: async () => ({ kind: "forbidden" }),
+
     transferHouseholdOwnership: async () => ({ kind: "forbidden" }),
+
     setHouseholdModuleEnabled: async () => ({ kind: "forbidden" }),
+
     listHouseholds: async () => ({ kind: "unauthorized" }),
+
     listHouseholdInvites: async () => ({ kind: "forbidden" }),
+
     listHouseholdMembers: async () => ({ kind: "forbidden" }),
+
     removeHouseholdMember: async () => ({ kind: "forbidden" }),
+
     renameHousehold: async () => ({ kind: "forbidden" }),
+
     revokeHouseholdInvite: async () => ({ kind: "forbidden" }),
+
     jwtSecret,
   });
 }
@@ -96,6 +111,7 @@ describe("delete household route", () => {
   ] as const)("maps %s to %s", async (kind, status) => {
     const response = await request({
       app: createTestRoutes(async () => ({ kind })),
+
       accessToken: createAccessToken(),
     });
 

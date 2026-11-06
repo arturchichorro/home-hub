@@ -10,8 +10,11 @@ import {
 import { normalizeListItemName, normalizeListName } from "./normalization";
 
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const listId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+
 const itemId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+
 const optimisticUpdatedAt = 1000;
 
 describe("Lists contracts", () => {
@@ -56,6 +59,7 @@ describe("Lists contracts", () => {
       orderedListIds: [listId],
     };
     expect(reorderListsMutationSchema.safeParse(args).success).toBe(true);
+
     for (const orderedListIds of [
       [],
       [itemId],
@@ -78,6 +82,7 @@ describe("Lists contracts", () => {
       orderedItemIds: [itemId],
     };
     expect(reorderListItemsMutationSchema.safeParse(args).success).toBe(true);
+
     for (const patch of [
       { listId: undefined },
       { status: "unknown" },

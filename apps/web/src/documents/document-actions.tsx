@@ -12,6 +12,7 @@ import {
 } from "@home-hub/ui-web";
 import { useState } from "react";
 import { useBlockAppUpdate } from "../updates/activity";
+
 export function DocumentActions({
   title,
   replaceDisabled,
@@ -29,6 +30,7 @@ export function DocumentActions({
 }) {
   const [confirm, setConfirm] = useState(false);
   useBlockAppUpdate(confirm);
+
   return (
     <>
       <MenuRoot>

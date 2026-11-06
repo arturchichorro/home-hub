@@ -8,6 +8,7 @@ export const reorderExerciseMediaSchema = z
     householdId: z.uuid(),
     exerciseId: z.uuid(),
     attachmentId: z.uuid(),
+
     orderedAttachmentIds: z
       .array(z.uuid())
       .min(1)
@@ -16,6 +17,7 @@ export const reorderExerciseMediaSchema = z
         (ids) => new Set(ids).size === ids.length,
         "Attachment IDs must be unique",
       ),
+
     optimisticTimestamp: z.number().int().nonnegative(),
   })
   .strict()
@@ -25,6 +27,7 @@ export const reorderExerciseMediaSchema = z
   );
 
 export const createExerciseMediaUploadSchema = stillImageUploadSchema;
+
 export const exerciseMediaUploadResponseSchema = z
   .object({
     attachmentId: z.uuid(),
@@ -39,6 +42,7 @@ export const exerciseMediaUploadResponseSchema = z
       .strict(),
   })
   .strict();
+
 export const confirmExerciseMediaResponseSchema = z
   .object({
     attachment: z
@@ -46,6 +50,7 @@ export const confirmExerciseMediaResponseSchema = z
       .strict(),
   })
   .strict();
+
 export const exerciseMediaReadRequestSchema = z
   .object({
     requests: z
@@ -62,6 +67,7 @@ export const exerciseMediaReadRequestSchema = z
       .max(100),
   })
   .strict();
+
 export const exerciseMediaReadResponseSchema = z
   .object({
     reads: z.array(
@@ -77,8 +83,10 @@ export const exerciseMediaReadResponseSchema = z
     ),
   })
   .strict();
+
 export type ExerciseMediaImage = ExerciseMedia &
   Pick<Media, "contentType" | "byteSize" | "width" | "height" | "confirmedAt">;
+
 export function exerciseImagesFromRows(
   rows: readonly (ExerciseMedia & { asset?: Media | undefined })[],
 ): ExerciseMediaImage[] {

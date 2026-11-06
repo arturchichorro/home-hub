@@ -14,6 +14,7 @@ describe("readImageDimensions", () => {
       close,
     }));
     vi.stubGlobal("createImageBitmap", createImageBitmap);
+
     const file = new File(["image"], "recipe.webp", {
       type: "image/webp",
     });

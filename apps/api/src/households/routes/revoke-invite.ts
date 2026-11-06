@@ -32,6 +32,7 @@ export function createRevokeHouseholdInviteRoute({
 
     if (result.kind === "unauthorized") {
       c.header("WWW-Authenticate", "Bearer");
+
       return c.json({ error: "Unauthorized" }, 401);
     }
 

@@ -32,6 +32,7 @@ export async function mutateWithHabitWorkouts(
       "Workout logging has changed. Reload Home Hub before logging.",
     );
   }
+
   const mutator = mustGetMutator(mutators, name);
   const workoutScope =
     name === "workouts.saveSet"
@@ -48,8 +49,11 @@ export async function mutateWithHabitWorkouts(
   const completionHousehold =
     workoutScope?.householdId ?? habitScope?.householdId;
   const db = tx.dbTransaction.wrappedTransaction;
-  if (completionHousehold)
+
+  if (completionHousehold) {
     await lockHabitWorkoutCompletion(db, completionHousehold);
+  }
+
   if (workoutScope) {
     const scope = workoutScope;
     // Serialize daily-header creation and row writes for this author only,
@@ -65,6 +69,7 @@ export async function mutateWithHabitWorkouts(
     args,
     ctx: { userId },
   });
+
   if (workoutScope) {
     const logs = zql.workoutLogs
       .where("householdId", workoutScope.householdId)
@@ -77,17 +82,20 @@ export async function mutateWithHabitWorkouts(
             logs.where("completedOn", workoutScope.completedOn).one(),
           )
         : undefined);
-    if (log)
+
+    if (log) {
       await refreshHabitWorkoutCompletion(db, {
         householdId: workoutScope.householdId,
         userId,
         entryOn: log.completedOn,
       });
+    }
   } else if (name === "habits.linkWorkouts" && habitScope) {
     await refreshHabitWorkoutCompletion(db, {
       householdId: habitScope.householdId,
       habitId: habitScope.habitId,
     });
   }
+
   return result;
 }

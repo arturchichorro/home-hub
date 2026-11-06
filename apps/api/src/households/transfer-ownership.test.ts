@@ -6,9 +6,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTransferHouseholdOwnershipService } from "./transfer-ownership";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const ownerMembershipId = "e467b00a-5f80-4c13-aa5b-d2e59996dd82";
+
 const targetMembershipId = "7dbb2304-955a-4d0b-9878-d39a42a38eb2";
+
 const now = new Date("2026-08-09T12:00:00.000Z");
 
 function createFakeDatabase({
@@ -35,18 +39,24 @@ function createFakeDatabase({
     from() {
       return selectBuilder;
     },
+
     where(condition: unknown) {
       selectionWhereClauses.push(condition);
+
       return selectBuilder;
     },
+
     limit() {
       return selectBuilder;
     },
+
     async for(strength: unknown) {
       lockStrengths.push(strength);
       selectionNumber += 1;
+
       const role = selectionNumber === 1 ? callerRole : targetRole;
       const id = selectionNumber === 1 ? ownerMembershipId : targetMembershipId;
+
       return role ? [{ id, role }] : [];
     },
   };
@@ -54,24 +64,32 @@ function createFakeDatabase({
   const updateBuilder = {
     set(values: unknown) {
       updatedValues.push(values);
+
       return updateBuilder;
     },
+
     where(condition: unknown) {
       updateWhereClauses.push(condition);
+
       return updateBuilder;
     },
+
     async returning() {
       const result = updateResults[updateNumber] ?? [];
       updateNumber += 1;
+
       return result;
     },
   };
 
   const tx = {
     query: { users: { findFirst: findUser } },
+
     select: () => selectBuilder,
+
     update(table: unknown) {
       updatedTables.push(table);
+
       return updateBuilder;
     },
   };

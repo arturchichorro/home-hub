@@ -28,7 +28,9 @@ export async function restoreStartupSession({
   restore = restoreSession,
   timeoutMilliseconds = sessionRestoreTimeoutMilliseconds,
 }: StartupSessionDependencies = {}): Promise<StartupSessionResult> {
-  if (!online) return { kind: "offline", session: loadOffline() };
+  if (!online) {
+    return { kind: "offline", session: loadOffline() };
+  }
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMilliseconds);

@@ -4,20 +4,27 @@ import { MediaSessionProvider } from "../media/session";
 import { ExerciseMedia } from "./exercise-media";
 
 const { useQuery } = vi.hoisted(() => ({ useQuery: vi.fn() }));
+
 vi.mock("@rocicorp/zero/react", () => ({
   useQuery,
+
   useZero: () => ({ mutate: vi.fn() }),
 }));
+
 vi.mock("../zero/use-zero-mutation-enabled", () => ({
   useZeroMutationEnabled: () => true,
 }));
-const householdId = crypto.randomUUID(),
-  exerciseId = crypto.randomUUID();
+
+const householdId = crypto.randomUUID();
+
+const exerciseId = crypto.randomUUID();
+
 const session = {
   accessToken: "test",
   userId: crypto.randomUUID(),
   onSessionExpired: vi.fn(),
 };
+
 beforeEach(() => {
   useQuery.mockReturnValue([
     [
@@ -50,6 +57,7 @@ beforeEach(() => {
     { type: "complete" },
   ]);
 });
+
 describe("inline exercise media", () => {
   it("shows a compact cooking-log-style strip with an upload action", () => {
     const html = renderToStaticMarkup(

@@ -9,6 +9,7 @@ function createMemoryLogger() {
   return {
     logger: {
       info: (record) => infoRecords.push(record),
+
       error: (record) => errorRecords.push(record),
     } satisfies StructuredLogger,
     infoRecords,
@@ -24,9 +25,11 @@ describe("graceful shutdown", () => {
       closeServer: async () => {
         order.push("server");
       },
+
       closeInfrastructure: async () => {
         order.push("infrastructure");
       },
+
       logger,
     });
 
@@ -67,6 +70,7 @@ describe("graceful shutdown", () => {
       closeServer: async () => {
         throw new Error(secret);
       },
+
       closeInfrastructure,
       logger,
     });

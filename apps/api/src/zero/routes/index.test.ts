@@ -6,10 +6,15 @@ import type { ZeroDbProvider } from "../db-provider";
 import { createZeroRoutes } from "./index";
 
 const jwtSecret = "test-jwt-secret";
+
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const itemId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+
 const listId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+
 const dbProvider = {} as ZeroDbProvider;
 
 afterEach(() => {
@@ -49,7 +54,9 @@ function createMutationTestProvider({
   };
   const hooks: TransactionProviderHooks = {
     updateClientMutationID: vi.fn(async () => ({ lastMutationID: 1 })),
+
     writeMutationResult: vi.fn(async () => undefined),
+
     deleteMutationResults: vi.fn(async () => undefined),
   };
   const transaction = vi.fn(
@@ -144,11 +151,15 @@ function postQuery(input: {
 
 describe("Zero routes", () => {
   it("rejects the retired bulk log writer before touching archived measurements", async () => {
-    const provider = createMutationTestProvider(),
-      app = createZeroRoutes({ dbProvider: provider.dbProvider, jwtSecret }),
-      request = createMutationRequest();
+    const provider = createMutationTestProvider();
+    const app = createZeroRoutes({
+      dbProvider: provider.dbProvider,
+      jwtSecret,
+    });
+    const request = createMutationRequest();
     const body = {
       ...request,
+
       mutations: request.mutations.map((m) => ({
         ...m,
         name: "workouts.saveLog",
@@ -168,9 +179,12 @@ describe("Zero routes", () => {
     expect(provider.update).not.toHaveBeenCalled();
   });
   it("acquires the author/workout transaction lock before reading a new set's scope", async () => {
-    const provider = createMutationTestProvider(),
-      app = createZeroRoutes({ dbProvider: provider.dbProvider, jwtSecret }),
-      request = createMutationRequest();
+    const provider = createMutationTestProvider();
+    const app = createZeroRoutes({
+      dbProvider: provider.dbProvider,
+      jwtSecret,
+    });
+    const request = createMutationRequest();
     const args = {
       householdId,
       workoutId: listId,
@@ -200,6 +214,7 @@ describe("Zero routes", () => {
     };
     const body = {
       ...request,
+
       mutations: request.mutations.map((m) => ({
         ...m,
         name: "workouts.saveSet",
@@ -257,6 +272,7 @@ describe("Zero routes", () => {
 
     const transformedQuery = body.queries[0];
     expect(transformedQuery).toBeDefined();
+
     if (!transformedQuery) {
       throw new Error("Expected a transformed query");
     }
@@ -331,6 +347,7 @@ describe("Zero routes", () => {
   it("executes an authenticated custom mutation and returns a Zero response", async () => {
     const authoritativeUpdatedAt = 1_786_000_001_000;
     vi.spyOn(Date, "now").mockReturnValue(authoritativeUpdatedAt);
+
     const { dbProvider, transaction, update } = createMutationTestProvider();
     const app = createZeroRoutes({ dbProvider, jwtSecret });
 

@@ -27,12 +27,16 @@ it("reserves the same viewport-fitted frame before either URL and after the larg
       error={false}
     />,
   );
-  for (const html of [empty, low, both])
+
+  for (const html of [empty, low, both]) {
     expect(html).toContain('class="relative mx-auto h-[90svh] w-full"');
+  }
+
   expect(both.match(/absolute inset-0 size-full object-contain/g)).toHaveLength(
     2,
   );
 });
+
 it("starts the full-resolution layer hidden and never fades the thumbnail out underneath it", () => {
   const html = renderToStaticMarkup(
     <ProgressiveImage
@@ -51,6 +55,7 @@ it("starts the full-resolution layer hidden and never fades the thumbnail out un
   expect(high).toContain("opacity-0");
   expect(high).toContain("motion-reduce:transition-none");
 });
+
 it("keeps the thumbnail usable on a high-resolution read error", () => {
   const html = renderToStaticMarkup(
     <ProgressiveImage

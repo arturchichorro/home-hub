@@ -4,8 +4,11 @@ import { createRecipeImageReadUrlsService } from "./create-read-urls";
 import { recipeImageReadUrlLifetimeSeconds } from "./sign-read";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+
 const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 
 function createFakeDatabase({ user = true }: { user?: boolean } = {}) {
@@ -25,11 +28,16 @@ function createFakeDatabase({ user = true }: { user?: boolean } = {}) {
     const result = results.shift() ?? [];
     const builder = {
       from: (_table: unknown) => builder,
+
       innerJoin: () => builder,
+
       where: (_condition: unknown) => builder,
+
       limit: (_limit: unknown) => builder,
+
       for: async (_strength: unknown) => result,
     };
+
     return builder;
   });
   const tx = {
@@ -44,6 +52,7 @@ function createFakeDatabase({ user = true }: { user?: boolean } = {}) {
     async <T>(operation: (transaction: typeof tx) => Promise<T>) =>
       operation(tx),
   );
+
   return { db: { transaction } as unknown as Database, transaction };
 }
 

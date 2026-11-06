@@ -6,7 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createListHouseholdInvitesService } from "./list-invites";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const now = new Date("2026-08-07T12:00:00Z");
 
 const inviteRows = [
@@ -35,18 +37,25 @@ function createFakeDatabase({
   const authorizationBuilder = {
     from: (table: unknown) => {
       fromTables.push(table);
+
       return authorizationBuilder;
     },
+
     where: (condition: unknown) => {
       whereClauses.push(condition);
+
       return authorizationBuilder;
     },
+
     limit: (limit: unknown) => {
       limits.push(limit);
+
       return authorizationBuilder;
     },
+
     for: async (strength: unknown) => {
       lockStrengths.push(strength);
+
       return ownerMembershipExists ? [{ id: "owner-membership-id" }] : [];
     },
   };
@@ -54,14 +63,19 @@ function createFakeDatabase({
   const invitesBuilder = {
     from: (table: unknown) => {
       fromTables.push(table);
+
       return invitesBuilder;
     },
+
     where: (condition: unknown) => {
       whereClauses.push(condition);
+
       return invitesBuilder;
     },
+
     orderBy: async (...ordering: unknown[]) => {
       orderings.push(ordering);
+
       return inviteRows;
     },
   };
@@ -72,8 +86,10 @@ function createFakeDatabase({
         findFirst: findUser,
       },
     },
+
     select: (selection: unknown) => {
       selections.push(selection);
+
       return selections.length === 1 ? authorizationBuilder : invitesBuilder;
     },
   };

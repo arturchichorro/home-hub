@@ -24,24 +24,32 @@ function createFakeDatabase({
   const builder = {
     from: (table: unknown) => {
       fromTables.push(table);
+
       return builder;
     },
+
     innerJoin: (table: unknown, condition: unknown) => {
       joins.push({ table, condition });
+
       return builder;
     },
+
     where: (condition: unknown) => {
       whereClauses.push(condition);
+
       return builder;
     },
+
     orderBy: async (...conditions: unknown[]) => {
       orderClauses.push(...conditions);
+
       return rows;
     },
   };
 
   const select = vi.fn((selection: unknown) => {
     selections.push(selection);
+
     return builder;
   });
 

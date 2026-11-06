@@ -14,12 +14,14 @@ const probe = {
     { codec_type: "audio", codec_name: "aac" },
   ],
 };
+
 it("accepts supported MP4 and computes authoritative duration/dimensions", () =>
   expect(validateVideoProbe(probe, "video/mp4")).toEqual({
     width: 1920,
     height: 1080,
     durationMs: 2500,
   }));
+
 it("preserves displayed orientation", () =>
   expect(
     validateVideoProbe(
@@ -30,6 +32,7 @@ it("preserves displayed orientation", () =>
       "video/mp4",
     ).width,
   ).toBe(1080));
+
 it("rejects unsupported codecs, duration, dimensions and extra streams", () => {
   for (const p of [
     { ...probe, format: { ...probe.format, duration: "601" } },
@@ -43,9 +46,11 @@ it("rejects unsupported codecs, duration, dimensions and extra streams", () => {
         { codec_type: "subtitle", codec_name: "subrip" },
       ],
     },
-  ])
+  ]) {
     expect(() => validateVideoProbe(p, "video/mp4")).toThrow();
+  }
 });
+
 it("accepts VP9/Opus WebM but never labels it as MP4", () => {
   const p = {
     format: { duration: "1", format_name: "matroska,webm" },

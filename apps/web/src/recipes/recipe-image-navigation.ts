@@ -5,7 +5,9 @@ export function getAdjacentRecipeImage<T extends ImageReference>(
   currentImageId: string,
   direction: -1 | 1,
 ): T | undefined {
-  if (images.length === 0) return undefined;
+  if (images.length === 0) {
+    return undefined;
+  }
 
   const currentIndex = images.findIndex((image) => image.id === currentImageId);
   const startIndex = currentIndex === -1 ? 0 : currentIndex;

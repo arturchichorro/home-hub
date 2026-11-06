@@ -22,6 +22,7 @@ export function createRefreshRoute({
 
     if (!rawRefreshToken) {
       clearRefreshTokenCookie(c, isProduction);
+
       return c.json({ error: "Invalid refresh token" }, 401);
     }
 
@@ -29,6 +30,7 @@ export function createRefreshRoute({
 
     if (result.kind === "invalid_token") {
       clearRefreshTokenCookie(c, isProduction);
+
       return c.json({ error: "Invalid refresh token" }, 401);
     }
 

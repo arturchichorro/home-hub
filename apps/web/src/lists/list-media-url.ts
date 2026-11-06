@@ -5,8 +5,10 @@ import { batchListImageUrl, type ListImageIdentity } from "./list-media-api";
 
 const cache = createImageUrlCache<ListImageIdentity>({
   storageKeyPrefix: "home-hub:list-image-urls:v1:",
+
   resourceKey: ({ householdId, listId, attachmentId }) =>
     JSON.stringify(["lists", householdId, listId, attachmentId]),
+
   cacheKey: ({ userId, householdId, listId, attachmentId, variant }) =>
     JSON.stringify([
       userId,
@@ -17,16 +19,21 @@ const cache = createImageUrlCache<ListImageIdentity>({
       variant,
     ]),
 });
+
 export const clearListImageUrlCache = cache.clear;
+
 export const invalidateListImageUrl = cache.invalidate;
+
 export function prefetchListImage(identity: ListImageIdentity) {
   return cache.getOrCreate(identity, () => batchListImageUrl(identity));
 }
+
 const useImageUrl = createUseImageUrl({
   key: cache.key,
   read: cache.read,
   resolve: prefetchListImage,
 });
+
 export function useListImageUrl(
   input: Omit<ListImageIdentity, "attachmentId"> & {
     attachmentId: string | undefined;
@@ -56,5 +63,6 @@ export function useListImageUrl(
         : undefined,
     [accessToken, userId, householdId, listId, attachmentId, variant],
   );
+
   return useImageUrl(identity, onSessionExpired);
 }

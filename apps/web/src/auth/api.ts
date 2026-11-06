@@ -42,7 +42,9 @@ async function requestAccessTokenRefresh({
     ...(signal ? { signal } : {}),
   });
 
-  if (refreshResponse.status === 401) return { kind: "unauthorized" };
+  if (refreshResponse.status === 401) {
+    return { kind: "unauthorized" };
+  }
 
   if (!refreshResponse.ok) {
     throw new Error("Failed to refresh session");
@@ -82,7 +84,9 @@ export async function restoreSession({
 }: SessionRequestOptions = {}): Promise<Session | null> {
   const refreshResult = await refreshAccessToken(signal ? { signal } : {});
 
-  if (refreshResult.kind === "unauthorized") return null;
+  if (refreshResult.kind === "unauthorized") {
+    return null;
+  }
 
   const { accessToken } = refreshResult;
 
@@ -93,7 +97,9 @@ export async function restoreSession({
     ...(signal ? { signal } : {}),
   });
 
-  if (meResponse.status === 401) return null;
+  if (meResponse.status === 401) {
+    return null;
+  }
 
   if (!meResponse.ok) {
     throw new Error("Failed to load current user");
@@ -116,7 +122,9 @@ export async function login(request: LoginRequest): Promise<LoginResult> {
     body: JSON.stringify(parsedRequest),
   });
 
-  if (loginResponse.status === 401) return { kind: "invalid_credentials" };
+  if (loginResponse.status === 401) {
+    return { kind: "invalid_credentials" };
+  }
 
   if (!loginResponse.ok) {
     throw new Error("Failed to login");
@@ -139,8 +147,13 @@ export async function signup(request: SignupRequest): Promise<SignupResult> {
     body: JSON.stringify(parsedRequest),
   });
 
-  if (signupResponse.status === 403) return { kind: "forbidden" };
-  if (signupResponse.status === 409) return { kind: "conflict" };
+  if (signupResponse.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (signupResponse.status === 409) {
+    return { kind: "conflict" };
+  }
 
   if (!signupResponse.ok) {
     throw new Error("Failed to sign up");

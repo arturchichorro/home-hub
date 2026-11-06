@@ -5,6 +5,7 @@ import type { ComponentProps } from "react";
 export const SelectRoot = BaseSelect.Root;
 
 type BaseSelectTriggerProps = ComponentProps<typeof BaseSelect.Trigger>;
+
 type BaseSelectValueProps = ComponentProps<typeof BaseSelect.Value>;
 
 export type SelectTriggerProps = Omit<
@@ -46,6 +47,7 @@ export function SelectTrigger({
 }
 
 type BaseSelectPopupProps = ComponentProps<typeof BaseSelect.Popup>;
+
 type BaseSelectPositionerProps = ComponentProps<typeof BaseSelect.Positioner>;
 
 export type SelectPopupProps = Omit<BaseSelectPopupProps, "className"> & {

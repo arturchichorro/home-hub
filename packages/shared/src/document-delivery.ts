@@ -1,5 +1,6 @@
 import * as z from "zod";
 import { documentFilenameSchema, documentFormats } from "./documents";
+
 export const documentReadSchema = z
   .object({
     householdId: z.uuid(),
@@ -7,23 +8,29 @@ export const documentReadSchema = z
     fileId: z.uuid(),
     hash: z.string().regex(/^[a-f0-9]{64}$/u),
     filename: documentFilenameSchema,
+
     contentType: z
       .string()
       .refine((t) => (Object.values(documentFormats) as string[]).includes(t)),
+
     disposition: z.enum(["inline", "attachment"]),
     expiresAt: z.number().int().positive(),
     thumbnail: z.literal(true).optional(),
   })
   .strict();
+
 export type DocumentRead = z.infer<typeof documentReadSchema>;
+
 export const documentUploadKey = (
   c: Pick<DocumentRead, "householdId" | "documentId" | "fileId">,
 ) =>
   `households/${c.householdId}/documents/${c.documentId}/files/${c.fileId}/upload`;
+
 export const documentReadKey = (
   c: Pick<DocumentRead, "householdId" | "documentId" | "fileId" | "hash">,
 ) =>
   `households/${c.householdId}/documents/${c.documentId}/files/${c.fileId}/verified/${c.hash}`;
+
 const payload = (c: DocumentRead) =>
   new TextEncoder().encode(
     JSON.stringify([
@@ -38,6 +45,7 @@ const payload = (c: DocumentRead) =>
       c.expiresAt,
     ]),
   );
+
 async function key(secret: string) {
   return crypto.subtle.importKey(
     "raw",
@@ -47,6 +55,7 @@ async function key(secret: string) {
     ["sign", "verify"],
   );
 }
+
 export async function signDocumentRead(c: DocumentRead, secret: string) {
   return Array.from(
     new Uint8Array(
@@ -55,12 +64,16 @@ export async function signDocumentRead(c: DocumentRead, secret: string) {
     (n) => n.toString(16).padStart(2, "0"),
   ).join("");
 }
+
 export async function verifyDocumentRead(
   c: DocumentRead,
   signature: string,
   secret: string,
 ) {
-  if (!/^[a-f0-9]{64}$/u.test(signature)) return false;
+  if (!/^[a-f0-9]{64}$/u.test(signature)) {
+    return false;
+  }
+
   return crypto.subtle.verify(
     "HMAC",
     await key(secret),

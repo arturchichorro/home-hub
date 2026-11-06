@@ -48,33 +48,49 @@ export function ListItemDraftNameForm({
   const errorId = `${itemId}-error`;
 
   useEffect(() => {
-    if (focusRequest >= 0) inputRef.current?.focus();
+    if (focusRequest >= 0) {
+      inputRef.current?.focus();
+    }
   }, [focusRequest]);
 
   useEffect(
     () => () => {
-      if (timeoutRef.current !== undefined) clearTimeout(timeoutRef.current);
+      if (timeoutRef.current !== undefined) {
+        clearTimeout(timeoutRef.current);
+      }
     },
     [],
   );
 
   function clearScheduledSave() {
-    if (timeoutRef.current === undefined) return;
+    if (timeoutRef.current === undefined) {
+      return;
+    }
+
     clearTimeout(timeoutRef.current);
     timeoutRef.current = undefined;
   }
 
   async function saveDraft(rawName: string, dismissEmpty: boolean) {
     clearScheduledSave();
-    if (savingRef.current) return;
 
-    const submittedName = cleanListItemName(rawName);
-    if (submittedName.length === 0) {
-      if (dismissEmpty) onCancel();
+    if (savingRef.current) {
       return;
     }
+
+    const submittedName = cleanListItemName(rawName);
+
+    if (submittedName.length === 0) {
+      if (dismissEmpty) {
+        onCancel();
+      }
+
+      return;
+    }
+
     if (!mutationEnabled) {
       setError("Unable to add the list item.");
+
       return;
     }
 
@@ -82,6 +98,7 @@ export function ListItemDraftNameForm({
     setSaving(true);
     setError(undefined);
     onSaveStarted(submittedName);
+
     const mutation = zero.mutate(
       mutators.lists.addItem({
         itemId,
@@ -98,11 +115,14 @@ export function ListItemDraftNameForm({
       savingRef.current = false;
       setSaving(false);
       setError("Unable to add the list item.");
+
       return;
     }
 
     onSaved(submittedName);
+
     const serverResult = await mutation.server;
+
     if (serverResult.type === "error") {
       onServerError("The list item could not be saved.");
     }
@@ -112,7 +132,11 @@ export function ListItemDraftNameForm({
     setName(value);
     setError(undefined);
     clearScheduledSave();
-    if (!canDebounceCreateTextDraft(value, cleanListItemName(value))) return;
+
+    if (!canDebounceCreateTextDraft(value, cleanListItemName(value))) {
+      return;
+    }
+
     timeoutRef.current = setTimeout(() => {
       void saveDraft(value, false);
     }, autosaveDelayMs);
@@ -140,7 +164,10 @@ export function ListItemDraftNameForm({
         value={name}
         onBlur={() => void saveDraft(name, true)}
         onKeyDown={(event) => {
-          if (event.key !== "Escape") return;
+          if (event.key !== "Escape") {
+            return;
+          }
+
           event.preventDefault();
           clearScheduledSave();
           onCancel();
@@ -182,7 +209,9 @@ export function AddListItemTriggerRow({
           className="h-7! px-1.5! font-normal text-muted"
           onClick={onActivate}
           onPointerDown={(event) => {
-            if (draftActive) event.preventDefault();
+            if (draftActive) {
+              event.preventDefault();
+            }
           }}
         >
           <Plus aria-hidden="true" className="size-4" />

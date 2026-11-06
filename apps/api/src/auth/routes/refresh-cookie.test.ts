@@ -11,11 +11,13 @@ function createCookieApp(isProduction: boolean) {
 
   app.get("/set", (c) => {
     setRefreshTokenCookie(c, "refresh-token", isProduction);
+
     return c.body(null, 204);
   });
 
   app.get("/clear", (c) => {
     clearRefreshTokenCookie(c, isProduction);
+
     return c.body(null, 204);
   });
 

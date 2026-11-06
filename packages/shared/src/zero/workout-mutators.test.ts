@@ -10,17 +10,28 @@ import { mutators } from "./mutators";
 import { queries } from "./queries";
 import type { Schema } from "./schema.gen";
 
-const householdId = crypto.randomUUID(),
-  userId = crypto.randomUUID(),
-  other = crypto.randomUUID(),
-  workoutId = crypto.randomUUID(),
-  logId = crypto.randomUUID();
+const householdId = crypto.randomUUID();
+
+const userId = crypto.randomUUID();
+
+const other = crypto.randomUUID();
+
+const workoutId = crypto.randomUUID();
+
+const logId = crypto.randomUUID();
+
 const now = Date.parse("2026-10-25T23:30:00Z");
-const ctx = { userId },
-  scope = { householdId, workoutId, optimisticTimestamp: 1234 };
+
+const ctx = { userId };
+
+const scope = { householdId, workoutId, optimisticTimestamp: 1234 };
+
 const starter = workoutContentSchema.parse(starterWorkouts[0]);
+
 const snapshot = { title: starter.title, exercises: starter.exercises };
+
 type Row = Record<string, unknown>;
+
 type Condition =
   | { type: "and"; conditions: Condition[] }
   | {
@@ -36,16 +47,23 @@ type Condition =
         subquery: { table: string; where?: Condition };
       };
     };
+
 function matches(
   row: Row,
   condition: Condition | undefined,
   data: Record<string, Row[]>,
 ): boolean {
-  if (!condition) return true;
-  if (condition.type === "and")
+  if (!condition) {
+    return true;
+  }
+
+  if (condition.type === "and") {
     return condition.conditions.every((c) => matches(row, c, data));
+  }
+
   if (condition.type === "correlatedSubquery") {
     const { correlation, subquery } = condition.related;
+
     return (data[subquery.table] ?? []).some(
       (r) =>
         correlation.parentField.every(
@@ -53,15 +71,21 @@ function matches(
         ) && matches(r, subquery.where, data),
     );
   }
-  if (condition.op === "IS" && condition.right.value === null)
+
+  if (condition.op === "IS" && condition.right.value === null) {
     return row[condition.left.name] == null;
-  if (condition.op === "=")
+  }
+
+  if (condition.op === "=") {
     return row[condition.left.name] === condition.right.value;
+  }
+
   throw new Error(`Unsupported operator ${condition.op}`);
 }
 
 function setup(location: "server" | "client" = "server") {
   vi.spyOn(Date, "now").mockReturnValue(now);
+
   const data: Record<string, Row[]> = {
     households: [{ id: householdId, deletedAt: null }],
     householdMembers: [{ householdId, userId }],
@@ -77,6 +101,7 @@ function setup(location: "server" | "client" = "server") {
         notes: starter.notes,
       },
     ],
+
     exercises: starter.exercises.map((e, index) => ({
       id: e.id,
       householdId,
@@ -90,6 +115,7 @@ function setup(location: "server" | "client" = "server") {
       createdAt: now,
       updatedAt: now,
     })),
+
     workoutExercises: starter.exercises.map((exercise, index) => ({
       id: exercise.id,
       exerciseId: exercise.id,
@@ -101,6 +127,7 @@ function setup(location: "server" | "client" = "server") {
       createdAt: now,
       updatedAt: now,
     })),
+
     workoutLogs: [],
     workoutLogSets: [],
     exerciseLogs: [],
@@ -125,25 +152,41 @@ function setup(location: "server" | "client" = "server") {
             : a.id === b.id;
   const crud = (table: string) => ({
     insert: async (row: Row) => {
-      if (data[table]?.some((r) => sameKey(table, r, row)))
+      if (data[table]?.some((r) => sameKey(table, r, row))) {
         throw new Error("duplicate");
+      }
+
       writes(table, "insert", row);
       data[table]?.push(structuredClone(row));
     },
+
     update: async (row: Row) => {
-      if (table !== "households") writes(table, "update", row); // Household UPDATE only serializes catalog writes.
+      if (table !== "households") {
+        writes(table, "update", row); // Household UPDATE only serializes catalog writes.
+      }
+
       const found = data[table]?.find((r) => sameKey(table, r, row));
-      if (found) Object.assign(found, structuredClone(row));
+
+      if (found) {
+        Object.assign(found, structuredClone(row));
+      }
     },
+
     delete: async (row: Row) => {
       writes(table, "delete", row);
       data[table] = (data[table] ?? []).filter((r) => !sameKey(table, r, row));
     },
+
     upsert: async (row: Row) => {
       writes(table, "upsert", row);
+
       const found = data[table]?.find((r) => sameKey(table, r, row));
-      if (found) Object.assign(found, structuredClone(row));
-      else data[table]?.push(structuredClone(row));
+
+      if (found) {
+        Object.assign(found, structuredClone(row));
+      } else {
+        data[table]?.push(structuredClone(row));
+      }
     },
   });
   const tx = {
@@ -162,6 +205,7 @@ function setup(location: "server" | "client" = "server") {
         "exerciseMedia",
       ].map((t) => [t, crud(t)]),
     ),
+
     run: async (query: unknown) => {
       const { ast, format } = query as {
         ast: { table: string; where?: Condition; orderBy?: [string, string][] };
@@ -173,6 +217,7 @@ function setup(location: "server" | "client" = "server") {
           ast.table === "workoutLogs"
             ? {
                 ...r,
+
                 sets: (data.workoutLogSets ?? []).filter(
                   (s) => s.logId === r.id,
                 ),
@@ -180,6 +225,7 @@ function setup(location: "server" | "client" = "server") {
             : ast.table === "exerciseMedia"
               ? {
                   ...r,
+
                   asset: (data.media ?? []).find(
                     (asset) =>
                       asset.id === r.mediaId &&
@@ -189,6 +235,7 @@ function setup(location: "server" | "client" = "server") {
               : ast.table === "workouts"
                 ? {
                     ...r,
+
                     exercises: (data.workoutExercises ?? [])
                       .filter(
                         (e) =>
@@ -197,6 +244,7 @@ function setup(location: "server" | "client" = "server") {
                       )
                       .map((e) => ({
                         ...e,
+
                         exercise: (data.exercises ?? []).find(
                           (x) =>
                             x.id === e.exerciseId &&
@@ -211,14 +259,18 @@ function setup(location: "server" | "client" = "server") {
                   }
                 : r,
         );
-      for (const [field, direction] of [...(ast.orderBy ?? [])].reverse())
+
+      for (const [field, direction] of [...(ast.orderBy ?? [])].reverse()) {
         rows.sort((a, b) => {
-          const av = a[field] as string | number,
-            bv = b[field] as string | number;
+          const av = a[field] as string | number;
+          const bv = b[field] as string | number;
+
           return (
             (av < bv ? -1 : av > bv ? 1 : 0) * (direction === "asc" ? 1 : -1)
           );
         });
+      }
+
       return format.singular ? rows[0] : rows;
     },
   } as unknown as Transaction<Schema>;
@@ -238,6 +290,7 @@ function setup(location: "server" | "client" = "server") {
       timeZone: "Europe/Brussels",
       ...changes,
     };
+
     for (const set of args.sets) {
       await mutators.workouts.saveSet.fn({
         tx,
@@ -257,7 +310,9 @@ function setup(location: "server" | "client" = "server") {
         },
       });
     }
+
     let log = data.workoutLogs?.find((row) => row.id === args.logId);
+
     if (!log) {
       log = {
         id: args.logId,
@@ -271,7 +326,9 @@ function setup(location: "server" | "client" = "server") {
       };
       data.workoutLogs?.push(log);
     }
+
     log.note = args.note;
+
     for (const set of args.sets) {
       if (
         data.workoutLogSets?.some(
@@ -280,12 +337,18 @@ function setup(location: "server" | "client" = "server") {
             row.workoutExerciseId === set.workoutExerciseId &&
             row.round === set.round,
         )
-      )
+      ) {
         continue;
+      }
+
       const definition = args.snapshot.exercises.find(
         (row) => row.id === set.workoutExerciseId,
       );
-      if (!definition) throw Error("Missing fixture definition");
+
+      if (!definition) {
+        throw Error("Missing fixture definition");
+      }
+
       data.workoutLogSets?.push({
         logId: log.id,
         householdId,
@@ -299,19 +362,28 @@ function setup(location: "server" | "client" = "server") {
       });
     }
   };
+
   return { tx, data, writes, record };
 }
+
 afterEach(() => vi.restoreAllMocks());
+
 function fixtureRow(rows: Row[] | undefined) {
   const row = rows?.[0];
-  if (!row) throw Error("Missing fixture row");
+
+  if (!row) {
+    throw Error("Missing fixture row");
+  }
+
   return row;
 }
+
 const recordedSet = {
   workoutExerciseId: starter.exercises[0]?.id ?? "",
   round: 1,
   values: { weightKg: 8, amount: 10, rightAmount: null },
 };
+
 describe("exercise picture ordering", () => {
   function mediaSetup(location: "server" | "client" = "server") {
     const context = setup(location);
@@ -337,6 +409,7 @@ describe("exercise picture ordering", () => {
       confirmedAt: index === 3 ? null : now,
       deletedAt: null,
     }));
+
     const move = (
       orderedAttachmentIds: string[],
       attachmentId = ids[0] ?? "",
@@ -356,6 +429,7 @@ describe("exercise picture ordering", () => {
       [...(context.data.exerciseMedia ?? [])]
         .sort((a, b) => Number(b.sortKey) - Number(a.sortKey))
         .map((row) => row.id);
+
     return {
       ...context,
       ids: ids as [string, string, string, string],
@@ -364,6 +438,7 @@ describe("exercise picture ordering", () => {
       order,
     };
   }
+
   it.each(["client", "server"] as const)(
     "optimistically/server-orders one picture with sparse keys: %s",
     async (location) => {
@@ -390,8 +465,8 @@ describe("exercise picture ordering", () => {
   it("rebalances the entire scope without losing pending or unseen uploads", async () => {
     const state = mediaSetup();
     const { ids, data } = state;
-    const extraId = crypto.randomUUID(),
-      assetId = crypto.randomUUID();
+    const extraId = crypto.randomUUID();
+    const assetId = crypto.randomUUID();
     data.exerciseMedia?.push({
       id: extraId,
       householdId,
@@ -408,8 +483,9 @@ describe("exercise picture ordering", () => {
       deletedAt: null,
     });
     data.workoutLogs = [{ id: logId, note: "Keep private notes", snapshot }];
-    const assetsBefore = JSON.stringify(data.media),
-      logsBefore = JSON.stringify(data.workoutLogs);
+
+    const assetsBefore = JSON.stringify(data.media);
+    const logsBefore = JSON.stringify(data.workoutLogs);
     await state.move([ids[2], ids[0], ids[1]]);
     expect(state.order()).toEqual([extraId, ids[2], ids[0], ids[1], ids[3]]);
     expect(JSON.stringify(data.media)).toBe(assetsBefore);
@@ -420,14 +496,33 @@ describe("exercise picture ordering", () => {
     async (kind) => {
       const state = mediaSetup();
       const { data, ids } = state;
-      const row = data.exerciseMedia?.[1],
-        asset = data.media?.[1];
-      if (!row || !asset) throw new Error("fixture");
-      if (kind === "deleted") row.deletedAt = now;
-      if (kind === "pending") asset.confirmedAt = null;
-      if (kind === "asset-deleted") asset.deletedAt = now;
-      if (kind === "video") asset.kind = "video";
-      if (kind === "foreign") row.exerciseId = crypto.randomUUID();
+      const row = data.exerciseMedia?.[1];
+      const asset = data.media?.[1];
+
+      if (!row || !asset) {
+        throw new Error("fixture");
+      }
+
+      if (kind === "deleted") {
+        row.deletedAt = now;
+      }
+
+      if (kind === "pending") {
+        asset.confirmedAt = null;
+      }
+
+      if (kind === "asset-deleted") {
+        asset.deletedAt = now;
+      }
+
+      if (kind === "video") {
+        asset.kind = "video";
+      }
+
+      if (kind === "foreign") {
+        row.exerciseId = crypto.randomUUID();
+      }
+
       await expect(
         state.move([ids[1], ids[0], ids[2]], ids[1]),
       ).rejects.toThrow("Exercise media reorder not allowed");
@@ -438,12 +533,23 @@ describe("exercise picture ordering", () => {
     "rejects unavailable media scope: %s",
     async (kind) => {
       const state = mediaSetup();
-      if (kind === "membership") state.data.householdMembers = [];
-      if (kind === "module") state.data.householdModuleSettings = [];
+
+      if (kind === "membership") {
+        state.data.householdMembers = [];
+      }
+
+      if (kind === "module") {
+        state.data.householdModuleSettings = [];
+      }
+
       if (kind === "deleted-parent") {
         const parent = state.data.exercises?.[0];
-        if (parent) parent.deletedAt = now;
+
+        if (parent) {
+          parent.deletedAt = now;
+        }
       }
+
       await expect(
         state.move([state.ids[1], state.ids[0], state.ids[2]], state.ids[1]),
       ).rejects.toThrow();
@@ -459,9 +565,13 @@ describe("exercise picture ordering", () => {
           change === "delete-parent"
             ? state.data.exercises?.[0]
             : state.data.exerciseMedia?.[1];
+
         if (row) {
-          if (change === "delete-parent") row.deletedAt = now;
-          else row.deletedAt = now;
+          if (change === "delete-parent") {
+            row.deletedAt = now;
+          } else {
+            row.deletedAt = now;
+          }
         }
       });
       await expect(
@@ -473,6 +583,7 @@ describe("exercise picture ordering", () => {
     },
   );
 });
+
 describe("standalone exercise creation", () => {
   const definition = () => ({
     id: crypto.randomUUID(),
@@ -500,8 +611,8 @@ describe("standalone exercise creation", () => {
     async (location) => {
       const { tx, data, writes } = setup(location);
       const exercise = definition();
-      const workoutsBefore = JSON.stringify(data.workouts),
-        slotsBefore = JSON.stringify(data.workoutExercises);
+      const workoutsBefore = JSON.stringify(data.workouts);
+      const slotsBefore = JSON.stringify(data.workoutExercises);
       await create(tx, exercise);
       expect(
         data.exercises?.find((row) => row.id === exercise.id),
@@ -522,7 +633,11 @@ describe("standalone exercise creation", () => {
   it("rejects normalized duplicates without changing the existing exercise", async () => {
     const { tx, data, writes } = setup();
     const existing = data.exercises?.[0];
-    if (!existing) throw Error("fixture");
+
+    if (!existing) {
+      throw Error("fixture");
+    }
+
     await expect(
       create(tx, {
         ...definition(),
@@ -544,6 +659,7 @@ describe("standalone exercise creation", () => {
       unilateral: true,
       sortKey: 0,
     });
+
     const exercise = definition();
     await create(tx, exercise);
     expect(
@@ -562,8 +678,13 @@ describe("standalone exercise creation", () => {
     const { tx, data, writes } = setup();
     const exercise = definition();
     await create(tx, exercise);
+
     const row = data.exercises?.find((row) => row.id === exercise.id);
-    if (!row) throw Error("fixture");
+
+    if (!row) {
+      throw Error("fixture");
+    }
+
     row.unilateral = true;
     writes.mockClear();
     await create(tx, exercise);
@@ -577,8 +698,15 @@ describe("standalone exercise creation", () => {
     "requires active household/module authorization: %s",
     async (kind) => {
       const { tx, data, writes } = setup();
-      if (kind === "membership") data.householdMembers = [];
-      if (kind === "module") data.householdModuleSettings = [];
+
+      if (kind === "membership") {
+        data.householdMembers = [];
+      }
+
+      if (kind === "module") {
+        data.householdModuleSettings = [];
+      }
+
       await expect(
         create(tx, definition(), kind === "foreign" ? other : householdId),
       ).rejects.toThrow();
@@ -586,9 +714,14 @@ describe("standalone exercise creation", () => {
     },
   );
 });
+
 describe("catalog deletion and ordering", () => {
   const first = starter.exercises[0];
-  if (!first) throw Error("seed");
+
+  if (!first) {
+    throw Error("seed");
+  }
+
   const remove = (tx: Transaction<Schema>, exerciseId = first.id) =>
     mutators.workouts.deleteExercise.fn({
       tx,
@@ -615,6 +748,7 @@ describe("catalog deletion and ordering", () => {
     async (location) => {
       const { tx, data, record } = setup(location);
       await record({ sets: [recordedSet] });
+
       const foreignSlot = {
         ...data.workoutExercises?.[0],
         id: crypto.randomUUID(),
@@ -630,9 +764,10 @@ describe("catalog deletion and ordering", () => {
         exerciseId: first.id,
         deletedAt: null,
       });
-      const logs = structuredClone(data.workoutLogs),
-        sets = structuredClone(data.workoutLogSets),
-        mediaBefore = structuredClone(data.exerciseMedia);
+
+      const logs = structuredClone(data.workoutLogs);
+      const sets = structuredClone(data.workoutLogSets);
+      const mediaBefore = structuredClone(data.exerciseMedia);
       await remove(tx);
       expect(data.exercises?.find((e) => e.id === first.id)?.deletedAt).toBe(
         location === "server" ? now : 1234,
@@ -647,6 +782,7 @@ describe("catalog deletion and ordering", () => {
       expect(data.workoutLogs).toEqual(logs);
       expect(data.workoutLogSets).toEqual(sets);
       expect(data.exerciseMedia).toEqual(mediaBefore);
+
       const catalog = await tx.run(
         queries.workouts.catalog.fn({ ctx, args: { householdId } }),
       );
@@ -693,6 +829,7 @@ describe("catalog deletion and ordering", () => {
     await expect(
       state.record({ sets: [recordedSet] }),
     ).resolves.toBeUndefined();
+
     const fresh = setup();
     await remove(fresh.tx);
     await expect(fresh.record({ sets: [recordedSet] })).rejects.toThrow(
@@ -703,10 +840,19 @@ describe("catalog deletion and ordering", () => {
     "protects delete and order with %s authorization",
     async (reason) => {
       const { tx, data, writes } = setup();
-      if (reason === "membership") data.householdMembers = [];
-      if (reason === "module") data.householdModuleSettings = [];
-      if (reason === "household" && data.households?.[0])
+
+      if (reason === "membership") {
+        data.householdMembers = [];
+      }
+
+      if (reason === "module") {
+        data.householdModuleSettings = [];
+      }
+
+      if (reason === "household" && data.households?.[0]) {
         data.households[0].deletedAt = now;
+      }
+
       await expect(remove(tx)).rejects.toThrow();
       await expect(move(tx, first.id, [first.id])).rejects.toThrow();
       expect(writes).not.toHaveBeenCalled();
@@ -716,10 +862,15 @@ describe("catalog deletion and ordering", () => {
     const { tx, data } = setup();
     const ids = data.exercises?.map((row) => String(row.id)) ?? [];
     const second = ids[1];
-    if (!second) throw Error("seed");
+
+    if (!second) {
+      throw Error("seed");
+    }
+
     const unseen = structuredClone(data.exercises?.slice(2));
     await move(tx, second, [second, first.id]);
     expect(data.exercises?.slice(2)).toEqual(unseen);
+
     const ordered = await tx.run(
       queries.workouts.catalog.fn({ ctx, args: { householdId } }),
     );
@@ -732,10 +883,15 @@ describe("catalog deletion and ordering", () => {
   it("rebalances all active rows without resurrecting tombstones", async () => {
     const { tx, data } = setup();
     const rows = data.exercises ?? [];
-    if (!rows[0] || !rows[1] || !rows[2]) throw Error("seed");
+
+    if (!rows[0] || !rows[1] || !rows[2]) {
+      throw Error("seed");
+    }
+
     rows[0].sortKey = 3;
     rows[1].sortKey = 0;
     rows[2].sortKey = 2;
+
     const deleted = {
       ...rows[0],
       id: crypto.randomUUID(),
@@ -743,6 +899,7 @@ describe("catalog deletion and ordering", () => {
       sortKey: 999,
     };
     rows.push(deleted);
+
     const before = rows.length;
     await move(tx, String(rows[1].id), [
       String(rows[0].id),
@@ -752,6 +909,7 @@ describe("catalog deletion and ordering", () => {
     expect(rows).toHaveLength(before);
     expect(deleted.sortKey).toBe(999);
     expect(deleted.deletedAt).toBe(now);
+
     const active = rows.filter((row) => row.deletedAt == null);
     expect(new Set(active.map((row) => row.sortKey)).size).toBe(active.length);
   });
@@ -760,13 +918,16 @@ describe("catalog deletion and ordering", () => {
     async (kind) => {
       const { tx, data, writes } = setup();
       const target = crypto.randomUUID();
-      if (kind !== "missing")
+
+      if (kind !== "missing") {
         data.exercises?.push({
           ...data.exercises[0],
           id: target,
           householdId: kind === "foreign" ? other : householdId,
           deletedAt: kind === "deleted" ? now : null,
         });
+      }
+
       await expect(move(tx, target, [target, first.id])).rejects.toThrow(
         "Reorder not allowed",
       );
@@ -774,9 +935,14 @@ describe("catalog deletion and ordering", () => {
     },
   );
 });
+
 describe("shared exercise catalog", () => {
   const first = starter.exercises[0];
-  if (!first) throw new Error("seed");
+
+  if (!first) {
+    throw new Error("seed");
+  }
+
   const edit = (
     tx: Transaction<Schema>,
     changes: Partial<
@@ -793,6 +959,7 @@ describe("shared exercise catalog", () => {
     data.workouts = [];
     data.workoutExercises = [];
     data.exercises = [];
+
     const workoutIds: [string, string, string] = [
       crypto.randomUUID(),
       crypto.randomUUID(),
@@ -817,8 +984,10 @@ describe("shared exercise catalog", () => {
     });
     expect(data.workoutExercises).toHaveLength(18);
     expect(data.exercises).toHaveLength(catalogExerciseIds.length);
+
     const grouped = data.workoutExercises?.filter((row) => row.id === first.id);
     expect(new Set(grouped?.map((row) => row.exerciseId)).size).toBe(1);
+
     const detail = await tx.run(
       queries.workouts.detail.fn({
         ctx,
@@ -873,6 +1042,7 @@ describe("shared exercise catalog", () => {
     expect(
       data.workoutExercises?.find((e) => e.workoutId === other),
     ).toMatchObject({ sets: 4, target: "Other target" });
+
     const detail = await tx.run(
       queries.workouts.detail.fn({
         ctx,
@@ -909,6 +1079,7 @@ describe("shared exercise catalog", () => {
         changes: { unit: "seconds" },
       },
     });
+
     const payload = writes.mock.calls.find(
       (call) => call[0] === "exercises",
     )?.[2];
@@ -919,7 +1090,11 @@ describe("shared exercise catalog", () => {
   it("does not let stale linking data overwrite current catalog details", async () => {
     const { tx, data } = setup();
     const row = data.exercises?.[0];
-    if (!row) throw new Error("catalog");
+
+    if (!row) {
+      throw new Error("catalog");
+    }
+
     row.name = "Remote name";
     row.normalizedName = "remote name";
     await edit(tx, {
@@ -932,8 +1107,9 @@ describe("shared exercise catalog", () => {
   it("deleting a slot preserves the catalog, numeric sets and immutable history", async () => {
     const { tx, data, record } = setup();
     await record({ sets: [recordedSet] });
-    const logs = structuredClone(data.workoutLogs),
-      sets = structuredClone(data.workoutLogSets);
+
+    const logs = structuredClone(data.workoutLogs);
+    const sets = structuredClone(data.workoutLogSets);
     await edit(tx, { deletes: [first.id] });
     expect(data.exercises?.some((e) => e.id === first.id)).toBe(true);
     expect(data.workoutLogs).toEqual(logs);
@@ -948,10 +1124,12 @@ describe("shared exercise catalog", () => {
       normalizedName: "private historical movement",
       deletedAt: now,
     });
+
     const before = await tx.run(
       queries.workouts.catalog.fn({ ctx, args: { householdId } }),
     );
     expect(before.some((e) => e.id === other)).toBe(false);
+
     const catalogExerciseId = crypto.randomUUID();
     await edit(tx, {
       creates: [
@@ -975,10 +1153,19 @@ describe("shared exercise catalog", () => {
     "blocks catalog reads and edits without %s access",
     async (reason) => {
       const { tx, data, writes } = setup();
-      if (reason === "module") data.householdModuleSettings = [];
-      if (reason === "membership") data.householdMembers = [];
-      if (reason === "household" && data.households?.[0])
+
+      if (reason === "module") {
+        data.householdModuleSettings = [];
+      }
+
+      if (reason === "membership") {
+        data.householdMembers = [];
+      }
+
+      if (reason === "household" && data.households?.[0]) {
         data.households[0].deletedAt = now;
+      }
+
       expect(
         await tx.run(
           queries.workouts.catalog.fn({ ctx, args: { householdId } }),
@@ -1003,6 +1190,7 @@ describe("shared exercise catalog", () => {
     expect(writes).not.toHaveBeenCalled();
   });
 });
+
 describe("workout placement roles", () => {
   it("changes only the selected placement, not the movement or another workout", async () => {
     const { tx, data } = setup();
@@ -1014,6 +1202,7 @@ describe("workout placement roles", () => {
       workoutId: other,
       role: "stretching",
     });
+
     const catalog = structuredClone(data.exercises);
     await mutators.workouts.editExercises.fn({
       tx,
@@ -1045,6 +1234,7 @@ describe("workout placement roles", () => {
     expect(data.workoutExercises?.[0]?.role).toBe("warmup");
   });
 });
+
 describe("exercise-first row logging", () => {
   const payload = {
     ...scope,
@@ -1062,6 +1252,7 @@ describe("exercise-first row logging", () => {
     const { tx, data } = setup();
     fixtureRow(data.workoutExercises).role = "warmup";
     await mutators.workouts.saveSet.fn({ tx, ctx, args: payload });
+
     const savedRole = () =>
       (fixtureRow(data.workoutLogs).exerciseRoles as Record<string, string>)[
         payload.workoutExerciseId
@@ -1135,8 +1326,10 @@ describe("exercise-first row logging", () => {
         args: { ...payload, values: { ...payload.values, weightKg: null } },
       }),
     ).rejects.toThrow("Complete");
+
     const unilateral = {
       ...snapshot,
+
       exercises: snapshot.exercises.map((e, i) =>
         i ? e : { ...e, unilateral: true },
       ),
@@ -1154,6 +1347,7 @@ describe("exercise-first row logging", () => {
   it("keeps the original date, snapshot, note and measurements during corrections", async () => {
     const { tx, data } = setup();
     await mutators.workouts.saveSet.fn({ tx, ctx, args: payload });
+
     const original = structuredClone(data.exerciseLogs);
     fixtureRow(data.workoutLogs).note = "Keep note";
     fixtureRow(data.exercises).unit = "seconds";
@@ -1174,12 +1368,15 @@ describe("exercise-first row logging", () => {
   });
   it("removes only the selected row, preserving other rows and the private note", async () => {
     const { tx, data } = setup();
-    for (const round of [1, 2])
+
+    for (const round of [1, 2]) {
       await mutators.workouts.saveSet.fn({
         tx,
         ctx,
         args: { ...payload, round },
       });
+    }
+
     fixtureRow(data.workoutLogs).note = "Keep";
     await mutators.workouts.removeSet.fn({
       tx,
@@ -1220,8 +1417,13 @@ it("rejects a stale device's differing measurement convention before writing a c
   const { tx, data, record, writes } = setup();
   await record({ sets: [recordedSet] });
   writes.mockClear();
+
   const exercise = snapshot.exercises[0];
-  if (!exercise) throw Error("fixture");
+
+  if (!exercise) {
+    throw Error("fixture");
+  }
+
   await expect(
     mutators.workouts.saveSet.fn({
       tx,
@@ -1245,6 +1447,7 @@ it("rejects a stale device's differing measurement convention before writing a c
   ).rejects.toThrow("settings changed");
   expect(writes).not.toHaveBeenCalled();
 });
+
 describe("retired bulk workout logging", () => {
   it.each(["server", "client"] as const)(
     "rejects %s calls without reading or writing archived measurements",
@@ -1267,6 +1470,7 @@ describe("retired bulk workout logging", () => {
     },
   );
 });
+
 describe("private notes added after completion", () => {
   const noteArgs = {
     householdId,
@@ -1277,6 +1481,7 @@ describe("private notes added after completion", () => {
   it("updates only the existing note, not sets, snapshot or completion date", async () => {
     const { tx, data, record, writes } = setup();
     await record({ sets: [recordedSet] });
+
     const before = structuredClone(data.workoutLogs?.[0]);
     const sets = structuredClone(data.workoutLogSets);
     writes.mockClear();
@@ -1315,14 +1520,29 @@ describe("private notes added after completion", () => {
     "foreign workout",
   ])("rejects %s without creating or modifying logs", async (reason) => {
     const { tx, data, record, writes } = setup();
+
     if (reason !== "missing log") {
       await record({ note: "Original" });
+
       const row = data.workoutLogs?.[0];
-      if (!row) throw new Error("log");
-      if (reason === "foreign user") row.userId = other;
-      if (reason === "foreign household") row.householdId = other;
-      if (reason === "foreign workout") row.workoutId = other;
+
+      if (!row) {
+        throw new Error("log");
+      }
+
+      if (reason === "foreign user") {
+        row.userId = other;
+      }
+
+      if (reason === "foreign household") {
+        row.householdId = other;
+      }
+
+      if (reason === "foreign workout") {
+        row.workoutId = other;
+      }
     }
+
     writes.mockClear();
     await expect(
       mutators.workouts.updateLogNote.fn({ tx, ctx, args: noteArgs }),
@@ -1334,10 +1554,19 @@ describe("private notes added after completion", () => {
     async (reason) => {
       const { tx, data, record, writes } = setup();
       await record();
-      if (reason === "module") data.householdModuleSettings = [];
-      if (reason === "membership") data.householdMembers = [];
-      if (reason === "household" && data.households?.[0])
+
+      if (reason === "module") {
+        data.householdModuleSettings = [];
+      }
+
+      if (reason === "membership") {
+        data.householdMembers = [];
+      }
+
+      if (reason === "household" && data.households?.[0]) {
         data.households[0].deletedAt = now;
+      }
+
       writes.mockClear();
       await expect(
         mutators.workouts.updateLogNote.fn({ tx, ctx, args: noteArgs }),
@@ -1346,6 +1575,7 @@ describe("private notes added after completion", () => {
     },
   );
 });
+
 describe("workout ordering", () => {
   it.each(["server", "client"] as const)(
     "persists a shared order with %s timestamps",
@@ -1422,6 +1652,7 @@ describe("workout ordering", () => {
       args: { ...scope, workoutId: other, title: "New" },
     });
     expect(data.workouts?.find((w) => w.id === other)?.sortKey).toBe(2048);
+
     const ids: [string, string, string] = [
       crypto.randomUUID(),
       crypto.randomUUID(),
@@ -1433,6 +1664,7 @@ describe("workout ordering", () => {
       args: {
         householdId,
         workoutIds: ids,
+
         catalogExerciseIds: [
           ...new Set(
             starterWorkouts.flatMap((w) =>
@@ -1440,15 +1672,18 @@ describe("workout ordering", () => {
             ),
           ),
         ].map(() => crypto.randomUUID()),
+
         optimisticTimestamp: 1,
       },
     });
+
     const rows = await tx.run(
       queries.workouts.byHousehold.fn({ args: { householdId }, ctx }),
     );
     expect(rows.map((w) => w.id)).toEqual([...ids, other, workoutId]);
   });
 });
+
 describe("private log queries", () => {
   it("shares definitions but never another user's log, note or sets", async () => {
     const { data, tx, record } = setup();
@@ -1470,6 +1705,7 @@ describe("private log queries", () => {
         queries.workouts.byHousehold.fn({ args: { householdId }, ctx }),
       ),
     ).toHaveLength(1);
+
     const logs = await tx.run(
       queries.workouts.logs.fn({ args: { householdId, workoutId }, ctx }),
     );
@@ -1481,10 +1717,19 @@ describe("private log queries", () => {
     async (reason) => {
       const { data, tx, record } = setup();
       await record();
-      if (reason === "module") data.householdModuleSettings = [];
-      if (reason === "membership") data.householdMembers = [];
-      if (reason === "household" && data.households?.[0])
+
+      if (reason === "module") {
+        data.householdModuleSettings = [];
+      }
+
+      if (reason === "membership") {
+        data.householdMembers = [];
+      }
+
+      if (reason === "household" && data.households?.[0]) {
         data.households[0].deletedAt = now;
+      }
+
       expect(
         await tx.run(
           queries.workouts.byHousehold.fn({ args: { householdId }, ctx }),

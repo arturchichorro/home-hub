@@ -2,8 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { processRecipeImageDerivatives } from "./process-derivatives";
 
 const secret = "test-image-delivery-secret-at-least-32-bytes";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+
 const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
 
 describe("processRecipeImageDerivatives", () => {
@@ -30,6 +33,7 @@ describe("processRecipeImageDerivatives", () => {
       "https://images.example/base/internal/recipe-images/process",
     );
     expect(init?.method).toBe("POST");
+
     const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
     expect(body).toMatchObject({ householdId, imageId, recipeId });
     expect(body.signature).toMatch(/^[0-9a-f]{64}$/u);
@@ -40,7 +44,9 @@ describe("processRecipeImageDerivatives", () => {
     await expect(
       processRecipeImageDerivatives({
         baseUrl: "https://images.example",
+
         fetchRequest: async () => new Response(null, { status: 500 }),
+
         householdId,
         imageId,
         recipeId,

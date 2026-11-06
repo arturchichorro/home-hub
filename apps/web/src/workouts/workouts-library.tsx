@@ -46,22 +46,33 @@ export function WorkoutsLibrary({ householdId }: { householdId: string }) {
     [enabled, busy],
   );
   useAppHeaderRightComponent(header);
+
   async function save(request: Parameters<typeof zero.mutate>[0]) {
-    if (!enabled || busy) return false;
+    if (!enabled || busy) {
+      return false;
+    }
+
     setBusy(true);
     setError("");
+
     try {
       const mutation = zero.mutate(request);
       const outcome = await acknowledgeMutation(mutation);
-      if (outcome.type === "error") throw new Error("save");
+
+      if (outcome.type === "error") {
+        throw new Error("save");
+      }
+
       return true;
     } catch {
       setError("Unable to save workout.");
+
       return false;
     } finally {
       setBusy(false);
     }
   }
+
   return (
     <section
       className="grid min-w-0 gap-4"
@@ -83,7 +94,9 @@ export function WorkoutsLibrary({ householdId }: { householdId: string }) {
           className="flex min-w-0 items-center gap-2"
           onSubmit={async (e) => {
             e.preventDefault();
+
             const workoutId = crypto.randomUUID();
+
             if (
               await save(
                 mutators.workouts.create({
@@ -155,6 +168,7 @@ export function WorkoutsLibrary({ householdId }: { householdId: string }) {
               void save(
                 mutators.workouts.importStarters({
                   householdId,
+
                   catalogExerciseIds: [
                     ...new Set(
                       starterWorkouts.flatMap((w) =>
@@ -162,6 +176,7 @@ export function WorkoutsLibrary({ householdId }: { householdId: string }) {
                       ),
                     ),
                   ].map(() => crypto.randomUUID()),
+
                   workoutIds: [
                     crypto.randomUUID(),
                     crypto.randomUUID(),

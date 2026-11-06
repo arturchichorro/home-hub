@@ -24,11 +24,13 @@ export function SignupForm({ onAuthenticated }: SignupFormProps) {
 
       if (result.kind === "forbidden") {
         setError("Sign up is unavailable or the access code is incorrect.");
+
         return;
       }
 
       if (result.kind === "conflict") {
         setError("That username or email is already in use.");
+
         return;
       }
 

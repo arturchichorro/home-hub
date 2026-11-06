@@ -11,6 +11,7 @@ const exercise: WorkoutExercise = {
   load: "single",
   unilateral: false,
 };
+
 it("distinguishes invalid fractional reps from missing input, without rejecting fractional kg or zero", () => {
   expect(
     setInputErrors(exercise, {
@@ -30,6 +31,7 @@ it("distinguishes invalid fractional reps from missing input, without rejecting 
     }),
   ).toEqual({ amount: 0, weightKg: 0, rightAmount: null });
 });
+
 it("validates sides independently and ignores inapplicable fields", () => {
   expect(
     setInputErrors(
@@ -47,6 +49,7 @@ it("validates sides independently and ignores inapplicable fields", () => {
     ),
   ).toEqual({});
 });
+
 it.each(["-1", "601", "Infinity", "NaN"])(
   "explains invalid count %s",
   (amount) => {

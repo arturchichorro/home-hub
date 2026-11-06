@@ -14,6 +14,7 @@ const logScope = {
   workoutExerciseId: z.uuid(),
   round: z.number().int().min(1).max(10),
 };
+
 export const saveExerciseSetSchema = z
   .object({
     ...logScope,
@@ -25,11 +26,15 @@ export const saveExerciseSetSchema = z
     values: workoutSetValuesSchema,
   })
   .strict();
+
 export const removeExerciseSetSchema = z
   .object({ ...logScope, completedOn: calendarDateSchema.optional() })
   .strict();
+
 export type SaveExerciseSet = z.infer<typeof saveExerciseSetSchema>;
+
 export type RemoveExerciseSet = z.infer<typeof removeExerciseSetSchema>;
+
 export function isCompleteExerciseSet(
   exercise: Pick<WorkoutExercise, "load" | "unilateral">,
   values: WorkoutSetValues,

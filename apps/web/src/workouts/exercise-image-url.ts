@@ -8,8 +8,10 @@ import {
 
 const cache = createImageUrlCache<ExerciseImageIdentity>({
   storageKeyPrefix: "home-hub:exercise-image-urls:v1:",
+
   resourceKey: ({ householdId, exerciseId, attachmentId }) =>
     JSON.stringify(["workouts", householdId, exerciseId, attachmentId]),
+
   cacheKey: ({ userId, householdId, exerciseId, attachmentId, variant }) =>
     JSON.stringify([
       userId,
@@ -20,16 +22,21 @@ const cache = createImageUrlCache<ExerciseImageIdentity>({
       variant,
     ]),
 });
+
 export const clearExerciseImageUrlCache = cache.clear;
+
 export const invalidateExerciseImageUrl = cache.invalidate;
+
 export function prefetchExerciseImage(identity: ExerciseImageIdentity) {
   return cache.getOrCreate(identity, () => batchExerciseImageUrl(identity));
 }
+
 const useImageUrl = createUseImageUrl({
   key: cache.key,
   read: cache.read,
   resolve: prefetchExerciseImage,
 });
+
 export function useExerciseImageUrl(
   input: Omit<ExerciseImageIdentity, "attachmentId"> & {
     attachmentId: string | undefined;
@@ -59,5 +66,6 @@ export function useExerciseImageUrl(
         : undefined,
     [accessToken, userId, householdId, exerciseId, attachmentId, variant],
   );
+
   return useImageUrl(identity, onSessionExpired);
 }

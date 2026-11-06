@@ -13,10 +13,15 @@ import {
 } from "./index";
 
 const nowSeconds = 1_787_625_600;
+
 const secret = "test-image-delivery-secret-at-least-32-bytes";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+
 const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+
 const objectKey = `households/${householdId}/recipes/${recipeId}/${imageId}`;
 
 async function signedRequest(variant: "card" | "thumbnail" | "viewer") {
@@ -31,6 +36,7 @@ async function signedRequest(variant: "card" | "thumbnail" | "viewer") {
     capability,
     secret,
   });
+
   return new Request(
     `https://images.example/recipe-images/${variant}/${householdId}/${recipeId}/${imageId}?expires=${capability.expiresAt}&signature=${signature}`,
   );
@@ -193,6 +199,7 @@ describe("recipe image delivery Worker", () => {
 
     const tamperedUrl = new URL(request.url);
     tamperedUrl.pathname = tamperedUrl.pathname.replace("/card/", "/viewer/");
+
     const denied = await handleRecipeImageDeliveryRequest({
       ...harness,
       nowSeconds,

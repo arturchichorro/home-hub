@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { queries } from "./queries";
 import { schema } from "./schema.gen";
 
-const householdId = crypto.randomUUID(),
-  ctx = { userId: crypto.randomUUID() };
+const householdId = crypto.randomUUID();
+
+const ctx = { userId: crypto.randomUUID() };
+
 describe("document sync boundaries", () => {
   it("never publishes storage keys or replacement preconditions", () => {
     expect(schema.tables.documentFiles.columns).not.toHaveProperty("objectKey");

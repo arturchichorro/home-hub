@@ -17,21 +17,34 @@ export type ExerciseImageIdentity = {
   attachmentId: string;
   variant: MediaReadCapability["variant"];
 };
+
 function base(householdId: string) {
   return `/api/households/${encodeURIComponent(householdId)}/workouts/exercises`;
 }
+
 function headers(accessToken: string) {
   return {
     Authorization: `Bearer ${accessToken}`,
     "Content-Type": "application/json",
   };
 }
+
 function failure(response: Response) {
-  if (response.status === 401) return { kind: "unauthorized" as const };
-  if (response.status === 403) return { kind: "forbidden" as const };
-  if (response.status === 404) return { kind: "not_found" as const };
+  if (response.status === 401) {
+    return { kind: "unauthorized" as const };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" as const };
+  }
+
+  if (response.status === 404) {
+    return { kind: "not_found" as const };
+  }
+
   return undefined;
 }
+
 export async function requestExerciseImageUpload(input: {
   accessToken: string;
   householdId: string;
@@ -56,13 +69,21 @@ export async function requestExerciseImageUpload(input: {
     },
   );
   const rejected = failure(response);
-  if (rejected) return rejected;
-  if (!response.ok) throw new Error("Unable to request exercise image upload");
+
+  if (rejected) {
+    return rejected;
+  }
+
+  if (!response.ok) {
+    throw new Error("Unable to request exercise image upload");
+  }
+
   return {
     kind: "success" as const,
     ...exerciseMediaUploadResponseSchema.parse(await response.json()),
   };
 }
+
 export async function confirmExerciseImage(
   input: Omit<ExerciseImageIdentity, "userId" | "variant">,
 ) {
@@ -71,12 +92,24 @@ export async function confirmExerciseImage(
     { method: "POST", headers: headers(input.accessToken) },
   );
   const rejected = failure(response);
-  if (rejected) return rejected;
-  if (response.status === 422) return { kind: "invalid_upload" as const };
-  if (!response.ok) throw new Error("Unable to confirm exercise image");
+
+  if (rejected) {
+    return rejected;
+  }
+
+  if (response.status === 422) {
+    return { kind: "invalid_upload" as const };
+  }
+
+  if (!response.ok) {
+    throw new Error("Unable to confirm exercise image");
+  }
+
   confirmExerciseMediaResponseSchema.parse(await response.json());
+
   return { kind: "success" as const };
 }
+
 export async function deleteExerciseImage(
   input: Omit<ExerciseImageIdentity, "userId" | "variant">,
 ) {
@@ -85,10 +118,18 @@ export async function deleteExerciseImage(
     { method: "DELETE", headers: headers(input.accessToken) },
   );
   const rejected = failure(response);
-  if (rejected) return rejected;
-  if (!response.ok) throw new Error("Unable to remove exercise image");
+
+  if (rejected) {
+    return rejected;
+  }
+
+  if (!response.ok) {
+    throw new Error("Unable to remove exercise image");
+  }
+
   return { kind: "success" as const };
 }
+
 export async function readExerciseImageUrls(input: {
   accessToken: string;
   householdId: string;
@@ -107,8 +148,15 @@ export async function readExerciseImageUrls(input: {
     body: JSON.stringify(body),
   });
   const rejected = failure(response);
-  if (rejected) return rejected;
-  if (!response.ok) throw new Error("Unable to read exercise images");
+
+  if (rejected) {
+    return rejected;
+  }
+
+  if (!response.ok) {
+    throw new Error("Unable to read exercise images");
+  }
+
   return {
     kind: "success" as const,
     ...exerciseMediaReadResponseSchema.parse(await response.json()),
@@ -120,31 +168,45 @@ type Pending = {
   resolve: (value: ImageReadResult) => void;
   reject: (error: unknown) => void;
 };
+
 const groups = new Map<string, Pending[]>();
+
 let scheduled = false;
+
 async function flush(reads: Pending[]) {
   const first = reads[0];
-  if (!first) return;
+
+  if (!first) {
+    return;
+  }
+
   try {
     const result = await readExerciseImageUrls({
       accessToken: first.identity.accessToken,
       householdId: first.identity.householdId,
+
       requests: reads.map(({ identity }) => ({
         exerciseId: identity.exerciseId,
         attachmentId: identity.attachmentId,
         variant: identity.variant,
       })),
     });
+
     if (result.kind !== "success") {
-      for (const item of reads) item.resolve(result);
+      for (const item of reads) {
+        item.resolve(result);
+      }
+
       return;
     }
+
     const key = (item: {
       exerciseId: string;
       attachmentId: string;
       variant: string;
     }) => JSON.stringify([item.exerciseId, item.attachmentId, item.variant]);
     const urls = new Map(result.reads.map((item) => [key(item), item]));
+
     for (const item of reads) {
       const match = urls.get(key(item.identity));
       item.resolve(
@@ -158,9 +220,12 @@ async function flush(reads: Pending[]) {
       );
     }
   } catch (error) {
-    for (const item of reads) item.reject(error);
+    for (const item of reads) {
+      item.reject(error);
+    }
   }
 }
+
 export function batchExerciseImageUrl(
   identity: ExerciseImageIdentity,
 ): Promise<ImageReadResult> {
@@ -173,15 +238,20 @@ export function batchExerciseImageUrl(
     const group = groups.get(key) ?? [];
     group.push({ identity, resolve, reject });
     groups.set(key, group);
+
     if (!scheduled) {
       scheduled = true;
       queueMicrotask(() => {
         scheduled = false;
+
         const queued = [...groups.values()];
         groups.clear();
-        for (const items of queued)
-          for (let offset = 0; offset < items.length; offset += 100)
+
+        for (const items of queued) {
+          for (let offset = 0; offset < items.length; offset += 100) {
             void flush(items.slice(offset, offset + 100));
+          }
+        }
       });
     }
   });

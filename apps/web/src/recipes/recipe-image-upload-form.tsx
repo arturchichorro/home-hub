@@ -44,7 +44,10 @@ export function RecipeImageUploadForm({
 
   function chooseImage() {
     const input = fileInputRef.current;
-    if (!input || busy || !mutationEnabled) return;
+
+    if (!input || busy || !mutationEnabled) {
+      return;
+    }
 
     try {
       input.showPicker();
@@ -56,7 +59,10 @@ export function RecipeImageUploadForm({
   async function uploadImage(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file || busy || !mutationEnabled) return;
+
+    if (!file || busy || !mutationEnabled) {
+      return;
+    }
 
     const allowUpdate = blockAppUpdate();
     setBusy(true);
@@ -64,8 +70,10 @@ export function RecipeImageUploadForm({
 
     try {
       const contentType = recipeImageContentTypeSchema.safeParse(file.type);
+
       if (!contentType.success) {
         setError("Choose a still JPEG, PNG or WebP image.");
+
         return;
       }
 
@@ -80,6 +88,7 @@ export function RecipeImageUploadForm({
 
       if (!request.success) {
         setError("Choose an image up to 10 MiB and 16,384 pixels per side.");
+
         return;
       }
 
@@ -92,14 +101,18 @@ export function RecipeImageUploadForm({
 
       if (pending.kind === "unauthorized") {
         onSessionExpired();
+
         return;
       }
+
       if (pending.kind !== "success") {
         setError("Unable to upload this picture. Try again.");
+
         return;
       }
 
       await uploadRecipeImageObject({ file, upload: pending.upload });
+
       const confirmation = await confirmRecipeImageUpload({
         accessToken,
         householdId,

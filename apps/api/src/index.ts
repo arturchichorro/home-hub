@@ -46,7 +46,9 @@ import { createExerciseMediaServices } from "./workouts/exercise-media";
 import { createZeroDbProvider } from "./zero/db-provider";
 
 const { db, close: closeDatabase } = createDbClient(config.DATABASE_URL);
+
 const dbProvider = createZeroDbProvider({ db });
+
 const r2Client = createR2Client({
   endpoint: config.R2_ENDPOINT,
   accessKeyId: config.R2_ACCESS_KEY_ID,
@@ -108,6 +110,7 @@ const households = {
 const recipeImages = {
   createRecipeImageUpload: createRecipeImageUploadService({
     db: infrastructure.db,
+
     signUpload: ({ objectKey, contentType }) =>
       signMediaUpload({
         client: infrastructure.r2Client,
@@ -118,12 +121,14 @@ const recipeImages = {
   }),
   confirmRecipeImageUpload: createConfirmRecipeImageUploadService({
     db: infrastructure.db,
+
     inspectObject: ({ objectKey }) =>
       inspectR2Object({
         client: infrastructure.r2Client,
         bucket: infrastructure.config.R2_BUCKET,
         objectKey,
       }),
+
     processDerivatives: (input) =>
       processMediaImage({
         baseUrl: infrastructure.config.IMAGE_DELIVERY_BASE_URL,
@@ -135,6 +140,7 @@ const recipeImages = {
   }),
   createRecipeImageReadUrl: createRecipeImageReadUrlService({
     db: infrastructure.db,
+
     signRead: (input) =>
       signMediaRead({
         baseUrl: infrastructure.config.IMAGE_DELIVERY_BASE_URL,
@@ -145,6 +151,7 @@ const recipeImages = {
   }),
   createRecipeImageReadUrls: createRecipeImageReadUrlsService({
     db: infrastructure.db,
+
     signRead: (input) =>
       signMediaRead({
         baseUrl: infrastructure.config.IMAGE_DELIVERY_BASE_URL,
@@ -160,16 +167,20 @@ const recipeImages = {
 
 const exerciseMedia = createExerciseMediaServices({
   db,
+
   signUpload: (input) =>
     signMediaUpload({ ...input, client: r2Client, bucket: config.R2_BUCKET }),
+
   inspectObject: (input) =>
     inspectR2Object({ ...input, client: r2Client, bucket: config.R2_BUCKET }),
+
   processImage: (input) =>
     processMediaImage({
       ...input,
       baseUrl: config.IMAGE_DELIVERY_BASE_URL,
       secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
     }),
+
   signRead: (input) =>
     signMediaRead({
       ...input,
@@ -177,26 +188,33 @@ const exerciseMedia = createExerciseMediaServices({
       secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
     }),
 });
+
 const listMedia = createListMediaServices({
   db,
+
   signUpload: (input) =>
     signMediaUpload({ ...input, client: r2Client, bucket: config.R2_BUCKET }),
+
   inspectObject: (input) =>
     inspectR2Object({ ...input, client: r2Client, bucket: config.R2_BUCKET }),
+
   processImage: (input) =>
     processMediaImage({
       ...input,
       baseUrl: config.IMAGE_DELIVERY_BASE_URL,
       secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
     }),
+
   processVideo: (input) =>
     processMediaVideo({ ...input, client: r2Client, bucket: config.R2_BUCKET }),
+
   signRead: (input) =>
     signMediaRead({
       ...input,
       baseUrl: config.IMAGE_DELIVERY_BASE_URL,
       secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
     }),
+
   signVideo: (input) =>
     signVideoRead({
       ...input,
@@ -204,6 +222,7 @@ const listMedia = createListMediaServices({
       secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
     }),
 });
+
 const app = createApp({
   listMedia,
   auth,
@@ -244,6 +263,7 @@ const server = serve(
 
 const shutdown = createGracefulShutdown({
   closeServer: () => closeHttpServer(server),
+
   closeInfrastructure: closeDatabase,
   logger: consoleStructuredLogger,
 });

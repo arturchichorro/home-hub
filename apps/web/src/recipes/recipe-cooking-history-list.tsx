@@ -45,7 +45,10 @@ export function RecipeCookingHistoryList({
     useState<string>();
 
   function deleteCookLog(cookLogId: string) {
-    if (!mutationEnabled) return;
+    if (!mutationEnabled) {
+      return;
+    }
+
     zero.mutate(
       mutators.recipes.deleteCookLog({ householdId, recipeId, cookLogId }),
     );

@@ -8,27 +8,37 @@ const { useQuery, buttons } = vi.hoisted(() => ({
   useQuery: vi.fn(),
   buttons: [] as { onClick?: () => void; "aria-label"?: string }[],
 }));
+
 vi.mock("@rocicorp/zero/react", () => ({
   useQuery,
+
   useZero: () => ({ userID: "me", mutate: vi.fn() }),
 }));
+
 vi.mock("../zero/use-zero-mutation-enabled", () => ({
   useZeroMutationEnabled: () => true,
 }));
+
 vi.mock("@home-hub/ui-web", async (original) => {
   const actual = await original<typeof import("@home-hub/ui-web")>();
+
   return {
     ...actual,
+
     Button: (props: Parameters<typeof actual.Button>[0]) => {
       buttons.push({
         onClick: () => {
-          if (props.onClick) Reflect.apply(props.onClick, undefined, []);
+          if (props.onClick) {
+            Reflect.apply(props.onClick, undefined, []);
+          }
         },
       });
+
       return <actual.Button {...props} />;
     },
   };
 });
+
 const base = {
   householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
   habitId: "cf8e0455-182d-4c35-aab0-7c45d9009852",
@@ -46,6 +56,7 @@ const base = {
   onCompleted: vi.fn(),
   onDirtyChange: vi.fn(),
 };
+
 beforeEach(() => {
   buttons.length = 0;
   vi.clearAllMocks();
@@ -65,6 +76,7 @@ beforeEach(() => {
     { type: "complete" },
   ]);
 });
+
 describe("single habit history", () => {
   it("inspects a day without changing completion", () => {
     renderToStaticMarkup(
@@ -108,6 +120,7 @@ describe("single habit history", () => {
         /<button[^>]*aria-label="Read, 2026-10-14. Mark done"[^>]*>/,
       )?.[0],
     ).toContain('disabled=""');
+
     if (!flags.own || flags.archived) {
       expect(html).not.toContain("<textarea");
       expect(html).toContain("Ten minutes");
@@ -132,6 +145,7 @@ describe("single habit history", () => {
   });
   it("shows errors instead of editable empty history", () => {
     useQuery.mockReturnValue([[], { type: "error" }]);
+
     const html = renderToStaticMarkup(
       <HabitHistory {...base} selectedDate="2026-10-14" />,
     );
@@ -141,8 +155,8 @@ describe("single habit history", () => {
   it.each(["2024-02-01", "2025-02-01", "2026-12-01", "2027-01-01"])(
     "lays out all actual dates once, Monday-first (%s)",
     (anchor) => {
-      const dates = habitMonth(anchor).dates,
-        weeks = monthCalendarWeeks(dates);
+      const dates = habitMonth(anchor).dates;
+      const weeks = monthCalendarWeeks(dates);
       expect(weeks.flat().filter(Boolean)).toEqual(dates);
       expect(weeks.every((w) => w.length === 7)).toBe(true);
       expect(weeks[0]?.indexOf(dates[0] ?? null)).toBe(

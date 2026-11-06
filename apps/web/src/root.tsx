@@ -32,6 +32,7 @@ export function Root({ initialSession }: RootProps) {
   }, []);
   const sessionRef = useRef(session);
   sessionRef.current = session;
+
   const onLoggedOut = useCallback(() => {
     clearSessionBootstrap();
     clearRecipeImageUrlCache();
@@ -42,11 +43,17 @@ export function Root({ initialSession }: RootProps) {
   }, []);
   const onSessionExpired = useCallback(() => {
     const expiredSession = sessionRef.current;
-    if (!expiredSession) return;
+
+    if (!expiredSession) {
+      return;
+    }
 
     void refreshSession(expiredSession)
       .then((refreshedSession) => {
-        if (sessionRef.current !== expiredSession) return;
+        if (sessionRef.current !== expiredSession) {
+          return;
+        }
+
         if (!refreshedSession) {
           clearSessionBootstrap();
           clearRecipeImageUrlCache(expiredSession.user.id);
@@ -54,6 +61,7 @@ export function Root({ initialSession }: RootProps) {
           clearListImageUrlCache(expiredSession.user.id);
           setZero(undefined);
         }
+
         setSession(refreshedSession);
       })
       .catch(() => {

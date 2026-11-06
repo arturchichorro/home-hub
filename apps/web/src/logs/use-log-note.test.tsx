@@ -6,8 +6,10 @@ import { useLogNote } from "./use-log-note";
 
 vi.mock("./api", async (importOriginal) => {
   const real = await importOriginal<typeof import("./api")>();
+
   return { ...real, writeLogEntry: vi.fn(), readLogEntry: vi.fn() };
 });
+
 const old: LogEntrySnapshot = {
   id: crypto.randomUUID(),
   entryOn: "2026-11-01",
@@ -18,8 +20,10 @@ const old: LogEntrySnapshot = {
   createdBy: crypto.randomUUID(),
   lastEditedBy: crypto.randomUUID(),
 };
+
 function capture(entry: LogEntrySnapshot | null = old) {
   let editor: ReturnType<typeof useLogNote> | undefined;
+
   // biome-ignore lint/correctness/noComponentHookFactories: One-off SSR hook harness; never recreates a mounted subtree.
   function Capture() {
     editor = useLogNote({
@@ -35,21 +39,30 @@ function capture(entry: LogEntrySnapshot | null = old) {
       enabled: true,
       onWork: vi.fn(),
     });
+
     return null;
   }
+
   renderToStaticMarkup(<Capture />);
-  if (!editor) throw Error("Missing editor");
+
+  if (!editor) {
+    throw Error("Missing editor");
+  }
+
   return editor;
 }
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.mocked(writeLogEntry).mockReset();
   vi.mocked(readLogEntry).mockResolvedValue(old);
 });
+
 afterEach(() => {
   vi.clearAllTimers();
   vi.useRealTimers();
 });
+
 describe("shared daily note drafts", () => {
   it("autosaves nonempty text with the observed base revision", async () => {
     vi.mocked(writeLogEntry).mockResolvedValue({
@@ -57,6 +70,7 @@ describe("shared daily note drafts", () => {
       note: "New",
       version: 2,
     });
+
     const e = capture();
     e.changeValue("New");
     await vi.advanceTimersByTimeAsync(599);
@@ -79,6 +93,7 @@ describe("shared daily note drafts", () => {
       note: "  New line\n",
       version: 2,
     });
+
     const e = capture();
     e.changeValue("  New line\n");
     await vi.advanceTimersByTimeAsync(600);
@@ -89,6 +104,7 @@ describe("shared daily note drafts", () => {
   });
   it("never clears during a typing pause, but soft-removes on blur", async () => {
     vi.mocked(writeLogEntry).mockResolvedValue(null);
+
     const e = capture();
     e.changeValue("");
     await vi.advanceTimersByTimeAsync(3000);
@@ -108,6 +124,7 @@ describe("shared daily note drafts", () => {
       note: "Replacement",
       version: 2,
     });
+
     const e = capture();
     e.changeValue("");
     await vi.advanceTimersByTimeAsync(1000);
@@ -128,6 +145,7 @@ describe("shared daily note drafts", () => {
           }),
       )
       .mockResolvedValueOnce({ ...old, note: "Second", version: 3 });
+
     const e = capture();
     e.changeValue("First");
     await vi.advanceTimersByTimeAsync(600);
@@ -144,6 +162,7 @@ describe("shared daily note drafts", () => {
     vi.mocked(writeLogEntry)
       .mockRejectedValueOnce(Error("offline"))
       .mockResolvedValueOnce({ ...old, note: "Retained", version: 2 });
+
     const e = capture();
     e.changeValue("Retained");
     await vi.advanceTimersByTimeAsync(600);
@@ -151,6 +170,7 @@ describe("shared daily note drafts", () => {
     expect(e.hasChanges).toBe(true);
     e.retry();
     await vi.advanceTimersByTimeAsync(0);
+
     const calls = vi.mocked(writeLogEntry).mock.calls;
     expect(calls[0]?.[1].writeId).toBe(calls[1]?.[1].writeId);
     expect(e.hasChanges).toBe(false);
@@ -160,6 +180,7 @@ describe("shared daily note drafts", () => {
     vi.mocked(writeLogEntry)
       .mockRejectedValueOnce(new LogConflict(newer))
       .mockResolvedValueOnce({ ...newer, note: "Reconciled", version: 5 });
+
     const e = capture();
     e.changeValue("Mine");
     await vi.advanceTimersByTimeAsync(600);
@@ -181,6 +202,7 @@ describe("shared daily note drafts", () => {
     vi.mocked(writeLogEntry).mockRejectedValueOnce(
       new LogConflict({ ...old, note: "Other", version: 3 }),
     );
+
     const e = capture();
     e.changeValue("Mine");
     await vi.advanceTimersByTimeAsync(600);

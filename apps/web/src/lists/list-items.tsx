@@ -137,7 +137,10 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
   const archivedItems = items.filter((item) => item.status === "archived");
 
   useLayoutEffect(() => {
-    if (!draftIsPersisted) return;
+    if (!draftIsPersisted) {
+      return;
+    }
+
     setDraft((current) =>
       current?.savedItemId === draft?.savedItemId ? undefined : current,
     );
@@ -164,8 +167,9 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
     setActionError(undefined);
     void Promise.all([mutation.client, mutation.server])
       .then((results) => {
-        if (results.some((result) => result.type === "error"))
+        if (results.some((result) => result.type === "error")) {
           setActionError("The change could not be saved.");
+        }
       })
       .catch(() => setActionError("The change could not be saved."));
   }
@@ -186,21 +190,28 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
       ) : null}
       <DragDropProvider
         onDragEnd={(event) => {
-          if (event.canceled || !mutationEnabled) return;
+          if (event.canceled || !mutationEnabled) {
+            return;
+          }
+
           const { source } = event.operation;
+
           if (!isSortable(source) || source.initialIndex === source.index) {
             return;
           }
 
           const reordered = [...visibleCurrentItems];
           const [moved] = reordered.splice(source.initialIndex, 1);
+
           if (
             !moved ||
             (moved.status !== "active" && moved.status !== "crossed")
           ) {
             return;
           }
+
           reordered.splice(source.index, 0, moved);
+
           const orderedItemIds = reordered
             .filter((item) => item.status === moved.status)
             .map((item) => item.id);

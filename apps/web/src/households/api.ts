@@ -49,7 +49,9 @@ export async function acceptHouseholdInvite({
 }: AcceptHouseholdInviteCommandInput): Promise<AcceptHouseholdInviteCommandResult> {
   const parsedRequest = acceptHouseholdInviteRequestSchema.safeParse({ token });
 
-  if (!parsedRequest.success) return { kind: "invalid_invite" };
+  if (!parsedRequest.success) {
+    return { kind: "invalid_invite" };
+  }
 
   const request = parsedRequest.data;
   const response = await fetch("/api/households/invites/accept", {
@@ -61,10 +63,21 @@ export async function acceptHouseholdInvite({
     body: JSON.stringify(request),
   });
 
-  if (response.status === 401) return { kind: "unauthorized" };
-  if (response.status === 400) return { kind: "invalid_invite" };
-  if (response.status === 409) return { kind: "already_member" };
-  if (!response.ok) throw new Error("Failed to accept household invite");
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 400) {
+    return { kind: "invalid_invite" };
+  }
+
+  if (response.status === 409) {
+    return { kind: "already_member" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to accept household invite");
+  }
 
   const { membership } = acceptHouseholdInviteResponseSchema.parse(
     await response.json(),
@@ -91,8 +104,13 @@ export async function createHousehold({
     body: JSON.stringify(request),
   });
 
-  if (response.status === 401) return { kind: "unauthorized" };
-  if (!response.ok) throw new Error("Failed to create household");
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to create household");
+  }
 
   const { household } = createHouseholdResponseSchema.parse(
     await response.json(),
@@ -133,9 +151,17 @@ export async function createHouseholdInvite({
     },
   );
 
-  if (response.status === 401) return { kind: "unauthorized" };
-  if (response.status === 403) return { kind: "forbidden" };
-  if (!response.ok) throw new Error("Failed to create household invite");
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to create household invite");
+  }
 
   const { invite } = createHouseholdInviteResponseSchema.parse(
     await response.json(),
@@ -256,9 +282,17 @@ export async function deleteHousehold({
     },
   );
 
-  if (response.status === 401) return { kind: "unauthorized" };
-  if (response.status === 403) return { kind: "forbidden" };
-  if (!response.ok) throw new Error("Failed to delete household");
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to delete household");
+  }
 
   return { kind: "success" };
 }
@@ -485,9 +519,22 @@ export async function setHouseholdModuleEnabled({
       body: JSON.stringify(body),
     },
   );
-  if (response.status === 401) return { kind: "unauthorized" };
-  if (response.status === 403) return { kind: "forbidden" };
-  if (response.status === 409) return { kind: "module_not_configured" };
-  if (!response.ok) throw new Error("Failed to update household module");
+
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (response.status === 409) {
+    return { kind: "module_not_configured" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to update household module");
+  }
+
   return { kind: "success" };
 }

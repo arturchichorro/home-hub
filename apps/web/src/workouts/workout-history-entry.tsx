@@ -31,6 +31,7 @@ export function WorkoutHistoryEntry({
   const hasNote = !!entry.note?.trim();
   const hasNoteEditor = hasNote || editingNote;
   const summary = summarizeWorkoutLog(entry);
+
   return (
     <li className="py-1">
       <div className="flex min-w-0 items-center gap-2">

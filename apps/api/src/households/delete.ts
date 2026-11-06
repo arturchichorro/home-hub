@@ -22,14 +22,18 @@ export function createDeleteHouseholdService({ db }: { db: Database }) {
     return db.transaction(async (tx) => {
       const user = await findActiveUser(tx, userId);
 
-      if (!user) return { kind: "unauthorized" };
+      if (!user) {
+        return { kind: "unauthorized" };
+      }
 
       const ownerMembership = await findHouseholdOwnerForUpdate(tx, {
         householdId,
         userId,
       });
 
-      if (!ownerMembership) return { kind: "forbidden" };
+      if (!ownerMembership) {
+        return { kind: "forbidden" };
+      }
 
       const deletedAt = new Date();
       const [deletedHousehold] = await tx

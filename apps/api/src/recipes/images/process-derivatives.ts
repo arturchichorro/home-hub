@@ -41,6 +41,7 @@ export async function processRecipeImageDerivatives({
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...capability, signature }),
   });
+
   if (!response.ok) {
     throw new Error(`Image derivative processing failed (${response.status})`);
   }

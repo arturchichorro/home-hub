@@ -18,7 +18,9 @@ describe("restoreStartupSession", () => {
     await expect(
       restoreStartupSession({
         online: false,
+
         loadOffline: () => session,
+
         restore,
       }),
     ).resolves.toEqual({ kind: "offline", session });
@@ -29,6 +31,7 @@ describe("restoreStartupSession", () => {
     await expect(
       restoreStartupSession({
         online: true,
+
         restore: async () => session,
       }),
     ).resolves.toEqual({ kind: "online", session });
@@ -38,7 +41,9 @@ describe("restoreStartupSession", () => {
     await expect(
       restoreStartupSession({
         online: true,
+
         loadOffline: () => session,
+
         restore: async () => {
           throw new TypeError("Network request failed");
         },
@@ -50,8 +55,11 @@ describe("restoreStartupSession", () => {
     await expect(
       restoreStartupSession({
         online: true,
+
         loadOffline: () => session,
+
         timeoutMilliseconds: 1,
+
         restore: ({ signal }) =>
           new Promise((_resolve, reject) => {
             signal.addEventListener("abort", () =>
@@ -66,7 +74,9 @@ describe("restoreStartupSession", () => {
     await expect(
       restoreStartupSession({
         online: true,
+
         loadOffline: () => session,
+
         restore: async () => {
           throw new Error("Invalid response");
         },

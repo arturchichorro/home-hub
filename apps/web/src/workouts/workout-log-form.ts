@@ -15,7 +15,9 @@ export type WorkoutSetInput = {
   amount: string;
   rightAmount: string;
 };
+
 export type WorkoutSetInputs = Record<string, WorkoutSetInput>;
+
 export type WorkoutLogForm = {
   id: string;
   snapshot: WorkoutLogSnapshot;
@@ -25,25 +27,36 @@ export type WorkoutLogForm = {
   startedAt?: number;
   exerciseLogIds?: Record<string, string>;
 };
+
 export const setInputKey = (exerciseId: string, round: number) =>
   `${exerciseId}:${round}`;
+
 export function setInputErrors(
   exercise: WorkoutExercise,
   input: WorkoutSetInput,
 ) {
   const errors: Partial<Record<keyof WorkoutSetInput, string>> = {};
+
   for (const key of ["amount", "rightAmount", "weightKg"] as const) {
     if (
       (key === "rightAmount" && !exercise.unilateral) ||
       (key === "weightKg" && exercise.load === "bodyweight")
-    )
+    ) {
       continue;
+    }
+
     const raw = input[key].trim();
-    if (!raw) continue; // Missing fields remain quiet until the row is filled.
+
+    if (!raw) {
+      continue; // Missing fields remain quiet until the row is filled.
+    }
+
     const value = Number(raw);
+
     if (key === "weightKg") {
-      if (!Number.isFinite(value) || value < 0 || value > 1000)
+      if (!Number.isFinite(value) || value < 0 || value > 1000) {
         errors[key] = "Weight must be between 0 and 1000 kg.";
+      }
     } else if (!Number.isInteger(value) || value < 0 || value > 600) {
       const side = exercise.unilateral
         ? key === "rightAmount"
@@ -54,6 +67,7 @@ export function setInputErrors(
         `${side}${exercise.unit}: use a whole number from 0 to 600.`;
     }
   }
+
   return errors;
 }
 
@@ -61,7 +75,10 @@ export function completeSetValues(
   exercise: WorkoutExercise,
   input: WorkoutSetInput | undefined,
 ): WorkoutSetValues | undefined {
-  if (!input) return;
+  if (!input) {
+    return;
+  }
+
   const parsed = workoutSetValuesSchema.safeParse({
     amount: input.amount.trim() === "" ? null : Number(input.amount),
     weightKg:
@@ -73,21 +90,28 @@ export function completeSetValues(
         ? null
         : Number(input.rightAmount),
   });
+
   return parsed.success && isCompleteExerciseSet(exercise, parsed.data)
     ? parsed.data
     : undefined;
 }
+
 export function nextExerciseRound(
   exercise: WorkoutExercise,
   inputs: WorkoutSetInputs,
 ): number | undefined {
   const last = exerciseRoundCount(exercise, inputs);
-  if (last < 10) return last + 1;
+
+  if (last < 10) {
+    return last + 1;
+  }
+
   return Array.from({ length: 10 }, (_, i) => i + 1).find(
     (round) =>
       round > exercise.sets && !(setInputKey(exercise.id, round) in inputs),
   );
 }
+
 export function exerciseRounds(
   exercise: WorkoutExercise,
   inputs: WorkoutSetInputs,
@@ -100,6 +124,7 @@ export function exerciseRounds(
       round <= exercise.sets || setInputKey(exercise.id, round) in inputs,
   );
 }
+
 export function exerciseRoundCount(
   exercise: WorkoutExercise,
   inputs: WorkoutSetInputs,
@@ -114,14 +139,17 @@ export function exerciseRoundCount(
     ),
   );
 }
+
 export function findDailyWorkoutLog(
   logs: readonly WorkoutLog[],
   now: number,
   timeZone: string,
 ): WorkoutLog | undefined {
   const day = calendarDate(now, timeZone);
+
   return logs.find((log) => log.completedOn === day);
 }
+
 export function openWorkoutLog(
   workout: WorkoutLogSnapshot,
   existing?: WorkoutLog,
@@ -146,6 +174,7 @@ export function openWorkoutLog(
     inputs: Object.fromEntries(
       (existing?.sets ?? []).map((set) => {
         const values = workoutSetValuesFromRow(set);
+
         return [
           setInputKey(set.workoutExerciseId, set.round),
           {

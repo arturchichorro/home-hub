@@ -1,17 +1,19 @@
 import { expect, it } from "vitest";
 import { projectWorkoutLog } from "./workout-log-projection";
 
-const slot = crypto.randomUUID(),
-  definition = {
-    id: slot,
-    catalogExerciseId: crypto.randomUUID(),
-    name: "Squat",
-    unit: "reps",
-    load: "bodyweight",
-    unilateral: false,
-    sets: 2,
-    target: "10",
-  };
+const slot = crypto.randomUUID();
+
+const definition = {
+  id: slot,
+  catalogExerciseId: crypto.randomUUID(),
+  name: "Squat",
+  unit: "reps",
+  load: "bodyweight",
+  unilateral: false,
+  sets: 2,
+  target: "10",
+};
+
 const log = {
   id: crypto.randomUUID(),
   householdId: crypto.randomUUID(),
@@ -24,6 +26,7 @@ const log = {
   snapshot: { title: "Earlier", exercises: [definition] },
   loggedExercises: [],
 };
+
 it("projects frozen roles without mutating strict legacy definition JSON", () => {
   const projected = projectWorkoutLog({
     ...log,
@@ -35,6 +38,7 @@ it("projects frozen roles without mutating strict legacy definition JSON", () =>
   ).toBe("warmup");
   expect(log.snapshot.exercises[0]).not.toHaveProperty("role");
 });
+
 it("uses Workout for history from before role snapshots", () => {
   expect(
     (projectWorkoutLog(log).snapshot as { exercises: { role: string }[] })

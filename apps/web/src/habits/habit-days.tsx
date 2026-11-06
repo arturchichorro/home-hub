@@ -8,6 +8,7 @@ export type HabitEntry = {
   workoutCompleted?: boolean | null;
   note?: string | null;
 };
+
 export type HabitRow = {
   id: string;
   name: string;
@@ -15,6 +16,7 @@ export type HabitRow = {
   note?: string | null;
   entries: readonly HabitEntry[];
 };
+
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   weekday: "short",
   day: "numeric",
@@ -22,34 +24,47 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
   year: "numeric",
   timeZone: "UTC",
 });
+
 export const monthFormatter = new Intl.DateTimeFormat(undefined, {
   month: "long",
   year: "numeric",
   timeZone: "UTC",
 });
+
 export const weekdayLabels = Array.from({ length: 7 }, (_, i) =>
   new Intl.DateTimeFormat(undefined, {
     weekday: "short",
     timeZone: "UTC",
   }).format(new Date(Date.UTC(2026, 0, 5 + i))),
 );
+
 export const formatHabitDate = (date: string) =>
   dateFormatter.format(new Date(`${date}T12:00:00Z`));
+
 export function monthCalendarWeeks(
   dates: readonly string[],
 ): (string | null)[][] {
   const first = dates[0];
-  if (!first) return [];
+
+  if (!first) {
+    return [];
+  }
+
   const offset = (new Date(`${first}T12:00:00Z`).getUTCDay() + 6) % 7;
   const cells: (string | null)[] = [
     ...Array<null>(offset).fill(null),
     ...dates,
   ];
-  while (cells.length % 7 !== 0) cells.push(null);
+
+  while (cells.length % 7 !== 0) {
+    cells.push(null);
+  }
+
   return Array.from({ length: cells.length / 7 }, (_, i) =>
     cells.slice(i * 7, i * 7 + 7),
   );
 }
+
 // Compact recent strip only; month calendars keep their existing inspection UI.
 export function HabitRecentDay({
   name,
@@ -111,6 +126,7 @@ export function HabitRecentDay({
       )}
     </Button>
   );
+
   return entry?.note ? (
     <Tooltip
       delay={200}
@@ -180,6 +196,7 @@ export function HabitDayPreview({
       ) : null}
     </Button>
   );
+
   return entry?.note ? (
     <Tooltip
       delay={200}
@@ -198,6 +215,7 @@ export function HabitDayPreview({
     trigger
   );
 }
+
 export function HabitTodayToggle({
   name,
   date,

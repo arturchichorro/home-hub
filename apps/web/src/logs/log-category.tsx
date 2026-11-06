@@ -14,6 +14,7 @@ import { TextDraftGuard } from "../editing/text-draft-actions";
 import { useBlockAppUpdate } from "../updates/activity";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+
 export const categoryColors: Record<string, string> = {
   slate: "text-slate-200 bg-slate-400/15",
   red: "text-red-200 bg-red-400/15",
@@ -24,7 +25,9 @@ export const categoryColors: Record<string, string> = {
   blue: "text-blue-200 bg-blue-400/15",
   violet: "text-violet-200 bg-violet-400/15",
 };
+
 type Color = LogCategory["color"];
+
 export function LogCategoryDialog({
   householdId,
   initial,
@@ -34,24 +37,29 @@ export function LogCategoryDialog({
   initial: LogCategory | undefined;
   onClose: () => void;
 }) {
-  const zero = useZero(),
-    enabled = useZeroMutationEnabled();
-  const [name, setName] = useState(initial?.name ?? ""),
-    [color, setColor] = useState<Color>(
-      initial?.color ??
-        logColors[Math.floor(Math.random() * logColors.length)] ??
-        "slate",
-    ),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState<string>(),
-    [removing, setRemoving] = useState(false);
+  const zero = useZero();
+  const enabled = useZeroMutationEnabled();
+  const [name, setName] = useState(initial?.name ?? "");
+  const [color, setColor] = useState<Color>(
+    initial?.color ??
+      logColors[Math.floor(Math.random() * logColors.length)] ??
+      "slate",
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const [removing, setRemoving] = useState(false);
   const dirty =
     name !== (initial?.name ?? "") || (!!initial && color !== initial.color);
   useBlockAppUpdate(dirty || busy);
+
   async function save() {
-    if (!enabled || busy) return;
+    if (!enabled || busy) {
+      return;
+    }
+
     setBusy(true);
     setError(undefined);
+
     try {
       const r = await acknowledgeMutation(
         zero.mutate(
@@ -64,7 +72,11 @@ export function LogCategoryDialog({
           }),
         ),
       );
-      if (r.type !== "success") throw Error();
+
+      if (r.type !== "success") {
+        throw Error();
+      }
+
       onClose();
     } catch {
       setError("Unable to save this category. Its name may already exist.");
@@ -72,10 +84,15 @@ export function LogCategoryDialog({
       setBusy(false);
     }
   }
+
   async function remove() {
-    if (!initial || !enabled || busy) return;
+    if (!initial || !enabled || busy) {
+      return;
+    }
+
     setBusy(true);
     setError(undefined);
+
     try {
       const r = await acknowledgeMutation(
         zero.mutate(
@@ -86,7 +103,11 @@ export function LogCategoryDialog({
           }),
         ),
       );
-      if (r.type !== "success") throw Error();
+
+      if (r.type !== "success") {
+        throw Error();
+      }
+
       onClose();
     } catch {
       setError("Unable to remove this category.");
@@ -94,17 +115,21 @@ export function LogCategoryDialog({
       setBusy(false);
     }
   }
+
   const discard = () => {
     setName(initial?.name ?? "");
     setColor(initial?.color ?? "slate");
     setError(undefined);
   };
+
   return (
     <>
       <DialogRoot
         open
         onOpenChange={(open) => {
-          if (!open && !busy && !dirty) onClose();
+          if (!open && !busy && !dirty) {
+            onClose();
+          }
         }}
       >
         <DialogPopup
@@ -218,7 +243,9 @@ export function LogCategoryDialog({
             hasChanges: dirty,
             isSaving: busy,
             error,
+
             retry: () => void save(),
+
             discard,
           }}
         />
@@ -226,6 +253,7 @@ export function LogCategoryDialog({
     </>
   );
 }
+
 export function LogCategoryChooser({
   householdId,
   logId,
@@ -239,16 +267,21 @@ export function LogCategoryChooser({
   categories: readonly LogCategory[];
   onClose: () => void;
 }) {
-  const zero = useZero(),
-    enabled = useZeroMutationEnabled(),
-    [value, setValue] = useState(current ?? ""),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState<string>();
+  const zero = useZero();
+  const enabled = useZeroMutationEnabled();
+  const [value, setValue] = useState(current ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
   useBlockAppUpdate(value !== (current ?? "") || busy);
+
   async function save() {
-    if (!enabled || busy) return;
+    if (!enabled || busy) {
+      return;
+    }
+
     setBusy(true);
     setError(undefined);
+
     try {
       const r = await acknowledgeMutation(
         zero.mutate(
@@ -260,7 +293,11 @@ export function LogCategoryChooser({
           }),
         ),
       );
-      if (r.type !== "success") throw Error();
+
+      if (r.type !== "success") {
+        throw Error();
+      }
+
       onClose();
     } catch {
       setError("Unable to change the category.");
@@ -268,12 +305,15 @@ export function LogCategoryChooser({
       setBusy(false);
     }
   }
+
   return (
     <>
       <DialogRoot
         open
         onOpenChange={(open) => {
-          if (!open && !busy && value === (current ?? "")) onClose();
+          if (!open && !busy && value === (current ?? "")) {
+            onClose();
+          }
         }}
       >
         <DialogPopup
@@ -321,7 +361,9 @@ export function LogCategoryChooser({
             hasChanges: true,
             isSaving: busy,
             error,
+
             retry: () => void save(),
+
             discard: () => setValue(current ?? ""),
           }}
         />

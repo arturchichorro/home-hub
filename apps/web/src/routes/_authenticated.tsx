@@ -13,6 +13,7 @@ export const Route = createFileRoute("/_authenticated")({
 
     return { session: context.session };
   },
+
   component: AuthenticatedLayout,
 });
 

@@ -16,6 +16,7 @@ export const consoleStructuredLogger: StructuredLogger = {
   info(record) {
     console.info(JSON.stringify(record));
   },
+
   error(record) {
     console.error(JSON.stringify(record));
   },
@@ -29,6 +30,7 @@ export type ObservabilityEnv = {
 
 function loggedRoute(c: Parameters<typeof routePath>[0]): string {
   const path = routePath(c, -1);
+
   return path && path !== "*" ? path : "unmatched";
 }
 
@@ -48,7 +50,9 @@ function safeStackFrames(error: Error): string[] {
       const trimmed = line.trim();
       const location = trimmed.match(/([^/\\()\s]+:\d+:\d+)\)?$/)?.[1];
 
-      if (!location) return undefined;
+      if (!location) {
+        return undefined;
+      }
 
       const functionName = trimmed.match(
         /^at ([A-Za-z0-9_.<>[\] -]+?)(?: \(| [^ ]|$)/,

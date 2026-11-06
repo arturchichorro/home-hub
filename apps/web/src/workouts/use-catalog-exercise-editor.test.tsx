@@ -13,11 +13,13 @@ const existing: CatalogExercise = {
   load: "per-hand",
   unilateral: false,
 };
+
 const blank: CatalogExercise = {
   ...existing,
   id: crypto.randomUUID(),
   name: "",
 };
+
 function setup({
   initial = existing,
   current = (initial.name ? initial : undefined) as CatalogExercise | undefined,
@@ -31,6 +33,7 @@ function setup({
 } = {}) {
   let editor: ReturnType<typeof useCatalogExerciseEditor> | undefined;
   const onSaved = vi.fn();
+
   // biome-ignore lint/correctness/noComponentHookFactories: One-off SSR harness; no mounted subtree is recreated.
   function Capture() {
     editor = useCatalogExerciseEditor({
@@ -40,17 +43,26 @@ function setup({
       save,
       onSaved,
     });
+
     return null;
   }
+
   renderToStaticMarkup(<Capture />);
-  if (!editor) throw Error("editor");
+
+  if (!editor) {
+    throw Error("editor");
+  }
+
   return { editor, save, onSaved };
 }
+
 beforeEach(() => vi.useFakeTimers());
+
 afterEach(() => {
   vi.clearAllTimers();
   vi.useRealTimers();
 });
+
 describe("catalog autosave", () => {
   it("debounces names and saves only the latest text", async () => {
     const { editor, save } = setup();

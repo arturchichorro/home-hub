@@ -19,6 +19,7 @@ export function createBearerAuth(jwtSecret: string) {
       !parts[1]
     ) {
       c.header("WWW-Authenticate", "Bearer");
+
       return c.json({ error: "Unauthorized" }, 401);
     }
 
@@ -31,6 +32,7 @@ export function createBearerAuth(jwtSecret: string) {
       }).sub;
     } catch {
       c.header("WWW-Authenticate", "Bearer");
+
       return c.json({ error: "Unauthorized" }, 401);
     }
 

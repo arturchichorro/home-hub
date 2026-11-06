@@ -25,8 +25,11 @@ import { InvalidMediaUploadError } from "../media/process-image";
 import { mediaUploadUrlLifetimeSeconds } from "../media/sign-upload";
 
 type Scope = { userId: string; householdId: string; exerciseId: string };
+
 type AttachmentScope = Scope & { attachmentId: string };
+
 type Failure = { kind: "unauthorized" | "forbidden" | "not_found" };
+
 export type ExerciseMediaDependencies = {
   db: Database;
   signUpload: (input: {
@@ -51,26 +54,37 @@ async function authorizeHousehold(
   tx: DatabaseTransaction,
   input: Pick<Scope, "userId" | "householdId">,
 ): Promise<Failure | { kind: "authorized" }> {
-  if (!(await findActiveUser(tx, input.userId)))
+  if (!(await findActiveUser(tx, input.userId))) {
     return { kind: "unauthorized" };
-  if (!(await findHouseholdMembershipForShare(tx, input)))
+  }
+
+  if (!(await findHouseholdMembershipForShare(tx, input))) {
     return { kind: "forbidden" };
+  }
+
   if (
     !(await findEnabledHouseholdModuleForShare(tx, {
       householdId: input.householdId,
       moduleKey: "workouts",
     }))
-  )
+  ) {
     return { kind: "forbidden" };
+  }
+
   return { kind: "authorized" };
 }
+
 async function authorize(
   tx: DatabaseTransaction,
   input: Scope,
   lock: "share" | "update" = "share",
 ): Promise<Failure | { kind: "authorized" }> {
   const access = await authorizeHousehold(tx, input);
-  if (access.kind !== "authorized") return access;
+
+  if (access.kind !== "authorized") {
+    return access;
+  }
+
   const [exercise] = await tx
     .select({ id: exercises.id })
     .from(exercises)
@@ -83,12 +97,15 @@ async function authorize(
     )
     .limit(1)
     .for(lock);
+
   return exercise ? access : { kind: "not_found" };
 }
+
 const join = and(
   eq(media.id, exerciseMedia.mediaId),
   eq(media.householdId, exerciseMedia.householdId),
 );
+
 const details = {
   id: exerciseMedia.id,
   mediaId: media.id,
@@ -99,6 +116,7 @@ const details = {
   byteSize: media.byteSize,
   confirmedAt: media.confirmedAt,
 };
+
 type Attachment = {
   id: string;
   mediaId: string;
@@ -109,6 +127,7 @@ type Attachment = {
   byteSize: number;
   confirmedAt: Date | null;
 };
+
 function identity(row: Attachment): MediaIdentity {
   return {
     ...mediaStorageIdentity(row),
@@ -117,6 +136,7 @@ function identity(row: Attachment): MediaIdentity {
     attachmentId: row.id,
   };
 }
+
 async function findAttachment(
   tx: DatabaseTransaction,
   input: AttachmentScope,
@@ -138,6 +158,7 @@ async function findAttachment(
     )
     .limit(1)
     .for(lock);
+
   return row;
 }
 
@@ -146,6 +167,7 @@ export function createExerciseMediaServices(
 ) {
   const { db, signUpload, inspectObject, processImage, signRead } =
     dependencies;
+
   return {
     async createUpload(
       input: Scope & {
@@ -161,12 +183,17 @@ export function createExerciseMediaServices(
         width: input.width,
         height: input.height,
       });
+
       return db.transaction(async (tx) => {
         // Serializes sparse-order assignment and archive/rename changes for this catalog entry.
         const access = await authorize(tx, input, "update");
-        if (access.kind !== "authorized") return access;
-        const mediaId = randomUUID(),
-          attachmentId = randomUUID();
+
+        if (access.kind !== "authorized") {
+          return access;
+        }
+
+        const mediaId = randomUUID();
+        const attachmentId = randomUUID();
         const objectKey = mediaOriginalObjectKey({
           householdId: input.householdId,
           mediaId,
@@ -198,6 +225,7 @@ export function createExerciseMediaServices(
           mediaId,
           sortKey: appendSortKey(bottom?.sortKey),
         });
+
         return {
           kind: "success" as const,
           attachmentId,
@@ -212,29 +240,48 @@ export function createExerciseMediaServices(
         };
       });
     },
+
     async confirmUpload(input: AttachmentScope) {
       const initial = await db.transaction(async (tx) => {
         const access = await authorize(tx, input);
-        if (access.kind !== "authorized") return access;
+
+        if (access.kind !== "authorized") {
+          return access;
+        }
+
         const row = await findAttachment(tx, input, "share");
+
         return row
           ? { kind: "attachment" as const, row }
           : { kind: "not_found" as const };
       });
-      if (initial.kind !== "attachment") return initial;
+
+      if (initial.kind !== "attachment") {
+        return initial;
+      }
+
       const row = initial.row;
-      if (row.confirmedAt)
+
+      if (row.confirmedAt) {
         return {
           kind: "success" as const,
           attachment: { id: row.id, confirmedAt: row.confirmedAt },
         };
+      }
+
       const object = await inspectObject({ objectKey: row.objectKey });
-      if (!object) return { kind: "upload_not_found" as const };
+
+      if (!object) {
+        return { kind: "upload_not_found" as const };
+      }
+
       if (
         object.contentType !== row.contentType ||
         object.byteSize !== row.byteSize
-      )
+      ) {
         return { kind: "invalid_upload" as const };
+      }
+
       try {
         await processImage({
           identity: identity(row),
@@ -244,27 +291,42 @@ export function createExerciseMediaServices(
           byteSize: row.byteSize,
         });
       } catch (error) {
-        if (error instanceof InvalidMediaUploadError)
+        if (error instanceof InvalidMediaUploadError) {
           return { kind: "invalid_upload" as const };
+        }
+
         throw error;
       }
+
       return db.transaction(async (tx) => {
         const access = await authorize(tx, input);
-        if (access.kind !== "authorized") return access;
+
+        if (access.kind !== "authorized") {
+          return access;
+        }
+
         const current = await findAttachment(tx, input, "update");
-        if (!current) return { kind: "not_found" as const };
+
+        if (!current) {
+          return { kind: "not_found" as const };
+        }
+
         if (
           current.mediaId !== row.mediaId ||
           current.objectKey !== row.objectKey ||
           current.contentType !== row.contentType ||
           current.byteSize !== row.byteSize
-        )
+        ) {
           throw new Error("Exercise media changed during confirmation");
-        if (current.confirmedAt)
+        }
+
+        if (current.confirmedAt) {
           return {
             kind: "success" as const,
             attachment: { id: current.id, confirmedAt: current.confirmedAt },
           };
+        }
+
         const confirmedAt = new Date();
         await tx
           .update(media)
@@ -275,18 +337,28 @@ export function createExerciseMediaServices(
               eq(media.householdId, input.householdId),
             ),
           );
+
         return {
           kind: "success" as const,
           attachment: { id: current.id, confirmedAt },
         };
       });
     },
+
     async deleteAttachment(input: AttachmentScope) {
       return db.transaction(async (tx) => {
         const access = await authorize(tx, input);
-        if (access.kind !== "authorized") return access;
+
+        if (access.kind !== "authorized") {
+          return access;
+        }
+
         const row = await findAttachment(tx, input, "update");
-        if (!row) return { kind: "success" as const };
+
+        if (!row) {
+          return { kind: "success" as const };
+        }
+
         const deletedAt = new Date();
         await tx
           .update(exerciseMedia)
@@ -297,9 +369,11 @@ export function createExerciseMediaServices(
               eq(exerciseMedia.householdId, input.householdId),
             ),
           );
+
         return { kind: "success" as const };
       });
     },
+
     async readUrls(
       input: Pick<Scope, "userId" | "householdId"> & {
         requests: {
@@ -317,11 +391,18 @@ export function createExerciseMediaServices(
           ]),
         ).values(),
       ];
-      if (!unique.length || unique.length > 100)
+
+      if (!unique.length || unique.length > 100) {
         throw new Error("Invalid exercise media batch");
+      }
+
       const authorized = await db.transaction(async (tx) => {
         const access = await authorizeHousehold(tx, input);
-        if (access.kind !== "authorized") return access;
+
+        if (access.kind !== "authorized") {
+          return access;
+        }
+
         // Reorders/uploads lock the catalog parent before attachment rows.
         // Acquire these shared locks in the same order to avoid deadlocks.
         const parents = await tx
@@ -339,11 +420,14 @@ export function createExerciseMediaServices(
           )
           .orderBy(exercises.id)
           .for("share");
-        if (!parents.length)
+
+        if (!parents.length) {
           return {
             kind: "attachments" as const,
             rows: new Map<string, Attachment>(),
           };
+        }
+
         const rows = await tx
           .select(details)
           .from(exerciseMedia)
@@ -367,6 +451,7 @@ export function createExerciseMediaServices(
             ),
           )
           .for("share");
+
         return {
           kind: "attachments" as const,
           rows: new Map(
@@ -374,13 +459,19 @@ export function createExerciseMediaServices(
           ),
         };
       });
-      if (authorized.kind !== "attachments") return authorized;
+
+      if (authorized.kind !== "attachments") {
+        return authorized;
+      }
+
       const readable = unique.flatMap((request) => {
         const row = authorized.rows.get(
           JSON.stringify([request.exerciseId, request.attachmentId]),
         );
+
         return row ? [{ request, row }] : [];
       });
+
       return {
         kind: "success" as const,
         reads: await Promise.all(
@@ -397,6 +488,7 @@ export function createExerciseMediaServices(
     },
   };
 }
+
 export type ExerciseMediaServices = ReturnType<
   typeof createExerciseMediaServices
 >;

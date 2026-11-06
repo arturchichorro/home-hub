@@ -21,15 +21,25 @@ const exercise: WorkoutExercise = {
   sets: 2,
   target: "8–12",
 };
-const householdId = crypto.randomUUID(),
-  workoutId = crypto.randomUUID(),
-  userId = crypto.randomUUID();
+
+const householdId = crypto.randomUUID();
+
+const workoutId = crypto.randomUUID();
+
+const userId = crypto.randomUUID();
+
 const editors: WorkoutLogEditor[] = [];
+
 beforeEach(() => vi.useFakeTimers());
+
 afterEach(() => {
-  for (const editor of editors.splice(0)) editor.dispose();
+  for (const editor of editors.splice(0)) {
+    editor.dispose();
+  }
+
   vi.useRealTimers();
 });
+
 function savedLog(overrides: Partial<WorkoutLog> = {}): WorkoutLog {
   return {
     id: crypto.randomUUID(),
@@ -59,6 +69,7 @@ function savedLog(overrides: Partial<WorkoutLog> = {}): WorkoutLog {
     ...overrides,
   };
 }
+
 function setup(
   options: {
     exercises?: WorkoutExercise[];
@@ -87,8 +98,10 @@ function setup(
     remove,
   });
   editors.push(editor);
+
   return { editor, save, remove };
 }
+
 const fill = (editor: WorkoutLogEditor, round = 1, patch = {}) =>
   editor.change(exercise.id, round, {
     weightKg: "8",
@@ -96,6 +109,7 @@ const fill = (editor: WorkoutLogEditor, round = 1, patch = {}) =>
     rightAmount: "",
     ...patch,
   });
+
 it("publishes its day while saving so a concurrent device's canonical header can reconcile", async () => {
   let finish: (ok: boolean) => void = () => {};
   const { editor } = setup({
@@ -105,13 +119,20 @@ it("publishes its day while saving so a concurrent device's canonical header can
       }),
   });
   fill(editor);
+
   const pending = editor.flush();
   await vi.advanceTimersByTimeAsync(0);
+
   const form = editor.getSnapshot().form;
   expect(form.completedOn).not.toBeNull();
-  const old = savedLog(),
-    set = old.sets[0];
-  if (!set) throw Error("fixture");
+
+  const old = savedLog();
+  const set = old.sets[0];
+
+  if (!set) {
+    throw Error("fixture");
+  }
+
   const canonical = savedLog({
     id: crypto.randomUUID(),
     completedOn: form.completedOn ?? "",
@@ -130,17 +151,23 @@ it("publishes its day while saving so a concurrent device's canonical header can
   await pending;
   expect(editor.getSnapshot().hasChanges).toBe(false);
 });
+
 it("reconciles canonical occurrence IDs even if the measurements did not change", () => {
-  const log = savedLog(),
-    id = crypto.randomUUID(),
-    { editor } = setup({ existing: log });
+  const log = savedLog();
+  const id = crypto.randomUUID();
+  const { editor } = setup({ existing: log });
   editor.sync({ ...log, exerciseLogIds: { [exercise.id]: id } });
   expect(editor.getSnapshot().form.exerciseLogIds?.[exercise.id]).toBe(id);
 });
+
 it("removes a clean optional row when another device removes that recorded set", () => {
-  const log = savedLog(),
-    set = log.sets[0];
-  if (!set) throw Error("fixture");
+  const log = savedLog();
+  const set = log.sets[0];
+
+  if (!set) {
+    throw Error("fixture");
+  }
+
   const { editor } = setup({
     existing: { ...log, sets: [set, { ...set, round: 3 }] },
   });
@@ -149,9 +176,10 @@ it("removes a clean optional row when another device removes that recorded set",
     2,
   );
 });
+
 it("preserves typed numeric formatting when the acknowledged row synchronizes", async () => {
-  const log = savedLog(),
-    { editor } = setup({ existing: log });
+  const log = savedLog();
+  const { editor } = setup({ existing: log });
   fill(editor, 1, { weightKg: "8.000" });
   await editor.flush();
   editor.sync(log);
@@ -160,17 +188,23 @@ it("preserves typed numeric formatting when the acknowledged row synchronizes", 
   ).toBe("8.000");
   expect(editor.getSnapshot().hasChanges).toBe(false);
 });
+
 it("does not suppress remote legacy corrections when both rows have a missing weight", () => {
-  const log = savedLog(),
-    set = log.sets[0];
-  if (!set) throw Error("fixture");
-  const old = { ...log, sets: [{ ...set, weightKg: null }] },
-    { editor } = setup({ existing: old });
+  const log = savedLog();
+  const set = log.sets[0];
+
+  if (!set) {
+    throw Error("fixture");
+  }
+
+  const old = { ...log, sets: [{ ...set, weightKg: null }] };
+  const { editor } = setup({ existing: old });
   editor.sync({ ...old, sets: [{ ...set, weightKg: null, amount: 13 }] });
   expect(
     editor.getSnapshot().form.inputs[setInputKey(exercise.id, 1)]?.amount,
   ).toBe("13");
 });
+
 it("saves a complete row after the pause without resetting its text or closing the form", async () => {
   const { editor, save } = setup();
   fill(editor);
@@ -193,12 +227,14 @@ it("saves a complete row after the pause without resetting its text or closing t
   await editor.flush();
   expect(save).toHaveBeenCalledTimes(1);
 });
+
 it("flushes valid rows immediately on blur/Enter", async () => {
   const { editor, save } = setup();
   fill(editor);
   await editor.flush(exercise.id, 1);
   expect(save).toHaveBeenCalledTimes(1);
 });
+
 it("requires explicit weight and both unilateral counts, including valid zeros", async () => {
   const unilateral = { ...exercise, unilateral: true };
   const { editor, save } = setup({ exercises: [unilateral] });
@@ -216,6 +252,7 @@ it("requires explicit weight and both unilateral counts, including valid zeros",
     rightAmount: 0,
   });
 });
+
 it("a partial row does not block a different complete row", async () => {
   const other = {
     ...exercise,
@@ -233,6 +270,7 @@ it("a partial row does not block a different complete row", async () => {
   ).toBe("10");
   expect(editor.getSnapshot().hasChanges).toBe(true);
 });
+
 it("bodyweight needs no weight and invalid amounts never save", async () => {
   const bodyweight = { ...exercise, load: "bodyweight" as const };
   expect(
@@ -242,6 +280,7 @@ it("bodyweight needs no weight and invalid amounts never save", async () => {
       rightAmount: "",
     })?.weightKg,
   ).toBeNull();
+
   for (const amount of ["", "-1", "12.5", "601", "NaN"]) {
     const { editor, save } = setup();
     fill(editor, 1, { amount });
@@ -249,19 +288,25 @@ it("bodyweight needs no weight and invalid amounts never save", async () => {
     expect(save).not.toHaveBeenCalled();
   }
 });
+
 it("keeps edits typed during a pending save, then drains the latest complete version", async () => {
   let finish: (value: boolean) => void = () => {};
   let first = true;
   const { editor, save } = setup({
     onSave: async () => {
-      if (!first) return true;
+      if (!first) {
+        return true;
+      }
+
       first = false;
+
       return new Promise<boolean>((resolve) => {
         finish = resolve;
       });
     },
   });
   fill(editor);
+
   const pending = editor.flush();
   await vi.advanceTimersByTimeAsync(0);
   fill(editor, 1, { amount: "15" });
@@ -274,6 +319,7 @@ it("keeps edits typed during a pending save, then drains the latest complete ver
   expect(save.mock.calls[1]?.[0].values.amount).toBe(15);
   expect(editor.getSnapshot().hasChanges).toBe(false);
 });
+
 it("retains a failed save and retries the latest text rather than reverting it", async () => {
   let success = false;
   const { editor, save } = setup({ onSave: async () => success });
@@ -289,6 +335,7 @@ it("retains a failed save and retries the latest text rather than reverting it",
   expect(save.mock.calls.at(-1)?.[0].values.amount).toBe(14);
   expect(editor.getSnapshot().hasChanges).toBe(false);
 });
+
 it("clearing a saved field is an unsaved edit, not a deletion", async () => {
   const existing = savedLog();
   const { editor, save, remove } = setup({ existing });
@@ -302,6 +349,7 @@ it("clearing a saved field is an unsaved edit, not a deletion", async () => {
     editor.getSnapshot().form.inputs[setInputKey(exercise.id, 1)]?.weightKg,
   ).toBe("");
 });
+
 it("adds extra sets only after the displayed rows are complete and never changes the prescription", async () => {
   const { editor, save } = setup();
   editor.addSet(exercise.id);
@@ -319,12 +367,18 @@ it("adds extra sets only after the displayed rows are complete and never changes
   await editor.flush();
   expect(save.mock.calls.map((c) => c[0].round)).toEqual([1, 2, 3]);
 });
+
 it("can reuse a removed optional round at the ten-round limit without renumbering other sets", async () => {
   const { editor } = setup();
+
   for (let round = 1; round <= 10; round++) {
     fill(editor, round);
-    if (round >= 2 && round < 10) editor.addSet(exercise.id);
+
+    if (round >= 2 && round < 10) {
+      editor.addSet(exercise.id);
+    }
   }
+
   await editor.flush();
   expect(editor.getSnapshot().recorded.size).toBe(10);
   await editor.removeSet(exercise.id, 3);
@@ -341,6 +395,7 @@ it("can reuse a removed optional round at the ten-round limit without renumberin
   ).toBe("12");
   expect(editor.getSnapshot().form.snapshot.exercises[0]?.sets).toBe(2);
 });
+
 it("removes a recorded set explicitly without removing any other set or changing its date", async () => {
   const { editor, remove } = setup({ existing: savedLog() });
   await editor.removeSet(exercise.id, 1);
@@ -350,9 +405,11 @@ it("removes a recorded set explicitly without removing any other set or changing
   ).toBeUndefined();
   expect(editor.getSnapshot().form.completedOn).toBe("2026-10-20");
 });
+
 it("does not lose the saved row when deletion fails", async () => {
   const { editor } = setup({
     existing: savedLog(),
+
     onRemove: async () => false,
   });
   await editor.removeSet(exercise.id, 1);
@@ -363,10 +420,15 @@ it("does not lose the saved row when deletion fails", async () => {
     "remove",
   );
 });
+
 it("hydrates extra sets after reopening, and skips removed optional rounds without renumbering history", () => {
   const log = savedLog();
   const set = log.sets[0];
-  if (!set) throw Error("fixture");
+
+  if (!set) {
+    throw Error("fixture");
+  }
+
   const reopened = openWorkoutLog(
     { title: "New", exercises: [exercise] },
     { ...log, sets: [set, { ...set, round: 4 }] },
@@ -374,10 +436,15 @@ it("hydrates extra sets after reopening, and skips removed optional rounds witho
   expect(exerciseRoundCount(exercise, reopened.inputs)).toBe(4);
   expect(exerciseRounds(exercise, reopened.inputs)).toEqual([1, 2, 4]);
 });
+
 it("updates untouched rows from another device without overwriting an incomplete local row", () => {
-  const log = savedLog(),
-    first = log.sets[0];
-  if (!first) throw Error("fixture");
+  const log = savedLog();
+  const first = log.sets[0];
+
+  if (!first) {
+    throw Error("fixture");
+  }
+
   const { editor } = setup({ existing: log });
   editor.change(exercise.id, 1, { weightKg: "" });
   editor.sync({
@@ -394,11 +461,16 @@ it("updates untouched rows from another device without overwriting an incomplete
     editor.getSnapshot().form.inputs[setInputKey(exercise.id, 2)]?.amount,
   ).toBe("7");
 });
+
 it("interprets legacy blank-right as the historical left value without mutating the stored row", () => {
-  const unilateral = { ...exercise, unilateral: true },
-    log = savedLog({ snapshot: { title: "Old", exercises: [unilateral] } }),
-    set = log.sets[0];
-  if (!set) throw Error("fixture");
+  const unilateral = { ...exercise, unilateral: true };
+  const log = savedLog({ snapshot: { title: "Old", exercises: [unilateral] } });
+  const set = log.sets[0];
+
+  if (!set) {
+    throw Error("fixture");
+  }
+
   const old = {
     ...log,
     sets: [{ ...set, unilateral: true, rightAmount: null }],
@@ -407,17 +479,20 @@ it("interprets legacy blank-right as the historical left value without mutating 
   expect(form.inputs[setInputKey(exercise.id, 1)]?.rightAmount).toBe("12");
   expect(old.sets[0]?.rightAmount).toBeNull();
 });
+
 it("keeps historical dates and original definitions during autosaved corrections", async () => {
-  const log = savedLog(),
-    { editor, save } = setup({ existing: log });
+  const log = savedLog();
+  const { editor, save } = setup({ existing: log });
   fill(editor, 1, { amount: "14" });
   await editor.flush();
+
   const args = save.mock.calls[0]?.[0];
   expect(args?.logId).toBe(log.id);
   expect(args?.completedOn).toBe(log.completedOn);
   expect(args?.optimisticTimestamp).toBe(log.completedAt);
   expect(args?.snapshot.title).toBe("Original");
 });
+
 it("keeps a complete edit pending if an app update or access guard disables writes", async () => {
   let enabled = false;
   const { editor, save } = setup({ enabled: () => enabled });

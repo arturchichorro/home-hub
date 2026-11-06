@@ -16,16 +16,17 @@ import { createZeroDbProvider } from "../zero/db-provider";
 import { createLogEntryServices } from "./entries";
 
 const url = process.env.MEDIA_TEST_DATABASE_URL;
+
 describe.runIf(!!url)("household logs on PostgreSQL", () => {
-  let client: ReturnType<typeof createDbClient>,
-    userId: string,
-    otherUser: string,
-    householdId: string,
-    foreign: string,
-    logId: string;
-  const now = () => new Date("2026-11-03T00:30:00Z"),
-    service = () => createLogEntryServices({ db: client.db, now }),
-    provider = () => createZeroDbProvider({ db: client.db });
+  let client: ReturnType<typeof createDbClient>;
+  let userId: string;
+  let otherUser: string;
+  let householdId: string;
+  let foreign: string;
+  let logId: string;
+  const now = () => new Date("2026-11-03T00:30:00Z");
+  const service = () => createLogEntryServices({ db: client.db, now });
+  const provider = () => createZeroDbProvider({ db: client.db });
   const scope = () => ({ userId, householdId, logId, entryOn: "2026-11-02" });
   const write = (
     input: Partial<Parameters<ReturnType<typeof service>["write"]>[0]> = {},
@@ -47,12 +48,16 @@ describe.runIf(!!url)("household logs on PostgreSQL", () => {
     ) => Promise<unknown>,
   ) => provider().transaction(fn);
   beforeAll(() => {
-    if (!url || !new URL(url).pathname.startsWith("/media_migration_"))
+    if (!url || !new URL(url).pathname.startsWith("/media_migration_")) {
       throw Error("Disposable database required");
+    }
+
     client = createDbClient(url);
   });
   afterAll(async () => {
-    if (client) await client.close();
+    if (client) {
+      await client.close();
+    }
   });
   beforeEach(async () => {
     userId = randomUUID();
@@ -102,6 +107,7 @@ describe.runIf(!!url)("household logs on PostgreSQL", () => {
     expect(await service().read({ ...scope(), userId: otherUser })).toEqual({
       entry,
     });
+
     const synced = await provider().run(
       queries.logs.entry.fn({
         ctx: { userId: otherUser },
@@ -131,7 +137,11 @@ describe.runIf(!!url)("household logs on PostgreSQL", () => {
   });
   it("protects racing updates and returns the newer saved text", async () => {
     const base = (await write()).entry;
-    if (!base) throw Error();
+
+    if (!base) {
+      throw Error();
+    }
+
     const results = await Promise.allSettled([
       write({ entryId: base.id, expectedVersion: 1, note: "Member one" }),
       write({
@@ -142,6 +152,7 @@ describe.runIf(!!url)("household logs on PostgreSQL", () => {
       }),
     ]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+
     const failed = results.find((r) => r.status === "rejected");
     expect(
       failed?.status === "rejected" ? failed.reason : undefined,
@@ -149,15 +160,19 @@ describe.runIf(!!url)("household logs on PostgreSQL", () => {
     expect((await service().read(scope())).entry?.version).toBe(2);
   });
   it("retries the same operation idempotently without incrementing its revision", async () => {
-    const entryId = randomUUID(),
-      writeId = randomUUID(),
-      first = await write({ entryId, writeId });
+    const entryId = randomUUID();
+    const writeId = randomUUID();
+    const first = await write({ entryId, writeId });
     expect(await write({ entryId, writeId })).toEqual(first);
     expect((await service().read(scope())).entry?.version).toBe(1);
   });
   it("soft-deletes on clearing, retains text and permits a new active entry on that date", async () => {
     const base = (await write()).entry;
-    if (!base) throw Error();
+
+    if (!base) {
+      throw Error();
+    }
+
     const writeId = randomUUID();
     expect(
       await write({ entryId: base.id, expectedVersion: 1, note: "", writeId }),
@@ -165,6 +180,7 @@ describe.runIf(!!url)("household logs on PostgreSQL", () => {
     expect(
       await write({ entryId: base.id, expectedVersion: 1, note: "", writeId }),
     ).toEqual({ entry: null });
+
     const [retained] = await client.db
       .select()
       .from(logEntries)
@@ -175,6 +191,7 @@ describe.runIf(!!url)("household logs on PostgreSQL", () => {
       (await client.db.select().from(logs).where(eq(logs.id, logId)))[0]
         ?.lastEntryOn,
     ).toBeNull();
+
     const next = (await write({ note: "Recreated" })).entry;
     expect(next?.id).not.toBe(base.id);
     await expect(
@@ -187,7 +204,11 @@ describe.runIf(!!url)("household logs on PostgreSQL", () => {
   });
   it("does not delete someone else's newer edit using an old revision", async () => {
     const base = (await write()).entry;
-    if (!base) throw Error();
+
+    if (!base) {
+      throw Error();
+    }
+
     await write({
       entryId: base.id,
       expectedVersion: 1,
@@ -202,10 +223,15 @@ describe.runIf(!!url)("household logs on PostgreSQL", () => {
     await expect(
       write({ entryOn: "2026-11-03", timeZone: "America/Los_Angeles" }),
     ).rejects.toMatchObject({ status: 422 });
+
     const base = (
       await write({ entryOn: "2026-11-03", timeZone: "Pacific/Kiritimati" })
     ).entry;
-    if (!base) throw Error();
+
+    if (!base) {
+      throw Error();
+    }
+
     expect(
       (
         await write({
@@ -276,8 +302,9 @@ describe.runIf(!!url)("household logs on PostgreSQL", () => {
   });
   it("enforces title/category uniqueness and household integrity without losing entries on rename/category removal", async () => {
     await write();
-    const categoryId = randomUUID(),
-      ctx = { userId };
+
+    const categoryId = randomUUID();
+    const ctx = { userId };
     await metadata(async (tx) => {
       await mutators.logs.saveCategory.fn({
         tx,
@@ -346,11 +373,13 @@ describe.runIf(!!url)("household logs on PostgreSQL", () => {
     ).toBeNull();
   });
   it("searches literal note text and pages exclusively by date", async () => {
-    for (let i = 1; i <= 25; i++)
+    for (let i = 1; i <= 25; i++) {
       await write({
         entryOn: `2026-10-${String(i).padStart(2, "0")}`,
         note: i === 1 ? "literal % needle" : "Daily update",
       });
+    }
+
     const page = await provider().run(
       queries.logs.history.fn({
         ctx: { userId },
@@ -358,6 +387,7 @@ describe.runIf(!!url)("household logs on PostgreSQL", () => {
       }),
     );
     expect(page).toHaveLength(21);
+
     const older = await provider().run(
       queries.logs.history.fn({
         ctx: { userId },

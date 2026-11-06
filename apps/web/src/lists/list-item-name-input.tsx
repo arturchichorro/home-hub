@@ -20,6 +20,7 @@ import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 const autosaveDelayMs = 600;
+
 const duplicateNameError = "List item name already exists";
 
 type ListItemNameInputProps = {
@@ -65,7 +66,9 @@ export function ListItemNameInput({
   useBlockAppUpdate(isSaving || draftName !== confirmedNameRef.current);
 
   useEffect(() => {
-    if (focusRequest !== undefined) inputRef.current?.focus();
+    if (focusRequest !== undefined) {
+      inputRef.current?.focus();
+    }
   }, [focusRequest]);
 
   const clearScheduledSave = useCallback(() => {
@@ -77,7 +80,10 @@ export function ListItemNameInput({
 
   const replaceDraft = useCallback((name: string) => {
     draftNameRef.current = name;
-    if (mountedRef.current) setDraftName(name);
+
+    if (mountedRef.current) {
+      setDraftName(name);
+    }
   }, []);
 
   const revertDraft = useCallback(() => {
@@ -87,18 +93,23 @@ export function ListItemNameInput({
   const saveDraft = useCallback(
     async (showEmptyNameError: boolean, canonicalizeVisibleDraft: boolean) => {
       clearScheduledSave();
-      if (appUpdates.getState().required) return;
+
+      if (appUpdates.getState().required) {
+        return;
+      }
 
       if (saveInFlightRef.current) {
         queuedSaveRef.current = true;
         queuedEmptyNameErrorRef.current ||= showEmptyNameError;
         queuedCanonicalizationRef.current ||= canonicalizeVisibleDraft;
+
         return;
       }
 
       if (!mutationEnabled) {
         revertDraft();
         setError("The change could not be saved.");
+
         return;
       }
 
@@ -110,6 +121,7 @@ export function ListItemNameInput({
           revertDraft();
           setError("The item name cannot be empty.");
         }
+
         return;
       }
 
@@ -123,6 +135,7 @@ export function ListItemNameInput({
         ) {
           replaceDraft(submittedName);
         }
+
         return;
       }
 
@@ -159,6 +172,7 @@ export function ListItemNameInput({
         draftMatchesSaveSnapshot(draftNameRef.current, submittedDraftName)
       ) {
         revertDraft();
+
         if (mountedRef.current) {
           setError(
             result.error.message === duplicateNameError
@@ -169,7 +183,10 @@ export function ListItemNameInput({
       }
 
       saveInFlightRef.current = false;
-      if (mountedRef.current) setIsSaving(false);
+
+      if (mountedRef.current) {
+        setIsSaving(false);
+      }
 
       if (queuedSaveRef.current) {
         const showQueuedEmptyNameError = queuedEmptyNameErrorRef.current;
@@ -200,7 +217,9 @@ export function ListItemNameInput({
   saveDraftRef.current = saveDraft;
 
   useEffect(() => {
-    if (saveInFlightRef.current) return;
+    if (saveInFlightRef.current) {
+      return;
+    }
 
     const previousConfirmedName = confirmedNameRef.current;
     confirmedNameRef.current = currentName;
@@ -232,6 +251,7 @@ export function ListItemNameInput({
     if (event.key === "Enter") {
       event.preventDefault();
       void saveDraft(true, true);
+
       return;
     }
 

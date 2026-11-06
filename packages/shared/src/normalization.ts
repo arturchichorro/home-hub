@@ -8,11 +8,13 @@ function cleanSingleLineText(value: string): string {
 
 function cleanNullableSingleLineText(value: string): string | null {
   const cleaned = cleanSingleLineText(value);
+
   return cleaned.length === 0 ? null : cleaned;
 }
 
 function cleanNullableMultilineText(value: string): string | null {
   const cleaned = value.normalize("NFKC").trim();
+
   return cleaned.length === 0 ? null : cleaned;
 }
 

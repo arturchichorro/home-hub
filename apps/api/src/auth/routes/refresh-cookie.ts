@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 
 export const refreshTokenCookieName = "home_hub_refresh";
+
 const refreshTokenMaxAgeSeconds = 30 * 24 * 60 * 60;
 
 export function setRefreshTokenCookie(

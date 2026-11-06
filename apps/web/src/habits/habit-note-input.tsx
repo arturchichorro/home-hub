@@ -25,6 +25,7 @@ type Props = {
   readOnly?: boolean;
   entryOn?: string;
 };
+
 export function HabitNoteInput({
   householdId,
   habitId,
@@ -43,8 +44,11 @@ export function HabitNoteInput({
     currentValue: currentNote ?? "",
     preserveOnFailure: true,
     mutationEnabled: enabled,
+
     normalize: (value) => cleanHabitNote(value) ?? "",
+
     failureError: "Unable to save note.",
+
     save: async (note) => {
       try {
         const scope = {
@@ -63,6 +67,7 @@ export function HabitNoteInput({
             )
           : zero.mutate(mutators.habits.updateNote(scope));
         const outcome = await acknowledgeMutation(mutation);
+
         return outcome.type === "success";
       } catch {
         return false;
@@ -70,10 +75,14 @@ export function HabitNoteInput({
     },
   });
   useHabitDraftStatus(editor.hasChanges || editor.isSaving, onDirtyChange);
+
   useEffect(() => {
-    if (editing) inputRef.current?.focus();
+    if (editing) {
+      inputRef.current?.focus();
+    }
   }, [editing]);
-  if (readOnly)
+
+  if (readOnly) {
     return currentNote ? (
       <span
         className="min-w-0 flex-1 truncate text-xs text-muted"
@@ -82,6 +91,8 @@ export function HabitNoteInput({
         {currentNote}
       </span>
     ) : null;
+  }
+
   return (
     <>
       {currentNote !== null ||

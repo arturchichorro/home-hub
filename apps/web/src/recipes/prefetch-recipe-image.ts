@@ -9,9 +9,16 @@ type NavigatorWithConnection = Navigator & {
 };
 
 export function shouldPrefetchRecipeImages() {
-  if (typeof navigator === "undefined") return false;
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
   const connection = (navigator as NavigatorWithConnection).connection;
-  if (!connection) return false;
+
+  if (!connection) {
+    return false;
+  }
+
   return (
     connection?.saveData !== true &&
     connection?.effectiveType !== "slow-2g" &&
@@ -20,11 +27,17 @@ export function shouldPrefetchRecipeImages() {
 }
 
 export async function prefetchRecipeImage(identity: RecipeImageUrlIdentity) {
-  if (!shouldPrefetchRecipeImages()) return { kind: "skipped" as const };
+  if (!shouldPrefetchRecipeImages()) {
+    return { kind: "skipped" as const };
+  }
+
   const result = await getOrCreateRecipeImageUrl(identity, () =>
     createBatchedRecipeImageReadUrl(identity),
   );
-  if (result.kind !== "success" || typeof Image === "undefined") return result;
+
+  if (result.kind !== "success" || typeof Image === "undefined") {
+    return result;
+  }
 
   await new Promise<void>((resolve) => {
     const image = new Image();
@@ -32,17 +45,24 @@ export async function prefetchRecipeImage(identity: RecipeImageUrlIdentity) {
     image.onerror = () => resolve();
     image.src = result.url;
   });
+
   return result;
 }
 
 export function scheduleIdleRecipeImagePrefetch(operation: () => void) {
-  if (typeof window === "undefined") return () => undefined;
+  if (typeof window === "undefined") {
+    return () => undefined;
+  }
+
   if (typeof window.requestIdleCallback === "function") {
     const callbackId = window.requestIdleCallback(operation, {
       timeout: 2_000,
     });
+
     return () => window.cancelIdleCallback(callbackId);
   }
+
   const timeoutId = globalThis.setTimeout(operation, 500);
+
   return () => globalThis.clearTimeout(timeoutId);
 }

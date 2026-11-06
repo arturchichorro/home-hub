@@ -31,7 +31,10 @@ export function LeaveHouseholdControl({
   const mutationEnabled = useZeroMutationEnabled();
 
   async function handleLeave() {
-    if (!mutationEnabled) return;
+    if (!mutationEnabled) {
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -40,16 +43,19 @@ export function LeaveHouseholdControl({
 
       if (result.kind === "unauthorized") {
         onSessionExpired();
+
         return;
       }
 
       if (result.kind === "forbidden") {
         setError("You are no longer a member of this household.");
+
         return;
       }
 
       if (result.kind === "owner_must_transfer") {
         setError("Transfer ownership before leaving this household.");
+
         return;
       }
 

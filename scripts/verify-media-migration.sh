@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
 # Exercise the real forward migration in disposable databases, never app data.
 set -euo pipefail
+
 cd "$(dirname "$0")/.."
+
 container="${1:?Usage: scripts/verify-media-migration.sh <postgres-container>}"
 user="${POSTGRES_USER:-home_hub}"
 prefix="media_migration_${RANDOM}_$$"
 databases=()
+
 cleanup() {
   for database in "${databases[@]}"; do
     docker exec "$container" psql -X -U "$user" -d postgres -v ON_ERROR_STOP=1 \
       -c "DROP DATABASE IF EXISTS \"$database\" WITH (FORCE);" >/dev/null
   done
 }
+
 trap cleanup EXIT
+
 for scenario in empty populated; do
   database="${prefix}_${scenario}"
   databases+=("$database")
@@ -23,10 +28,12 @@ for scenario in empty populated; do
       docker exec -i "$container" psql -X -U "$user" -d "$database" -v ON_ERROR_STOP=1 \
         < scripts/fixtures/media-before.sql >/dev/null
     fi
-    { printf 'BEGIN;\nSET LOCAL search_path TO public;\n'; \
+    {
+      printf 'BEGIN;\nSET LOCAL search_path TO public;\n'
       # Read SQL as input; statement-breakpoint markers are PostgreSQL comments.
       cat "$migration"
-      printf '\nCOMMIT;\n'; } | \
+      printf '\nCOMMIT;\n'
+    } |
       docker exec -i "$container" psql -X -U "$user" -d "$database" -v ON_ERROR_STOP=1 >/dev/null
   done
   if [[ "$scenario" == populated ]]; then
@@ -38,7 +45,13 @@ for scenario in empty populated; do
   fi
   if [[ "$scenario" == empty && -n "${DATABASE_URL:-}" ]]; then
     runtime_url="$(MEDIA_TEST_DATABASE_NAME="$database" node -e 'const u = new URL(process.env.DATABASE_URL); u.pathname = "/" + process.env.MEDIA_TEST_DATABASE_NAME; process.stdout.write(u.toString());')"
-    MEDIA_TEST_DATABASE_URL="$runtime_url" pnpm exec vitest run apps/api/src/media/recipes.integration.test.ts apps/api/src/workouts/exercise-media.integration.test.ts apps/api/src/zero/habit-workouts.integration.test.ts apps/api/src/lists/media.integration.test.ts apps/api/src/documents/documents.integration.test.ts apps/api/src/logs/logs.integration.test.ts
+    MEDIA_TEST_DATABASE_URL="$runtime_url" pnpm exec vitest run \
+      apps/api/src/media/recipes.integration.test.ts \
+      apps/api/src/workouts/exercise-media.integration.test.ts \
+      apps/api/src/zero/habit-workouts.integration.test.ts \
+      apps/api/src/lists/media.integration.test.ts \
+      apps/api/src/documents/documents.integration.test.ts \
+      apps/api/src/logs/logs.integration.test.ts
   fi
   printf 'Shared media migration: %s passed\n' "$scenario"
 done

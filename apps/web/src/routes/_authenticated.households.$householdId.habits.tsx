@@ -7,8 +7,10 @@ export const Route = createFileRoute(
 )({
   component: HabitsRoute,
 });
+
 function HabitsRoute() {
   const { householdId } = Route.useParams();
+
   return (
     <HouseholdModuleGate householdId={householdId} moduleKey="habits">
       <HabitsPage key={householdId} householdId={householdId} />

@@ -127,6 +127,7 @@ export const createRecipeCookLogMutationSchema = z
     cookLogId: z.uuid(),
     householdId: z.uuid(),
     recipeId: z.uuid(),
+
     cookedAt: z
       .number()
       .int()
@@ -134,6 +135,7 @@ export const createRecipeCookLogMutationSchema = z
       .refine((value) => value <= Date.now(), {
         message: "Cooking date cannot be in the future",
       }),
+
     comment: recipeCookLogCommentSchema,
     optimisticTimestamp: z.number().int().nonnegative(),
   })
