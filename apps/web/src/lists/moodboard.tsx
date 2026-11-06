@@ -14,7 +14,7 @@ import {
   Trash2,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { type CSSProperties, useLayoutEffect, useRef, useState } from "react";
 import { ImageViewer } from "../media/image-viewer";
 import { type MediaSession, useMediaSession } from "../media/session";
 import { useBlockAppUpdate } from "../updates/activity";
@@ -33,12 +33,14 @@ function Tile({
   session,
   disabled,
   onOpen,
+  style,
 }: {
   pin: MoodboardPin;
   index: number;
   session: MediaSession;
   disabled: boolean;
   onOpen: () => void;
+  style: CSSProperties;
 }) {
   const sortable = useSortable({
     id: pin.id,
@@ -51,6 +53,7 @@ function Tile({
   return (
     <li
       ref={sortable.ref}
+      style={style}
       className={`relative mb-3 break-inside-avoid overflow-hidden rounded-sm bg-raised ${sortable.isDragging ? "opacity-50" : ""}`}
       data-moodboard-pin={pin.id}
     >
@@ -59,12 +62,14 @@ function Tile({
         draggable={false}
         onClick={onOpen}
         aria-label={`Open ${pin.asset?.kind === "video" ? "video" : "image"} ${index + 1}`}
-        className="block w-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-focus-ring"
+        className="relative block w-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-focus-ring"
         style={{
           aspectRatio: `${pin.asset?.width ?? 1}/${pin.asset?.height ?? 1}`,
         }}
       >
-        <MoodboardThumbnail pin={pin} session={session} />
+        <span className="absolute inset-0">
+          <MoodboardThumbnail pin={pin} session={session} cover />
+        </span>
         {pin.asset?.kind === "video" && (
           <span className="absolute bottom-2 left-2 rounded-sm bg-canvas/80 p-2">
             <Play className="size-4" aria-hidden="true" />
@@ -422,9 +427,10 @@ export function Moodboard({
         }}
       >
         <MoodboardLayout pins={visible}>
-          {(pin, index) => (
+          {(pin, index, style) => (
             <Tile
               key={pin.id}
+              style={style}
               pin={pin}
               index={index}
               session={session}
