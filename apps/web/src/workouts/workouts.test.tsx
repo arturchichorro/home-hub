@@ -101,6 +101,7 @@ function loggingFixture(form: WorkoutLogForm) {
 
     onFlush: () => {},
 
+    onAddExercise: editor.addExercise,
     onAddSet: editor.addSet,
 
     onRemoveSet: () => {},
@@ -318,6 +319,7 @@ describe("simple workouts", () => {
     expect(html).not.toMatch(/aria-label="Save [^"]+, set /);
     expect(html).not.toContain("Rest timer");
     expect(html).not.toContain("Reps in reserve");
+    expect(html).toContain("Add exercise");
     expect(html).toContain('aria-label="Close logging"');
     expect(html).not.toContain('aria-label="Save log"');
     expect(html).not.toContain("Done</span>");

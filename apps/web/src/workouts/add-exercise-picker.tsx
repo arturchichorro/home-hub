@@ -23,21 +23,34 @@ export function AddExercisePicker({
   householdId,
   disabled,
   onSelect,
+  allowCreate = true,
+  iconOnly = false,
+  excludedExerciseIds = [],
 }: {
   householdId: string;
   disabled: boolean;
+  allowCreate?: boolean;
+  iconOnly?: boolean;
+  excludedExerciseIds?: readonly string[];
   onSelect: (exercise: CatalogExercise) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [data, result] = useQuery(
-    open ? queries.workouts.definitions({ householdId }) : undefined,
+    // Log-only drafts need the selected definitions for optimistic set writes,
+    // even after the picker closes. Normal template editing still loads on open.
+    open || !allowCreate
+      ? queries.workouts.definitions({ householdId })
+      : undefined,
   );
   const rows = result.type === "complete" ? (data ?? []) : [];
   const name = search.trim();
   const normalized = normalizeExerciseName(name);
+  const excluded = new Set(excludedExerciseIds);
   const options: Option[] = rows
-    .filter((row) => row.normalizedName.includes(normalized))
+    .filter(
+      (row) => !excluded.has(row.id) && row.normalizedName.includes(normalized),
+    )
     .map((row) =>
       exerciseCatalogSchema.parse({
         id: row.id,
@@ -49,6 +62,7 @@ export function AddExercisePicker({
     );
 
   if (
+    allowCreate &&
     result.type === "complete" &&
     name &&
     !rows.some((row) => row.normalizedName === normalized)
@@ -81,7 +95,13 @@ export function AddExercisePicker({
       disabled={disabled}
       itemToStringLabel={(option) => option.name}
       onValueChange={(option) => {
-        if (!option || disabled || result.type !== "complete") {
+        if (
+          !option ||
+          disabled ||
+          result.type !== "complete" ||
+          excluded.has(option.id) ||
+          (!allowCreate && option.create)
+        ) {
           return;
         }
 
@@ -100,17 +120,22 @@ export function AddExercisePicker({
         render={
           <Button
             variant="ghost"
+            title={iconOnly ? "Add exercise" : undefined}
             className="h-7! px-1! text-xs! font-normal text-muted sm:text-sm!"
           >
             <Plus aria-hidden="true" className="size-4" />
-            Add exercise
+            <span className={iconOnly ? "sr-only" : undefined}>
+              Add exercise
+            </span>
           </Button>
         }
       />
       <ComboboxPopup>
         <ComboboxInput
-          aria-label="Find or create exercise"
-          placeholder="Find or create exercise…"
+          aria-label={allowCreate ? "Find or create exercise" : "Find exercise"}
+          placeholder={
+            allowCreate ? "Find or create exercise…" : "Find exercise…"
+          }
           maxLength={150}
           autoFocus
         />
@@ -130,7 +155,9 @@ export function AddExercisePicker({
         )}
         {result.type === "complete" && !options.length && (
           <p className="px-3 py-2 text-xs text-muted">
-            Type an exercise name to create one.
+            {allowCreate
+              ? "Type an exercise name to create one."
+              : "No available exercises match."}
           </p>
         )}
       </ComboboxPopup>

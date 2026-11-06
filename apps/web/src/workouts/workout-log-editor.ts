@@ -1,9 +1,13 @@
-import type {
-  RemoveExerciseSet,
-  SaveExerciseSet,
+import {
+  logOnlyWorkoutExercise,
+  type RemoveExerciseSet,
+  type SaveExerciseSet,
 } from "@home-hub/shared/exercise-logs";
 import { calendarDate } from "@home-hub/shared/habits";
-import type { WorkoutExercise } from "@home-hub/shared/workouts";
+import type {
+  CatalogExercise,
+  WorkoutExercise,
+} from "@home-hub/shared/workouts";
 import type { WorkoutLog } from "./workout-log";
 import {
   completeSetValues,
@@ -49,6 +53,7 @@ export class WorkoutLogEditor {
   private form: WorkoutLogForm;
   private readonly saved = new Map<string, WorkoutSetInput>();
   private readonly dirty = new Set<string>();
+  private readonly unsavedExercises = new Set<string>();
   private readonly queued = new Set<string>();
   private readonly deleting = new Set<string>();
   private readonly errors: Record<string, string> = {};
@@ -81,7 +86,12 @@ export class WorkoutLogEditor {
       recorded: new Set(this.saved.keys()),
       headerConfirmed: this.headerConfirmed,
       deleting: new Set(this.deleting),
-      hasChanges: !!(this.dirty.size || this.queued.size || this.deleting.size),
+      hasChanges: !!(
+        this.dirty.size ||
+        this.queued.size ||
+        this.deleting.size ||
+        this.unsavedExercises.size
+      ),
     };
   }
 
@@ -231,7 +241,15 @@ export class WorkoutLogEditor {
           exerciseLogId,
           round,
           values,
-          snapshot: this.form.snapshot,
+          snapshot: {
+            ...this.form.snapshot,
+            exercises: this.form.snapshot.exercises.filter(
+              (row) => !this.form.logOnlyExerciseIds?.includes(row.id),
+            ),
+          },
+          ...(this.form.logOnlyExerciseIds?.includes(exercise.id)
+            ? { logOnlyExercise: exercise }
+            : {}),
           completedOn:
             this.form.completedOn ??
             calendarDate(performedAt, this.options.timeZone),
@@ -247,6 +265,7 @@ export class WorkoutLogEditor {
       }
 
       this.headerConfirmed = true;
+      this.unsavedExercises.delete(exercise.id);
       this.saved.set(key, input);
       delete this.errors[key];
 
@@ -259,6 +278,34 @@ export class WorkoutLogEditor {
       this.emit();
     }
   }
+
+  addExercise = (catalog: CatalogExercise) => {
+    if (
+      this.disposed ||
+      !this.options.enabled() ||
+      this.form.snapshot.exercises.length >= 40 ||
+      this.form.snapshot.exercises.some(
+        (row) => row.catalogExerciseId === catalog.id || row.id === catalog.id,
+      )
+    ) {
+      return;
+    }
+
+    const exercise = logOnlyWorkoutExercise(catalog);
+    this.form = {
+      ...this.form,
+      snapshot: {
+        ...this.form.snapshot,
+        exercises: [...this.form.snapshot.exercises, exercise],
+      },
+      logOnlyExerciseIds: [
+        ...(this.form.logOnlyExerciseIds ?? []),
+        exercise.id,
+      ],
+    };
+    this.unsavedExercises.add(exercise.id);
+    this.emit();
+  };
 
   addSet = (id: string) => {
     const exercise = this.form.snapshot.exercises.find((e) => e.id === id);
@@ -364,6 +411,37 @@ export class WorkoutLogEditor {
     }
 
     const remote = openWorkoutLog(this.form.snapshot, log);
+    const knownIds = new Set(this.form.snapshot.exercises.map((row) => row.id));
+    const additions = remote.snapshot.exercises.filter(
+      (row) => !knownIds.has(row.id),
+    );
+    const logOnlyIds = [
+      ...new Set([
+        ...(this.form.logOnlyExerciseIds ?? []),
+        ...(remote.logOnlyExerciseIds ?? []),
+      ]),
+    ];
+
+    if (
+      additions.length ||
+      logOnlyIds.length !== (this.form.logOnlyExerciseIds?.length ?? 0)
+    ) {
+      changed = true;
+    }
+
+    for (const id of remote.logOnlyExerciseIds ?? []) {
+      if (
+        this.unsavedExercises.has(id) &&
+        log.exerciseLogIds?.[id] &&
+        ![...this.dirty, ...this.queued, ...this.deleting].some((key) =>
+          key.startsWith(`${id}:`),
+        )
+      ) {
+        this.unsavedExercises.delete(id);
+        changed = true;
+      }
+    }
+
     const inputs = { ...this.form.inputs };
 
     for (const key of new Set([
@@ -420,6 +498,11 @@ export class WorkoutLogEditor {
         completedAt: log.completedAt,
         completedOn: log.completedOn,
         exerciseLogIds: { ...this.form.exerciseLogIds, ...log.exerciseLogIds },
+        snapshot: {
+          ...this.form.snapshot,
+          exercises: [...this.form.snapshot.exercises, ...additions],
+        },
+        logOnlyExerciseIds: logOnlyIds,
         inputs,
       };
       this.emit();

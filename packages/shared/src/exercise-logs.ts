@@ -1,8 +1,10 @@
 import * as z from "zod";
 import { calendarDateSchema, timeZoneSchema } from "./habits";
 import {
+  type CatalogExercise,
   type WorkoutExercise,
   type WorkoutSetValues,
+  workoutExerciseSchema,
   workoutLogSnapshotSchema,
   workoutSetValuesSchema,
 } from "./workouts";
@@ -24,6 +26,7 @@ export const saveExerciseSetSchema = z
     timeZone: timeZoneSchema,
     optimisticTimestamp: z.number().nonnegative(),
     values: workoutSetValuesSchema,
+    logOnlyExercise: workoutExerciseSchema.optional(),
   })
   .strict();
 
@@ -34,6 +37,24 @@ export const removeExerciseSetSchema = z
 export type SaveExerciseSet = z.infer<typeof saveExerciseSetSchema>;
 
 export type RemoveExerciseSet = z.infer<typeof removeExerciseSetSchema>;
+
+// A catalog ID is a stable, per-log slot key (the link PK also includes logId).
+// Concurrent devices therefore cannot create duplicate log-only occurrences.
+export function logOnlyWorkoutExercise(
+  exercise: CatalogExercise,
+): WorkoutExercise {
+  return {
+    id: exercise.id,
+    catalogExerciseId: exercise.id,
+    name: exercise.name,
+    unit: exercise.unit,
+    load: exercise.load,
+    unilateral: exercise.unilateral,
+    role: "workout",
+    sets: 2,
+    target: "",
+  };
+}
 
 export function isCompleteExerciseSet(
   exercise: Pick<WorkoutExercise, "load" | "unilateral">,
