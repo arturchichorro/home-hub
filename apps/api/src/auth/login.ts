@@ -41,7 +41,9 @@ export function createLoginService(input: CreateLoginServiceInput) {
       passwordHash,
     });
 
-    if (!user || !passwordIsValid) return { kind: "invalid_credentials" };
+    if (!user || !passwordIsValid) {
+      return { kind: "invalid_credentials" };
+    }
 
     const now = new Date();
     const refreshTokenId = randomUUID();

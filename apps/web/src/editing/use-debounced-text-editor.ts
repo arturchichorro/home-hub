@@ -70,7 +70,10 @@ export function useDebouncedTextEditor({
 
   const replaceDraft = useCallback((value: string) => {
     draftValueRef.current = value;
-    if (mountedRef.current) setDraftValue(value);
+
+    if (mountedRef.current) {
+      setDraftValue(value);
+    }
   }, []);
 
   const revertDraft = useCallback(() => {
@@ -80,28 +83,38 @@ export function useDebouncedTextEditor({
   const saveDraft = useCallback(
     async (validateRequired: boolean, canonicalizeVisibleDraft: boolean) => {
       clearScheduledSave();
-      if (appUpdates.getState().required) return;
+
+      if (appUpdates.getState().required) {
+        return;
+      }
 
       if (saveInFlightRef.current) {
         queuedSaveRef.current = true;
         queuedValidationRef.current ||= validateRequired;
         queuedCanonicalizationRef.current ||= canonicalizeVisibleDraft;
+
         return;
       }
 
       if (!mutationEnabled) {
-        if (!preserveOnFailure) revertDraft();
+        if (!preserveOnFailure) {
+          revertDraft();
+        }
+
         setError(failureError);
+
         return;
       }
 
       const submittedDraft = draftValueRef.current;
       const submittedValue = normalizeRef.current(submittedDraft);
+
       if (required && submittedValue.length === 0) {
         if (validateRequired) {
           revertDraft();
           setError(emptyError ?? failureError);
         }
+
         return;
       }
 
@@ -115,13 +128,16 @@ export function useDebouncedTextEditor({
         ) {
           replaceDraft(submittedValue);
         }
+
         return;
       }
 
       saveInFlightRef.current = true;
       setIsSaving(true);
       setError(undefined);
+
       let success = false;
+
       try {
         success = await saveMutationRef.current(submittedValue);
       } catch {
@@ -130,6 +146,7 @@ export function useDebouncedTextEditor({
 
       if (success) {
         confirmedValueRef.current = submittedValue;
+
         if (
           shouldCanonicalizeVisibleDraft(
             canonicalizeVisibleDraft,
@@ -143,12 +160,20 @@ export function useDebouncedTextEditor({
         !appUpdates.getState().required &&
         draftMatchesSaveSnapshot(draftValueRef.current, submittedDraft)
       ) {
-        if (!preserveOnFailure) revertDraft();
-        if (mountedRef.current) setError(failureError);
+        if (!preserveOnFailure) {
+          revertDraft();
+        }
+
+        if (mountedRef.current) {
+          setError(failureError);
+        }
       }
 
       saveInFlightRef.current = false;
-      if (mountedRef.current) setIsSaving(false);
+
+      if (mountedRef.current) {
+        setIsSaving(false);
+      }
 
       if (queuedSaveRef.current) {
         const validateQueued = queuedValidationRef.current;
@@ -176,10 +201,14 @@ export function useDebouncedTextEditor({
   saveDraftRef.current = saveDraft;
 
   useEffect(() => {
-    if (saveInFlightRef.current) return;
+    if (saveInFlightRef.current) {
+      return;
+    }
+
     const nextValue = normalizeRef.current(currentValue);
     const previousConfirmedValue = confirmedValueRef.current;
     confirmedValueRef.current = nextValue;
+
     if (draftValueRef.current === previousConfirmedValue) {
       replaceDraft(nextValue);
     }
@@ -187,6 +216,7 @@ export function useDebouncedTextEditor({
 
   useEffect(() => {
     mountedRef.current = true;
+
     return () => {
       mountedRef.current = false;
       clearScheduledSave();
@@ -220,23 +250,33 @@ export function useDebouncedTextEditor({
 
   return {
     changeValue,
+
     retry: () => void saveDraft(true, true),
+
     discard: () => {
       clearScheduledSave();
       revertDraft();
       setError(undefined);
     },
+
     error,
     errorId,
+
     handleBlur: () => {
       // Moving to Retry/Discard must not silently resubmit a failed draft.
-      if (preserveOnFailure && error) return;
+      if (preserveOnFailure && error) {
+        return;
+      }
+
       void saveDraft(true, true);
     },
+
     handleKeyDown,
     isSaving,
     hasChanges: draftValue !== confirmedValueRef.current,
+
     dismissError: () => setError(undefined),
+
     value: draftValue,
   };
 }

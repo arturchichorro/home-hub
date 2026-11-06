@@ -11,6 +11,7 @@ type PendingRead = {
 };
 
 const pendingGroups = new Map<string, PendingRead[]>();
+
 let flushScheduled = false;
 
 function groupKey(identity: RecipeImageUrlIdentity) {
@@ -19,12 +20,16 @@ function groupKey(identity: RecipeImageUrlIdentity) {
 
 async function flushGroup(reads: PendingRead[]) {
   const first = reads[0];
-  if (!first) return;
+
+  if (!first) {
+    return;
+  }
 
   try {
     const result = await createRecipeImageReadUrls({
       accessToken: first.identity.accessToken,
       householdId: first.identity.householdId,
+
       requests: reads.map(({ identity }) => ({
         imageId: identity.imageId,
         recipeId: identity.recipeId,
@@ -33,7 +38,10 @@ async function flushGroup(reads: PendingRead[]) {
     });
 
     if (result.kind !== "success") {
-      for (const read of reads) read.resolve(result);
+      for (const read of reads) {
+        read.resolve(result);
+      }
+
       return;
     }
 
@@ -43,6 +51,7 @@ async function flushGroup(reads: PendingRead[]) {
         read,
       ]),
     );
+
     for (const read of reads) {
       const resultForRead = resultsByKey.get(
         `${read.identity.recipeId}:${read.identity.imageId}:${read.identity.variant}`,
@@ -58,14 +67,18 @@ async function flushGroup(reads: PendingRead[]) {
       );
     }
   } catch (error) {
-    for (const read of reads) read.reject(error);
+    for (const read of reads) {
+      read.reject(error);
+    }
   }
 }
 
 function flushPendingReads() {
   flushScheduled = false;
+
   const groups = Array.from(pendingGroups.values());
   pendingGroups.clear();
+
   for (const reads of groups) {
     for (let index = 0; index < reads.length; index += 100) {
       void flushGroup(reads.slice(index, index + 100));

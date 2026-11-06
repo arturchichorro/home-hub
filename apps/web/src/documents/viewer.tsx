@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import type { MediaSession } from "../media/session";
 import { useBlockAppUpdate } from "../updates/activity";
 import { readDocument } from "./api";
+
 export function DocumentViewer({
   householdId,
   documentId,
@@ -22,13 +23,16 @@ export function DocumentViewer({
   session: MediaSession;
   onClose: () => void;
 }) {
-  const [file, setFile] = useState<Awaited<ReturnType<typeof readDocument>>>(),
-    [error, setError] = useState(false),
-    [attempt, setAttempt] = useState(0);
+  const [file, setFile] = useState<Awaited<ReturnType<typeof readDocument>>>();
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useBlockAppUpdate(true);
+
   const { accessToken, onSessionExpired, userId } = session;
+
   useEffect(() => {
     void attempt;
+
     let alive = true;
     setError(false);
     setFile(undefined);
@@ -39,21 +43,29 @@ export function DocumentViewer({
       "inline",
     ).then(
       (f) => {
-        if (alive) setFile(f);
+        if (alive) {
+          setFile(f);
+        }
       },
       () => {
-        if (alive) setError(true);
+        if (alive) {
+          setError(true);
+        }
       },
     );
+
     return () => {
       alive = false;
     };
   }, [accessToken, onSessionExpired, userId, householdId, documentId, attempt]);
+
   return (
     <DialogRoot
       open
       onOpenChange={(open) => {
-        if (!open) onClose();
+        if (!open) {
+          onClose();
+        }
       }}
     >
       <DialogPopup
@@ -127,6 +139,7 @@ export function DocumentViewer({
     </DialogRoot>
   );
 }
+
 export async function downloadDocument(
   session: MediaSession,
   householdId: string,

@@ -1,9 +1,13 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 const accessTokenIssuer = "home-hub-api";
+
 const accessTokenAudience = "home-hub-api";
+
 const accessTokenAlgorithm = "HS256";
+
 const accessTokenType = "JWT";
+
 const defaultAccessTokenTtlSeconds = 10 * 60;
 
 export type AccessTokenClaims = {

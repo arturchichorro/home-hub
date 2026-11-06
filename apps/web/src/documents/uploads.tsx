@@ -22,6 +22,7 @@ import {
   uploadDocumentBytes,
 } from "./api";
 import { DocumentWorkGuard } from "./work-guard";
+
 export function DocumentUpload({
   session,
   householdId,
@@ -37,32 +38,40 @@ export function DocumentUpload({
   onSaved?: () => void;
   trigger?: (props: { choose: () => void; disabled: boolean }) => ReactNode;
 }) {
-  const input = useRef<HTMLInputElement>(null),
-    lock = useRef(false),
-    mounted = useRef(true),
-    enabled = useZeroMutationEnabled();
-  const [file, setFile] = useState<File>(),
-    [pending, setPending] = useState<UploadSession>(),
-    [uploaded, setUploaded] = useState(false),
-    [started, setStarted] = useState(0),
-    [busy, setBusy] = useState(false),
-    [percent, setPercent] = useState(0),
-    [phase, setPhase] = useState(""),
-    [error, setError] = useState<string>();
+  const input = useRef<HTMLInputElement>(null);
+  const lock = useRef(false);
+  const mounted = useRef(true);
+  const enabled = useZeroMutationEnabled();
+  const [file, setFile] = useState<File>();
+  const [pending, setPending] = useState<UploadSession>();
+  const [uploaded, setUploaded] = useState(false);
+  const [started, setStarted] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [percent, setPercent] = useState(0);
+  const [phase, setPhase] = useState("");
+  const [error, setError] = useState<string>();
   const key = `${documentId ?? "new"}:upload`;
   const chooseFile = useCallback(() => input.current?.click(), []);
+
   useEffect(() => {
     mounted.current = true;
+
     return () => {
       mounted.current = false;
     };
   }, []);
+
   useEffect(() => {
     onWork?.(key, !!file || busy);
+
     return () => onWork?.(key, false);
   }, [onWork, key, file, busy]);
+
   function discard() {
-    if (lock.current) return;
+    if (lock.current) {
+      return;
+    }
+
     setFile(undefined);
     setPending(undefined);
     setUploaded(false);
@@ -70,22 +79,31 @@ export function DocumentUpload({
     setPercent(0);
     setPhase("");
   }
+
   async function run(chosen: File) {
-    if (lock.current || !enabled) return;
+    if (lock.current || !enabled) {
+      return;
+    }
+
     lock.current = true;
     setBusy(true);
     setError(undefined);
     setFile(chosen);
+
     try {
       const validation = documentUploadSchema.safeParse({
         filename: chosen.name,
         byteSize: chosen.size,
         ...(documentId ? { documentId } : {}),
       });
-      if (!validation.success)
+
+      if (!validation.success) {
         throw Error("Choose a supported document up to 50 MiB.");
-      let upload = pending,
-        alreadyUploaded = uploaded;
+      }
+
+      let upload = pending;
+      let alreadyUploaded = uploaded;
+
       if (!upload || (!alreadyUploaded && Date.now() - started > 240000)) {
         setPhase("Preparing");
         upload = await beginDocumentUpload(
@@ -99,15 +117,20 @@ export function DocumentUpload({
         alreadyUploaded = false;
         setUploaded(false);
       }
+
       if (!alreadyUploaded) {
         setPhase("Uploading");
         await uploadDocumentBytes(chosen, upload.url, (n) => {
-          if (mounted.current) setPercent(n);
+          if (mounted.current) {
+            setPercent(n);
+          }
         });
         setUploaded(true);
       }
+
       setPhase("Checking file");
       await confirmDocumentUpload(session, householdId, upload.fileId);
+
       if (mounted.current) {
         setFile(undefined);
         setPending(undefined);
@@ -116,15 +139,20 @@ export function DocumentUpload({
         onSaved?.();
       }
     } catch (e) {
-      if (mounted.current)
+      if (mounted.current) {
         setError(
           e instanceof Error ? e.message : "Unable to upload this document.",
         );
+      }
     } finally {
       lock.current = false;
-      if (mounted.current) setBusy(false);
+
+      if (mounted.current) {
+        setBusy(false);
+      }
     }
   }
+
   return (
     <div className={documentId ? "" : "contents"}>
       <input
@@ -141,12 +169,16 @@ export function DocumentUpload({
         onChange={(e) => {
           const chosen = e.target.files?.[0];
           e.target.value = "";
-          if (chosen) void run(chosen);
+
+          if (chosen) {
+            void run(chosen);
+          }
         }}
       />
       {trigger ? (
         trigger({
           choose: () => input.current?.click(),
+
           disabled: !enabled || !!file,
         })
       ) : documentId ? (
@@ -233,5 +265,6 @@ function DocumentUploadHeaderAction({
     [choose, disabled],
   );
   useAppHeaderRightComponent(action);
+
   return null;
 }

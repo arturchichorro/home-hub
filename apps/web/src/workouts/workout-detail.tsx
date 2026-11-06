@@ -46,7 +46,9 @@ import {
 } from "./workout-log-projection";
 
 const emptySubscribe = () => () => {};
+
 const emptySnapshot = () => undefined;
+
 export function WorkoutDetail(props: {
   householdId: string;
   workoutId: string;
@@ -58,6 +60,7 @@ export function WorkoutDetail(props: {
     />
   );
 }
+
 function WorkoutDetailPage({
   householdId,
   workoutId,
@@ -65,8 +68,8 @@ function WorkoutDetailPage({
   householdId: string;
   workoutId: string;
 }) {
-  const zero = useZero(),
-    enabled = useZeroMutationEnabled();
+  const zero = useZero();
+  const enabled = useZeroMutationEnabled();
   const [workout, result] = useQuery(
     queries.workouts.detail({ householdId, workoutId }),
   );
@@ -74,10 +77,18 @@ function WorkoutDetailPage({
   const noteDraftChanged = useCallback(
     (id: string, dirty: boolean) =>
       setDirtyNotes((previous) => {
-        if (previous.has(id) === dirty) return previous;
+        if (previous.has(id) === dirty) {
+          return previous;
+        }
+
         const next = new Set(previous);
-        if (dirty) next.add(id);
-        else next.delete(id);
+
+        if (dirty) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+
         return next;
       }),
     [],
@@ -99,12 +110,13 @@ function WorkoutDetailPage({
     emptySnapshot,
   );
   const form = state?.form;
-  const activeLogId = form?.id,
-    activeLogDay = form?.completedOn,
-    startedAt = form?.startedAt;
+  const activeLogId = form?.id;
+  const activeLogDay = form?.completedOn;
+  const startedAt = form?.startedAt;
   const [day, setDay] = useState(() =>
     calendarDate(Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone),
   );
+
   useEffect(() => {
     const update = () =>
       setDay(
@@ -115,11 +127,13 @@ function WorkoutDetailPage({
       );
     const timer = setInterval(update, 60_000);
     window.addEventListener("focus", update);
+
     return () => {
       clearInterval(timer);
       window.removeEventListener("focus", update);
     };
   }, []);
+
   const [dailyRows, dailyResult] = useQuery(
     queries.workouts.logForDay({ householdId, workoutId, completedOn: day }),
   );
@@ -143,23 +157,34 @@ function WorkoutDetailPage({
     .slice(0, workoutHistoryPageSize)
     .map(projectWorkoutLog);
   const selected = logs.find((log) => log.id === activeLogId);
-  if (selected && !visibleLogs.some((log) => log.id === selected.id))
+
+  if (selected && !visibleLogs.some((log) => log.id === selected.id)) {
     visibleLogs.unshift(selected);
-  const loaded = result.type === "complete" && dailyResult.type === "complete",
-    disabled = !enabled || !loaded;
+  }
+
+  const loaded = result.type === "complete" && dailyResult.type === "complete";
+  const disabled = !enabled || !loaded;
   const enabledRef = useRef(false);
   enabledRef.current = !disabled;
+
   const latestWorkout = useRef(workout);
   latestWorkout.current = workout;
+
   const latestLogs = useRef(logs);
   latestLogs.current = logs;
+
   const [error, setError] = useState("");
   const [confirmClose, setConfirmClose] = useState(false);
   const action = useRef<() => void>(() => {});
   useBlockAppUpdate(Boolean(editor));
+
   useEffect(() => () => editor?.dispose(), [editor]);
+
   useEffect(() => {
-    if (!editor) return;
+    if (!editor) {
+      return;
+    }
+
     const log =
       logs.find((entry) => entry.id === activeLogId) ??
       (activeLogDay
@@ -169,15 +194,25 @@ function WorkoutDetailPage({
             startedAt ?? Date.now(),
             Intl.DateTimeFormat().resolvedOptions().timeZone,
           ));
-    if (log) editor.sync(log);
+
+    if (log) {
+      editor.sync(log);
+    }
   }, [editor, logs, activeLogId, activeLogDay, startedAt]);
+
   const blocker = useBlocker({
     shouldBlockFn: () => {
-      if (!editor?.getSnapshot().hasChanges) return false;
+      if (!editor?.getSnapshot().hasChanges) {
+        return false;
+      }
+
       void editor.flush();
+
       return true;
     },
+
     enableBeforeUnload: () => Boolean(editor?.getSnapshot().hasChanges),
+
     withResolver: true,
   });
   const [previousRows] = useQuery(
@@ -197,41 +232,69 @@ function WorkoutDetailPage({
   );
   const previous = useMemo(() => {
     const map = new Map<string, ExercisePerformance>();
+
     for (const row of previousRows ?? []) {
       const occurrence = row.performances[0];
-      if (occurrence) map.set(row.id, occurrence);
+
+      if (occurrence) {
+        map.set(row.id, occurrence);
+      }
     }
+
     return map;
   }, [previousRows]);
+
   async function perform(
     request: Parameters<typeof zero.mutate>[0],
     report = false,
   ) {
-    if (!enabledRef.current) return false;
+    if (!enabledRef.current) {
+      return false;
+    }
+
     const release = blockAppUpdate();
-    if (report) setError("");
+
+    if (report) {
+      setError("");
+    }
+
     try {
       const mutation = zero.mutate(request);
       const outcome = await acknowledgeMutation(mutation);
-      if (outcome.type === "error") throw Error("save");
+
+      if (outcome.type === "error") {
+        throw Error("save");
+      }
+
       return true;
     } catch {
-      if (report) setError("Unable to save workout.");
+      if (report) {
+        setError("Unable to save workout.");
+      }
+
       return false;
     } finally {
       release();
     }
   }
+
   function requestAction(next: () => void) {
     if (editor?.getSnapshot().hasChanges) {
       void editor.flush();
       action.current = next;
       setConfirmClose(true);
-    } else next();
+    } else {
+      next();
+    }
   }
+
   function startLog(existing?: WorkoutLog) {
     const current = latestWorkout.current;
-    if (!current || disabled) return;
+
+    if (!current || disabled) {
+      return;
+    }
+
     requestAction(() => {
       setEditor(
         new WorkoutLogEditor(
@@ -251,8 +314,11 @@ function WorkoutDetailPage({
             householdId,
             workoutId,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+
             enabled: () => enabledRef.current,
+
             save: (args) => perform(mutators.workouts.saveSet(args)),
+
             remove: (args) => perform(mutators.workouts.removeSet(args)),
           },
         ),
@@ -260,39 +326,52 @@ function WorkoutDetailPage({
       setError("");
     });
   }
+
   function closeLog() {
     requestAction(() => {
       setEditor(undefined);
       setError("");
     });
   }
+
   function cancelDiscard() {
     setConfirmClose(false);
     blocker.reset?.();
   }
+
   function discard() {
     setConfirmClose(false);
+
     if (blocker.status === "blocked") {
       editor?.dispose();
       blocker.proceed?.();
-    } else action.current();
+    } else {
+      action.current();
+    }
   }
+
   useAppHeaderRightComponent(null);
-  if (result.type === "error" || dailyResult.type === "error")
+
+  if (result.type === "error" || dailyResult.type === "error") {
     return (
       <InlineAlert role="alert" variant="danger">
         Unable to load workout.
       </InlineAlert>
     );
-  if (!workout)
+  }
+
+  if (!workout) {
     return result.type === "complete" ? (
       <p className="text-muted">Workout not found.</p>
     ) : null;
+  }
+
   const scope = () => ({
     householdId,
     workoutId,
     optimisticTimestamp: Date.now(),
   });
+
   return (
     <article className="grid min-w-0 gap-2">
       {error && (
@@ -323,12 +402,15 @@ function WorkoutDetailPage({
         disabled={disabled}
         onSave={async (exercises, previous) => {
           const edits = planExerciseEdits(previous, exercises);
+
           if (
             !edits.creates.length &&
             !edits.updates.length &&
             !edits.deletes.length
-          )
+          ) {
             return true;
+          }
+
           return perform(
             mutators.workouts.editExercises({ ...scope(), ...edits }),
             true,
@@ -343,10 +425,13 @@ function WorkoutDetailPage({
                 state,
                 previous,
                 onChange: editor.change,
+
                 onFlush: (id, round) => {
                   void editor.flush(id, round);
                 },
+
                 onAddSet: editor.addSet,
+
                 onRemoveSet: (id, round) => {
                   void editor.removeSet(id, round);
                 },
@@ -444,7 +529,8 @@ function WorkoutDetailPage({
               disabled={logResult.type !== "complete" || dirtyNotes.size > 0}
               onClick={() => {
                 const last = logRows[workoutHistoryPageSize - 1];
-                if (last)
+
+                if (last) {
                   setCursors((previous) => [
                     ...previous,
                     {
@@ -453,6 +539,7 @@ function WorkoutDetailPage({
                       id: last.id,
                     },
                   ]);
+                }
               }}
             >
               Load older history
@@ -463,7 +550,9 @@ function WorkoutDetailPage({
       <DialogRoot
         open={confirmClose || blocker.status === "blocked"}
         onOpenChange={(open) => {
-          if (!open) cancelDiscard();
+          if (!open) {
+            cancelDiscard();
+          }
         }}
       >
         <DialogPopup

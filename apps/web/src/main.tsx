@@ -56,20 +56,27 @@ async function start() {
         <UiGallery />
       </StrictMode>,
     );
+
     return;
   }
 
   const result = await restoreStartupSession();
 
   if (result.kind === "online") {
-    if (result.session) saveSessionBootstrap(result.session.user);
-    else clearSessionBootstrap();
+    if (result.session) {
+      saveSessionBootstrap(result.session.user);
+    } else {
+      clearSessionBootstrap();
+    }
+
     renderApplication(result.session);
+
     return;
   }
 
   if (result.kind === "offline" && result.session) {
     renderApplication(result.session);
+
     return;
   }
 
@@ -78,6 +85,7 @@ async function start() {
       "Home Hub is offline",
       "Connect once to sign in and synchronize your household data.",
     );
+
     return;
   }
 
@@ -88,4 +96,5 @@ async function start() {
 }
 
 startAppUpdates();
+
 void start();

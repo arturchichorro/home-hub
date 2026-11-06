@@ -13,11 +13,11 @@ import {
   findEnabledHouseholdModuleForShare,
   findHouseholdMembershipForShare,
 } from "../../authorization/household-access";
+import { mediaUploadUrlLifetimeSeconds as recipeImageUploadUrlLifetimeSeconds } from "../../media/sign-upload";
 import {
   findRecipeCookLogForShare,
   findRecipeForShare,
 } from "./scoped-entities";
-import { recipeImageUploadUrlLifetimeSeconds } from "./sign-upload";
 
 type SignUpload = (input: {
   objectKey: string;
@@ -75,22 +75,34 @@ export function createRecipeImageUploadService({
   }: CreateRecipeImageUploadInput): Promise<CreateRecipeImageUploadResult> {
     return db.transaction(async (tx) => {
       const user = await findActiveUser(tx, userId);
-      if (!user) return { kind: "unauthorized" };
+
+      if (!user) {
+        return { kind: "unauthorized" };
+      }
 
       const membership = await findHouseholdMembershipForShare(tx, {
         householdId,
         userId,
       });
-      if (!membership) return { kind: "forbidden" };
+
+      if (!membership) {
+        return { kind: "forbidden" };
+      }
 
       const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
         householdId,
         moduleKey: "recipes",
       });
-      if (!moduleSetting) return { kind: "forbidden" };
+
+      if (!moduleSetting) {
+        return { kind: "forbidden" };
+      }
 
       const recipe = await findRecipeForShare(tx, { householdId, recipeId });
-      if (!recipe) return { kind: "not_found" };
+
+      if (!recipe) {
+        return { kind: "not_found" };
+      }
 
       if (cookLogId !== null) {
         const cookLog = await findRecipeCookLogForShare(tx, {
@@ -98,7 +110,10 @@ export function createRecipeImageUploadService({
           recipeId,
           cookLogId,
         });
-        if (!cookLog) return { kind: "not_found" };
+
+        if (!cookLog) {
+          return { kind: "not_found" };
+        }
       }
 
       const imageId = randomUUID();
@@ -137,7 +152,11 @@ export function createRecipeImageUploadService({
           deletedAt: null,
         })
         .returning({ id: media.id });
-      if (!asset) throw new Error("Pending media insert returned no row");
+
+      if (!asset) {
+        throw new Error("Pending media insert returned no row");
+      }
+
       const [image] = await tx
         .insert(recipeMedia)
         .values({
@@ -150,8 +169,10 @@ export function createRecipeImageUploadService({
           deletedAt: null,
         })
         .returning({ id: recipeMedia.id });
-      if (!image)
+
+      if (!image) {
         throw new Error("Pending recipe image insert returned no row");
+      }
 
       const uploadUrl = await signUpload({ objectKey, contentType });
 

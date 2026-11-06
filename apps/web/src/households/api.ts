@@ -8,9 +8,7 @@ import {
   createHouseholdRequestSchema,
   createHouseholdResponseSchema,
   type ListHouseholdInvitesResponse,
-  type ListHouseholdMembersResponse,
   listHouseholdInvitesResponseSchema,
-  listHouseholdMembersResponseSchema,
   renameHouseholdRequestSchema,
   transferHouseholdOwnershipRequestSchema,
 } from "@home-hub/shared/households";
@@ -49,7 +47,9 @@ export async function acceptHouseholdInvite({
 }: AcceptHouseholdInviteCommandInput): Promise<AcceptHouseholdInviteCommandResult> {
   const parsedRequest = acceptHouseholdInviteRequestSchema.safeParse({ token });
 
-  if (!parsedRequest.success) return { kind: "invalid_invite" };
+  if (!parsedRequest.success) {
+    return { kind: "invalid_invite" };
+  }
 
   const request = parsedRequest.data;
   const response = await fetch("/api/households/invites/accept", {
@@ -61,10 +61,21 @@ export async function acceptHouseholdInvite({
     body: JSON.stringify(request),
   });
 
-  if (response.status === 401) return { kind: "unauthorized" };
-  if (response.status === 400) return { kind: "invalid_invite" };
-  if (response.status === 409) return { kind: "already_member" };
-  if (!response.ok) throw new Error("Failed to accept household invite");
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 400) {
+    return { kind: "invalid_invite" };
+  }
+
+  if (response.status === 409) {
+    return { kind: "already_member" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to accept household invite");
+  }
 
   const { membership } = acceptHouseholdInviteResponseSchema.parse(
     await response.json(),
@@ -91,8 +102,13 @@ export async function createHousehold({
     body: JSON.stringify(request),
   });
 
-  if (response.status === 401) return { kind: "unauthorized" };
-  if (!response.ok) throw new Error("Failed to create household");
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to create household");
+  }
 
   const { household } = createHouseholdResponseSchema.parse(
     await response.json(),
@@ -100,11 +116,6 @@ export async function createHousehold({
 
   return { kind: "success", household };
 }
-
-export type ListHouseholdMembersCommandResult =
-  | { kind: "success"; members: ListHouseholdMembersResponse["members"] }
-  | { kind: "unauthorized" }
-  | { kind: "forbidden" };
 
 export type ListHouseholdInvitesCommandResult =
   | { kind: "success"; invites: ListHouseholdInvitesResponse["invites"] }
@@ -133,9 +144,17 @@ export async function createHouseholdInvite({
     },
   );
 
-  if (response.status === 401) return { kind: "unauthorized" };
-  if (response.status === 403) return { kind: "forbidden" };
-  if (!response.ok) throw new Error("Failed to create household invite");
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to create household invite");
+  }
 
   const { invite } = createHouseholdInviteResponseSchema.parse(
     await response.json(),
@@ -256,26 +275,6 @@ export async function deleteHousehold({
     },
   );
 
-  if (response.status === 401) return { kind: "unauthorized" };
-  if (response.status === 403) return { kind: "forbidden" };
-  if (!response.ok) throw new Error("Failed to delete household");
-
-  return { kind: "success" };
-}
-
-export async function listHouseholdMembers({
-  accessToken,
-  householdId,
-}: HouseholdReadCommandInput): Promise<ListHouseholdMembersCommandResult> {
-  const response = await fetch(
-    `/api/households/${encodeURIComponent(householdId)}/members`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    },
-  );
-
   if (response.status === 401) {
     return { kind: "unauthorized" };
   }
@@ -285,14 +284,10 @@ export async function listHouseholdMembers({
   }
 
   if (!response.ok) {
-    throw new Error("Failed to list household members");
+    throw new Error("Failed to delete household");
   }
 
-  const { members } = listHouseholdMembersResponseSchema.parse(
-    await response.json(),
-  );
-
-  return { kind: "success", members };
+  return { kind: "success" };
 }
 
 export async function listHouseholdInvites({
@@ -485,9 +480,22 @@ export async function setHouseholdModuleEnabled({
       body: JSON.stringify(body),
     },
   );
-  if (response.status === 401) return { kind: "unauthorized" };
-  if (response.status === 403) return { kind: "forbidden" };
-  if (response.status === 409) return { kind: "module_not_configured" };
-  if (!response.ok) throw new Error("Failed to update household module");
+
+  if (response.status === 401) {
+    return { kind: "unauthorized" };
+  }
+
+  if (response.status === 403) {
+    return { kind: "forbidden" };
+  }
+
+  if (response.status === 409) {
+    return { kind: "module_not_configured" };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to update household module");
+  }
+
   return { kind: "success" };
 }

@@ -1,7 +1,7 @@
 import { forwardRef, type ReactNode } from "react";
 import { Button, type ButtonProps } from "./button";
 
-export type IconButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+type IconButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 export type IconButtonProps = Omit<
   ButtonProps,

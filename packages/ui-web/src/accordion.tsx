@@ -3,12 +3,16 @@ import type { ComponentProps } from "react";
 import { ChevronDown } from "./icons";
 
 export const AccordionRoot = BaseAccordion.Root;
+
 export const AccordionItem = BaseAccordion.Item;
+
 export const AccordionHeader = BaseAccordion.Header;
+
 export type AccordionTriggerProps = Omit<
   ComponentProps<typeof BaseAccordion.Trigger>,
   "className"
 > & { className?: string };
+
 export function AccordionTrigger({
   children,
   className,
@@ -32,10 +36,12 @@ export function AccordionTrigger({
     </BaseAccordion.Trigger>
   );
 }
+
 export type AccordionPanelProps = Omit<
   ComponentProps<typeof BaseAccordion.Panel>,
   "className"
 > & { className?: string };
+
 export function AccordionPanel({
   children,
   className,

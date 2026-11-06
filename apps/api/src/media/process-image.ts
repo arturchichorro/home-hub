@@ -11,10 +11,12 @@ export class InvalidMediaUploadError extends Error {
     super("Unsupported or invalid image upload");
   }
 }
+
 export const processMediaImage = instrumentOperation(
   "media.process_image",
   processMediaImageImplementation,
 );
+
 async function processMediaImageImplementation({
   baseUrl,
   identity,
@@ -53,7 +55,12 @@ async function processMediaImageImplementation({
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...capability, signature }),
   });
-  if (response.status === 422) throw new InvalidMediaUploadError();
-  if (!response.ok)
+
+  if (response.status === 422) {
+    throw new InvalidMediaUploadError();
+  }
+
+  if (!response.ok) {
     throw new Error(`Media image processing failed (${response.status})`);
+  }
 }

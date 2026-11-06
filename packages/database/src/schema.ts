@@ -36,14 +36,18 @@ export const refreshTokens = pgTable(
   {
     id: uuid("id").primaryKey(),
     tokenHash: text("token_hash").notNull().unique(),
+
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
+
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
+
     replacedById: uuid("replaced_by_id").references(
       (): AnyPgColumn => refreshTokens.id,
     ),
+
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -75,12 +79,15 @@ export const householdMembers = pgTable(
   "household_members",
   {
     id: uuid("id").primaryKey(),
+
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
+
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
+
     role: householdMemberRoleEnum().notNull(),
     sortKey: integer("sort_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -110,12 +117,15 @@ export const householdInvites = pgTable(
   "household_invites",
   {
     id: uuid("id").primaryKey(),
+
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
+
     creatorId: uuid("creator_id")
       .notNull()
       .references(() => users.id),
+
     tokenHash: text("token_hash").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     acceptedAt: timestamp("accepted_at", { withTimezone: true }),
@@ -169,9 +179,11 @@ export const habits = pgTable(
   "habits",
   {
     id: uuid("id").primaryKey(),
+
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
+
     name: text("name").notNull(),
     workoutMode: text("workout_mode", { enum: ["none", "any", "selected"] })
       .notNull()
@@ -218,9 +230,11 @@ export const habitEntries = pgTable(
   {
     householdId: uuid("household_id").notNull(),
     habitId: uuid("habit_id").notNull(),
+
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
+
     entryOn: text("entry_on").notNull(),
     completed: boolean("completed").notNull().default(false),
     workoutCompleted: boolean("workout_completed").notNull().default(false),
@@ -286,9 +300,11 @@ export const lists = pgTable(
   "lists",
   {
     id: uuid("id").primaryKey(),
+
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
+
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
     kind: text("kind", { enum: ["checklist", "moodboard"] })
@@ -321,9 +337,11 @@ export const listItems = pgTable(
   "list_items",
   {
     id: uuid("id").primaryKey(),
+
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
+
     listId: uuid("list_id").notNull(),
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
@@ -381,9 +399,11 @@ export const recipes = pgTable(
   "recipes",
   {
     id: uuid("id").primaryKey(),
+
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
+
     title: text("title").notNull(),
     description: text("description"),
     sortKey: integer("sort_key").notNull(),
@@ -511,6 +531,7 @@ export const householdModuleSettings = pgTable(
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
+
     moduleKey: text("module_key").notNull(),
     enabled: boolean("enabled").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -542,9 +563,11 @@ export const media = pgTable(
   "media",
   {
     id: uuid("id").primaryKey(),
+
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
+
     kind: text("kind").notNull(),
     objectKey: text("object_key").notNull().unique(),
     contentType: text("content_type").notNull(),
@@ -640,6 +663,7 @@ export const listMedia = pgTable(
       .where(sql`${t.deletedAt} is null`),
   ],
 );
+
 export const listMediaRelations = relations(listMedia, ({ one }) => ({
   list: one(lists, {
     fields: [listMedia.householdId, listMedia.listId],
@@ -703,9 +727,11 @@ export const workouts = pgTable(
   {
     id: uuid("id").primaryKey(),
     sortKey: integer("sort_key").notNull().default(0),
+
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
+
     title: text("title").notNull(),
     notes: text("notes").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -724,13 +750,16 @@ export const workouts = pgTable(
     ),
   ],
 );
+
 export const exercises = pgTable(
   "exercises",
   {
     id: uuid("id").primaryKey(),
+
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
+
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
     unit: text("unit").notNull(),
@@ -762,6 +791,7 @@ export const exercises = pgTable(
     ),
   ],
 );
+
 export const exerciseMedia = pgTable(
   "exercise_media",
   {
@@ -795,6 +825,7 @@ export const exerciseMedia = pgTable(
     index("exercise_media_media_id").on(table.mediaId),
   ],
 );
+
 export const exerciseMediaRelations = relations(exerciseMedia, ({ one }) => ({
   exercise: one(exercises, {
     fields: [exerciseMedia.householdId, exerciseMedia.exerciseId],
@@ -805,6 +836,7 @@ export const exerciseMediaRelations = relations(exerciseMedia, ({ one }) => ({
     references: [media.householdId, media.id],
   }),
 }));
+
 export const exercisesRelations = relations(exercises, ({ one, many }) => ({
   images: many(exerciseMedia),
   performances: many(exerciseLogs),
@@ -813,6 +845,7 @@ export const exercisesRelations = relations(exercises, ({ one, many }) => ({
     references: [households.id],
   }),
 }));
+
 export const habitWorkoutLinks = pgTable(
   "habit_workout_links",
   {
@@ -839,6 +872,7 @@ export const habitWorkoutLinks = pgTable(
     ),
   ],
 );
+
 export const habitWorkoutLinksRelations = relations(
   habitWorkoutLinks,
   ({ one }) => ({
@@ -898,6 +932,7 @@ export const workoutExercises = pgTable(
     check("workout_exercises_target_length", sql`length(${t.target}) <= 100`),
   ],
 );
+
 export const workoutExercisesRelations = relations(
   workoutExercises,
   ({ one }) => ({
@@ -911,6 +946,7 @@ export const workoutExercisesRelations = relations(
     }),
   }),
 );
+
 export const workoutLogs = pgTable(
   "workout_logs",
   {
@@ -919,9 +955,11 @@ export const workoutLogs = pgTable(
     // Immutable placement-role snapshot, separate from legacy strict definition JSON.
     exerciseRoles: jsonb("exercise_roles").notNull().default({}),
     householdId: uuid("household_id").notNull(),
+
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
+
     workoutId: uuid("workout_id").notNull(),
     snapshot: jsonb("snapshot").notNull(),
     completedOn: text("completed_on").notNull(),
@@ -951,6 +989,7 @@ export const workoutLogs = pgTable(
     ),
   ],
 );
+
 export const workoutLogSets = pgTable(
   "workout_log_sets",
   {
@@ -996,15 +1035,18 @@ export const workoutLogSets = pgTable(
     ),
   ],
 );
+
 // Exercise occurrences are independent of their optional workout grouping.
 export const exerciseLogs = pgTable(
   "exercise_logs",
   {
     id: uuid("id").primaryKey(),
     householdId: uuid("household_id").notNull(),
+
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
+
     exerciseId: uuid("exercise_id").notNull(),
     performedOn: text("performed_on").notNull(),
     performedAt: timestamp("performed_at", { withTimezone: true }).notNull(),
@@ -1026,6 +1068,7 @@ export const exerciseLogs = pgTable(
     ),
   ],
 );
+
 export const exerciseLogSets = pgTable(
   "exercise_log_sets",
   {
@@ -1061,6 +1104,7 @@ export const exerciseLogSets = pgTable(
     ),
   ],
 );
+
 export const workoutLogExercises = pgTable(
   "workout_log_exercises",
   {
@@ -1091,6 +1135,7 @@ export const workoutLogExercises = pgTable(
     }),
   ],
 );
+
 export const exerciseLogsRelations = relations(
   exerciseLogs,
   ({ one, many }) => ({
@@ -1105,6 +1150,7 @@ export const exerciseLogsRelations = relations(
     sets: many(exerciseLogSets),
   }),
 );
+
 export const exerciseLogSetsRelations = relations(
   exerciseLogSets,
   ({ one }) => ({
@@ -1114,6 +1160,7 @@ export const exerciseLogSetsRelations = relations(
     }),
   }),
 );
+
 export const workoutLogExercisesRelations = relations(
   workoutLogExercises,
   ({ one }) => ({
@@ -1148,6 +1195,7 @@ export const workoutsRelations = relations(workouts, ({ one, many }) => ({
   logs: many(workoutLogs),
   exercises: many(workoutExercises),
 }));
+
 export const workoutLogsRelations = relations(workoutLogs, ({ one, many }) => ({
   household: one(households, {
     fields: [workoutLogs.householdId],
@@ -1160,6 +1208,7 @@ export const workoutLogsRelations = relations(workoutLogs, ({ one, many }) => ({
   sets: many(workoutLogSets),
   loggedExercises: many(workoutLogExercises),
 }));
+
 export const workoutLogSetsRelations = relations(workoutLogSets, ({ one }) => ({
   log: one(workoutLogs, {
     fields: [workoutLogSets.logId],
@@ -1200,9 +1249,11 @@ export const documentFiles = pgTable(
   "document_files",
   {
     id: uuid("id").primaryKey(),
+
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
+
     documentId: uuid("document_id").notNull(),
     filename: text("filename").notNull(),
     contentType: text("content_type").notNull(),
@@ -1223,13 +1274,16 @@ export const documentFiles = pgTable(
     ),
   ],
 );
+
 export const documents = pgTable(
   "documents",
   {
     id: uuid("id").primaryKey(),
+
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
+
     title: text("title").notNull(),
     description: text("description"),
     fileId: uuid("file_id").notNull(),
@@ -1268,13 +1322,16 @@ export const documents = pgTable(
       .where(sql`${t.deletedAt} IS NULL`),
   ],
 );
+
 export const documentTags = pgTable(
   "document_tags",
   {
     id: uuid("id").primaryKey(),
+
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
+
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
     color: text("color", {
@@ -1309,6 +1366,7 @@ export const documentTags = pgTable(
     ),
   ],
 );
+
 export const documentTagAssignments = pgTable(
   "document_tag_assignments",
   {
@@ -1331,6 +1389,7 @@ export const documentTagAssignments = pgTable(
     index("document_assignments_tag").on(t.householdId, t.tagId, t.documentId),
   ],
 );
+
 export const documentsRelations = relations(documents, ({ one, many }) => ({
   household: one(households, {
     fields: [documents.householdId],
@@ -1346,12 +1405,14 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
   }),
   tags: many(documentTagAssignments),
 }));
+
 export const documentFilesRelations = relations(documentFiles, ({ one }) => ({
   household: one(households, {
     fields: [documentFiles.householdId],
     references: [households.id],
   }),
 }));
+
 export const documentTagsRelations = relations(
   documentTags,
   ({ one, many }) => ({
@@ -1362,6 +1423,7 @@ export const documentTagsRelations = relations(
     assignments: many(documentTagAssignments),
   }),
 );
+
 export const documentTagAssignmentsRelations = relations(
   documentTagAssignments,
   ({ one }) => ({
@@ -1386,9 +1448,11 @@ export const logCategories = pgTable(
   "log_categories",
   {
     id: uuid("id").primaryKey(),
+
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
+
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
     color: text("color", {
@@ -1426,13 +1490,16 @@ export const logCategories = pgTable(
     ),
   ],
 );
+
 export const logs = pgTable(
   "logs",
   {
     id: uuid("id").primaryKey(),
+
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
+
     title: text("title").notNull(),
     normalizedTitle: text("normalized_title").notNull(),
     categoryId: uuid("category_id"),
@@ -1458,6 +1525,7 @@ export const logs = pgTable(
     check("logs_title", sql`length(trim(${t.title})) BETWEEN 1 AND 100`),
   ],
 );
+
 export const logEntries = pgTable(
   "log_entries",
   {
@@ -1467,12 +1535,15 @@ export const logEntries = pgTable(
     entryOn: text("entry_on").notNull(),
     note: text("note").notNull(),
     version: integer("version").notNull().default(1),
+
     createdBy: uuid("created_by")
       .notNull()
       .references(() => users.id),
+
     lastEditedBy: uuid("last_edited_by")
       .notNull()
       .references(() => users.id),
+
     lastWriteId: uuid("last_write_id").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -1499,6 +1570,7 @@ export const logEntries = pgTable(
     check("log_entries_version", sql`${t.version}>0`),
   ],
 );
+
 export const logsRelations = relations(logs, ({ one, many }) => ({
   household: one(households, {
     fields: [logs.householdId],
@@ -1510,12 +1582,14 @@ export const logsRelations = relations(logs, ({ one, many }) => ({
   }),
   entries: many(logEntries),
 }));
+
 export const logCategoriesRelations = relations(logCategories, ({ one }) => ({
   household: one(households, {
     fields: [logCategories.householdId],
     references: [households.id],
   }),
 }));
+
 export const logEntriesRelations = relations(logEntries, ({ one }) => ({
   log: one(logs, {
     fields: [logEntries.householdId, logEntries.logId],

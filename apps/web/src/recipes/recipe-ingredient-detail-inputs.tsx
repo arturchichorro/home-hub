@@ -44,7 +44,9 @@ export function RecipeIngredientAmountInput({
     currentValue: currentAmount ?? "",
     failureError: "The ingredient amount could not be saved.",
     mutationEnabled,
+
     normalize: (value) => cleanRecipeIngredientAmount(value) ?? "",
+
     save: async (amount) => {
       const mutation = zero.mutate(
         mutators.recipes.updateIngredient({
@@ -56,12 +58,15 @@ export function RecipeIngredientAmountInput({
         }),
       );
       const result = await acknowledgeMutation(mutation);
+
       return result.type === "success";
     },
   });
 
   useEffect(() => {
-    if (focusOnMount) inputRef.current?.focus();
+    if (focusOnMount) {
+      inputRef.current?.focus();
+    }
   }, [focusOnMount]);
 
   return (
@@ -122,7 +127,9 @@ export function RecipeIngredientNoteInput({
     currentValue: currentNote ?? "",
     failureError: "The ingredient note could not be saved.",
     mutationEnabled,
+
     normalize: (value) => cleanRecipeIngredientNote(value) ?? "",
+
     save: async (note) => {
       const mutation = zero.mutate(
         mutators.recipes.updateIngredient({
@@ -134,12 +141,15 @@ export function RecipeIngredientNoteInput({
         }),
       );
       const result = await acknowledgeMutation(mutation);
+
       return result.type === "success";
     },
   });
 
   useEffect(() => {
-    if (focusOnMount) textareaRef.current?.focus();
+    if (focusOnMount) {
+      textareaRef.current?.focus();
+    }
   }, [focusOnMount]);
 
   return (

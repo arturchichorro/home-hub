@@ -11,10 +11,15 @@ import { LogsReader } from "../src/logs.ts";
 import { createLogsServer } from "../src/mcp.ts";
 
 const [mode, directory, port, metricsPort] = process.argv.slice(2);
+
 assert(directory);
+
 const requestId = "147db701-6b85-42f9-b09d-aa39784bf1ca";
+
 const revision = "a".repeat(40);
+
 const secret = "DO_NOT_EXPORT_PRIVATE_CANARY_9a70";
+
 if (mode === "seed") {
   const { sourceDiagnosticFixture } = await import(
     "../../api/test/diagnostics-fixture.ts"
@@ -29,6 +34,7 @@ if (mode === "seed") {
   );
   await mkdir(join(directory, "docker/a"), { recursive: true });
   await mkdir(join(directory, "operations"), { recursive: true });
+
   const wrap = (
     service: string,
     payload: unknown,
@@ -108,11 +114,12 @@ if (mode === "seed") {
     { url: base, tenant: "1", token: "fixture-read-token" },
     fileAudit(join(directory, "audit/queries.jsonl")),
   );
-  const server = createLogsServer(reader),
-    client = new Client({ name: "fixture-agent", version: "1.0.0" });
+  const server = createLogsServer(reader);
+  const client = new Client({ name: "fixture-agent", version: "1.0.0" });
   const [c, s] = InMemoryTransport.createLinkedPair();
   await server.connect(s);
   await client.connect(c);
+
   try {
     const filters = () => ({
       services: ["api", "zero-cache", "postgres", "web", "deploy", "backup"],
@@ -126,7 +133,9 @@ if (mode === "seed") {
         arguments: { ...filters(), ...extra },
       });
       assert(!result.isError, JSON.stringify(result));
+
       const content = result.content as { type: string; text: string }[];
+
       return JSON.parse(content[0]?.text ?? "");
     };
     const all = await query();
@@ -135,9 +144,11 @@ if (mode === "seed") {
       "Private field reached the agent",
     );
     assert(!JSON.stringify(all).includes("signature="));
+
     const events = all.entries.map(
       (e: { record: { event: string } }) => e.record.event,
     );
+
     for (const event of [
       "http_request",
       "postgres_error",
@@ -148,27 +159,32 @@ if (mode === "seed") {
       "deployment_failed",
       "backup_succeeded",
       "backup_failed",
-    ])
+    ]) {
       assert(
         events.includes(event),
         `Missing ${event}: ${JSON.stringify(all)}`,
       );
+    }
+
     assert.equal(
       all.entries.filter((e: { service: string }) => e.service === "api")
         .length,
       2,
       "Foreign/oversized input escaped filtering",
     );
+
     const failedDeploy = all.entries.find(
       (e: { record: { event: string } }) =>
         e.record.event === "deployment_failed",
     );
     assert.equal(failedDeploy.record.phase, "migrate");
     assert.equal(failedDeploy.record.exitCode, "37");
+
     const failedBackup = all.entries.find(
       (e: { record: { event: string } }) => e.record.event === "backup_failed",
     );
     assert.equal(failedBackup.record.phase, "configuration");
+
     const known = await query({ services: ["api"], requestId });
     assert.equal(known.entries.length, 1);
     assert.equal(known.entries[0].record.status, "500");
@@ -195,6 +211,7 @@ if (mode === "seed") {
     );
     assert.equal(known.entries[0].revision, revision);
     assert.match(known.entries[0].citation, /^loki:/);
+
     const canary = await query({
       services: ["deploy"],
       event: "collector_canary",
@@ -205,6 +222,7 @@ if (mode === "seed") {
       0,
     );
     assert.equal((await query({ limit: 1 })).truncated, true);
+
     // Inspect the real Loki storage response too, not merely the gateway projection.
     const url = new URL("/loki/api/v1/query_range", base);
     url.search = new URLSearchParams({
@@ -213,6 +231,7 @@ if (mode === "seed") {
       start: String(BigInt(Date.now() - 300_000) * 1_000_000n),
       end: String(BigInt(Date.now()) * 1_000_000n),
     }).toString();
+
     const raw = await (await fetch(url)).text();
     assert(!raw.includes(secret), "Private field exported to Loki");
     assert(
@@ -286,12 +305,14 @@ if (mode === "seed") {
     normal.entries.length > 0 && normal.entries.length < 40,
     `Flood not bounded: ${normal.entries.length}`,
   );
+
   const canary = await reader.search({
     ...times,
     services: ["deploy"],
     event: "collector_canary",
   });
   assert(canary.entries.length >= 2, "Normal traffic starved the canary");
+
   const metrics = await (
     await fetch(`http://127.0.0.1:${metricsPort}/metrics`)
   ).text();

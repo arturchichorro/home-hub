@@ -26,11 +26,15 @@ import { type Schema, zql } from "./schema.gen";
 import { workoutMutatorDefinitions } from "./workout-mutators";
 
 const defineHomeHubMutator = defineMutatorWithType<Schema, ZeroAuthContext>();
+
 const defineHomeHubMutators = defineMutatorsWithType<Schema>();
+
 const activeRecipes = (householdId: string) =>
   zql.recipes.where("householdId", householdId).where("deletedAt", "IS", null);
+
 const activeRecipe = (householdId: string, recipeId: string) =>
   activeRecipes(householdId).where("id", recipeId);
+
 const reorderHouseholds = defineHomeHubMutator(
   reorderHouseholdsMutationSchema,
   async ({ args, ctx, tx }) => {
@@ -45,9 +49,14 @@ const reorderHouseholds = defineHomeHubMutator(
     );
     const updatedAt =
       tx.location === "server" ? Date.now() : args.optimisticUpdatedAt;
+
     for (const update of updates) {
       const membership = membershipsByHouseholdId.get(update.id);
-      if (!membership) throw new Error("Household reorder not allowed");
+
+      if (!membership) {
+        throw new Error("Household reorder not allowed");
+      }
+
       await tx.mutate.householdMembers.update({
         id: membership.id,
         sortKey: update.sortKey,
@@ -56,6 +65,7 @@ const reorderHouseholds = defineHomeHubMutator(
     }
   },
 );
+
 const createRecipe = defineHomeHubMutator(
   createRecipeMutationSchema,
   async ({ args, ctx, tx }) => {
@@ -103,8 +113,10 @@ const reorderRecipes = defineHomeHubMutator(
     const updates = planReorder(rows, args.orderedRecipeIds, args.recipeId);
     const updatedAt =
       tx.location === "server" ? Date.now() : args.optimisticUpdatedAt;
-    for (const update of updates)
+
+    for (const update of updates) {
       await tx.mutate.recipes.update({ ...update, updatedAt });
+    }
   },
 );
 
@@ -149,7 +161,10 @@ const deleteRecipe = defineHomeHubMutator(
     const recipe = await tx.run(
       activeRecipe(args.householdId, args.recipeId).one(),
     );
-    if (!recipe) throw new Error("Recipe deletion not allowed");
+
+    if (!recipe) {
+      throw new Error("Recipe deletion not allowed");
+    }
 
     await tx.mutate.recipes.update({
       id: args.recipeId,
@@ -225,7 +240,10 @@ const updateRecipeIngredient = defineHomeHubMutator(
         )
         .one(),
     );
-    if (!ingredient) throw new Error("Recipe ingredient update not allowed");
+
+    if (!ingredient) {
+      throw new Error("Recipe ingredient update not allowed");
+    }
 
     const update: {
       id: string;
@@ -237,8 +255,14 @@ const updateRecipeIngredient = defineHomeHubMutator(
       updatedAt:
         tx.location === "server" ? Date.now() : args.optimisticUpdatedAt,
     };
-    if (args.amount !== undefined) update.amount = args.amount;
-    if (args.note !== undefined) update.note = args.note;
+
+    if (args.amount !== undefined) {
+      update.amount = args.amount;
+    }
+
+    if (args.note !== undefined) {
+      update.note = args.note;
+    }
 
     await tx.mutate.recipeIngredients.update(update);
   },
@@ -265,7 +289,10 @@ const renameRecipeIngredient = defineHomeHubMutator(
         )
         .one(),
     );
-    if (!ingredient) throw new Error("Recipe ingredient rename not allowed");
+
+    if (!ingredient) {
+      throw new Error("Recipe ingredient rename not allowed");
+    }
 
     await tx.mutate.recipeIngredients.update({
       id: args.ingredientId,
@@ -335,7 +362,10 @@ const updateRecipeCookLog = defineHomeHubMutator(
         )
         .one(),
     );
-    if (!cookLog) throw new Error("Recipe cooking log update not allowed");
+
+    if (!cookLog) {
+      throw new Error("Recipe cooking log update not allowed");
+    }
 
     await tx.mutate.recipeCookLogs.update({
       id: args.cookLogId,
@@ -367,7 +397,10 @@ const deleteRecipeIngredient = defineHomeHubMutator(
         )
         .one(),
     );
-    if (!ingredient) throw new Error("Recipe ingredient deletion not allowed");
+
+    if (!ingredient) {
+      throw new Error("Recipe ingredient deletion not allowed");
+    }
 
     const deletedAt = Date.now();
     await tx.mutate.recipeIngredients.update({
@@ -404,11 +437,13 @@ const reorderRecipeIngredients = defineHomeHubMutator(
     );
     const timestamp =
       tx.location === "server" ? Date.now() : args.optimisticUpdatedAt;
-    for (const update of updates)
+
+    for (const update of updates) {
       await tx.mutate.recipeIngredients.update({
         ...update,
         updatedAt: timestamp,
       });
+    }
   },
 );
 
@@ -433,7 +468,10 @@ const deleteRecipeCookLog = defineHomeHubMutator(
         )
         .one(),
     );
-    if (!cookLog) throw new Error("Recipe cooking log deletion not allowed");
+
+    if (!cookLog) {
+      throw new Error("Recipe cooking log deletion not allowed");
+    }
 
     const deletedAt = Date.now();
     await tx.mutate.recipeCookLogs.update({
@@ -466,8 +504,10 @@ const reorderRecipeImages = defineHomeHubMutator(
     const updates = planReorder(rows, args.orderedImageIds, args.imageId);
     const timestamp =
       tx.location === "server" ? Date.now() : args.optimisticUpdatedAt;
-    for (const update of updates)
+
+    for (const update of updates) {
       await tx.mutate.recipeMedia.update({ ...update, updatedAt: timestamp });
+    }
   },
 );
 

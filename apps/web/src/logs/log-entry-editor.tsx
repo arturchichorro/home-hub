@@ -6,6 +6,7 @@ import type { MediaSession } from "../media/session";
 import { useBlockAppUpdate } from "../updates/activity";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { useLogNote } from "./use-log-note";
+
 export function LogEntryEditor({
   householdId,
   logId,
@@ -23,8 +24,8 @@ export function LogEntryEditor({
   onWork: (date: string, busy: boolean) => void;
   future?: boolean;
 }) {
-  const enabled = useZeroMutationEnabled(),
-    ref = useRef<HTMLTextAreaElement>(null);
+  const enabled = useZeroMutationEnabled();
+  const ref = useRef<HTMLTextAreaElement>(null);
   const report = useCallback(
     (busy: boolean) => onWork(entryOn, busy),
     [onWork, entryOn],
@@ -39,15 +40,19 @@ export function LogEntryEditor({
     onWork: report,
   });
   useBlockAppUpdate(editor.hasChanges || editor.isSaving);
+
   const hasEntry = !!entry;
+
   useLayoutEffect(() => {
     void editor.value;
     void hasEntry;
+
     if (ref.current) {
       ref.current.style.height = "auto";
       ref.current.style.height = `${ref.current.scrollHeight}px`;
     }
   }, [editor.value, hasEntry]);
+
   return (
     <div className="grid min-w-0 gap-2">
       <Textarea

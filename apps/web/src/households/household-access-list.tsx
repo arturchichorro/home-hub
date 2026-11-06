@@ -32,6 +32,7 @@ type HouseholdAccessListProps = {
 };
 
 type PendingInvite = ListHouseholdInvitesResponse["invites"][number];
+
 type CreatedInvite = CreateHouseholdInviteResponse["invite"];
 
 type InviteState =
@@ -83,6 +84,7 @@ export function HouseholdAccessList({
 
     if (!isOwner) {
       setInviteState({ status: "success", invites: [] });
+
       return () => {
         active = false;
       };
@@ -91,10 +93,13 @@ export function HouseholdAccessList({
     setInviteState({ status: "loading" });
     void listHouseholdInvites({ accessToken, householdId })
       .then((result) => {
-        if (!active) return;
+        if (!active) {
+          return;
+        }
 
         if (result.kind === "unauthorized") {
           onSessionExpired();
+
           return;
         }
 
@@ -103,6 +108,7 @@ export function HouseholdAccessList({
             status: "error",
             message: "You are no longer allowed to view household invites.",
           });
+
           return;
         }
 
@@ -123,7 +129,10 @@ export function HouseholdAccessList({
   }, [accessToken, householdId, isOwner, onSessionExpired]);
 
   async function handleCreateInvite() {
-    if (!mutationEnabled) return;
+    if (!mutationEnabled) {
+      return;
+    }
+
     setCreateError(undefined);
     setCopyStatus(undefined);
     setIsCreating(true);
@@ -133,11 +142,13 @@ export function HouseholdAccessList({
 
       if (result.kind === "unauthorized") {
         onSessionExpired();
+
         return;
       }
 
       if (result.kind === "forbidden") {
         setCreateError("Only the household owner can create invitations.");
+
         return;
       }
 
@@ -165,7 +176,9 @@ export function HouseholdAccessList({
   }
 
   async function handleCopyInvite() {
-    if (!createdInvite) return;
+    if (!createdInvite) {
+      return;
+    }
 
     try {
       await navigator.clipboard.writeText(createdInvite.token);
@@ -176,7 +189,10 @@ export function HouseholdAccessList({
   }
 
   async function handleRevokeInvite(inviteId: string) {
-    if (!mutationEnabled) return;
+    if (!mutationEnabled) {
+      return;
+    }
+
     setRevokingInviteId(inviteId);
     setActionError(null);
 
@@ -189,11 +205,13 @@ export function HouseholdAccessList({
 
       if (result.kind === "unauthorized") {
         onSessionExpired();
+
         return;
       }
 
       if (result.kind === "forbidden") {
         setActionError("You are no longer allowed to revoke invitations.");
+
         return;
       }
 
@@ -202,6 +220,7 @@ export function HouseholdAccessList({
           current.status === "success"
             ? {
                 status: "success",
+
                 invites: current.invites.filter(
                   (invite) => invite.id !== inviteId,
                 ),
@@ -222,7 +241,10 @@ export function HouseholdAccessList({
   }
 
   async function handleRemoveMember(membershipId: string) {
-    if (!mutationEnabled) return;
+    if (!mutationEnabled) {
+      return;
+    }
+
     setRemovingMembershipId(membershipId);
     setActionError(null);
 
@@ -235,6 +257,7 @@ export function HouseholdAccessList({
 
       if (result.kind === "unauthorized") {
         onSessionExpired();
+
         return;
       }
 
@@ -249,7 +272,10 @@ export function HouseholdAccessList({
   }
 
   async function handleTransferOwnership(membershipId: string) {
-    if (!mutationEnabled) return;
+    if (!mutationEnabled) {
+      return;
+    }
+
     setTransferringMembershipId(membershipId);
     setActionError(null);
 
@@ -262,16 +288,19 @@ export function HouseholdAccessList({
 
       if (result.kind === "unauthorized") {
         onSessionExpired();
+
         return;
       }
 
       if (result.kind === "forbidden") {
         setActionError("You are no longer allowed to transfer ownership.");
+
         return;
       }
 
       if (result.kind === "invalid_member") {
         setActionError("That member is no longer eligible to become owner.");
+
         return;
       }
 
@@ -342,6 +371,7 @@ export function HouseholdAccessList({
           {rows.map((row) => {
             if (row.type === "invitation") {
               const { invite } = row;
+
               return (
                 <li
                   key={`invitation:${invite.id}`}
@@ -376,7 +406,10 @@ export function HouseholdAccessList({
 
             const { member } = row;
             const user = member.user;
-            if (!user) return null;
+
+            if (!user) {
+              return null;
+            }
 
             const joinedAt =
               member.createdAt == null ? undefined : new Date(member.createdAt);

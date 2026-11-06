@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateDocumentFile } from "./validate-file";
 
 const b = (s: string) => new TextEncoder().encode(s);
+
 describe("document format validation", () => {
   it("validates PDFs and UTF-8 text/Markdown/CSV", () => {
     expect(
@@ -10,10 +11,12 @@ describe("document format validation", () => {
         b("%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF"),
       ),
     ).toBe("application/pdf");
-    for (const ext of ["txt", "md", "csv"])
+
+    for (const ext of ["txt", "md", "csv"]) {
       expect(validateDocumentFile(`a.${ext}`, b("Olá 👋\nline\ttwo"))).toMatch(
         /^text\//u,
       );
+    }
   });
   it.each([
     ["a.pdf", "hello"],

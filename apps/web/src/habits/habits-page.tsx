@@ -39,10 +39,12 @@ import { HabitWorkoutLink } from "./habit-workout-link";
 
 const localToday = () =>
   calendarDate(Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone);
+
 type Expanded = { habitId: string; anchor: string; date?: string | undefined };
 
 export function HabitsPage({ householdId }: { householdId: string }) {
   const { userID } = useZero();
+
   return userID ? (
     <HabitsContent
       key={householdId}
@@ -51,6 +53,7 @@ export function HabitsPage({ householdId }: { householdId: string }) {
     />
   ) : null;
 }
+
 function HabitsContent({
   householdId,
   currentUserId,
@@ -71,10 +74,18 @@ function HabitsContent({
   const dirtyChanged = useCallback(
     (key: string, value: boolean) =>
       setDirty((previous) => {
-        if (previous.has(key) === value) return previous;
+        if (previous.has(key) === value) {
+          return previous;
+        }
+
         const next = new Set(previous);
-        if (value) next.add(key);
-        else next.delete(key);
+
+        if (value) {
+          next.add(key);
+        } else {
+          next.delete(key);
+        }
+
         return next;
       }),
     [],
@@ -82,6 +93,7 @@ function HabitsContent({
   const pendingRef = useRef(new Set<string>());
   const [pending, setPending] = useState(new Set<string>());
   useBlockAppUpdate(pending.size > 0);
+
   const [members, memberResult] = useQuery(
     queries.householdMemberships.byHousehold({ householdId }),
   );
@@ -117,30 +129,43 @@ function HabitsContent({
     [archived, enabled, locked],
   );
   useAppHeaderRightComponent(headerActions);
+
   useEffect(() => {
     const update = () => {
-      if (!locked) setToday(localToday());
+      if (!locked) {
+        setToday(localToday());
+      }
     };
     update();
+
     const timer = setInterval(update, 60_000);
     window.addEventListener("focus", update);
+
     return () => {
       clearInterval(timer);
       window.removeEventListener("focus", update);
     };
   }, [locked]);
+
   async function change(
     key: string,
     request: Parameters<typeof zero.mutate>[0],
   ) {
-    if (!enabled || pendingRef.current.has(key)) return;
+    if (!enabled || pendingRef.current.has(key)) {
+      return;
+    }
+
     pendingRef.current.add(key);
     setPending(new Set(pendingRef.current));
     setError(undefined);
+
     try {
       const mutation = zero.mutate(request);
       const outcome = await acknowledgeMutation(mutation);
-      if (outcome.type === "error") setError("Unable to save.");
+
+      if (outcome.type === "error") {
+        setError("Unable to save.");
+      }
     } catch {
       setError("Unable to save.");
     } finally {
@@ -148,8 +173,12 @@ function HabitsContent({
       setPending(new Set(pendingRef.current));
     }
   }
+
   function completed(habitId: string, date: string, value: boolean) {
-    if (!own || archived || loading || date > today) return;
+    if (!own || archived || loading || date > today) {
+      return;
+    }
+
     void change(
       `${habitId}:${date}`,
       mutators.habits.setCompleted({
@@ -162,9 +191,13 @@ function HabitsContent({
       }),
     );
   }
+
   function inspect(habitId: string, date?: string) {
-    if (!locked) setExpanded({ habitId, anchor: date ?? today, date });
+    if (!locked) {
+      setExpanded({ habitId, anchor: date ?? today, date });
+    }
   }
+
   return (
     <div className="grid min-w-0 gap-3">
       <div className="flex items-center justify-between gap-3">
@@ -232,15 +265,18 @@ function HabitsContent({
             expanded={expanded?.habitId === habit.id ? expanded : undefined}
             onInspect={(date) => inspect(habit.id, date)}
             onDisclosure={() => {
-              if (!locked)
+              if (!locked) {
                 setExpanded((current) =>
                   current?.habitId === habit.id
                     ? undefined
                     : { habitId: habit.id, anchor: today },
                 );
+              }
             }}
             onMonth={(anchor) => {
-              if (!locked) setExpanded({ habitId: habit.id, anchor });
+              if (!locked) {
+                setExpanded({ habitId: habit.id, anchor });
+              }
             }}
             onCompleted={(date, value) => completed(habit.id, date, value)}
             dirtyChanged={(key, value) =>
@@ -322,6 +358,7 @@ function HabitListRow({
       .map((e) => [e.entryOn, e]),
   );
   const current = entries.get(today);
+
   return (
     <>
       <div className="flex min-w-0 items-center">
@@ -356,7 +393,10 @@ function HabitListRow({
           disabled={locked}
           onClick={() => {
             setNoteOpen((v) => expanded?.date === today || !v);
-            if (expanded?.date === today) onMonth(expanded.anchor);
+
+            if (expanded?.date === today) {
+              onMonth(expanded.anchor);
+            }
           }}
         >
           <StickyNote

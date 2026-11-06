@@ -6,8 +6,8 @@ import {
   findEnabledHouseholdModuleForShare,
   findHouseholdMembershipForShare,
 } from "../../authorization/household-access";
+import type { InspectR2ObjectResult } from "../../media/inspect-object";
 import { InvalidMediaUploadError } from "../../media/process-image";
-import type { InspectR2ObjectResult } from "./inspect-object";
 import {
   findRecipeImageForShare,
   findRecipeImageForUpdate,
@@ -59,31 +59,46 @@ export function createConfirmRecipeImageUploadService({
   }: ConfirmRecipeImageUploadInput): Promise<ConfirmRecipeImageUploadResult> {
     const initial = await db.transaction(async (tx) => {
       const user = await findActiveUser(tx, userId);
-      if (!user) return { kind: "unauthorized" as const };
+
+      if (!user) {
+        return { kind: "unauthorized" as const };
+      }
 
       const membership = await findHouseholdMembershipForShare(tx, {
         householdId,
         userId,
       });
-      if (!membership) return { kind: "forbidden" as const };
+
+      if (!membership) {
+        return { kind: "forbidden" as const };
+      }
 
       const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
         householdId,
         moduleKey: "recipes",
       });
-      if (!moduleSetting) return { kind: "forbidden" as const };
+
+      if (!moduleSetting) {
+        return { kind: "forbidden" as const };
+      }
 
       const image = await findRecipeImageForShare(tx, {
         householdId,
         recipeId,
         imageId,
       });
-      if (!image) return { kind: "not_found" as const };
+
+      if (!image) {
+        return { kind: "not_found" as const };
+      }
 
       return { kind: "image" as const, image };
     });
 
-    if (initial.kind !== "image") return initial;
+    if (initial.kind !== "image") {
+      return initial;
+    }
+
     if (initial.image.confirmedAt) {
       return {
         kind: "success",
@@ -95,7 +110,11 @@ export function createConfirmRecipeImageUploadService({
     }
 
     const object = await inspectObject({ objectKey: initial.image.objectKey });
-    if (!object) return { kind: "upload_not_found" };
+
+    if (!object) {
+      return { kind: "upload_not_found" };
+    }
+
     if (
       object.contentType !== initial.image.contentType ||
       object.byteSize !== initial.image.byteSize
@@ -114,36 +133,51 @@ export function createConfirmRecipeImageUploadService({
         byteSize: initial.image.byteSize,
       });
     } catch (error) {
-      if (error instanceof InvalidMediaUploadError)
+      if (error instanceof InvalidMediaUploadError) {
         return { kind: "invalid_upload" };
+      }
+
       throw error;
     }
 
     return db.transaction(async (tx) => {
       const user = await findActiveUser(tx, userId);
-      if (!user) return { kind: "unauthorized" };
+
+      if (!user) {
+        return { kind: "unauthorized" };
+      }
 
       const membership = await findHouseholdMembershipForShare(tx, {
         householdId,
         userId,
       });
-      if (!membership) return { kind: "forbidden" };
+
+      if (!membership) {
+        return { kind: "forbidden" };
+      }
 
       const moduleSetting = await findEnabledHouseholdModuleForShare(tx, {
         householdId,
         moduleKey: "recipes",
       });
-      if (!moduleSetting) return { kind: "forbidden" };
+
+      if (!moduleSetting) {
+        return { kind: "forbidden" };
+      }
 
       const image = await findRecipeImageForUpdate(tx, {
         householdId,
         recipeId,
         imageId,
       });
-      if (!image) return { kind: "not_found" };
+
+      if (!image) {
+        return { kind: "not_found" };
+      }
 
       if (image.confirmedAt) {
         const confirmedAt = image.confirmedAt;
+
         return {
           kind: "success",
           image: { id: image.id, confirmedAt },
@@ -170,6 +204,7 @@ export function createConfirmRecipeImageUploadService({
           id: media.id,
           confirmedAt: media.confirmedAt,
         });
+
       if (!confirmedImage?.confirmedAt) {
         throw new Error("Recipe image confirmation returned no row");
       }

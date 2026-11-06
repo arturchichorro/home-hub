@@ -92,7 +92,10 @@ export function useRecipeDetailsEditor({
 
   const replaceDraft = useCallback((nextDraft: RecipeDraft) => {
     draftRef.current = nextDraft;
-    if (mountedRef.current) setDraft(nextDraft);
+
+    if (mountedRef.current) {
+      setDraft(nextDraft);
+    }
   }, []);
 
   const revertDraft = useCallback(() => {
@@ -102,18 +105,23 @@ export function useRecipeDetailsEditor({
   const saveDraft = useCallback(
     async (validateTitle: boolean, canonicalizeVisibleDraft: boolean) => {
       clearScheduledSave();
-      if (appUpdates.getState().required) return;
+
+      if (appUpdates.getState().required) {
+        return;
+      }
 
       if (saveInFlightRef.current) {
         queuedSaveRef.current = true;
         queuedValidationRef.current ||= validateTitle;
         queuedCanonicalizationRef.current ||= canonicalizeVisibleDraft;
+
         return;
       }
 
       if (!mutationEnabled) {
         revertDraft();
         setError("The changes could not be saved.");
+
         return;
       }
 
@@ -126,6 +134,7 @@ export function useRecipeDetailsEditor({
           setErrorField("title");
           setError("The recipe title cannot be empty.");
         }
+
         return;
       }
 
@@ -140,6 +149,7 @@ export function useRecipeDetailsEditor({
         ) {
           replaceDraft(submittedDraft);
         }
+
         return;
       }
 
@@ -160,6 +170,7 @@ export function useRecipeDetailsEditor({
 
       if (result.type === "success") {
         confirmedDraftRef.current = submittedDraft;
+
         if (
           shouldCanonicalizeVisibleDraft(
             canonicalizeVisibleDraft,
@@ -179,11 +190,17 @@ export function useRecipeDetailsEditor({
         )
       ) {
         revertDraft();
-        if (mountedRef.current) setError("The changes could not be saved.");
+
+        if (mountedRef.current) {
+          setError("The changes could not be saved.");
+        }
       }
 
       saveInFlightRef.current = false;
-      if (mountedRef.current) setIsSaving(false);
+
+      if (mountedRef.current) {
+        setIsSaving(false);
+      }
 
       if (queuedSaveRef.current) {
         const validateQueuedTitle = queuedValidationRef.current;
@@ -210,7 +227,9 @@ export function useRecipeDetailsEditor({
   saveDraftRef.current = saveDraft;
 
   useEffect(() => {
-    if (saveInFlightRef.current) return;
+    if (saveInFlightRef.current) {
+      return;
+    }
 
     const previousConfirmedDraft = confirmedDraftRef.current;
     const nextConfirmedDraft = {
@@ -226,6 +245,7 @@ export function useRecipeDetailsEditor({
 
   useEffect(() => {
     mountedRef.current = true;
+
     return () => {
       mountedRef.current = false;
       clearScheduledSave();
@@ -274,8 +294,11 @@ export function useRecipeDetailsEditor({
         error && errorField === "title" ? errorId : undefined,
       disabled: !mutationEnabled,
       value: draft.title,
+
       onBlur: () => void saveDraft(true, true),
+
       onKeyDown: handleTitleKeyDown,
+
       onValueChange: (value: string) => changeDraft("title", value),
     },
     descriptionProps: {
@@ -286,9 +309,12 @@ export function useRecipeDetailsEditor({
         error && errorField === "description" ? errorId : undefined,
       disabled: !mutationEnabled,
       value: draft.description,
+
       onBlur: () => void saveDraft(true, true),
+
       onChange: (event: ChangeEvent<HTMLTextAreaElement>) =>
         changeDraft("description", event.target.value),
+
       onKeyDown: handleDescriptionKeyDown,
     },
     error,
@@ -296,6 +322,7 @@ export function useRecipeDetailsEditor({
       anchor: errorField === "title" ? titleRef : descriptionRef,
       id: errorId,
       open: error !== undefined,
+
       onDismiss: () => setError(undefined),
     },
   };

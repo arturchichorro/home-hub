@@ -41,9 +41,12 @@ export function HabitEntryNote({
   const editor = useDebouncedTextEditor({
     currentValue: note ?? "",
     mutationEnabled: enabled,
+
     normalize: (value) => cleanHabitNote(value) ?? "",
+
     preserveOnFailure: true,
     failureError: "Unable to save note.",
+
     save: async (note) => {
       try {
         const r = zero.mutate(
@@ -57,6 +60,7 @@ export function HabitEntryNote({
           }),
         );
         const client = await r.client;
+
         return (
           (client.type === "error" ? client : await r.server).type === "success"
         );
@@ -67,6 +71,7 @@ export function HabitEntryNote({
   });
   const dirty = editor.hasChanges || editor.isSaving;
   useHabitDraftStatus(dirty, onDirtyChange);
+
   return (
     <div className="grid min-w-0 gap-1" data-habit-note>
       {!hideTrigger ? (
@@ -77,7 +82,10 @@ export function HabitEntryNote({
           className={`size-11! ${note ? "text-foreground" : "text-muted"}`}
           onClick={() => {
             setOpen((value) => !value);
-            if (!open) requestAnimationFrame(() => ref.current?.focus());
+
+            if (!open) {
+              requestAnimationFrame(() => ref.current?.focus());
+            }
           }}
         >
           <StickyNote aria-hidden="true" className="size-4" />

@@ -7,8 +7,10 @@ import {
 } from "./recipe-image-delivery";
 
 export const mediaImageVariants = recipeImageVariants;
+
 export const mediaReadLifetimeSeconds =
   recipeImageDeliveryCapabilityLifetimeSeconds;
+
 export const mediaProcessingLifetimeSeconds =
   recipeImageProcessingCapabilityLifetimeSeconds;
 
@@ -22,7 +24,9 @@ const identitySchema = z.object({
   parentId: z.uuid(),
   attachmentId: z.uuid(),
 });
+
 export type MediaIdentity = z.infer<typeof identitySchema>;
+
 export const mediaReadCapabilitySchema = identitySchema
   .extend({
     expiresAt: z.number().int().positive(),
@@ -33,6 +37,7 @@ export const mediaReadCapabilitySchema = identitySchema
       .optional(),
   })
   .strict();
+
 export const mediaProcessingCapabilitySchema = identitySchema
   .extend({
     expiresAt: z.number().int().positive(),
@@ -40,7 +45,9 @@ export const mediaProcessingCapabilitySchema = identitySchema
     byteSize: z.number().int().positive().max(maxStillImageByteSize),
   })
   .strict();
+
 export type MediaReadCapability = z.infer<typeof mediaReadCapabilitySchema>;
+
 export type MediaProcessingCapability = z.infer<
   typeof mediaProcessingCapabilitySchema
 >;
@@ -49,6 +56,7 @@ export function mediaOriginalObjectKey(
   identity: Pick<MediaIdentity, "householdId" | "mediaId" | "storageRecipeId">,
 ): string {
   const prefix = `households/${identity.householdId}`;
+
   return identity.storageRecipeId === null
     ? `${prefix}/media/${identity.mediaId}`
     : `${prefix}/recipes/${identity.storageRecipeId}/${identity.mediaId}`;
@@ -68,13 +76,22 @@ export function mediaStorageIdentity({
     mediaId,
     storageRecipeId: null as string | null,
   };
-  if (mediaOriginalObjectKey(identity) === objectKey) return identity;
+
+  if (mediaOriginalObjectKey(identity) === objectKey) {
+    return identity;
+  }
+
   const legacyRecipeId = objectKey.split("/")[3];
   const parsedRecipeId = z.uuid().safeParse(legacyRecipeId);
+
   if (parsedRecipeId.success) {
     identity.storageRecipeId = parsedRecipeId.data;
-    if (mediaOriginalObjectKey(identity) === objectKey) return identity;
+
+    if (mediaOriginalObjectKey(identity) === objectKey) {
+      return identity;
+    }
   }
+
   throw new Error("Media object key does not match its stored identity");
 }
 
@@ -100,6 +117,7 @@ function payload(
     capability.attachmentId,
     capability.expiresAt,
   ];
+
   return JSON.stringify([
     "videoVersion" in capability && capability.videoVersion
       ? `home-hub-media-${purpose}-v3`
@@ -116,8 +134,11 @@ function payload(
 
 async function key(secret: string) {
   const bytes = new TextEncoder().encode(secret);
-  if (bytes.length < 32)
+
+  if (bytes.length < 32) {
     throw new Error("Media signing secret must be at least 32 bytes");
+  }
+
   return crypto.subtle.importKey(
     "raw",
     bytes,
@@ -145,6 +166,7 @@ export async function signMediaCapability({
     await key(secret),
     new TextEncoder().encode(payload(parsed, purpose)),
   );
+
   return Array.from(new Uint8Array(signature), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
@@ -172,16 +194,20 @@ export async function verifyMediaCapability({
     purpose === "read"
       ? mediaReadLifetimeSeconds
       : mediaProcessingLifetimeSeconds;
+
   if (
     !parsed.success ||
     parsed.data.expiresAt <= nowSeconds ||
     parsed.data.expiresAt > nowSeconds + lifetime + 5 ||
     !/^[a-f0-9]{64}$/u.test(signature)
-  )
+  ) {
     return false;
+  }
+
   const bytes = new Uint8Array(
     signature.match(/../gu)?.map((byte) => Number.parseInt(byte, 16)) ?? [],
   );
+
   return crypto.subtle.verify(
     "HMAC",
     await key(secret),
@@ -206,5 +232,6 @@ export function mediaReadUrl({
   // The complete capability is signed, including storage provenance and context.
   url.searchParams.set("capability", JSON.stringify(capability));
   url.searchParams.set("signature", signature);
+
   return url.toString();
 }

@@ -1,27 +1,40 @@
 import * as z from "zod";
 import { cleanListItemName, cleanListName } from "./normalization";
 
-export const listKindSchema = z.enum(["checklist", "moodboard"]);
+// Two extra records prove that a clipped preview has more than one hidden item.
+export const listPreviewMaxRows = 20;
+
+export const listPreviewItemLimit = listPreviewMaxRows + 2;
+
+const listKindSchema = z.enum(["checklist", "moodboard"]);
+
 export const listNameSchema = z
   .string()
   .transform(cleanListName)
   .pipe(z.string().min(1).max(100));
-export const listItemNameSchema = z
+
+const listItemNameSchema = z
   .string()
   .transform(cleanListItemName)
   .pipe(z.string().min(1).max(100));
+
 export const listItemStatusSchema = z.enum([
   "active",
   "crossed",
   "archived",
   "deleted",
 ]);
+
 export const listNameAlreadyExistsError = "List name already exists";
+
 export const listItemNameAlreadyExistsError = "List item name already exists";
 
 const timestamp = z.number().int().nonnegative();
+
 const scope = { householdId: z.uuid(), listId: z.uuid() };
+
 const itemScope = { ...scope, itemId: z.uuid() };
+
 const orderedIds = z
   .array(z.uuid())
   .min(1)
@@ -31,6 +44,7 @@ const orderedIds = z
   });
 
 export const listDetailArgsSchema = z.object(scope).strict();
+
 export const createListMutationSchema = z
   .object({
     ...scope,
@@ -39,6 +53,7 @@ export const createListMutationSchema = z
     optimisticTimestamp: timestamp,
   })
   .strict();
+
 export const renameListMutationSchema = z
   .object({
     ...scope,
@@ -46,9 +61,11 @@ export const renameListMutationSchema = z
     optimisticUpdatedAt: timestamp,
   })
   .strict();
+
 export const deleteListMutationSchema = z
   .object({ ...scope, optimisticDeletedAt: timestamp })
   .strict();
+
 export const reorderListsMutationSchema = z
   .object({
     ...scope,
@@ -60,6 +77,7 @@ export const reorderListsMutationSchema = z
     message: "Ordered IDs must contain the moved list",
     path: ["orderedListIds"],
   });
+
 export const addListItemMutationSchema = z
   .object({
     ...itemScope,
@@ -67,6 +85,7 @@ export const addListItemMutationSchema = z
     optimisticTimestamp: timestamp,
   })
   .strict();
+
 export const renameListItemMutationSchema = z
   .object({
     ...itemScope,
@@ -74,6 +93,7 @@ export const renameListItemMutationSchema = z
     optimisticUpdatedAt: timestamp,
   })
   .strict();
+
 export const setListItemStatusMutationSchema = z
   .object({
     ...itemScope,
@@ -81,6 +101,7 @@ export const setListItemStatusMutationSchema = z
     optimisticUpdatedAt: timestamp,
   })
   .strict();
+
 export const reorderListItemsMutationSchema = z
   .object({
     ...itemScope,
@@ -93,22 +114,3 @@ export const reorderListItemsMutationSchema = z
     message: "Ordered IDs must contain the moved item",
     path: ["orderedItemIds"],
   });
-
-export type CreateListMutationInput = z.infer<typeof createListMutationSchema>;
-export type RenameListMutationInput = z.infer<typeof renameListMutationSchema>;
-export type DeleteListMutationInput = z.infer<typeof deleteListMutationSchema>;
-export type ReorderListsMutationInput = z.infer<
-  typeof reorderListsMutationSchema
->;
-export type AddListItemMutationInput = z.infer<
-  typeof addListItemMutationSchema
->;
-export type RenameListItemMutationInput = z.infer<
-  typeof renameListItemMutationSchema
->;
-export type SetListItemStatusMutationInput = z.infer<
-  typeof setListItemStatusMutationSchema
->;
-export type ReorderListItemsMutationInput = z.infer<
-  typeof reorderListItemsMutationSchema
->;

@@ -13,7 +13,7 @@ import {
   Trash2,
 } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
-import { useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
@@ -22,6 +22,7 @@ import {
 } from "./add-list-item-form";
 import { ListItemNameInput } from "./list-item-name-input";
 import { orderCurrentListItems } from "./list-item-order";
+import { preserveListScroll } from "./preserve-list-scroll";
 
 type ListItemsProps = {
   householdId: string;
@@ -75,6 +76,7 @@ function ListItemRow({
   return (
     <li
       ref={sortable.ref}
+      data-list-item-id={item.id}
       className={`flex min-h-14 items-center gap-2 py-2 ${sortable.isDragging ? "opacity-60" : ""}`}
     >
       <IconButton
@@ -94,6 +96,7 @@ function ListItemRow({
         crossed={crossed}
       />
       <IconButton
+        data-list-status-toggle
         aria-label={`${toggleLabel} ${item.name}`}
         title={`${toggleLabel} ${item.name}`}
         disabled={disabled}
@@ -120,6 +123,16 @@ function ListItemRow({
 export function ListItems({ householdId, listId, items }: ListItemsProps) {
   const zero = useZero();
   const mutationEnabled = useZeroMutationEnabled();
+  const root = useRef<HTMLElement>(null);
+  const scrollRequest = useRef<
+    | {
+        id: symbol;
+        itemId: string;
+        status: ListItem["status"] | undefined;
+        snapshot: ReturnType<typeof preserveListScroll>;
+      }
+    | undefined
+  >(undefined);
   const [showArchived, setShowArchived] = useState(false);
   const [draft, setDraft] = useState<DraftListItem>();
   const [creationError, setCreationError] = useState<string>();
@@ -137,13 +150,56 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
   const archivedItems = items.filter((item) => item.status === "archived");
 
   useLayoutEffect(() => {
-    if (!draftIsPersisted) return;
+    if (!draftIsPersisted) {
+      return;
+    }
+
     setDraft((current) =>
       current?.savedItemId === draft?.savedItemId ? undefined : current,
     );
   }, [draft?.savedItemId, draftIsPersisted]);
 
+  useEffect(
+    () => () => {
+      scrollRequest.current?.snapshot.dispose();
+      scrollRequest.current = undefined;
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
+    const request = scrollRequest.current;
+
+    if (!request) {
+      return;
+    }
+
+    const status = items.find((item) => item.id === request.itemId)?.status;
+
+    if (status !== request.status) {
+      request.status = status;
+      request.snapshot.restore();
+    }
+  }, [items]);
+
   function setStatus(itemId: string, status: ListItemStatus) {
+    if (!mutationEnabled) {
+      return;
+    }
+
+    scrollRequest.current?.snapshot.dispose();
+
+    const requestId = Symbol();
+    const request = root.current
+      ? {
+          id: requestId,
+          itemId,
+          status: items.find((item) => item.id === itemId)?.status,
+          snapshot: preserveListScroll(root.current, itemId),
+        }
+      : undefined;
+    scrollRequest.current = request;
+
     observeMutation(
       zero.mutate(
         mutators.lists.setItemStatus({
@@ -154,20 +210,32 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
           optimisticUpdatedAt: Date.now(),
         }),
       ),
+      () =>
+        requestAnimationFrame(() => {
+          if (scrollRequest.current?.id === requestId) {
+            scrollRequest.current.snapshot.dispose();
+            scrollRequest.current = undefined;
+          }
+        }),
     );
   }
 
-  function observeMutation(mutation: {
-    client: PromiseLike<{ type: string }>;
-    server: PromiseLike<{ type: string }>;
-  }) {
+  function observeMutation(
+    mutation: {
+      client: PromiseLike<{ type: string }>;
+      server: PromiseLike<{ type: string }>;
+    },
+    onSettled?: () => void,
+  ) {
     setActionError(undefined);
     void Promise.all([mutation.client, mutation.server])
       .then((results) => {
-        if (results.some((result) => result.type === "error"))
+        if (results.some((result) => result.type === "error")) {
           setActionError("The change could not be saved.");
+        }
       })
-      .catch(() => setActionError("The change could not be saved."));
+      .catch(() => setActionError("The change could not be saved."))
+      .finally(onSettled);
   }
 
   function resolveDraftItemId(name: string) {
@@ -178,7 +246,7 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
   }
 
   return (
-    <section aria-label="List" className="grid gap-5">
+    <section ref={root} tabIndex={-1} aria-label="List" className="grid gap-5">
       {actionError ? (
         <InlineAlert role="alert" variant="danger">
           {actionError}
@@ -186,21 +254,28 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
       ) : null}
       <DragDropProvider
         onDragEnd={(event) => {
-          if (event.canceled || !mutationEnabled) return;
+          if (event.canceled || !mutationEnabled) {
+            return;
+          }
+
           const { source } = event.operation;
+
           if (!isSortable(source) || source.initialIndex === source.index) {
             return;
           }
 
           const reordered = [...visibleCurrentItems];
           const [moved] = reordered.splice(source.initialIndex, 1);
+
           if (
             !moved ||
             (moved.status !== "active" && moved.status !== "crossed")
           ) {
             return;
           }
+
           reordered.splice(source.index, 0, moved);
+
           const orderedItemIds = reordered
             .filter((item) => item.status === moved.status)
             .map((item) => item.id);
@@ -321,6 +396,7 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
             ? archivedItems.map((item) => (
                 <li
                   key={item.id}
+                  data-list-item-id={item.id}
                   className="flex min-h-14 items-center gap-2 py-2"
                 >
                   <IconButton
@@ -338,6 +414,7 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
                     muted
                   />
                   <IconButton
+                    data-list-status-toggle
                     aria-label={`Restore ${item.name}`}
                     title={`Restore ${item.name}`}
                     disabled={!mutationEnabled}

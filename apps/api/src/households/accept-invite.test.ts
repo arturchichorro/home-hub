@@ -7,9 +7,13 @@ import { createAcceptHouseholdInviteService } from "./accept-invite";
 import { hashInviteToken } from "./invite-token";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const inviteId = "74fc10c9-a82d-4126-918c-0d09d1224a32";
+
 const rawToken = "a".repeat(43);
+
 const now = new Date("2026-07-28T12:00:00Z");
 
 type StoredInvite = {
@@ -56,21 +60,30 @@ function createFakeDatabase({
     const builder = {
       from: (table: unknown) => {
         fromTables.push(table);
+
         return builder;
       },
+
       where: (condition: unknown) => {
         whereClauses.push(condition);
+
         return builder;
       },
+
       limit: (limit: unknown) => {
         limits.push(limit);
+
         return builder;
       },
+
       orderBy: (..._order: unknown[]) => builder,
+
       for: async (strength: unknown) => {
         lockStrengths.push(strength);
+
         return rows;
       },
+
       execute: async () => rows,
     };
 
@@ -83,8 +96,10 @@ function createFakeDatabase({
         findFirst: findUser,
       },
     },
+
     select: (selection: unknown) => {
       selections.push(selection);
+
       const index = selectIndex++;
       const rows =
         index === 0
@@ -98,17 +113,21 @@ function createFakeDatabase({
             : topSortKey === undefined
               ? []
               : [{ sortKey: topSortKey }];
+
       return createSelectBuilder(rows);
     },
+
     insert: (table: unknown) => ({
       values: async (values: unknown) => {
         inserted.push({ table, values });
       },
     }),
+
     update: (table: unknown) => ({
       set: (values: unknown) => ({
         where: async (condition: unknown) => {
           updates.push({ table, values, where: condition });
+
           if (failInviteUpdate) {
             throw new Error("invite update failed");
           }
@@ -213,6 +232,7 @@ describe("accept household invite service", () => {
     const result = await acceptInvite({ userId, token: rawToken });
 
     expect(result.kind).toBe("success");
+
     if (result.kind !== "success") {
       throw new Error("Expected invite acceptance to succeed");
     }

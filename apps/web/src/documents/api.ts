@@ -5,8 +5,10 @@ import {
   documentUploadSchema,
 } from "@home-hub/shared/documents";
 import type { MediaSession } from "../media/session";
+
 export type UploadSession = { documentId: string; fileId: string; url: string };
-export async function documentRequest<T>(
+
+async function documentRequest<T>(
   session: MediaSession,
   householdId: string,
   path: string,
@@ -25,10 +27,13 @@ export async function documentRequest<T>(
       signal: AbortSignal.timeout(120000),
     },
   );
+
   if (response.status === 401) {
     session.onSessionExpired();
+
     throw Error("Session expired");
   }
+
   if (!response.ok) {
     // Never display arbitrary upstream messages or SQL errors.
     const messages: Record<number, string> = {
@@ -38,13 +43,16 @@ export async function documentRequest<T>(
       422: "Unsupported or invalid file. Choose a supported document up to 50 MiB.",
       503: "Unable to complete this action. Please retry.",
     };
+
     throw Error(
       messages[response.status] ??
         "The document action could not be completed.",
     );
   }
+
   return schema.parse(await response.json());
 }
+
 export const beginDocumentUpload = (
   session: MediaSession,
   householdId: string,
@@ -62,6 +70,7 @@ export const beginDocumentUpload = (
     }),
     documentUploadResponseSchema,
   );
+
 export const confirmDocumentUpload = (
   session: MediaSession,
   householdId: string,
@@ -74,6 +83,7 @@ export const confirmDocumentUpload = (
     {},
     documentConfirmResponseSchema,
   );
+
 export const readDocument = (
   session: MediaSession,
   householdId: string,
@@ -88,6 +98,7 @@ export const readDocument = (
     { disposition, ...(thumbnail ? { thumbnail } : {}) },
     documentReadResponseSchema,
   );
+
 export function uploadDocumentBytes(
   file: File,
   url: string,
@@ -99,7 +110,9 @@ export function uploadDocumentBytes(
     xhr.setRequestHeader("Content-Type", "application/octet-stream");
     xhr.timeout = 300000;
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) progress(Math.round((e.loaded / e.total) * 100));
+      if (e.lengthComputable) {
+        progress(Math.round((e.loaded / e.total) * 100));
+      }
     };
     xhr.onload = () =>
       xhr.status >= 200 && xhr.status < 300

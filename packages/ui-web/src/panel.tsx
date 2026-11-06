@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
 
-export type PanelVariant = "default" | "raised";
+type PanelVariant = "default" | "raised";
 
 export type PanelProps = Omit<ComponentProps<"section">, "title"> & {
   title?: ReactNode;

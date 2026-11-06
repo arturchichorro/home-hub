@@ -15,6 +15,7 @@ export type CreateZeroMutateRouteInput = {
   dbProvider: ZeroDbProvider;
   logger?: StructuredLogger;
 };
+
 export function createZeroMutateRoute({
   dbProvider,
   logger = consoleStructuredLogger,
@@ -31,7 +32,11 @@ export function createZeroMutateRoute({
         diagnostic.code,
         diagnostic.locations,
       ]);
-      if (reported.has(key)) return;
+
+      if (reported.has(key)) {
+        return;
+      }
+
       reported.add(key);
       logger.error({
         event,
@@ -47,8 +52,10 @@ export function createZeroMutateRoute({
           "mutation_database_error",
         );
       }),
+
       request: c.req.raw,
       userID: userId,
+
       handler: (transact) =>
         transact(async (tx, name, args) => {
           try {
@@ -65,10 +72,12 @@ export function createZeroMutateRoute({
                 ? "mutation_database_error"
                 : "zero_mutation_error",
             );
+
             throw error;
           }
         }),
     });
+
     return c.json(response);
   };
 }

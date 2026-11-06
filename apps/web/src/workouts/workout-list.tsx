@@ -15,15 +15,18 @@ type Workout = {
   title: string;
   logs?: readonly { completedOn: string }[];
 };
+
 const weekdayFormatter = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
   timeZone: "UTC",
 });
+
 const dayFormatter = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "long",
   timeZone: "UTC",
 });
+
 const yearFormatter = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "long",
@@ -37,29 +40,39 @@ export function formatLastDoneDate(
 ): string | undefined {
   // completedOn is the logged local calendar day, not a UTC instant to convert.
   const date = new Date(`${day}T00:00:00Z`);
-  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== day)
+
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== day) {
     return undefined;
+  }
+
   const weekday = weekdayFormatter.format(date);
   const label = (
     date.getUTCFullYear() !== now.getFullYear() ? yearFormatter : dayFormatter
   ).format(date);
+
   return `${weekday}, ${label}`;
 }
+
 // Same gestures as Lists: mouse movement, touch hold, Space/arrow keys.
 const pointerSensor = PointerSensor.configure({
   activationConstraints(event) {
-    if (event.pointerType === "mouse")
+    if (event.pointerType === "mouse") {
       return [new PointerActivationConstraints.Distance({ value: 5 })];
-    if (event.pointerType === "touch")
+    }
+
+    if (event.pointerType === "touch") {
       return [
         new PointerActivationConstraints.Delay({ value: 250, tolerance: 5 }),
       ];
+    }
+
     return [
       new PointerActivationConstraints.Delay({ value: 200, tolerance: 10 }),
       new PointerActivationConstraints.Distance({ value: 5 }),
     ];
   },
 });
+
 const keyboardSensor = KeyboardSensor.configure({
   keyboardCodes: {
     start: ["Space"],
@@ -71,6 +84,7 @@ const keyboardSensor = KeyboardSensor.configure({
     right: ["ArrowRight"],
   },
 });
+
 export function workoutOrderingSensors(defaults: Sensors): Sensors {
   return [
     ...defaults.filter(
@@ -80,6 +94,7 @@ export function workoutOrderingSensors(defaults: Sensors): Sensors {
     keyboardSensor,
   ];
 }
+
 export function reorderedWorkoutIds(
   workouts: readonly { id: string }[],
   from: number,
@@ -91,14 +106,22 @@ export function reorderedWorkoutIds(
     to < 0 ||
     from >= workouts.length ||
     to >= workouts.length
-  )
+  ) {
     return undefined;
+  }
+
   const ids = workouts.map((w) => w.id);
   const [workoutId] = ids.splice(from, 1);
-  if (!workoutId) return undefined;
+
+  if (!workoutId) {
+    return undefined;
+  }
+
   ids.splice(to, 0, workoutId);
+
   return { workoutId, orderedWorkoutIds: ids };
 }
+
 export function WorkoutList({
   workouts,
   disabled,
@@ -113,13 +136,20 @@ export function WorkoutList({
       sensors={workoutOrderingSensors}
       onDragEnd={(event) => {
         const source = event.operation.source;
-        if (disabled || event.canceled || !isSortable(source)) return;
+
+        if (disabled || event.canceled || !isSortable(source)) {
+          return;
+        }
+
         const move = reorderedWorkoutIds(
           workouts,
           source.initialIndex,
           source.index,
         );
-        if (move) onMove(move.workoutId, move.orderedWorkoutIds);
+
+        if (move) {
+          onMove(move.workoutId, move.orderedWorkoutIds);
+        }
       }}
     >
       <ul className="min-w-0 divide-y divide-border">
@@ -135,7 +165,8 @@ export function WorkoutList({
     </DragDropProvider>
   );
 }
-export function WorkoutRow({
+
+function WorkoutRow({
   workout,
   index,
   disabled,
@@ -153,6 +184,7 @@ export function WorkoutRow({
   });
   const lastDone = workout.logs?.[0]?.completedOn;
   const lastDoneLabel = lastDone ? formatLastDoneDate(lastDone) : undefined;
+
   return (
     <li
       ref={sortable.ref}

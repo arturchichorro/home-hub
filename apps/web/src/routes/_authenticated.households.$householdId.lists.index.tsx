@@ -10,9 +10,12 @@ export const Route = createFileRoute(
       queries.lists.library({ householdId: params.householdId }),
     );
   },
+
   component: ListsRoute,
 });
+
 function ListsRoute() {
   const { householdId } = Route.useParams();
+
   return <ListsLibrary key={householdId} householdId={householdId} />;
 }

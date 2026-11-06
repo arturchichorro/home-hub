@@ -41,7 +41,9 @@ export function RecipeIngredientDraftNameForm({
   const [error, setError] = useState<string>();
 
   useEffect(() => {
-    if (focusRequest >= 0) inputRef.current?.focus();
+    if (focusRequest >= 0) {
+      inputRef.current?.focus();
+    }
   }, [focusRequest]);
 
   useEffect(
@@ -54,28 +56,41 @@ export function RecipeIngredientDraftNameForm({
   );
 
   function clearScheduledSave() {
-    if (timeoutRef.current === undefined) return;
+    if (timeoutRef.current === undefined) {
+      return;
+    }
+
     clearTimeout(timeoutRef.current);
     timeoutRef.current = undefined;
   }
 
   async function saveDraft(rawName: string, dismissEmpty: boolean) {
     clearScheduledSave();
-    if (savingRef.current) return;
 
-    const submittedName = cleanRecipeIngredientName(rawName);
-    if (submittedName.length === 0) {
-      if (dismissEmpty) onCancel();
+    if (savingRef.current) {
       return;
     }
+
+    const submittedName = cleanRecipeIngredientName(rawName);
+
+    if (submittedName.length === 0) {
+      if (dismissEmpty) {
+        onCancel();
+      }
+
+      return;
+    }
+
     if (!mutationEnabled) {
       setError("Unable to add the ingredient.");
+
       return;
     }
 
     savingRef.current = true;
     setSaving(true);
     setError(undefined);
+
     const mutation = zero.mutate(
       mutators.recipes.addIngredient({
         ingredientId,
@@ -91,10 +106,12 @@ export function RecipeIngredientDraftNameForm({
       setError("Unable to add the ingredient.");
       savingRef.current = false;
       setSaving(false);
+
       return;
     }
 
     const serverResult = await mutation.server;
+
     if (serverResult.type === "error") {
       onServerError("The ingredient could not be saved.");
     }
@@ -104,9 +121,11 @@ export function RecipeIngredientDraftNameForm({
     setName(value);
     setError(undefined);
     clearScheduledSave();
+
     if (!canDebounceCreateTextDraft(value, cleanRecipeIngredientName(value))) {
       return;
     }
+
     timeoutRef.current = setTimeout(() => {
       void saveDraft(value, false);
     }, autosaveDelayMs);
@@ -137,7 +156,10 @@ export function RecipeIngredientDraftNameForm({
         value={name}
         onBlur={() => void saveDraft(name, true)}
         onKeyDown={(event) => {
-          if (event.key !== "Escape") return;
+          if (event.key !== "Escape") {
+            return;
+          }
+
           event.preventDefault();
           clearScheduledSave();
           onCancel();
@@ -179,7 +201,9 @@ export function AddRecipeIngredientTriggerRow({
           className="h-7! px-1.5! ml-2 font-normal text-muted"
           onClick={onActivate}
           onPointerDown={(event) => {
-            if (draftActive) event.preventDefault();
+            if (draftActive) {
+              event.preventDefault();
+            }
           }}
         >
           <Plus aria-hidden="true" className="size-4" />

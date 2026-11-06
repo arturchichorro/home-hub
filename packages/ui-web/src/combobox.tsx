@@ -1,8 +1,12 @@
 import { Combobox as BaseCombobox } from "@base-ui/react/combobox";
 import type { ComponentProps } from "react";
+
 export const ComboboxRoot = BaseCombobox.Root;
+
 export const ComboboxTrigger = BaseCombobox.Trigger;
+
 export const ComboboxList = BaseCombobox.List;
+
 export function ComboboxInput(
   props: ComponentProps<typeof BaseCombobox.Input>,
 ) {
@@ -13,6 +17,7 @@ export function ComboboxInput(
     />
   );
 }
+
 export function ComboboxPopup({ children }: { children: React.ReactNode }) {
   return (
     <BaseCombobox.Portal>
@@ -24,6 +29,7 @@ export function ComboboxPopup({ children }: { children: React.ReactNode }) {
     </BaseCombobox.Portal>
   );
 }
+
 export function ComboboxItem({
   children,
   ...props

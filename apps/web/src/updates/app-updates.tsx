@@ -8,7 +8,11 @@ export function AppUpdates() {
     appUpdates.getState,
     appUpdates.getState,
   );
-  if (!state.waiting && !state.ready && !state.required) return null;
+
+  if (!state.waiting && !state.ready && !state.required) {
+    return null;
+  }
+
   const canUpdate = state.waiting || state.ready || state.reloadOnly;
   const label = state.applying
     ? "Updating…"
@@ -20,6 +24,7 @@ export function AppUpdates() {
       {label}
     </Button>
   );
+
   return (
     <aside
       role={state.required ? "alert" : "status"}

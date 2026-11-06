@@ -21,19 +21,24 @@ import {
 } from "vitest";
 import { createListMediaServices, type ListMediaDependencies } from "./media";
 
-const url = process.env.MEDIA_TEST_DATABASE_URL;
+const url = process.env.TEST_DATABASE_URL;
+
 describe.runIf(Boolean(url))("moodboard media on PostgreSQL", () => {
-  let client: ReturnType<typeof createDbClient>,
-    userId: string,
-    householdId: string,
-    listId: string;
+  let client: ReturnType<typeof createDbClient>;
+  let userId: string;
+  let householdId: string;
+  let listId: string;
   beforeAll(() => {
-    if (!url || !new URL(url).pathname.startsWith("/media_migration_"))
-      throw Error("Disposable database required");
+    if (!url || !new URL(url).pathname.startsWith("/home_hub_test_")) {
+      throw Error("Disposable home_hub_test_ database required");
+    }
+
     client = createDbClient(url);
   });
   afterAll(async () => {
-    if (client) await client.close();
+    if (client) {
+      await client.close();
+    }
   });
   beforeEach(async () => {
     userId = randomUUID();
@@ -67,7 +72,9 @@ describe.runIf(Boolean(url))("moodboard media on PostgreSQL", () => {
       sortKey: 1024,
     });
   });
+
   const scope = () => ({ userId, householdId, listId });
+
   function setup(contentType = "video/mp4") {
     const processVideo = vi.fn(async () => ({
       width: 400,
@@ -75,15 +82,17 @@ describe.runIf(Boolean(url))("moodboard media on PostgreSQL", () => {
       durationMs: 2000,
       videoVersion: "a".repeat(64),
     }));
-    const processImage = vi.fn(async () => {}),
-      inspectObject = vi.fn(async () => ({ contentType, byteSize: 1000 }));
-    const signRead = vi.fn(async () => "https://fixture.invalid/poster"),
-      signVideo = vi.fn<ListMediaDependencies["signVideo"]>(
-        async () => "https://fixture.invalid/video",
-      );
+    const processImage = vi.fn(async () => {});
+    const inspectObject = vi.fn(async () => ({ contentType, byteSize: 1000 }));
+    const signRead = vi.fn(async () => "https://fixture.invalid/poster");
+    const signVideo = vi.fn<ListMediaDependencies["signVideo"]>(
+      async () => "https://fixture.invalid/video",
+    );
     const services = createListMediaServices({
       db: client.db,
+
       signUpload: async () => "https://fixture.invalid/upload",
+
       processVideo,
       processImage,
       inspectObject,
@@ -98,6 +107,7 @@ describe.runIf(Boolean(url))("moodboard media on PostgreSQL", () => {
         width: 320,
         height: 240,
       });
+
     return {
       services,
       upload,
@@ -108,19 +118,25 @@ describe.runIf(Boolean(url))("moodboard media on PostgreSQL", () => {
       signVideo,
     };
   }
+
   async function id(
     result: Awaited<ReturnType<ReturnType<typeof setup>["upload"]>>,
   ) {
     expect(result.kind).toBe("success");
-    if (result.kind !== "success") throw Error("fixture");
+
+    if (result.kind !== "success") {
+      throw Error("fixture");
+    }
+
     return result.attachmentId;
   }
+
   const count = async () =>
     (await client.db.select().from(lists).where(eq(lists.id, listId)))[0]
       ?.mediaCount;
   it("confirms clips exactly once, publishes authoritative metadata and signed playback/poster reads", async () => {
-    const f = setup(),
-      attachmentId = await id(await f.upload());
+    const f = setup();
+    const attachmentId = await id(await f.upload());
     expect(await count()).toBe(0);
     expect(
       await f.services.readUrls({
@@ -136,6 +152,7 @@ describe.runIf(Boolean(url))("moodboard media on PostgreSQL", () => {
     await f.services.confirmUpload({ ...scope(), attachmentId });
     expect(f.processVideo).toHaveBeenCalledOnce();
     expect(await count()).toBe(1);
+
     const read = await f.services.readUrls({
       userId,
       householdId,
@@ -152,6 +169,7 @@ describe.runIf(Boolean(url))("moodboard media on PostgreSQL", () => {
       videoVersion: "a".repeat(64),
       identity: { moduleKey: "lists", parentId: listId, attachmentId },
     });
+
     const [asset] = await client.db
       .select()
       .from(media)
@@ -166,8 +184,8 @@ describe.runIf(Boolean(url))("moodboard media on PostgreSQL", () => {
     });
   });
   it("keeps image processing separate and never signs an image as a video", async () => {
-    const f = setup("image/png"),
-      attachmentId = await id(await f.upload());
+    const f = setup("image/png");
+    const attachmentId = await id(await f.upload());
     await f.services.confirmUpload({ ...scope(), attachmentId });
     expect(f.processVideo).not.toHaveBeenCalled();
     expect(f.processImage).toHaveBeenCalledOnce();
@@ -181,9 +199,9 @@ describe.runIf(Boolean(url))("moodboard media on PostgreSQL", () => {
     ).toMatchObject({ kind: "success", reads: [] });
   });
   it("retains assets on removal and serializes concurrent upload/count changes", async () => {
-    const f = setup(),
-      [a, b] = await Promise.all([f.upload(), f.upload()]),
-      ids = [await id(a), await id(b)];
+    const f = setup();
+    const [a, b] = await Promise.all([f.upload(), f.upload()]);
+    const ids = [await id(a), await id(b)];
     await Promise.all(
       ids.map((attachmentId) =>
         f.services.confirmUpload({ ...scope(), attachmentId }),
@@ -196,17 +214,20 @@ describe.runIf(Boolean(url))("moodboard media on PostgreSQL", () => {
       ),
     );
     expect(await count()).toBe(0);
+
     const attached = await client.db
       .select()
       .from(listMedia)
       .where(eq(listMedia.listId, listId));
     expect(attached.every((r) => r.deletedAt !== null)).toBe(true);
-    for (const row of attached)
+
+    for (const row of attached) {
       expect(
         (
           await client.db.select().from(media).where(eq(media.id, row.mediaId))
         )[0]?.confirmedAt,
       ).not.toBeNull();
+    }
   });
   it("rejects checklist, disabled-module and foreign-parent access before storage calls", async () => {
     const f = setup();
@@ -236,13 +257,14 @@ describe.runIf(Boolean(url))("moodboard media on PostgreSQL", () => {
     ).toBe("forbidden");
   });
   it("reauthorizes after external processing without holding database locks", async () => {
-    const f = setup(),
-      attachmentId = await id(await f.upload());
+    const f = setup();
+    const attachmentId = await id(await f.upload());
     f.processVideo.mockImplementation(async () => {
       await client.db
         .update(lists)
         .set({ deletedAt: new Date() })
         .where(eq(lists.id, listId));
+
       return {
         width: 400,
         height: 600,
@@ -253,6 +275,7 @@ describe.runIf(Boolean(url))("moodboard media on PostgreSQL", () => {
     expect(
       (await f.services.confirmUpload({ ...scope(), attachmentId })).kind,
     ).toBe("not_found");
+
     const [asset] = await client.db
       .select()
       .from(media)

@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 import { signAccessToken, verifyAccessToken } from "./access-token";
 
 const secret = "super-secret";
+
 const now = new Date("2026-01-01T00:00:00Z");
+
 const issuedAt = Math.floor(now.getTime() / 1000);
 
 function base64UrlEncodeJson(value: unknown): string {

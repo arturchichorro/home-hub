@@ -20,11 +20,14 @@ import {
 
 const secret =
   "PRIVATE_NOTE password=secret https://private.invalid/?signature=TOKEN";
+
 const source = fileURLToPath(new URL("./app.ts", import.meta.url));
+
 function unknownError() {
   const error = new Error(secret);
   error.name = "PrivateUserName";
   error.stack = `${secret}\n    at PrivateFunction (${source}:1:1)\n    at x (/home/private-user/secret.ts:2:2)\n    at y (${source}?signature=PRIVATE:1:1)\n    at z (file://${source}#PRIVATE:1:1)`;
+
   return error;
 }
 
@@ -102,13 +105,17 @@ describe("source-first diagnostics", () => {
     const e = unknownError();
     Object.defineProperty(e, "cause", { value: e });
     expect(diagnosticFor("http.request", e).locations).toHaveLength(1);
+
     const hostile = new Error();
-    for (const key of ["stack", "name", "code", "cause"])
+
+    for (const key of ["stack", "name", "code", "cause"]) {
       Object.defineProperty(hostile, key, {
         get() {
           throw Error(secret);
         },
       });
+    }
+
     expect(diagnosticFor("http.request", hostile).errorCode).toBe(
       "HH_UNEXPECTED",
     );
@@ -131,9 +138,9 @@ describe("source-first diagnostics", () => {
     expect(diagnosticContext.getStore()).toBeUndefined();
   });
   it("logs child-handled failures once and preserves private response semantics", async () => {
-    const records: StructuredLogRecord[] = [],
-      app = new Hono<ObservabilityEnv>(),
-      child = new Hono();
+    const records: StructuredLogRecord[] = [];
+    const app = new Hono<ObservabilityEnv>();
+    const child = new Hono();
     installApiObservability(app, {
       logger: { info: (r) => records.push(r), error: (r) => records.push(r) },
     });
@@ -144,6 +151,7 @@ describe("source-first diagnostics", () => {
       }),
     );
     app.route("/api/households/:householdId/documents", child);
+
     const r = await app.request(
       "/api/households/private/documents/uploads/private/confirm?signature=PRIVATE",
       { method: "POST" },
@@ -160,8 +168,8 @@ describe("source-first diagnostics", () => {
     expect(JSON.stringify(records)).not.toContain("/private/");
   });
   it("does not misattribute a later unrelated exception to a recovered dependency failure", async () => {
-    const records: StructuredLogRecord[] = [],
-      app = new Hono<ObservabilityEnv>();
+    const records: StructuredLogRecord[] = [];
+    const app = new Hono<ObservabilityEnv>();
     installApiObservability(app, {
       logger: { info: (r) => records.push(r), error: (r) => records.push(r) },
     });
@@ -169,6 +177,7 @@ describe("source-first diagnostics", () => {
       await withDiagnosticOperation("documents.storage_read", async () => {
         throw unknownError();
       }).catch(() => {});
+
       throw new Error("Different private failure");
     });
     await app.request("/api/health");
@@ -179,8 +188,8 @@ describe("source-first diagnostics", () => {
     });
   });
   it("does not turn a recovered failure into an error on a successful response", async () => {
-    const records: StructuredLogRecord[] = [],
-      app = new Hono<ObservabilityEnv>();
+    const records: StructuredLogRecord[] = [];
+    const app = new Hono<ObservabilityEnv>();
     installApiObservability(app, {
       logger: { info: (r) => records.push(r), error: (r) => records.push(r) },
     });
@@ -188,6 +197,7 @@ describe("source-first diagnostics", () => {
       await withDiagnosticOperation("documents.storage_read", async () => {
         throw unknownError();
       }).catch(() => {});
+
       return c.json({ ok: true });
     });
     await app.request("/api/health");

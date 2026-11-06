@@ -20,5 +20,6 @@ export function reorderNeighborhood(
   movedId: string,
 ): string[] {
   const index = ids.indexOf(movedId);
+
   return index < 0 ? [] : ids.slice(Math.max(0, index - 1), index + 2);
 }

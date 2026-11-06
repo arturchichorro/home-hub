@@ -4,9 +4,11 @@ import { ZeroConnectionStatus } from "./connection-status";
 import { useZeroMutationEnabled } from "./use-zero-mutation-enabled";
 
 const state = vi.hoisted(() => ({ name: "initializing", required: false }));
+
 vi.mock("@rocicorp/zero/react", () => ({
   useConnectionState: () => ({ name: state.name }),
 }));
+
 vi.mock("../updates/state", () => ({
   useUpdateRequired: () => state.required,
 }));
@@ -14,16 +16,19 @@ vi.mock("../updates/state", () => ({
 function MutationState() {
   return <span>{String(useZeroMutationEnabled())}</span>;
 }
+
 afterEach(() => {
   state.name = "initializing";
   state.required = false;
 });
+
 it("shows local initialization and blocks writes until storage is ready", () => {
   expect(renderToStaticMarkup(<ZeroConnectionStatus />)).toContain(
     "Loading local data",
   );
   expect(renderToStaticMarkup(<MutationState />)).toContain("false");
 });
+
 it.each(["connecting", "connected"])(
   "allows writes while %s unless an update is required",
   (name) => {
@@ -33,6 +38,7 @@ it.each(["connecting", "connected"])(
     expect(renderToStaticMarkup(<MutationState />)).toContain("false");
   },
 );
+
 it.each(["disconnected", "needs-auth", "error", "closed"])(
   "blocks writes while %s",
   (name) => {

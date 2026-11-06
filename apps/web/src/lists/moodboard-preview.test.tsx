@@ -11,12 +11,11 @@ it("bounds the card mosaic to four tiles and labels videos without autoplay", ()
         listId: "list",
         asset: { id: String(i), kind: "video", width: 400, height: 600 },
       }))}
-      count={8}
     />,
   );
   expect(html.match(/aria-label="Video"/g)).toHaveLength(4);
-  expect(html).toContain("8");
-  expect(html).toContain("media items");
+  expect(html).not.toContain("media items");
+  expect(html).not.toContain("media item");
   expect(html).not.toContain("<video");
   expect(html).not.toContain("autoplay");
 });

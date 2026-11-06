@@ -5,7 +5,8 @@ export type StatusIndicatorVariant =
   | "success"
   | "warning"
   | "danger";
-export type StatusIndicatorSize = "compact" | "default";
+
+type StatusIndicatorSize = "compact" | "default";
 
 export type StatusIndicatorProps = Omit<
   ComponentProps<"span">,

@@ -5,15 +5,20 @@ import {
   recipeMedia as recipeImages,
   recipes,
 } from "@home-hub/database/schema";
+import { recipeImageDeliveryCapabilityLifetimeSeconds as recipeImageReadUrlLifetimeSeconds } from "@home-hub/shared/recipe-image-delivery";
 import { describe, expect, it, vi } from "vitest";
 import { createRecipeImageReadUrlService } from "./create-read-url";
-import { recipeImageReadUrlLifetimeSeconds } from "./sign-read";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+
 const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+
 const objectKey = `households/${householdId}/recipes/${recipeId}/${imageId}`;
+
 const input = {
   userId,
   householdId,
@@ -49,17 +54,25 @@ function createFakeDatabase({
     const builder = {
       from: (table: unknown) => {
         tables.push(table);
+
         return builder;
       },
+
       innerJoin: () => builder,
+
       where: (_condition: unknown) => builder,
+
       limit: (_limit: unknown) => builder,
+
       for: async (strength: unknown) => {
         lockStrengths.push(strength);
+
         const result = results.shift();
+
         return result ? [result] : [];
       },
     };
+
     return builder;
   });
 
@@ -74,8 +87,10 @@ function createFakeDatabase({
   const transaction = vi.fn(
     async <T>(operation: (transaction: typeof tx) => Promise<T>) => {
       events.push("transaction:start");
+
       const result = await operation(tx);
       events.push("transaction:end");
+
       return result;
     },
   );
@@ -96,6 +111,7 @@ describe("create recipe image read URL service", () => {
     });
     const signRead = vi.fn(async () => {
       events.push("sign");
+
       return "https://signed-read.example";
     });
 

@@ -9,10 +9,15 @@ import { describe, expect, it, vi } from "vitest";
 import { createDeleteRecipeImageService } from "./delete";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+
 const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+
 const objectKey = `households/${householdId}/recipes/${recipeId}/${imageId}`;
+
 const input = { userId, householdId, recipeId, imageId };
 
 function createFakeDatabase({
@@ -39,17 +44,25 @@ function createFakeDatabase({
     const builder = {
       from: (table: unknown) => {
         tables.push(table);
+
         return builder;
       },
+
       innerJoin: () => builder,
+
       where: () => builder,
+
       limit: () => builder,
+
       for: async (strength: unknown) => {
         lockStrengths.push(strength);
+
         const result = results.shift();
+
         return result ? [result] : [];
       },
     };
+
     return builder;
   });
   const returning = vi.fn(async () =>
@@ -59,6 +72,7 @@ function createFakeDatabase({
   const set = vi.fn(() => ({ where }));
   const update = vi.fn((table: unknown) => {
     tables.push(table);
+
     return { set };
   });
   const tx = {

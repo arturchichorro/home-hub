@@ -22,22 +22,27 @@ import {
 import { createLogsServer } from "./mcp.ts";
 
 const now = Date.parse("2026-11-04T12:00:00Z");
+
 const input = {
   services: ["api"],
   start: "2026-11-04T11:00:00Z",
   end: "2026-11-04T12:00:00Z",
 };
+
 const config = {
   url: "https://logs-prod-test.grafana.net",
   tenant: "12345",
   token: "secret-read-token-not-returned",
 };
+
 const timestamp = String(BigInt(now - 10_000) * 1_000_000n);
+
 const line = JSON.stringify({
   event: "http_request",
   status: "500",
   requestId: "147db701-6b85-42f9-b09d-aa39784bf1ca",
 });
+
 function body(lines = [line], stream: Record<string, string> = {}) {
   return {
     status: "success",
@@ -51,16 +56,20 @@ function body(lines = [line], stream: Record<string, string> = {}) {
             service: "api",
             ...stream,
           },
+
           values: lines.map((l) => [timestamp, l]),
         },
       ],
     },
   };
 }
+
 const response = (data: unknown) => new Response(JSON.stringify(data));
+
 function fixture(data = body()) {
   const audit = vi.fn<(record: AuditRecord) => Promise<void>>(async () => {});
   const fetcher = vi.fn<typeof fetch>(async () => response(data));
+
   return {
     reader: new LogsReader(config, audit, fetcher, () => now),
     audit,
@@ -71,8 +80,8 @@ function fixture(data = body()) {
 describe("bounded read-only log queries", () => {
   it("returns stable citations, exact nanoseconds and reproducible sources without credentials", async () => {
     const { reader, fetcher, audit } = fixture();
-    const a = await reader.search(input),
-      b = await reader.search(input);
+    const a = await reader.search(input);
+    const b = await reader.search(input);
     expect(a.entries[0]?.citation).toBe(b.entries[0]?.citation);
     expect(a.entries[0]?.timestamp).toBe(timestamp);
     expect(JSON.stringify(a)).not.toContain(config.token);
@@ -133,8 +142,11 @@ describe("bounded read-only log queries", () => {
       new LogsReader(config, fail, fetcher, () => now).search(input),
     ).rejects.toThrow("Log search unavailable");
     expect(fetcher).not.toHaveBeenCalled();
+
     const completionFail = vi.fn(async ({ phase }) => {
-      if (phase === "completed") throw Error("disk full");
+      if (phase === "completed") {
+        throw Error("disk full");
+      }
     });
     await expect(
       new LogsReader(config, completionFail, fetcher, () => now).search(input),
@@ -185,6 +197,7 @@ describe("bounded read-only log queries", () => {
         input,
       ),
     ).rejects.toThrow("Unexpected log backend");
+
     const result = await fixture(
       body([JSON.stringify({ event: "http_request", privateNote: "PRIVATE" })]),
     ).reader.search(input);
@@ -195,14 +208,20 @@ describe("bounded read-only log queries", () => {
   });
   it("enforces per-process rate limits and concurrent limits", async () => {
     const { reader } = fixture();
-    for (let i = 0; i < 20; i++) await reader.search(input);
+
+    for (let i = 0; i < 20; i++) {
+      await reader.search(input);
+    }
+
     await expect(reader.search(input)).rejects.toThrow("query limit");
+
     let release: () => void = () => {};
     const wait = new Promise<void>((resolve) => {
       release = resolve;
     });
     const fetcher = vi.fn(async () => {
       await wait;
+
       return response(body());
     });
     const concurrent = new LogsReader(
@@ -211,8 +230,8 @@ describe("bounded read-only log queries", () => {
       fetcher,
       () => now,
     );
-    const a = concurrent.search(input),
-      b = concurrent.search(input);
+    const a = concurrent.search(input);
+    const b = concurrent.search(input);
     await expect(concurrent.search(input)).rejects.toThrow("query limit");
     release();
     await Promise.all([a, b]);
@@ -285,10 +304,12 @@ describe("agent protocol and audit", () => {
       InMemoryTransport.createLinkedPair();
     await server.connect(serverTransport);
     await client.connect(clientTransport);
+
     try {
       const { tools } = await client.listTools();
       expect(tools.map((t) => t.name)).toEqual(["search_logs"]);
       expect(tools[0]?.annotations?.readOnlyHint).toBe(true);
+
       const result = await client.callTool({
         name: "search_logs",
         arguments: input,
@@ -305,9 +326,10 @@ describe("agent protocol and audit", () => {
   });
   it("writes private bounded audit files and rotates without retaining query text", async () => {
     const dir = await mkdtemp(join(tmpdir(), "hh-log-audit-"));
+
     try {
-      const file = join(dir, "query.jsonl"),
-        audit = fileAudit(file);
+      const file = join(dir, "query.jsonl");
+      const audit = fileAudit(file);
       await new LogsReader(
         config,
         audit,
@@ -338,6 +360,7 @@ describe("agent protocol and audit", () => {
   });
   it("serializes concurrent audits across readers sharing the same private file", async () => {
     const dir = await mkdtemp(join(tmpdir(), "hh-log-audit-"));
+
     try {
       const file = join(dir, "query.jsonl");
       const a = new LogsReader(
@@ -353,6 +376,7 @@ describe("agent protocol and audit", () => {
         () => now,
       );
       await Promise.all([a.search(input), b.search(input)]);
+
       const records = (await readFile(file, "utf8"))
         .trim()
         .split("\n")
@@ -366,6 +390,7 @@ describe("agent protocol and audit", () => {
   });
   it("refuses symlink audit targets", async () => {
     const dir = await mkdtemp(join(tmpdir(), "hh-log-audit-"));
+
     try {
       const target = join(dir, "other");
       await writeFile(target, "untouched", { mode: 0o600 });

@@ -9,9 +9,17 @@ import {
 } from "./workout-log-form";
 
 const workout = starterWorkouts[0];
-if (!workout) throw Error("seed");
+
+if (!workout) {
+  throw Error("seed");
+}
+
 const exercise = workout.exercises[0];
-if (!exercise) throw Error("seed");
+
+if (!exercise) {
+  throw Error("seed");
+}
+
 describe("workout logging inputs", () => {
   it("starts empty without copying shared notes, targets or previous values", () => {
     const form = openWorkoutLog(workout);
@@ -23,7 +31,11 @@ describe("workout logging inputs", () => {
   });
   it("requires both unilateral counts rather than interpreting a new blank as left", () => {
     const unilateral = workout.exercises.find((e) => e.unilateral);
-    if (!unilateral) throw Error("seed");
+
+    if (!unilateral) {
+      throw Error("seed");
+    }
+
     expect(
       completeSetValues(unilateral, {
         weightKg: "8",
@@ -40,8 +52,8 @@ describe("workout logging inputs", () => {
     ).toEqual({ weightKg: 8, amount: 10, rightAmount: 9 });
   });
   it("retains incomplete text without treating it as a saved row", () => {
-    const form = openWorkoutLog(workout),
-      input = { weightKg: "8", amount: "", rightAmount: "" };
+    const form = openWorkoutLog(workout);
+    const input = { weightKg: "8", amount: "", rightAmount: "" };
     form.inputs[setInputKey(exercise.id, 1)] = input;
     expect(completeSetValues(exercise, input)).toBeUndefined();
     expect(input.weightKg).toBe("8");
@@ -54,6 +66,7 @@ describe("workout logging inputs", () => {
       amount: "",
       rightAmount: "",
     };
+
     const next = openWorkoutLog(workout);
     expect(next.id).not.toBe(old.id);
     expect(next.inputs).toEqual({});
@@ -99,6 +112,7 @@ describe("workout logging inputs", () => {
         "Europe/Brussels",
       ),
     ).toBeUndefined();
+
     const form = openWorkoutLog({ ...workout, title: "Changed" }, existing);
     expect(form.id).toBe(existing.id);
     expect(form.snapshot.title).toBe(workout.title);

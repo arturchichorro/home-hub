@@ -11,7 +11,9 @@ import {
 } from "./recipe-image-delivery";
 
 const secret = "test-image-delivery-secret-at-least-32-bytes";
+
 const nowSeconds = 1_787_625_600;
+
 const capability = {
   expiresAt: nowSeconds + recipeImageDeliveryCapabilityLifetimeSeconds,
   householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",

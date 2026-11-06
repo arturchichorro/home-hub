@@ -7,7 +7,7 @@ import {
 } from "@home-hub/shared/diagnostics";
 import * as z from "zod";
 
-export const services = [
+const services = [
   "api",
   "zero-cache",
   "postgres",
@@ -15,7 +15,8 @@ export const services = [
   "deploy",
   "backup",
 ] as const;
-export const events = [
+
+const events = [
   "operational_log",
   "http_request",
   "mutation_database_error",
@@ -36,6 +37,7 @@ export const events = [
   "backup_failed",
   "collector_canary",
 ] as const;
+
 const severitySchema = z.enum([
   "unknown",
   "debug",
@@ -44,6 +46,7 @@ const severitySchema = z.enum([
   "error",
   "fatal",
 ]);
+
 export const searchSchema = z
   .object({
     services: z.array(z.enum(services)).min(1).max(6),
@@ -76,10 +79,11 @@ export const searchSchema = z
     limit: z.number().int().min(1).max(200).default(50),
   })
   .strict();
+
 export type Search = z.infer<typeof searchSchema>;
 
 // A second allowlist protects tool responses even if a backend stream is misconfigured.
-export const recordSchema = z
+const recordSchema = z
   .object({
     errorCode: diagnosticCodeSchema.optional(),
     operation: diagnosticOperationSchema.optional(),
@@ -152,7 +156,9 @@ export const recordSchema = z
       ? { diagnosticMessage: diagnosticMessages[record.errorCode] }
       : {}),
   }));
-export type SafeRecord = z.infer<typeof recordSchema>;
+
+type SafeRecord = z.infer<typeof recordSchema>;
+
 export type AuditRecord = {
   queryId: string;
   phase: "started" | "completed" | "failed";
@@ -164,13 +170,16 @@ export type AuditRecord = {
   count?: number;
   truncated?: boolean;
 };
+
 export type LogsConfig = { url: string; tenant: string; token: string };
+
 export class LogSearchError extends Error {}
-export const digest = (s: string) =>
-  createHash("sha256").update(s).digest("hex");
+
+const digest = (s: string) => createHash("sha256").update(s).digest("hex");
 
 export function loadLogsConfig(env: NodeJS.ProcessEnv): LogsConfig {
   const url = new URL(env.HOME_HUB_LOKI_URL ?? "");
+
   // A trusted operator chooses the stack, never a tool caller. No redirects, URL credentials or queries.
   if (
     url.protocol !== "https:" ||
@@ -186,8 +195,10 @@ export function loadLogsConfig(env: NodeJS.ProcessEnv): LogsConfig {
       "Use the HTTPS Grafana Cloud Loki origin, without a path or credentials.",
     );
   }
+
   const tenant = env.HOME_HUB_LOKI_TENANT ?? "";
   const token = env.HOME_HUB_LOKI_READ_TOKEN ?? "";
+
   if (
     !/^[0-9]{1,20}$/.test(tenant) ||
     token.length < 16 ||
@@ -196,14 +207,20 @@ export function loadLogsConfig(env: NodeJS.ProcessEnv): LogsConfig {
   ) {
     throw new LogSearchError("A dedicated logs:read tenant/token is required.");
   }
+
   return { url: url.origin, tenant, token };
 }
 
 export function compileQuery(s: Search): string {
   const selector = `{app="home-hub",environment="production",service=~${JSON.stringify([...new Set(s.services)].sort().join("|"))}${s.revision ? `,revision=${JSON.stringify(s.revision)}` : ""}}`;
   let q = selector;
-  if (s.contains) q += ` |= ${JSON.stringify(s.contains)}`;
+
+  if (s.contains) {
+    q += ` |= ${JSON.stringify(s.contains)}`;
+  }
+
   q += " | json";
+
   for (const key of [
     "event",
     "errorCode",
@@ -213,37 +230,52 @@ export function compileQuery(s: Search): string {
     "code",
     "status",
   ] as const) {
-    if (s[key] !== undefined)
+    if (s[key] !== undefined) {
       q += ` | ${key}=${JSON.stringify(String(s[key]))}`;
+    }
   }
+
   return `${q} | __error__=""`;
 }
 
 async function boundedJson(response: Response): Promise<unknown> {
-  if (!response.body) throw new LogSearchError("Empty log backend response.");
+  if (!response.body) {
+    throw new LogSearchError("Empty log backend response.");
+  }
+
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
   let bytes = 0;
+
   try {
     while (true) {
       const item = await reader.read();
-      if (item.done) break;
+
+      if (item.done) {
+        break;
+      }
+
       bytes += item.value.byteLength;
-      if (bytes > 2 * 1024 * 1024)
+
+      if (bytes > 2 * 1024 * 1024) {
         throw new LogSearchError(
           "Log response exceeded 2 MiB; narrow the query.",
         );
+      }
+
       chunks.push(item.value);
     }
   } finally {
     await reader.cancel();
   }
+
   try {
     return JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } catch {
     throw new LogSearchError("Invalid log backend response.");
   }
 }
+
 const backendSchema = z.object({
   status: z.literal("success"),
   data: z.object({
@@ -268,6 +300,7 @@ export class LogsReader {
   private readonly audit: (record: AuditRecord) => Promise<void>;
   private readonly fetcher: typeof fetch;
   private readonly now: () => number;
+
   constructor(
     config: LogsConfig,
     audit: (record: AuditRecord) => Promise<void>,
@@ -282,11 +315,16 @@ export class LogsReader {
 
   async search(input: unknown) {
     const parsed = searchSchema.safeParse(input);
-    if (!parsed.success) throw new LogSearchError("Invalid log filters.");
+
+    if (!parsed.success) {
+      throw new LogSearchError("Invalid log filters.");
+    }
+
     const s = parsed.data;
-    const start = Date.parse(s.start),
-      end = Date.parse(s.end),
-      now = this.now();
+    const start = Date.parse(s.start);
+    const end = Date.parse(s.end);
+    const now = this.now();
+
     if (
       start >= end ||
       end > now + 2000 ||
@@ -297,13 +335,18 @@ export class LogsReader {
         "Use a past window of at most 6 hours within the last 14 days.",
       );
     }
+
     this.starts = this.starts.filter((t) => t > now - 60_000);
-    if (this.active >= 2 || this.starts.length >= 20)
+
+    if (this.active >= 2 || this.starts.length >= 20) {
       throw new LogSearchError("Log query limit reached; retry later.");
+    }
+
     this.starts.push(now);
     this.active++;
-    const query = compileQuery(s),
-      queryId = randomUUID();
+
+    const query = compileQuery(s);
+    const queryId = randomUUID();
     const meta = {
       queryId,
       queryHash: digest(query),
@@ -312,11 +355,13 @@ export class LogsReader {
       end: s.end,
       limit: s.limit,
     };
+
     try {
       await this.audit({ ...meta, phase: "started" }); // Fail closed before contacting the backend.
+
       const url = new URL("/loki/api/v1/query_range", this.config.url);
-      const from = BigInt(start) * 1_000_000n,
-        until = BigInt(end) * 1_000_000n;
+      const from = BigInt(start) * 1_000_000n;
+      const until = BigInt(end) * 1_000_000n;
       url.search = new URLSearchParams({
         query,
         start: String(from),
@@ -324,6 +369,7 @@ export class LogsReader {
         limit: String(s.limit + 1),
         direction: "backward",
       }).toString();
+
       const response = await this.fetcher(url, {
         method: "GET",
         redirect: "error",
@@ -332,18 +378,25 @@ export class LogsReader {
           Authorization: `Basic ${Buffer.from(`${this.config.tenant}:${this.config.token}`).toString("base64")}`,
         },
       });
+
       if (!response.ok) {
         await response.body?.cancel();
+
         throw new LogSearchError(
           `Log backend returned HTTP ${response.status}.`,
         );
       }
+
       const decoded = backendSchema.safeParse(await boundedJson(response));
-      if (!decoded.success)
+
+      if (!decoded.success) {
         throw new LogSearchError(
           "Unexpected log backend response; no entries returned.",
         );
+      }
+
       const entries = [];
+
       for (const stream of decoded.data.data.result) {
         if (
           stream.stream.app !== "home-hub" ||
@@ -352,14 +405,19 @@ export class LogsReader {
             stream.stream.service as (typeof services)[number],
           ) ||
           (s.revision && stream.stream.revision !== s.revision)
-        )
+        ) {
           throw new LogSearchError(
             "Unexpected log stream; no entries returned.",
           );
+        }
+
         for (const [timestamp, line] of stream.values) {
-          if (BigInt(timestamp) < from || BigInt(timestamp) > until)
+          if (BigInt(timestamp) < from || BigInt(timestamp) > until) {
             throw new LogSearchError("Unexpected log timestamp.");
+          }
+
           let record: SafeRecord;
+
           try {
             record = recordSchema.parse(JSON.parse(line));
           } catch {
@@ -367,6 +425,7 @@ export class LogsReader {
               "Unexpected log record; no entries returned.",
             );
           }
+
           const service = stream.stream.service;
           entries.push({
             citation: `loki:${digest(this.config.url + this.config.tenant).slice(0, 12)}:${service}:${timestamp}:${digest(line).slice(0, 20)}`,
@@ -379,8 +438,11 @@ export class LogsReader {
           });
         }
       }
-      if (entries.length > s.limit + 1)
+
+      if (entries.length > s.limit + 1) {
         throw new LogSearchError("Backend ignored result bounds.");
+      }
+
       entries.sort((a, b) =>
         a.timestamp === b.timestamp
           ? a.citation.localeCompare(b.citation)
@@ -388,6 +450,7 @@ export class LogsReader {
             ? -1
             : 1,
       );
+
       const truncated = entries.length > s.limit;
       const result = {
         queryId,
@@ -409,6 +472,7 @@ export class LogsReader {
         count: result.entries.length,
         truncated,
       });
+
       return result;
     } catch (error) {
       try {
@@ -416,7 +480,11 @@ export class LogsReader {
       } catch {
         /* Never expose backend errors or credentials. */
       }
-      if (error instanceof LogSearchError) throw error;
+
+      if (error instanceof LogSearchError) {
+        throw error;
+      }
+
       throw new LogSearchError(
         "Log search unavailable (network, timeout or audit failure).",
       );

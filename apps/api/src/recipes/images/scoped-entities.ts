@@ -8,6 +8,7 @@ import {
 import { and, eq, exists, inArray, isNotNull, isNull } from "drizzle-orm";
 
 type RecipeEntityInput = { householdId: string; recipeId: string };
+
 type RecipeImageInput = RecipeEntityInput & { imageId: string };
 
 const activeRecipeExists = (
@@ -113,6 +114,7 @@ export async function findConfirmedRecipeImageForShare(
   input: RecipeImageInput,
 ) {
   const [image] = await scopedImageQuery(tx, input).for("share");
+
   return image?.confirmedAt ? image : undefined;
 }
 
@@ -154,14 +156,15 @@ export async function findRecipeImageForShare(
   input: RecipeImageInput,
 ) {
   const [image] = await scopedImageQuery(tx, input).for("share");
+
   return image;
 }
+
 export async function findRecipeImageForUpdate(
   tx: DatabaseTransaction,
   input: RecipeImageInput,
 ) {
   const [image] = await scopedImageQuery(tx, input).for("update");
+
   return image;
 }
-export const findRecipeImageObjectForShare = findRecipeImageForShare;
-export const findRecipeImageObjectForUpdate = findRecipeImageForUpdate;

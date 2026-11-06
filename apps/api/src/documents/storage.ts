@@ -10,6 +10,7 @@ import { documentMaxBytes } from "@home-hub/shared/documents";
 import { instrumentOperation } from "../diagnostics";
 import type { DocumentStorage } from "./service";
 import { InvalidDocumentFileError } from "./validate-file";
+
 export function createDocumentStorage({
   client,
   bucket,
@@ -45,36 +46,51 @@ export function createDocumentStorage({
           signableHeaders: new Set(["content-type", "content-length"]),
         },
       ),
+
     async readUpload(key, expectedBytes) {
       const response = await client.send(
         new GetObjectCommand({ Bucket: bucket, Key: key }),
         { abortSignal: AbortSignal.timeout(30000) },
       );
       const body = response.Body;
-      if (!(body instanceof Readable)) throw new InvalidDocumentFileError();
+
+      if (!(body instanceof Readable)) {
+        throw new InvalidDocumentFileError();
+      }
+
       if (
         response.ContentLength !== expectedBytes ||
         expectedBytes > documentMaxBytes
       ) {
         body.destroy();
+
         throw new InvalidDocumentFileError();
       }
+
       // Explicitly bound the stream even if a storage implementation misreports its length.
       const bytes = new Uint8Array(expectedBytes);
       let offset = 0;
+
       try {
         for await (const chunk of body as AsyncIterable<Uint8Array>) {
-          if (offset + chunk.length > bytes.length)
+          if (offset + chunk.length > bytes.length) {
             throw new InvalidDocumentFileError();
+          }
+
           bytes.set(chunk, offset);
           offset += chunk.length;
         }
       } finally {
         body.destroy();
       }
-      if (offset !== expectedBytes) throw new InvalidDocumentFileError();
+
+      if (offset !== expectedBytes) {
+        throw new InvalidDocumentFileError();
+      }
+
       return bytes;
     },
+
     async putVerified(key, data, contentType) {
       await client.send(
         new PutObjectCommand({
@@ -86,13 +102,16 @@ export function createDocumentStorage({
         { abortSignal: AbortSignal.timeout(30000) },
       );
     },
+
     async signRead(cap) {
       const url = new URL("/documents/files", baseUrl);
       url.searchParams.set("capability", JSON.stringify(cap));
       url.searchParams.set("signature", await signDocumentRead(cap, secret));
+
       return url.toString();
     },
   };
+
   return {
     signUpload: instrumentOperation(
       "documents.storage_sign",

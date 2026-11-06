@@ -13,6 +13,7 @@ function toLocalDateValue(date: Date): string {
   const localTime = new Date(
     date.getTime() - date.getTimezoneOffset() * 60_000,
   );
+
   return localTime.toISOString().slice(0, 10);
 }
 
@@ -29,7 +30,10 @@ export function AddRecipeCookLogForm({
 
   function openDatePicker() {
     const input = dateInputRef.current;
-    if (!input || saving) return;
+
+    if (!input || saving) {
+      return;
+    }
 
     try {
       input.showPicker();
@@ -41,20 +45,29 @@ export function AddRecipeCookLogForm({
   async function addCookLog(event: ChangeEvent<HTMLInputElement>) {
     const selectedDate = event.currentTarget.value;
     event.currentTarget.value = "";
-    if (!selectedDate || saving || !mutationEnabled) return;
 
-    setError(undefined);
-    if (selectedDate > today) {
-      setError("Cooking date cannot be in the future.");
+    if (!selectedDate || saving || !mutationEnabled) {
       return;
     }
+
+    setError(undefined);
+
+    if (selectedDate > today) {
+      setError("Cooking date cannot be in the future.");
+
+      return;
+    }
+
     const cookedAtTimestamp = new Date(`${selectedDate}T00:00:00`).getTime();
+
     if (!Number.isFinite(cookedAtTimestamp)) {
       setError("Choose a valid cooking date.");
+
       return;
     }
 
     setSaving(true);
+
     const mutation = zero.mutate(
       mutators.recipes.addCookLog({
         cookLogId: crypto.randomUUID(),
@@ -70,13 +83,16 @@ export function AddRecipeCookLogForm({
     if (clientResult.type === "error") {
       setError("Unable to add the cooking log.");
       setSaving(false);
+
       return;
     }
 
     const serverResult = await mutation.server;
+
     if (serverResult.type === "error") {
       setError("The cooking log could not be saved.");
     }
+
     setSaving(false);
   }
 

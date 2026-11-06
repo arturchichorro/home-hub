@@ -3,6 +3,7 @@ import { Play } from "@home-hub/ui-web";
 import { useState } from "react";
 import { type MediaSession, useMediaSession } from "../media/session";
 import { useListImageUrl } from "./list-media-url";
+
 export type MoodboardPin = {
   id: string;
   householdId: string;
@@ -10,6 +11,7 @@ export type MoodboardPin = {
   sortKey?: number | null;
   asset?: Pick<Media, "id" | "kind" | "width" | "height"> | undefined;
 };
+
 export function MoodboardThumbnail({
   pin,
   session,
@@ -27,6 +29,7 @@ export function MoodboardThumbnail({
     variant: "thumbnail",
   });
   const [failedUrl, setFailedUrl] = useState<string>();
+
   return state.url && state.url !== failedUrl ? (
     <img
       src={state.url}
@@ -37,7 +40,9 @@ export function MoodboardThumbnail({
       decoding="async"
       width={pin.asset?.width}
       height={pin.asset?.height}
-      className={cover ? "size-full object-cover" : "h-auto w-full"}
+      className={
+        cover ? "size-full object-cover" : "h-auto w-full min-w-0 max-w-full"
+      }
     />
   ) : (
     <span
@@ -49,14 +54,10 @@ export function MoodboardThumbnail({
     />
   );
 }
-export function MoodboardPreview({
-  pins,
-  count,
-}: {
-  pins: readonly MoodboardPin[];
-  count: number;
-}) {
+
+export function MoodboardPreview({ pins }: { pins: readonly MoodboardPin[] }) {
   const session = useMediaSession();
+
   return (
     <div className="grid gap-2">
       <div
@@ -81,9 +82,6 @@ export function MoodboardPreview({
           </div>
         ))}
       </div>
-      <p className="text-xs text-muted">
-        {count} {count === 1 ? "media item" : "media items"}
-      </p>
     </div>
   );
 }

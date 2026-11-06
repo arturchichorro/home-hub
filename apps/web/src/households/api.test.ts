@@ -7,7 +7,6 @@ import {
   deleteHousehold,
   leaveHousehold,
   listHouseholdInvites,
-  listHouseholdMembers,
   removeHouseholdMember,
   renameHousehold,
   revokeHouseholdInvite,
@@ -16,6 +15,7 @@ import {
 } from "./api";
 
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const fetchMock = vi.fn<typeof fetch>();
 
 beforeEach(() => {
@@ -355,61 +355,6 @@ describe("renameHousehold", () => {
     ).rejects.toThrow();
 
     expect(fetchMock).not.toHaveBeenCalled();
-  });
-});
-
-describe("listHouseholdMembers", () => {
-  const members = [
-    {
-      id: "7dbb2304-955a-4d0b-9878-d39a42a38eb2",
-      username: "artur",
-      role: "owner" as const,
-      joinedAt: "2026-08-01T12:00:00.000Z",
-    },
-  ];
-
-  it("returns a validated member roster", async () => {
-    fetchMock.mockResolvedValueOnce(Response.json({ members }));
-
-    await expect(
-      listHouseholdMembers({ accessToken: "access-token", householdId }),
-    ).resolves.toEqual({ kind: "success", members });
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      `/api/households/${householdId}/members`,
-      { headers: { Authorization: "Bearer access-token" } },
-    );
-  });
-
-  it.each([
-    [401, "unauthorized"],
-    [403, "forbidden"],
-  ] as const)("maps status %s to %s", async (status, kind) => {
-    fetchMock.mockResolvedValueOnce(
-      Response.json({ error: "Rejected" }, { status }),
-    );
-
-    await expect(
-      listHouseholdMembers({ accessToken: "access-token", householdId }),
-    ).resolves.toEqual({ kind });
-  });
-
-  it("rejects malformed success data", async () => {
-    fetchMock.mockResolvedValueOnce(
-      Response.json({ members: [{ ...members[0], email: "private@test" }] }),
-    );
-
-    await expect(
-      listHouseholdMembers({ accessToken: "access-token", householdId }),
-    ).rejects.toThrow();
-  });
-
-  it("throws for an unexpected server failure", async () => {
-    fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
-
-    await expect(
-      listHouseholdMembers({ accessToken: "access-token", householdId }),
-    ).rejects.toThrow("Failed to list household members");
   });
 });
 

@@ -8,10 +8,12 @@ import { hashRefreshToken } from "./refresh-token";
 
 vi.mock("./password", () => ({
   hashPassword: vi.fn(async () => "dummy-password-hash"),
+
   verifyPassword: vi.fn(),
 }));
 
 const jwtSecret = "test-jwt-secret";
+
 const refreshTokenTtlMilliseconds = 30 * 24 * 60 * 60 * 1000;
 
 const storedUser = {
@@ -43,6 +45,7 @@ describe("login service", () => {
   it("returns a public user and persists a hashed refresh token for valid credentials", async () => {
     const { db, findFirst, insert, values } = createFakeDatabase(storedUser);
     vi.mocked(verifyPassword).mockResolvedValue(true);
+
     const login = createLoginService({ db, jwtSecret });
     const beforeLogin = Date.now();
 
@@ -53,6 +56,7 @@ describe("login service", () => {
 
     const afterLogin = Date.now();
     expect(result.kind).toBe("success");
+
     if (result.kind !== "success") {
       throw new Error("Expected a successful login");
     }
@@ -77,6 +81,7 @@ describe("login service", () => {
 
     expect(insert).toHaveBeenCalledOnce();
     expect(values).toHaveBeenCalledOnce();
+
     const persistedToken = values.mock.calls[0]?.[0] as
       | {
           id: string;
@@ -87,6 +92,7 @@ describe("login service", () => {
       | undefined;
 
     expect(persistedToken).toBeDefined();
+
     if (!persistedToken) {
       throw new Error("Expected a refresh token to be persisted");
     }
@@ -107,6 +113,7 @@ describe("login service", () => {
   it("uses the dummy hash and returns invalid credentials for an unknown email", async () => {
     const { db, values } = createFakeDatabase(undefined);
     vi.mocked(verifyPassword).mockResolvedValue(false);
+
     const login = createLoginService({ db, jwtSecret });
 
     const result = await login({
@@ -126,6 +133,7 @@ describe("login service", () => {
   it("returns the same invalid-credentials result for an incorrect password", async () => {
     const { db, values } = createFakeDatabase(storedUser);
     vi.mocked(verifyPassword).mockResolvedValue(false);
+
     const login = createLoginService({ db, jwtSecret });
 
     const result = await login({

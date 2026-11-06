@@ -8,10 +8,13 @@ export const Route = createFileRoute(
   loader: ({ context, params }) => {
     void context.zero?.run(queries.lists.detail(params));
   },
+
   component: ListRoute,
 });
+
 function ListRoute() {
   const { householdId, listId } = Route.useParams();
+
   return (
     <ListDetail
       key={`${householdId}:${listId}`}

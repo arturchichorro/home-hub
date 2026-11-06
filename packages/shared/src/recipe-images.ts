@@ -17,6 +17,7 @@ import type { Media, RecipeMedia } from "./zero/schema.gen";
 export type RecipeImageContentType = z.infer<
   typeof recipeImageContentTypeSchema
 >;
+
 export const createRecipeImageUploadRequestSchema = z
   .object({
     cookLogId: z.uuid().nullable(),
@@ -27,6 +28,7 @@ export const createRecipeImageUploadRequestSchema = z
 // Recipe UI identity is the attachment ID, not the reusable asset ID.
 export type RecipeImage = RecipeMedia &
   Pick<Media, "contentType" | "byteSize" | "confirmedAt" | "width" | "height">;
+
 export function recipeImagesFromRows(
   rows: readonly (RecipeMedia & { asset?: Media | undefined })[],
 ): RecipeImage[] {
@@ -85,19 +87,11 @@ export const confirmRecipeImageUploadResponseSchema = z
   })
   .strict();
 
-export type ConfirmRecipeImageUploadResponse = z.infer<
-  typeof confirmRecipeImageUploadResponseSchema
->;
-
-export const recipeImageVariantSchema = z.enum(recipeImageVariants);
+const recipeImageVariantSchema = z.enum(recipeImageVariants);
 
 export const createRecipeImageReadUrlRequestSchema = z
   .object({ variant: recipeImageVariantSchema })
   .strict();
-
-export type CreateRecipeImageReadUrlRequest = z.infer<
-  typeof createRecipeImageReadUrlRequestSchema
->;
 
 export const createRecipeImageReadUrlResponseSchema = z
   .object({
@@ -109,10 +103,6 @@ export const createRecipeImageReadUrlResponseSchema = z
       .strict(),
   })
   .strict();
-
-export type CreateRecipeImageReadUrlResponse = z.infer<
-  typeof createRecipeImageReadUrlResponseSchema
->;
 
 export const createRecipeImageReadUrlsRequestSchema = z
   .object({
@@ -150,7 +140,3 @@ export const createRecipeImageReadUrlsResponseSchema = z
     ),
   })
   .strict();
-
-export type CreateRecipeImageReadUrlsResponse = z.infer<
-  typeof createRecipeImageReadUrlsResponseSchema
->;

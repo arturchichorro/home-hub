@@ -10,6 +10,7 @@ export const inspectR2Object = instrumentOperation(
   "media.inspect_object",
   inspectR2ObjectImplementation,
 );
+
 async function inspectR2ObjectImplementation({
   client,
   bucket,

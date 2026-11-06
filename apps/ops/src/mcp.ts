@@ -39,5 +39,6 @@ export function createLogsServer(reader: LogsReader) {
       }
     },
   );
+
   return server;
 }

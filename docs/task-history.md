@@ -408,6 +408,26 @@ Open review work remains in [Tasks](./tasks.md#work-in-review).
 
 - [x] Implement opt-in Alloy privacy projection for API/Zero/PostgreSQL/Caddy, safe deployment/backup outcomes, bounded local rotation and a restricted, audited read-only MCP log search. Add source-first stable error codes/operations, controlled messages and validated source locations for unfamiliar application failures. Real synthetic Alloy → Loki → MCP verification checks pre-export redaction and cited evidence. See [Operations](./operations/) for deliberate Cloud activation and remaining production acceptance; no deployment is implied.
 
+## Moodboard UI refinement
+
+- [x] Share the Recipes image viewer with Moodboards, replace the upload CTA/helper copy with a small header `+`, remove media-count captions and constrain masonry/upload grid widths to prevent horizontal page scrolling. Preserve failed uploads, retry/discard, ordering and paused video previews.
+
+## Smooth expanded image loading
+
+- [x] Keep Recipes/Moodboard previews in one stable frame, wait for full-image decode and fade the larger image over an opaque fallback. Preserve last-good pixels on URL refresh/failure, reset on close/navigation and respect reduced motion.
+
+## Repository readability
+
+- [x] Sweep hand-written application, shared, test and tooling code for explicit control-flow braces, single-variable statements and whitespace between logical steps. Enforce braces/declarations in Biome and record readability conventions in `AGENTS.md`; preserve generated files, migrations and historical fixtures.
+
+## List usability
+
+- [x] Replace the list-type select with icon radio choices; fill moodboard desktop columns, preserve the shopping-history viewport on reactivation, and expand bounded checklist previews into taller cards with a final overflow ellipsis. Keep old query shapes and existing editing/upload protections.
+
+## Moodboard reorder reconciliation
+
+- [x] Keep masonry tiles under one stable React list parent to prevent sortable DOM moves and optimistic query updates from causing `removeChild` crashes. Reproduce the previous layout failure and add a CI browser regression with live reordering, rollback, cancellation, touch and responsive resizing.
+
 ## Misc
 
 - [x] Preserve raw seamless-input drafts during debounced saves and normalize them only at editing boundaries

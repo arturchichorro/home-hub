@@ -5,6 +5,7 @@ import type { ZeroDbProvider } from "./db-provider";
 
 function databaseFailure(error: unknown): { code?: string } | undefined {
   const code = sqlState(error);
+
   return code || errorChain(error).some((e) => e instanceof DrizzleQueryError)
     ? code
       ? { code }
@@ -21,13 +22,21 @@ export function safeMutationProvider(
   return new Proxy(provider, {
     get(target, property, receiver) {
       const value = Reflect.get(target, property, receiver);
-      if (property !== "transaction") return value;
+
+      if (property !== "transaction") {
+        return value;
+      }
+
       return async (...args: unknown[]) => {
         try {
           return await Reflect.apply(value, target, args);
         } catch (error) {
           const failure = databaseFailure(error);
-          if (!failure) throw error;
+
+          if (!failure) {
+            throw error;
+          }
+
           report({
             ...failure,
             diagnostic: diagnosticFor(
@@ -36,6 +45,7 @@ export function safeMutationProvider(
               "HH_DATABASE_FAILURE",
             ),
           });
+
           throw new Error("Unable to save changes. Please retry.");
         }
       };

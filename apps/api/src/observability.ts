@@ -12,29 +12,37 @@ import {
 import { httpOperation } from "./http-operations";
 
 export type StructuredLogRecord = { event: string; [key: string]: unknown };
+
 export type StructuredLogger = {
   info: (record: StructuredLogRecord) => void;
   error: (record: StructuredLogRecord) => void;
 };
+
 export const consoleStructuredLogger: StructuredLogger = {
   info(record) {
     console.info(JSON.stringify(record));
   },
+
   error(record) {
     console.error(JSON.stringify(record));
   },
 };
+
 export type ObservabilityEnv = { Variables: { requestStartedAt: number } };
+
 function loggedRoute(c: Parameters<typeof routePath>[0]): string {
   const path = routePath(c, -1);
+
   return path && path !== "*" ? path : "unmatched";
 }
+
 export function serializeUnexpectedError(error: unknown) {
   return {
     name: safeErrorType(error),
     stackFrames: diagnosticLocations(error),
   };
 }
+
 export function installApiObservability(
   app: Hono<ObservabilityEnv>,
   { logger }: { logger: StructuredLogger },
@@ -45,8 +53,9 @@ export function installApiObservability(
       const startedAt = performance.now();
       c.set("requestStartedAt", startedAt);
       await next();
-      const route = loggedRoute(c),
-        status = c.res.status;
+
+      const route = loggedRoute(c);
+      const status = c.res.status;
       const failure =
         status >= 400 ? diagnosticContext.getStore()?.failure : undefined;
       const error = c.error ?? failure?.error;
@@ -77,8 +86,12 @@ export function installApiObservability(
         ...diagnostic,
         ...(error ? { error: serializeUnexpectedError(error) } : {}),
       };
-      if (status >= 500) logger.error(record);
-      else logger.info(record);
+
+      if (status >= 500) {
+        logger.error(record);
+      } else {
+        logger.info(record);
+      }
     }),
   );
   app.onError((_error, c) =>

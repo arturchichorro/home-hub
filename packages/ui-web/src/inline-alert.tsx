@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
 
-export type InlineAlertVariant = "info" | "success" | "warning" | "danger";
+type InlineAlertVariant = "info" | "success" | "warning" | "danger";
 
 export type InlineAlertProps = Omit<
   ComponentProps<"div">,

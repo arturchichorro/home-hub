@@ -12,7 +12,9 @@ import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
 import { type Schema, zql } from "./schema.gen";
 
 const define = defineMutatorWithType<Schema, ZeroAuthContext>();
+
 type Tx = Transaction<Schema>;
+
 const access = (tx: Tx, ctx: ZeroAuthContext, householdId: string) =>
   requireServerHouseholdModuleAccess({
     tx,
@@ -20,12 +22,14 @@ const access = (tx: Tx, ctx: ZeroAuthContext, householdId: string) =>
     householdId,
     moduleKey: "documents",
   });
+
 async function row(
   tx: Tx,
   ctx: ZeroAuthContext,
   args: { householdId: string; documentId: string },
 ) {
   await access(tx, ctx, args.householdId);
+
   const get = () =>
     tx.run(
       zql.documents
@@ -34,16 +38,24 @@ async function row(
         .where("deletedAt", "IS", null)
         .one(),
     );
-  if (!(await get())) throw Error("Document unavailable");
+
+  if (!(await get())) {
+    throw Error("Document unavailable");
+  }
+
   // Acquire the same row lock as file confirmation; then recheck deletion.
   if (tx.location === "server") {
     await tx.mutate.documents.update({
       id: args.documentId,
       updatedAt: Date.now(),
     });
-    if (!(await get())) throw Error("Document unavailable");
+
+    if (!(await get())) {
+      throw Error("Document unavailable");
+    }
   }
 }
+
 async function tag(tx: Tx, args: { householdId: string; tagId: string }) {
   const t = await tx.run(
     zql.documentTags
@@ -52,9 +64,14 @@ async function tag(tx: Tx, args: { householdId: string; tagId: string }) {
       .where("deletedAt", "IS", null)
       .one(),
   );
-  if (!t) throw Error("Tag unavailable");
+
+  if (!t) {
+    throw Error("Tag unavailable");
+  }
+
   return t;
 }
+
 export const documentMutators = {
   update: define(documentTextMutationSchema, async ({ tx, ctx, args }) => {
     await row(tx, ctx, args);
@@ -66,6 +83,7 @@ export const documentMutators = {
         tx.location === "server" ? Date.now() : args.optimisticTimestamp,
     });
   }),
+
   delete: define(documentScopeSchema, async ({ tx, ctx, args }) => {
     await row(tx, ctx, args);
     await tx.mutate.documents.update({
@@ -73,16 +91,21 @@ export const documentMutators = {
       deletedAt: Date.now(),
     });
   }),
+
   saveTag: define(documentTagSchema, async ({ tx, ctx, args }) => {
     await access(tx, ctx, args.householdId);
+
     const existing = await tx.run(
       zql.documentTags.where("id", args.tagId).one(),
     );
+
     if (
       existing &&
       (existing.householdId !== args.householdId || existing.deletedAt !== null)
-    )
+    ) {
       throw Error("Tag unavailable");
+    }
+
     const normalizedName = normalizeDocumentTag(args.name);
     const duplicate = await tx.run(
       zql.documentTags
@@ -91,8 +114,11 @@ export const documentMutators = {
         .where("deletedAt", "IS", null)
         .one(),
     );
-    if (duplicate && duplicate.id !== args.tagId)
+
+    if (duplicate && duplicate.id !== args.tagId) {
       throw Error("Tag name already exists");
+    }
+
     const now =
       tx.location === "server" ? Date.now() : args.optimisticTimestamp;
     const values = {
@@ -101,9 +127,10 @@ export const documentMutators = {
       color: args.color,
       updatedAt: now,
     };
-    if (existing)
+
+    if (existing) {
       await tx.mutate.documentTags.update({ id: args.tagId, ...values });
-    else
+    } else {
       await tx.mutate.documentTags.insert({
         id: args.tagId,
         householdId: args.householdId,
@@ -111,7 +138,9 @@ export const documentMutators = {
         createdAt: now,
         deletedAt: null,
       });
+    }
   }),
+
   deleteTag: define(documentDeleteTagSchema, async ({ tx, ctx, args }) => {
     await access(tx, ctx, args.householdId);
     await tag(tx, args);
@@ -122,19 +151,22 @@ export const documentMutators = {
         tx.location === "server" ? Date.now() : args.optimisticTimestamp,
     });
   }),
+
   assignTag: define(documentTagAssignmentSchema, async ({ tx, ctx, args }) => {
     await row(tx, ctx, args);
     await tag(tx, args);
-    if (args.assigned)
+
+    if (args.assigned) {
       await tx.mutate.documentTagAssignments.upsert({
         householdId: args.householdId,
         documentId: args.documentId,
         tagId: args.tagId,
       });
-    else
+    } else {
       await tx.mutate.documentTagAssignments.delete({
         documentId: args.documentId,
         tagId: args.tagId,
       });
+    }
   }),
 };

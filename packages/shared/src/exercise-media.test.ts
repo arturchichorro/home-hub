@@ -18,16 +18,18 @@ describe("shared exercise media", () => {
       optimisticTimestamp: 1,
     };
     expect(reorderExerciseMediaSchema.safeParse(input).success).toBe(true);
+
     for (const patch of [
       { orderedAttachmentIds: [] },
       { orderedAttachmentIds: [attachmentId, attachmentId] },
       { orderedAttachmentIds: [crypto.randomUUID()] },
       { orderedAttachmentIds: Array(501).fill(attachmentId) },
       { workoutId: crypto.randomUUID() },
-    ])
+    ]) {
       expect(
         reorderExerciseMediaSchema.safeParse({ ...input, ...patch }).success,
       ).toBe(false);
+    }
   });
   it("rejects videos, GIF and client-controlled storage identity", () => {
     for (const extra of [
@@ -46,20 +48,22 @@ describe("shared exercise media", () => {
         }).success,
       ).toBe(false);
     }
+
     expect(
       exerciseMediaReadRequestSchema.safeParse({ requests: [] }).success,
     ).toBe(false);
   });
   it("has a household/module/active-catalog and confirmed-asset authorized query", () => {
-    const householdId = crypto.randomUUID(),
-      exerciseId = crypto.randomUUID(),
-      userId = crypto.randomUUID();
+    const householdId = crypto.randomUUID();
+    const exerciseId = crypto.randomUUID();
+    const userId = crypto.randomUUID();
     const query = queries.workouts.exerciseMedia.fn({
       args: { householdId, exerciseId },
       ctx: { userId },
     });
     const ast = (query as unknown as { ast: unknown }).ast;
     const json = JSON.stringify(ast);
+
     for (const required of [
       "exerciseMedia",
       "media",
@@ -75,6 +79,7 @@ describe("shared exercise media", () => {
     ]) {
       expect(json).toContain(required);
     }
+
     expect(json).not.toContain("workoutLogs");
     expect(queries.workouts.exerciseMedia.queryName).toBe(
       "workouts.exerciseMedia",

@@ -13,6 +13,7 @@ const attachment: RecipeMedia = {
   createdAt: 10,
   updatedAt: 20,
 };
+
 const asset: Media = {
   id: "asset",
   householdId: "household",
@@ -29,6 +30,7 @@ const asset: Media = {
   createdAt: 1,
   updatedAt: 15,
 };
+
 describe("recipe image compatibility view", () => {
   it("preserves attachment identity, order and cooking context while reading asset metadata", () => {
     expect(recipeImagesFromRows([{ ...attachment, asset }])).toEqual([
@@ -58,6 +60,7 @@ describe("recipe image compatibility view", () => {
         ]),
       ).toEqual([]);
     }
+
     expect(recipeImagesFromRows([{ ...attachment, asset: undefined }])).toEqual(
       [],
     );

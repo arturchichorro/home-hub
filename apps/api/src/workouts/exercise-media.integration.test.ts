@@ -33,14 +33,15 @@ import { InvalidMediaUploadError } from "../media/process-image";
 import { createZeroDbProvider } from "../zero/db-provider";
 import { createExerciseMediaServices } from "./exercise-media";
 
-const databaseUrl = process.env.MEDIA_TEST_DATABASE_URL;
+const databaseUrl = process.env.TEST_DATABASE_URL;
+
 describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
   let client: ReturnType<typeof createDbClient>;
-  let userId: string,
-    householdId: string,
-    exerciseId: string,
-    foreignHouseholdId: string,
-    foreignExerciseId: string;
+  let userId: string;
+  let householdId: string;
+  let exerciseId: string;
+  let foreignHouseholdId: string;
+  let foreignExerciseId: string;
   const signUpload = vi.fn(async () => "https://upload.example/object");
   const inspectObject = vi.fn(async () => ({
     contentType: "image/png",
@@ -68,13 +69,17 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
   beforeAll(() => {
     if (
       !databaseUrl ||
-      !new URL(databaseUrl).pathname.startsWith("/media_migration_")
-    )
-      throw new Error("Disposable migration database required");
+      !new URL(databaseUrl).pathname.startsWith("/home_hub_test_")
+    ) {
+      throw new Error("Disposable home_hub_test_ database required");
+    }
+
     client = createDbClient(databaseUrl);
   });
   afterAll(async () => {
-    if (client) await client.close();
+    if (client) {
+      await client.close();
+    }
   });
   beforeEach(async () => {
     vi.resetAllMocks();
@@ -131,11 +136,11 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
     ]);
   });
   it("keeps roles on workout placements, defaults old inserts and rejects unknown roles", async () => {
-    const firstWorkout = randomUUID(),
-      secondWorkout = randomUUID(),
-      firstSlot = randomUUID(),
-      secondSlot = randomUUID(),
-      defaultSlot = randomUUID();
+    const firstWorkout = randomUUID();
+    const secondWorkout = randomUUID();
+    const firstSlot = randomUUID();
+    const secondSlot = randomUUID();
+    const defaultSlot = randomUUID();
     await client.db.insert(workouts).values([
       { id: firstWorkout, householdId, title: "Warm-up workout", notes: "" },
       {
@@ -173,6 +178,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
         target: "8",
       },
     ]);
+
     const rows = await client.db
       .select()
       .from(workoutExercises)
@@ -204,11 +210,17 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       )[0],
     ).not.toHaveProperty("role");
   });
+
   async function pending() {
     const result = await upload();
-    if (result.kind !== "success") throw new Error("Upload denied");
+
+    if (result.kind !== "success") {
+      throw new Error("Upload denied");
+    }
+
     return result;
   }
+
   const read = (attachmentId: string, targetExerciseId = exerciseId) =>
     services().readUrls({
       userId,
@@ -228,6 +240,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
     load: "bodyweight",
     unilateral: false,
   });
+
   async function seedPerformance(
     log: typeof workoutLogs.$inferSelect,
     slotId: string,
@@ -251,7 +264,8 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       exerciseLogId: id,
       position: 0,
     });
-    if (amounts.length)
+
+    if (amounts.length) {
       await client.db.insert(exerciseLogSets).values(
         amounts.map((amount, index) => ({
           exerciseLogId: id,
@@ -264,15 +278,18 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
           unilateral: false,
         })),
       );
+    }
+
     return id;
   }
+
   it("shows only each author's latest nonempty exercise performance and local workout activity", async () => {
     const provider = createZeroDbProvider({ db: client.db });
-    const workoutId = randomUUID(),
-      emptyId = randomUUID(),
-      otherUser = randomUUID(),
-      latestId = randomUUID(),
-      slotId = randomUUID();
+    const workoutId = randomUUID();
+    const emptyId = randomUUID();
+    const otherUser = randomUUID();
+    const latestId = randomUUID();
+    const slotId = randomUUID();
     await client.db.insert(workouts).values([
       { id: workoutId, householdId, title: "Logged", notes: "", sortKey: 2 },
       {
@@ -296,6 +313,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       role: "member",
       sortKey: 0,
     });
+
     const base = {
       householdId,
       workoutId,
@@ -330,8 +348,11 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
         },
       ])
       .returning();
-    for (const log of recorded)
+
+    for (const log of recorded) {
       await seedPerformance(log, slotId, log.userId === userId ? [8] : [99]);
+    }
+
     const [empty] = await client.db
       .insert(workoutLogs)
       .values({
@@ -342,7 +363,11 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
         note: "Removed all sets",
       })
       .returning();
-    if (!empty) throw Error("fixture");
+
+    if (!empty) {
+      throw Error("fixture");
+    }
+
     await seedPerformance(empty, slotId, []);
     await client.db.insert(workoutLogs).values({
       ...base,
@@ -351,6 +376,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       completedOn: "2026-11-04",
       note: "Note only",
     });
+
     const catalog = await provider.run(
       queries.workouts.catalog.fn({ ctx: { userId }, args: { householdId } }),
     );
@@ -361,6 +387,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       sets: [{ amount: 8 }],
     });
     expect(JSON.stringify(catalog)).not.toContain("OTHER AUTHOR SECRET");
+
     const rows = await provider.run(
       queries.workouts.byHousehold.fn({
         ctx: { userId },
@@ -374,6 +401,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
     ).toEqual([{ id: latestId, day: "2026-06-17" }]);
     expect(rows.find((row) => row.id === emptyId)?.logs).toEqual([]);
     expect(JSON.stringify(rows)).not.toContain("OTHER AUTHOR SECRET");
+
     const theirs = await provider.run(
       queries.workouts.byHousehold.fn({
         ctx: { userId: otherUser },
@@ -386,9 +414,9 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
     expect(JSON.stringify(theirs)).not.toContain("Own private note");
   });
   it("deletes catalog links atomically, preserves completed logs/media, and recreates names with fresh identities", async () => {
-    const workoutId = randomUUID(),
-      slotId = randomUUID(),
-      logId = randomUUID();
+    const workoutId = randomUUID();
+    const slotId = randomUUID();
+    const logId = randomUUID();
     await client.db.insert(workouts).values({
       id: workoutId,
       householdId,
@@ -442,11 +470,16 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       load: "bodyweight",
       unilateral: false,
     });
+
     const [storedLog] = await client.db
       .select()
       .from(workoutLogs)
       .where(eq(workoutLogs.id, logId));
-    if (!storedLog) throw Error("fixture");
+
+    if (!storedLog) {
+      throw Error("fixture");
+    }
+
     const occurrenceId = await seedPerformance(storedLog, slotId);
     const beforeOccurrence = await client.db
       .select()
@@ -461,6 +494,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       ...scope(),
       attachmentId: image.attachmentId,
     });
+
     const beforeLogs = await client.db
       .select()
       .from(workoutLogs)
@@ -506,6 +540,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       reads: [],
     });
     expect(await upload()).toEqual({ kind: "not_found" });
+
     const replacement = randomUUID();
     await provider.transaction((tx) =>
       mutators.workouts.createExercise.fn({
@@ -524,6 +559,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
         },
       }),
     );
+
     const visible = await provider.run(
       queries.workouts.catalog.fn({ ctx: { userId }, args: { householdId } }),
     );
@@ -575,6 +611,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
           .where(eq(exerciseLogSets.exerciseLogId, occurrenceId))
       )[0]?.amount,
     ).toBe(9);
+
     const history = await provider.run(
       queries.workouts.logsV2.fn({
         ctx: { userId },
@@ -615,6 +652,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       notes: "",
       sortKey: 1,
     });
+
     const provider = createZeroDbProvider({ db: client.db });
     const outcomes = await Promise.allSettled([
       provider.transaction((tx) =>
@@ -658,6 +696,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
         .from(workoutExercises)
         .where(eq(workoutExercises.exerciseId, exerciseId)),
     ).toHaveLength(0);
+
     const [row] = await client.db
       .select()
       .from(exercises)
@@ -665,8 +704,8 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
     expect(row?.deletedAt).toBeInstanceOf(Date);
   }, 15_000);
   it("serializes duplicate creation and preserves catalog order through the real adapter", async () => {
-    const provider = createZeroDbProvider({ db: client.db }),
-      ids = [randomUUID(), randomUUID()];
+    const provider = createZeroDbProvider({ db: client.db });
+    const ids = [randomUUID(), randomUUID()];
     const results = await Promise.allSettled(
       ids.map((id) =>
         provider.transaction((tx) =>
@@ -691,6 +730,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
     expect(
       results.filter((result) => result.status === "fulfilled"),
     ).toHaveLength(1);
+
     const before = await provider.run(
       queries.workouts.catalog.fn({ ctx: { userId }, args: { householdId } }),
     );
@@ -712,6 +752,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
         },
       }),
     );
+
     const after = await provider.run(
       queries.workouts.catalog.fn({ ctx: { userId }, args: { householdId } }),
     );
@@ -736,7 +777,11 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       .select()
       .from(exerciseMedia)
       .where(eq(exerciseMedia.id, result.attachmentId));
-    if (!attachment) throw new Error("Missing attachment");
+
+    if (!attachment) {
+      throw new Error("Missing attachment");
+    }
+
     expect(attachment.mediaId).not.toBe(result.attachmentId);
     expect(await read(result.attachmentId)).toEqual({
       kind: "success",
@@ -751,6 +796,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       kind: "success",
       attachment: { id: result.attachmentId },
     });
+
     const [asset] = await client.db
       .select()
       .from(media)
@@ -794,12 +840,18 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
   });
   it("persists picture ordering through the actual Zero/Drizzle transaction adapter", async () => {
     const items: Awaited<ReturnType<typeof pending>>[] = [];
-    for (let i = 0; i < 4; i++) items.push(await pending());
-    for (const item of items.slice(0, 3))
+
+    for (let i = 0; i < 4; i++) {
+      items.push(await pending());
+    }
+
+    for (const item of items.slice(0, 3)) {
       await services().confirmUpload({
         ...scope(),
         attachmentId: item.attachmentId,
       });
+    }
+
     const provider = createZeroDbProvider({ db: client.db });
     const order = [
       items[2]?.attachmentId,
@@ -807,7 +859,11 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       items[1]?.attachmentId,
     ].filter((id) => id !== undefined);
     const moved = order[0];
-    if (!moved) throw new Error("Missing picture");
+
+    if (!moved) {
+      throw new Error("Missing picture");
+    }
+
     await provider.transaction((tx) =>
       mutators.workouts.reorderExerciseMedia.fn({
         tx,
@@ -821,6 +877,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
         },
       }),
     );
+
     const synced = await provider.run(
       queries.workouts.exerciseMedia.fn({
         args: { householdId, exerciseId },
@@ -828,6 +885,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       }),
     );
     expect(synced.map((row) => row.id)).toEqual(order);
+
     const [all] = await client.db
       .select()
       .from(exerciseMedia)
@@ -835,8 +893,8 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
     expect(all).toBeDefined(); // The unconfirmed upload is retained, not dropped by reorder.
   });
   it("serializes reorders with uploads and batched reads without deadlocking", async () => {
-    const first = await pending(),
-      second = await pending();
+    const first = await pending();
+    const second = await pending();
     await services().confirmUpload({
       ...scope(),
       attachmentId: first.attachmentId,
@@ -845,14 +903,20 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       ...scope(),
       attachmentId: second.attachmentId,
     });
+
     const provider = createZeroDbProvider({ db: client.db });
+
     for (let i = 0; i < 4; i++) {
       const order =
         i % 2
           ? [first.attachmentId, second.attachmentId]
           : [second.attachmentId, first.attachmentId];
       const moved = order[0];
-      if (!moved) throw new Error("Missing picture");
+
+      if (!moved) {
+        throw new Error("Missing picture");
+      }
+
       const [, reads] = await Promise.all([
         provider.transaction((tx) =>
           mutators.workouts.reorderExerciseMedia.fn({
@@ -870,6 +934,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
         services().readUrls({
           userId,
           householdId,
+
           requests: order.map((attachmentId) => ({
             exerciseId,
             attachmentId,
@@ -901,6 +966,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
         sortKey: 0,
       })),
     );
+
     const result = await pending();
     await services().confirmUpload({
       ...scope(),
@@ -927,6 +993,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
   it("serializes concurrent uploads and rolls back both records if signing fails", async () => {
     const results = await Promise.all([upload(), upload()]);
     expect(results.every((r) => r.kind === "success")).toBe(true);
+
     const rows = await client.db
       .select()
       .from(exerciseMedia)
@@ -955,6 +1022,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       ...scope(),
       attachmentId: result.attachmentId,
     });
+
     const requests = [
       {
         exerciseId,
@@ -986,7 +1054,11 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       kind: "success",
       reads: [{ attachmentId: result.attachmentId, exerciseId }],
     });
-    if (batch.kind === "success") expect(batch.reads).toHaveLength(1);
+
+    if (batch.kind === "success") {
+      expect(batch.reads).toHaveLength(1);
+    }
+
     expect(signRead).toHaveBeenCalledOnce();
     expect(
       await services().confirmUpload({
@@ -1002,11 +1074,16 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       ...scope(),
       attachmentId: result.attachmentId,
     });
+
     const [attachment] = await client.db
       .select()
       .from(exerciseMedia)
       .where(eq(exerciseMedia.id, result.attachmentId));
-    if (!attachment) throw new Error("Missing attachment");
+
+    if (!attachment) {
+      throw new Error("Missing attachment");
+    }
+
     const otherId = randomUUID();
     await client.db.insert(exerciseMedia).values({
       id: otherId,
@@ -1035,6 +1112,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       kind: "success",
       reads: [{ attachmentId: otherId }],
     });
+
     const [asset] = await client.db
       .select()
       .from(media)
@@ -1084,7 +1162,11 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       .select()
       .from(exerciseMedia)
       .where(eq(exerciseMedia.id, result.attachmentId));
-    if (!attachment) throw new Error("Missing attachment");
+
+    if (!attachment) {
+      throw new Error("Missing attachment");
+    }
+
     for (const target of [
       { householdId, exerciseId: foreignExerciseId },
       { householdId: foreignHouseholdId, exerciseId: foreignExerciseId },
@@ -1112,6 +1194,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
         attachmentId: result.attachmentId,
       }),
     ).toEqual({ kind: "forbidden" });
+
     const rows = await client.db
       .select()
       .from(media)

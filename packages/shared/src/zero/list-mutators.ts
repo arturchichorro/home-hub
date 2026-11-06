@@ -19,12 +19,17 @@ import { nextSortKey, planReorder } from "./ordering";
 import { type Schema, zql } from "./schema.gen";
 
 const defineMutator = defineMutatorWithType<Schema, ZeroAuthContext>();
+
 type Tx = Transaction<Schema>;
+
 type Scope = { householdId: string; listId: string };
+
 const timestamp = (tx: Tx, optimistic: number) =>
   tx.location === "server" ? Date.now() : optimistic;
+
 const scopedLists = (householdId: string) =>
   zql.lists.where("householdId", householdId).where("deletedAt", "IS", null);
+
 const scopedItems = (scope: Scope) =>
   zql.listItems
     .where("householdId", scope.householdId)
@@ -45,10 +50,15 @@ async function requireAccess(
 
 async function requireList(tx: Tx, ctx: ZeroAuthContext, scope: Scope) {
   await requireAccess(tx, ctx, scope.householdId);
+
   const list = await tx.run(
     scopedLists(scope.householdId).where("id", scope.listId).one(),
   );
-  if (!list) throw new Error("List mutation not allowed");
+
+  if (!list) {
+    throw new Error("List mutation not allowed");
+  }
+
   return list;
 }
 
@@ -58,10 +68,17 @@ async function requireItem(
   scope: Scope & { itemId: string },
 ) {
   const parent = await requireList(tx, ctx, scope);
-  if (parent.kind === "moodboard")
+
+  if (parent.kind === "moodboard") {
     throw new Error("Checklist mutation not allowed");
+  }
+
   const item = await tx.run(scopedItems(scope).where("id", scope.itemId).one());
-  if (!item) throw new Error("List item mutation not allowed");
+
+  if (!item) {
+    throw new Error("List item mutation not allowed");
+  }
+
   return item;
 }
 
@@ -70,12 +87,18 @@ export const listMutatorDefinitions = {
     reorderListMediaSchema,
     async ({ tx, ctx, args }) => {
       const parent = await requireList(tx, ctx, args);
-      if (parent.kind !== "moodboard")
+
+      if (parent.kind !== "moodboard") {
         throw Error("Moodboard mutation not allowed");
+      }
+
       const now = timestamp(tx, args.optimisticTimestamp);
       await tx.mutate.lists.update({ id: args.listId, updatedAt: now });
-      if ((await requireList(tx, ctx, args)).kind !== "moodboard")
+
+      if ((await requireList(tx, ctx, args)).kind !== "moodboard") {
         throw Error("Moodboard mutation not allowed");
+      }
+
       const rows = await tx.run(
         zql.listMedia
           .where("householdId", args.householdId)
@@ -95,22 +118,31 @@ export const listMutatorDefinitions = {
         args.attachmentId,
         ...(args.nextId ? [args.nextId] : []),
       ];
-      if (ids.some((id) => !visible.has(id)))
+
+      if (ids.some((id) => !visible.has(id))) {
         throw Error("Moodboard reorder not allowed");
-      for (const update of planReorder(rows, ids, args.attachmentId))
+      }
+
+      for (const update of planReorder(rows, ids, args.attachmentId)) {
         await tx.mutate.listMedia.update({ ...update, updatedAt: now });
+      }
     },
   ),
 
   create: defineMutator(createListMutationSchema, async ({ tx, ctx, args }) => {
     await requireAccess(tx, ctx, args.householdId);
+
     const normalizedName = normalizeListName(args.name);
     const duplicate = await tx.run(
       scopedLists(args.householdId)
         .where("normalizedName", normalizedName)
         .one(),
     );
-    if (duplicate) throw new Error(listNameAlreadyExistsError);
+
+    if (duplicate) {
+      throw new Error(listNameAlreadyExistsError);
+    }
+
     const top = await tx.run(
       scopedLists(args.householdId)
         .orderBy("sortKey", "desc")
@@ -131,16 +163,21 @@ export const listMutatorDefinitions = {
       updatedAt: now,
     });
   }),
+
   rename: defineMutator(renameListMutationSchema, async ({ tx, ctx, args }) => {
     await requireList(tx, ctx, args);
+
     const normalizedName = normalizeListName(args.name);
     const duplicate = await tx.run(
       scopedLists(args.householdId)
         .where("normalizedName", normalizedName)
         .one(),
     );
-    if (duplicate && duplicate.id !== args.listId)
+
+    if (duplicate && duplicate.id !== args.listId) {
       throw new Error(listNameAlreadyExistsError);
+    }
+
     await tx.mutate.lists.update({
       id: args.listId,
       name: args.name,
@@ -148,6 +185,7 @@ export const listMutatorDefinitions = {
       updatedAt: timestamp(tx, args.optimisticUpdatedAt),
     });
   }),
+
   delete: defineMutator(deleteListMutationSchema, async ({ tx, ctx, args }) => {
     await requireList(tx, ctx, args);
     await tx.mutate.lists.update({
@@ -155,23 +193,31 @@ export const listMutatorDefinitions = {
       deletedAt: timestamp(tx, args.optimisticDeletedAt),
     });
   }),
+
   reorder: defineMutator(
     reorderListsMutationSchema,
     async ({ tx, ctx, args }) => {
       await requireAccess(tx, ctx, args.householdId);
+
       const rows = await tx.run(scopedLists(args.householdId));
       const updates = planReorder(rows, args.orderedListIds, args.listId);
       const updatedAt = timestamp(tx, args.optimisticUpdatedAt);
-      for (const update of updates)
+
+      for (const update of updates) {
         await tx.mutate.lists.update({ ...update, updatedAt });
+      }
     },
   ),
+
   addItem: defineMutator(
     addListItemMutationSchema,
     async ({ tx, ctx, args }) => {
       const parent = await requireList(tx, ctx, args);
-      if (parent.kind === "moodboard")
+
+      if (parent.kind === "moodboard") {
         throw new Error("Checklist mutation not allowed");
+      }
+
       const normalizedName = normalizeListItemName(args.name);
       const existing = await tx.run(
         scopedItems(args).where("normalizedName", normalizedName).one(),
@@ -188,6 +234,7 @@ export const listMutatorDefinitions = {
           ? top.sortKey
           : nextSortKey(top?.sortKey);
       const now = timestamp(tx, args.optimisticTimestamp);
+
       if (existing) {
         await tx.mutate.listItems.update({
           id: existing.id,
@@ -210,16 +257,21 @@ export const listMutatorDefinitions = {
       }
     },
   ),
+
   renameItem: defineMutator(
     renameListItemMutationSchema,
     async ({ tx, ctx, args }) => {
       await requireItem(tx, ctx, args);
+
       const normalizedName = normalizeListItemName(args.name);
       const duplicate = await tx.run(
         scopedItems(args).where("normalizedName", normalizedName).one(),
       );
-      if (duplicate && duplicate.id !== args.itemId)
+
+      if (duplicate && duplicate.id !== args.itemId) {
         throw new Error(listItemNameAlreadyExistsError);
+      }
+
       await tx.mutate.listItems.update({
         id: args.itemId,
         name: args.name,
@@ -228,6 +280,7 @@ export const listMutatorDefinitions = {
       });
     },
   ),
+
   setItemStatus: defineMutator(
     setListItemStatusMutationSchema,
     async ({ tx, ctx, args }) => {
@@ -239,17 +292,23 @@ export const listMutatorDefinitions = {
       });
     },
   ),
+
   reorderItems: defineMutator(
     reorderListItemsMutationSchema,
     async ({ tx, ctx, args }) => {
       const parent = await requireList(tx, ctx, args);
-      if (parent.kind === "moodboard")
+
+      if (parent.kind === "moodboard") {
         throw new Error("Checklist mutation not allowed");
+      }
+
       const rows = await tx.run(scopedItems(args).where("status", args.status));
       const updates = planReorder(rows, args.orderedItemIds, args.itemId);
       const updatedAt = timestamp(tx, args.optimisticUpdatedAt);
-      for (const update of updates)
+
+      for (const update of updates) {
         await tx.mutate.listItems.update({ ...update, updatedAt });
+      }
     },
   ),
 };

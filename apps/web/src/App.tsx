@@ -26,11 +26,14 @@ function App({
   useEffect(() => {
     const desktopQuery = window.matchMedia("(min-width: 64rem)");
     const closeOnDesktop = () => {
-      if (desktopQuery.matches) setMobileSidebarOpen(false);
+      if (desktopQuery.matches) {
+        setMobileSidebarOpen(false);
+      }
     };
 
     closeOnDesktop();
     desktopQuery.addEventListener("change", closeOnDesktop);
+
     return () => desktopQuery.removeEventListener("change", closeOnDesktop);
   }, []);
 

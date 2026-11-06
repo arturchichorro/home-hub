@@ -32,7 +32,10 @@ export function CreateHouseholdDialog({
   const mutationEnabled = useZeroMutationEnabled();
 
   function changeOpen(nextOpen: boolean) {
-    if (isSubmitting) return;
+    if (isSubmitting) {
+      return;
+    }
+
     onOpenChange(nextOpen);
 
     if (!nextOpen) {
@@ -43,7 +46,11 @@ export function CreateHouseholdDialog({
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!mutationEnabled) return;
+
+    if (!mutationEnabled) {
+      return;
+    }
+
     setError(undefined);
     setIsSubmitting(true);
 
@@ -52,6 +59,7 @@ export function CreateHouseholdDialog({
 
       if (result.kind === "unauthorized") {
         onSessionExpired();
+
         return;
       }
 

@@ -9,6 +9,7 @@ import {
   MenuTrigger,
   Settings,
 } from "@home-hub/ui-web";
+
 export function ExerciseSettings({
   exercise,
   disabled,
@@ -45,7 +46,9 @@ export function ExerciseSettings({
               aria-label="Measure"
               value={exercise.unit}
               onValueChange={(unit) => {
-                if (unit === "reps" || unit === "seconds") onChange({ unit });
+                if (unit === "reps" || unit === "seconds") {
+                  onChange({ unit });
+                }
               }}
             >
               <MenuRadioItem closeOnClick={false} value="reps">
@@ -67,8 +70,9 @@ export function ExerciseSettings({
               load === "per-hand" ||
               load === "single" ||
               load === "bodyweight"
-            )
+            ) {
               onChange({ load });
+            }
           }}
         >
           <MenuRadioItem closeOnClick={false} value="per-hand">

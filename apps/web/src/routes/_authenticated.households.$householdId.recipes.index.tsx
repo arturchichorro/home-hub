@@ -10,6 +10,7 @@ export const Route = createFileRoute(
       queries.recipes.byHousehold({ householdId: params.householdId }),
     );
   },
+
   component: RecipeLibraryRoute,
 });
 

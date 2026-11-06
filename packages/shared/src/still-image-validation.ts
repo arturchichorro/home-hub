@@ -1,4 +1,5 @@
 import type { StillImageContentType } from "./media";
+
 export class InvalidStillImageError extends Error {}
 
 // Detect container-level animation before any lossy transform. The Images binding
@@ -13,68 +14,104 @@ export function validateStillImage(
   const invalid = () => {
     throw new InvalidStillImageError();
   };
+
   if (contentType === "image/jpeg") {
     if (
       bytes.length < 4 ||
       bytes[0] !== 0xff ||
       bytes[1] !== 0xd8 ||
       bytes[2] !== 0xff
-    )
+    ) {
       invalid();
+    }
+
     return;
   }
+
   if (contentType === "image/png") {
     if (
       bytes.length < 33 ||
       ![137, 80, 78, 71, 13, 10, 26, 10].every((byte, i) => bytes[i] === byte)
-    )
+    ) {
       invalid();
+    }
+
     let offset = 8;
+
     while (offset + 12 <= bytes.length) {
       const length = view.getUint32(offset);
       const type = ascii(offset + 4, 4);
       const end = offset + 12 + length;
+
       if (
         end > bytes.length ||
         (offset === 8 && (type !== "IHDR" || length !== 13))
-      )
+      ) {
         invalid();
-      if (["acTL", "fcTL", "fdAT"].includes(type)) invalid();
+      }
+
+      if (["acTL", "fcTL", "fdAT"].includes(type)) {
+        invalid();
+      }
+
       if (type === "IEND") {
-        if (length !== 0 || end !== bytes.length) invalid();
+        if (length !== 0 || end !== bytes.length) {
+          invalid();
+        }
+
         return;
       }
+
       offset = end;
     }
+
     invalid();
   }
+
   if (contentType === "image/webp") {
     if (
       bytes.length < 20 ||
       ascii(0, 4) !== "RIFF" ||
       ascii(8, 4) !== "WEBP" ||
       view.getUint32(4, true) + 8 !== bytes.length
-    )
+    ) {
       invalid();
+    }
+
     let offset = 12;
     let pixels = false;
+
     while (offset + 8 <= bytes.length) {
       const type = ascii(offset, 4);
       const length = view.getUint32(offset + 4, true);
       const end = offset + 8 + length + (length % 2);
-      if (end > bytes.length) invalid();
+
+      if (end > bytes.length) {
+        invalid();
+      }
+
       if (
         type === "ANIM" ||
         type === "ANMF" ||
         (type === "VP8X" &&
           (length !== 10 || (view.getUint8(offset + 8) & 2) !== 0))
-      )
+      ) {
         invalid();
-      if (type === "VP8 " || type === "VP8L") pixels = true;
+      }
+
+      if (type === "VP8 " || type === "VP8L") {
+        pixels = true;
+      }
+
       offset = end;
     }
-    if (!pixels || offset !== bytes.length) invalid();
+
+    if (!pixels || offset !== bytes.length) {
+      invalid();
+    }
+
     return;
   }
+
   invalid();
 }

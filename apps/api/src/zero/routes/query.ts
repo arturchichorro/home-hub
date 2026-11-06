@@ -21,6 +21,7 @@ export function createZeroQueryRoute(
       request: c.req.raw,
       schema,
       userID: userId,
+
       handler: (name, args) => {
         try {
           return mustGetQuery(queries, name).fn({ args, ctx: { userId } });
@@ -31,6 +32,7 @@ export function createZeroQueryRoute(
             level: "error",
             ...diagnosticFor("zero.query", error),
           });
+
           throw error;
         }
       },

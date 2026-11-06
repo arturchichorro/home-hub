@@ -8,11 +8,11 @@
     "build": "tsc -b && NODE_ENV=production vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:moodboard-reorder": "tsc --noEmit -p test/moodboard-reorder/tsconfig.json && node test/verify-moodboard-reorder.mjs",
     "typecheck": "tsc -b"
   },
   "dependencies": {
     "@dnd-kit/dom": "^0.5.1",
-    "@dnd-kit/helpers": "^0.5.1",
     "@dnd-kit/react": "^0.5.1",
     "@home-hub/shared": "workspace:*",
     "@home-hub/ui-web": "workspace:*",

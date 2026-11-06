@@ -13,6 +13,7 @@ export function createMeRoute({ getMe }: CreateMeRouteInput) {
 
     if (result.kind === "not_found") {
       c.header("WWW-Authenticate", "Bearer");
+
       return c.json({ error: "Unauthorized" }, 401);
     }
 

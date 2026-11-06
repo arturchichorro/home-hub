@@ -6,7 +6,9 @@ import { describe, expect, it, vi } from "vitest";
 import { createLeaveHouseholdService } from "./leave";
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const membershipId = "7dbb2304-955a-4d0b-9878-d39a42a38eb2";
 
 function createFakeDatabase({
@@ -26,17 +28,23 @@ function createFakeDatabase({
   const selectBuilder = {
     from(table: unknown) {
       selectedTables.push(table);
+
       return selectBuilder;
     },
+
     where(condition: unknown) {
       selectionWhereClauses.push(condition);
+
       return selectBuilder;
     },
+
     limit() {
       return selectBuilder;
     },
+
     async for(strength: unknown) {
       lockStrengths.push(strength);
+
       return membershipRole ? [{ id: membershipId, role: membershipRole }] : [];
     },
   };
@@ -44,15 +52,19 @@ function createFakeDatabase({
   const deleteBuilder = {
     async where(condition: unknown) {
       deleteWhereClauses.push(condition);
+
       return [];
     },
   };
 
   const tx = {
     query: { users: { findFirst: findUser } },
+
     select: () => selectBuilder,
+
     delete(table: unknown) {
       deletedTables.push(table);
+
       return deleteBuilder;
     },
   };

@@ -8,8 +8,10 @@ export function useHabitDraftStatus(
 ) {
   const notify = useRef(onChange);
   notify.current = onChange;
+
   useEffect(() => {
     notify.current?.(dirty);
   }, [dirty]);
+
   useEffect(() => () => notify.current?.(false), []);
 }

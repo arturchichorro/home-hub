@@ -1,8 +1,16 @@
 import { createListMediaUploadSchema } from "@home-hub/shared/list-media";
 import { maxVideoDurationMs } from "@home-hub/shared/media";
-import { Button, DialogPopup, DialogRoot, InlineAlert } from "@home-hub/ui-web";
+import {
+  Button,
+  DialogPopup,
+  DialogRoot,
+  IconButton,
+  InlineAlert,
+  Plus,
+} from "@home-hub/ui-web";
 import { useBlocker } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { readImageDimensions } from "../media/read-image-dimensions";
 import type { MediaSession } from "../media/session";
 import { useBlockAppUpdate } from "../updates/activity";
@@ -20,13 +28,15 @@ type Job = {
   running?: boolean;
   done?: boolean;
 };
+
 function videoDimensions(
   file: File,
 ): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
-    const element = document.createElement("video"),
-      url = URL.createObjectURL(file);
+    const element = document.createElement("video");
+    const url = URL.createObjectURL(file);
     element.preload = "metadata";
+
     let timer: ReturnType<typeof setTimeout>;
     const finish = () => {
       clearTimeout(timer);
@@ -46,22 +56,26 @@ function videoDimensions(
     };
     element.onloadedmetadata = () => {
       const dimensions = {
-          width: element.videoWidth,
-          height: element.videoHeight,
-        },
-        duration = element.duration;
+        width: element.videoWidth,
+        height: element.videoHeight,
+      };
+      const duration = element.duration;
       finish();
+
       if (
         !Number.isFinite(duration) ||
         duration * 1000 > maxVideoDurationMs ||
         duration <= 0
-      )
+      ) {
         reject(Error("Choose a video up to 10 minutes."));
-      else resolve(dimensions);
+      } else {
+        resolve(dimensions);
+      }
     };
     element.src = url;
   });
 }
+
 function put(
   file: File,
   upload: { url: string; requiredHeaders: Record<string, string> },
@@ -69,16 +83,21 @@ function put(
   onProgress: (n: number) => void,
 ) {
   return new Promise<void>((resolve, reject) => {
-    const xhr = new XMLHttpRequest(),
-      abort = () => xhr.abort();
+    const xhr = new XMLHttpRequest();
+    const abort = () => xhr.abort();
     xhr.open("PUT", upload.url);
-    for (const [k, v] of Object.entries(upload.requiredHeaders))
+
+    for (const [k, v] of Object.entries(upload.requiredHeaders)) {
       xhr.setRequestHeader(k, v);
+    }
+
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable)
+      if (e.lengthComputable) {
         onProgress(Math.round((e.loaded / e.total) * 100));
+      }
     };
     xhr.timeout = 300000;
+
     const fail = () =>
       reject(Error("Upload interrupted. Your file is still here; retry."));
     xhr.onerror = fail;
@@ -88,13 +107,43 @@ function put(
       xhr.status >= 200 && xhr.status < 300 ? resolve() : fail();
     xhr.onloadend = () => signal.removeEventListener("abort", abort);
     signal.addEventListener("abort", abort, { once: true });
+
     if (signal.aborted) {
       reject(Error("Cancelled"));
+
       return;
     }
+
     xhr.send(file);
   });
 }
+
+function UploadHeaderAction({
+  input,
+  disabled,
+}: {
+  input: RefObject<HTMLInputElement | null>;
+  disabled: boolean;
+}) {
+  const action = useMemo(
+    () => (
+      <IconButton
+        aria-label="Add images or videos"
+        title="Add images or videos"
+        className="size-7!"
+        disabled={disabled}
+        onClick={() => input.current?.click()}
+      >
+        <Plus className="size-4" aria-hidden="true" />
+      </IconButton>
+    ),
+    [input, disabled],
+  );
+  useAppHeaderRightComponent(action);
+
+  return null;
+}
+
 export function MoodboardUploads({
   householdId,
   listId,
@@ -106,56 +155,77 @@ export function MoodboardUploads({
   session: MediaSession;
   onBusy: (busy: boolean) => void;
 }) {
-  const cancelled = useRef(new Set<string>()),
-    chain = useRef(Promise.resolve());
-  const [jobs, setJobs] = useState<Job[]>([]),
-    ref = useRef<HTMLInputElement>(null),
-    active = useRef(new Map<string, AbortController>()),
-    mounted = useRef(true);
-  const enabled = useZeroMutationEnabled(),
-    dirty = jobs.some((j) => !j.done);
+  const cancelled = useRef(new Set<string>());
+  const chain = useRef(Promise.resolve());
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const ref = useRef<HTMLInputElement>(null);
+  const active = useRef(new Map<string, AbortController>());
+  const mounted = useRef(true);
+  const enabled = useZeroMutationEnabled();
+  const dirty = jobs.some((j) => !j.done);
   useBlockAppUpdate(dirty);
+
   const blocker = useBlocker({
     shouldBlockFn: () => dirty,
+
     enableBeforeUnload: () => dirty,
+
     withResolver: true,
   });
+
   useEffect(() => {
     onBusy(dirty);
+
     return () => onBusy(false);
   }, [dirty, onBusy]);
+
   useEffect(() => {
     mounted.current = true;
+
     return () => {
       mounted.current = false;
-      for (const controller of active.current.values()) controller.abort();
+
+      for (const controller of active.current.values()) {
+        controller.abort();
+      }
     };
   }, []);
+
   function update(id: string, patch: Partial<Job>) {
-    if (mounted.current)
+    if (mounted.current) {
       setJobs((rows) =>
         rows.map((j) => (j.id === id ? { ...j, ...patch } : j)),
       );
+    }
   }
-  const sessionRef = useRef(session),
-    enabledRef = useRef(enabled);
+
+  const sessionRef = useRef(session);
+  const enabledRef = useRef(enabled);
   sessionRef.current = session;
   enabledRef.current = enabled;
+
   async function upload(job: Job) {
-    if (cancelled.current.has(job.id) || active.current.has(job.id)) return;
+    if (cancelled.current.has(job.id) || active.current.has(job.id)) {
+      return;
+    }
+
     if (!enabledRef.current) {
       update(job.id, {
         running: false,
         status: "Failed",
         error: "Reconnect, then retry this file.",
       });
+
       return;
     }
+
     const controller = new AbortController();
     active.current.set(job.id, controller);
     update(job.id, { running: true, error: undefined });
+
     try {
       let attachmentId = job.attachmentId;
+
       if (!job.uploaded) {
         const dimensions = job.file.type.startsWith("video/")
           ? await videoDimensions(job.file)
@@ -165,22 +235,30 @@ export function MoodboardUploads({
           byteSize: job.file.size,
           ...dimensions,
         });
-        if (!metadata.success)
+
+        if (!metadata.success) {
           throw Error(
             "Choose JPEG/PNG/WebP up to 10 MiB, or MP4/WebM up to 100 MiB (maximum 4096 pixels per video side).",
           );
+        }
+
         const pending = await requestListImageUpload({
           ...sessionRef.current,
           householdId,
           listId,
           ...metadata.data,
         });
+
         if (pending.kind === "unauthorized") {
           session.onSessionExpired();
+
           throw Error("Sign in again before retrying.");
         }
-        if (pending.kind !== "success")
+
+        if (pending.kind !== "success") {
           throw Error("This moodboard is unavailable.");
+        }
+
         attachmentId = pending.attachmentId;
         update(job.id, { attachmentId, status: "Uploading" });
         await put(job.file, pending.upload, controller.signal, (progress) =>
@@ -188,21 +266,34 @@ export function MoodboardUploads({
         );
         update(job.id, { uploaded: true });
       }
-      if (controller.signal.aborted) return;
+
+      if (controller.signal.aborted) {
+        return;
+      }
+
       update(job.id, { status: "Processing" });
+
       const result = await confirmListImage({
         ...sessionRef.current,
         householdId,
         listId,
         attachmentId: attachmentId as string,
       });
-      if (result.kind === "unauthorized") session.onSessionExpired();
-      if (result.kind === "invalid_upload")
+
+      if (result.kind === "unauthorized") {
+        session.onSessionExpired();
+      }
+
+      if (result.kind === "invalid_upload") {
         throw Error(
           "Unsupported or invalid media. Videos need H.264/AAC MP4 or VP8/VP9 WebM, up to 10 minutes; animated images are not supported.",
         );
-      if (result.kind !== "success")
+      }
+
+      if (result.kind !== "success") {
         throw Error("Unable to confirm this upload. Retry shortly.");
+      }
+
       update(job.id, {
         done: true,
         status: "Added",
@@ -222,13 +313,22 @@ export function MoodboardUploads({
       active.current.delete(job.id);
     }
   }
+
   function discard() {
-    for (const job of jobs) cancelled.current.add(job.id);
-    for (const c of active.current.values()) c.abort();
+    for (const job of jobs) {
+      cancelled.current.add(job.id);
+    }
+
+    for (const c of active.current.values()) {
+      c.abort();
+    }
+
     setJobs([]);
   }
+
   return (
-    <div className="grid gap-3">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+      <UploadHeaderAction input={ref} disabled={!enabled} />
       <input
         ref={ref}
         className="sr-only"
@@ -238,6 +338,7 @@ export function MoodboardUploads({
         onChange={(event) => {
           const files = Array.from(event.target.files ?? []);
           event.target.value = "";
+
           const batch = files.map((file) => ({
             id: crypto.randomUUID(),
             file,
@@ -247,20 +348,15 @@ export function MoodboardUploads({
           setJobs((rows) => [...rows, ...batch]);
           chain.current = chain.current.then(async () => {
             for (const job of batch) {
-              if (!mounted.current) break;
+              if (!mounted.current) {
+                break;
+              }
+
               await upload(job);
             }
           });
         }}
       />
-      <div className="flex flex-wrap items-center gap-3">
-        <Button disabled={!enabled} onClick={() => ref.current?.click()}>
-          Add media
-        </Button>
-        <span className="text-xs text-muted">
-          Images · MP4 / WebM clips · No autoplay
-        </span>
-      </div>
       {jobs.some((job) => job.done) && (
         <div className="flex items-center gap-2 text-xs text-muted">
           <span role="status">
@@ -276,13 +372,16 @@ export function MoodboardUploads({
         </div>
       )}
       {jobs.some((job) => !job.done) && (
-        <ul className="grid gap-2" aria-label="Media uploads">
+        <ul
+          className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2"
+          aria-label="Media uploads"
+        >
           {jobs
             .filter((job) => !job.done)
             .map((job) => (
               <li
                 key={job.id}
-                className="grid gap-1 rounded-md border border-border p-2 text-sm"
+                className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 rounded-md border border-border p-2 text-sm"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="min-w-0 truncate">{job.file.name}</span>
@@ -326,7 +425,9 @@ export function MoodboardUploads({
       <DialogRoot
         open={blocker.status === "blocked"}
         onOpenChange={(open) => {
-          if (!open && blocker.status === "blocked") blocker.reset();
+          if (!open && blocker.status === "blocked") {
+            blocker.reset();
+          }
         }}
       >
         <DialogPopup
@@ -344,7 +445,10 @@ export function MoodboardUploads({
                 disabled={jobs.some((job) => job.running)}
                 onClick={() => {
                   discard();
-                  if (blocker.status === "blocked") blocker.proceed();
+
+                  if (blocker.status === "blocked") {
+                    blocker.proceed();
+                  }
                 }}
               >
                 Discard uploads and leave

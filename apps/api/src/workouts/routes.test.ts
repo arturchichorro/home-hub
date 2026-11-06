@@ -6,22 +6,31 @@ import type { ExerciseMediaServices } from "./exercise-media";
 import { createExerciseMediaRoutes } from "./routes";
 
 const secret = "exercise-media-test-jwt";
-const householdId = randomUUID(),
-  exerciseId = randomUUID(),
-  attachmentId = randomUUID(),
-  userId = randomUUID();
+
+const householdId = randomUUID();
+
+const exerciseId = randomUUID();
+
+const attachmentId = randomUUID();
+
+const userId = randomUUID();
+
 const prefix = `/api/households/${householdId}/workouts/exercises`;
+
 function harness() {
   const services = {
     createUpload: vi.fn<ExerciseMediaServices["createUpload"]>(async () => ({
       kind: "forbidden",
     })),
+
     confirmUpload: vi.fn<ExerciseMediaServices["confirmUpload"]>(async () => ({
       kind: "forbidden",
     })),
+
     deleteAttachment: vi.fn<ExerciseMediaServices["deleteAttachment"]>(
       async () => ({ kind: "forbidden" }),
     ),
+
     readUrls: vi.fn<ExerciseMediaServices["readUrls"]>(async () => ({
       kind: "forbidden",
     })),
@@ -31,18 +40,22 @@ function harness() {
     "/api/households/:householdId/workouts/exercises",
     createExerciseMediaRoutes({ jwtSecret: secret, services }),
   );
+
   const headers = {
     Authorization: `Bearer ${signAccessToken({ userId, jwtId: randomUUID(), secret })}`,
     "Content-Type": "application/json",
   };
+
   return { app, services, headers };
 }
+
 const upload = {
   contentType: "image/png",
   byteSize: 42,
   width: 640,
   height: 480,
 };
+
 describe("exercise media routes", () => {
   it.each([
     ["POST", `/${exerciseId}/media/uploads`],
@@ -86,6 +99,7 @@ describe("exercise media routes", () => {
       },
     };
     services.createUpload.mockResolvedValue({ kind: "success", ...response });
+
     const result = await app.request(`${prefix}/${exerciseId}/media/uploads`, {
       method: "POST",
       headers,
@@ -109,6 +123,7 @@ describe("exercise media routes", () => {
   ] as const)("maps confirmation %s to %s", async (kind, status) => {
     const { app, services, headers } = harness();
     services.confirmUpload.mockResolvedValue({ kind });
+
     const result = await app.request(
       `${prefix}/${exerciseId}/media/${attachmentId}/confirm`,
       { method: "POST", headers },
@@ -129,6 +144,7 @@ describe("exercise media routes", () => {
       attachment: { id: attachmentId, confirmedAt },
     });
     services.deleteAttachment.mockResolvedValue({ kind: "success" });
+
     const response = await app.request(
       `${prefix}/${exerciseId}/media/${attachmentId}/confirm`,
       { method: "POST", headers },
@@ -148,6 +164,7 @@ describe("exercise media routes", () => {
   it("validates bounded read batches and preserves omitted unauthorized entries", async () => {
     const { app, services, headers } = harness();
     services.readUrls.mockResolvedValue({ kind: "success", reads: [] });
+
     const request = { exerciseId, attachmentId, variant: "viewer" };
     expect(
       (
@@ -163,6 +180,7 @@ describe("exercise media routes", () => {
       householdId,
       requests: [request],
     });
+
     for (const requests of [
       [],
       Array(101).fill(request),

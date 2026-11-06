@@ -67,8 +67,8 @@ old logs remain readable; use the cited revision to inspect the corresponding co
 These are validated locations, not cryptographic attestation of a stack's origin.
 
 After source/contract changes run `node scripts/generate-diagnostics.mjs` and format
-`packages/shared/src/diagnostic-sources.gen.ts`; CI rejects drift in both inventory
-and Alloy rules. Keep existing code meanings stable. Revalidate/recreate the
+`packages/shared/src/diagnostic-sources.gen.ts`; review the resulting inventory
+and Alloy-rule changes together. Keep existing code meanings stable. Revalidate/recreate the
 **already authorized** collector and restart MCP readers with updated contracts
 when new codes, operations or source files ship; normal app deployment still does
 not start the collector. An old contract may omit new details—never relax it to
@@ -202,4 +202,5 @@ uses the actual MCP protocol to find/cite a known canary. It inspects **raw Loki
 storage**, proving secrets/private content were removed before export, not merely
 hidden from the agent. The fixture uses temporary containers/tmpfs and fake keys;
 it never mounts real Docker log directories, app databases or production secrets.
-CI runs both. Cloud acceptance still requires step 7 above after approved activation.
+CI runs the normal unit tests; the Alloy/Loki pipeline stays a manual verification,
+not a deployment gate. Cloud acceptance still requires step 7 above after approved activation.

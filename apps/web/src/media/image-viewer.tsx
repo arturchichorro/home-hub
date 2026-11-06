@@ -10,13 +10,14 @@ import {
   Trash2,
   X,
 } from "@home-hub/ui-web";
-import { useState } from "react";
+import { ProgressiveImage } from "./progressive-image";
 
 export type DisplayImage = {
   id: string;
   width: number | null;
   height: number | null;
 };
+
 export function ImageViewer<Image extends DisplayImage>({
   image,
   images,
@@ -31,6 +32,7 @@ export function ImageViewer<Image extends DisplayImage>({
   onSelect,
   onDelete,
   onOpenChange,
+  onViewerLoad,
 }: {
   image: Image | undefined;
   images: readonly Image[];
@@ -45,16 +47,26 @@ export function ImageViewer<Image extends DisplayImage>({
   onSelect: (image: Image) => void;
   onDelete: (image: Image) => void;
   onOpenChange: (open: boolean) => void;
+  onViewerLoad?: (url: string) => void;
 }) {
-  const [loadedUrl, setLoadedUrl] = useState<string>();
-  const loaded = viewerUrl !== undefined && viewerUrl === loadedUrl;
   const navigate = (direction: number) => {
-    if (!image || images.length < 2) return;
+    if (!image || images.length < 2) {
+      return;
+    }
+
     const index = images.findIndex((item) => item.id === image.id);
-    if (index < 0) return;
+
+    if (index < 0) {
+      return;
+    }
+
     const next = images[(index + direction + images.length) % images.length];
-    if (next) onSelect(next);
+
+    if (next) {
+      onSelect(next);
+    }
   };
+
   return (
     <DialogRoot open={Boolean(image)} onOpenChange={onOpenChange}>
       <DialogPopup
@@ -62,7 +74,10 @@ export function ImageViewer<Image extends DisplayImage>({
         title="Image preview"
         size="large"
         onKeyDown={(event) => {
-          if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          if (
+            !deleting &&
+            (event.key === "ArrowLeft" || event.key === "ArrowRight")
+          ) {
             event.preventDefault();
             navigate(event.key === "ArrowLeft" ? -1 : 1);
           }
@@ -70,6 +85,7 @@ export function ImageViewer<Image extends DisplayImage>({
       >
         <DialogClose
           aria-label="Close image preview"
+          disabled={deleting}
           className="fixed! top-4 left-4 z-10 size-10! rounded-full p-0!"
         >
           <X aria-hidden="true" />
@@ -89,45 +105,21 @@ export function ImageViewer<Image extends DisplayImage>({
               </IconButton>
             }
             onConfirm={() => {
-              if (!deleting) onDelete(image);
+              if (!deleting) {
+                onDelete(image);
+              }
             }}
           />
         )}
-        {viewerUrl || thumbnailUrl ? (
-          <div className="relative">
-            {viewerUrl && (
-              <img
-                src={viewerUrl}
-                alt={alt}
-                width={image?.width ?? undefined}
-                height={image?.height ?? undefined}
-                className={[
-                  "max-h-[90vh] w-full object-contain transition-opacity duration-200",
-                  loaded ? "opacity-100" : "opacity-0",
-                ].join(" ")}
-                onLoad={() => setLoadedUrl(viewerUrl)}
-              />
-            )}
-            {thumbnailUrl && (
-              <img
-                src={thumbnailUrl}
-                alt={viewerUrl ? "" : alt}
-                width={image?.width ?? undefined}
-                height={image?.height ?? undefined}
-                className={[
-                  viewerUrl ? "absolute inset-0" : "",
-                  "max-h-[90vh] w-full object-contain transition-opacity duration-200",
-                  loaded ? "opacity-0" : "opacity-100",
-                ].join(" ")}
-              />
-            )}
-          </div>
-        ) : error ? (
-          <InlineAlert role="alert" variant="danger">
-            This image is not currently available.
-          </InlineAlert>
-        ) : (
-          <div className="aspect-video animate-pulse rounded-md bg-surface" />
+        {image && (
+          <ProgressiveImage
+            key={image.id}
+            thumbnailUrl={thumbnailUrl}
+            viewerUrl={viewerUrl}
+            alt={alt}
+            error={error}
+            {...(onViewerLoad ? { onViewerLoad } : {})}
+          />
         )}
         {actionError && (
           <InlineAlert
@@ -142,6 +134,7 @@ export function ImageViewer<Image extends DisplayImage>({
           <>
             <IconButton
               aria-label="Previous image"
+              disabled={deleting}
               className="fixed! top-1/2 left-4 z-10 -translate-y-1/2 rounded-full"
               variant="secondary"
               onClick={() => navigate(-1)}
@@ -150,6 +143,7 @@ export function ImageViewer<Image extends DisplayImage>({
             </IconButton>
             <IconButton
               aria-label="Next image"
+              disabled={deleting}
               className="fixed! top-1/2 right-4 z-10 -translate-y-1/2 rounded-full"
               variant="secondary"
               onClick={() => navigate(1)}

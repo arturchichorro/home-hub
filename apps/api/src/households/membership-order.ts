@@ -3,6 +3,7 @@ import { householdMembers } from "@home-hub/database/schema";
 import { desc, eq } from "drizzle-orm";
 
 const sortKeyGap = 1024;
+
 const maxSortKey = 2_147_483_647;
 
 export async function nextHouseholdMembershipSortKey(
@@ -17,7 +18,10 @@ export async function nextHouseholdMembershipSortKey(
     .limit(1)
     .execute();
   const next = (top?.sortKey ?? 0) + sortKeyGap;
-  if (next > maxSortKey)
+
+  if (next > maxSortKey) {
     throw new Error("Household ordering requires rebalancing");
+  }
+
   return next;
 }

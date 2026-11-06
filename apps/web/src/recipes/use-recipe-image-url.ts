@@ -12,11 +12,13 @@ import {
 const useImageUrl = createUseImageUrl<RecipeImageUrlIdentity>({
   key: recipeImageUrlCacheKey,
   read: readCachedRecipeImageUrl,
+
   resolve: (identity) =>
     getOrCreateRecipeImageUrl(identity, () =>
       createBatchedRecipeImageReadUrl(identity),
     ),
 });
+
 export function useRecipeImageUrl({
   accessToken,
   userId,
@@ -41,5 +43,6 @@ export function useRecipeImageUrl({
         : undefined,
     [accessToken, userId, householdId, imageId, recipeId, variant],
   );
+
   return useImageUrl(identity, onSessionExpired);
 }

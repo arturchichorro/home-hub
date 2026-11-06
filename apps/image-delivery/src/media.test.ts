@@ -14,7 +14,9 @@ import {
 import { readImageBytes, validateStillImage } from "./still-image";
 
 const nowSeconds = 1_787_625_600;
+
 const secret = "media-worker-test-secret-of-at-least-32-bytes";
+
 const identity: MediaIdentity = {
   householdId: "d92e5c4e-1c68-4942-9cc9-710207661bca",
   mediaId: "671874b1-df9d-4a91-8f3c-8055473e8aa2",
@@ -23,6 +25,7 @@ const identity: MediaIdentity = {
   parentId: "8d46a4c4-4845-4a6d-a937-139633ae1bb9",
   attachmentId: "5944cb0d-931a-4723-b981-77eacb122314",
 };
+
 const png = Uint8Array.from(
   atob(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6O1sAAAAASUVORK5CYII=",
@@ -43,6 +46,7 @@ function webp(type: string, flags = 0) {
   data[20] = flags;
   write(30, "VP8 ");
   view.setUint32(34, 0, true);
+
   return data;
 }
 
@@ -80,6 +84,7 @@ function harness({
     RECIPE_IMAGES: { get, put: store },
     IMAGES: { input },
   };
+
   return {
     env,
     context,
@@ -91,6 +96,7 @@ function harness({
     jobs,
   };
 }
+
 async function readRequest(patch: Partial<MediaReadCapability> = {}) {
   const capability = {
     ...identity,
@@ -98,6 +104,7 @@ async function readRequest(patch: Partial<MediaReadCapability> = {}) {
     expiresAt: nowSeconds + 3600,
     ...patch,
   };
+
   return new Request(
     mediaReadUrl({
       baseUrl: "https://images.example",
@@ -110,6 +117,7 @@ async function readRequest(patch: Partial<MediaReadCapability> = {}) {
     }),
   );
 }
+
 async function processRequest({
   source = png,
   contentType = "image/png" as const,
@@ -125,6 +133,7 @@ async function processRequest({
     contentType,
     byteSize: source.length,
   };
+
   return new Request("https://images.example/internal/media/images/process", {
     method: "POST",
     body: JSON.stringify({
@@ -195,6 +204,7 @@ describe("generic media image delivery", () => {
   });
   it("partitions the cache by asset, layout and fixed transform", async () => {
     const keys: string[] = [];
+
     for (const patch of [
       {},
       { mediaId: identity.parentId },
@@ -213,10 +223,12 @@ describe("generic media image delivery", () => {
       ).toBe(200);
       keys.push(h.match.mock.calls[0]?.[0].url ?? "");
     }
+
     expect(new Set(keys).size).toBe(4);
   });
   it("rejects arbitrary variants, extra fields and unsupported methods", async () => {
     const request = await readRequest();
+
     for (const patch of [
       { variant: "original" },
       { objectKey: "private/source" },
@@ -227,6 +239,7 @@ describe("generic media image delivery", () => {
         "capability",
         JSON.stringify({ ...capability, ...patch }),
       );
+
       const h = harness();
       expect(
         (
@@ -239,6 +252,7 @@ describe("generic media image delivery", () => {
       ).toBe(400);
       expect(h.get).not.toHaveBeenCalled();
     }
+
     const h = harness();
     expect(
       (
@@ -302,6 +316,7 @@ describe("generic media processing", () => {
       ).toBe(422);
       expect(h.store).not.toHaveBeenCalled();
     }
+
     const h = harness({ source: png.slice(0, 20) });
     expect(
       (
@@ -350,6 +365,7 @@ describe("still image probing", () => {
       start(controller) {
         controller.enqueue(new Uint8Array(100));
       },
+
       cancel,
     });
     await expect(readImageBytes(body, 10)).rejects.toThrow();

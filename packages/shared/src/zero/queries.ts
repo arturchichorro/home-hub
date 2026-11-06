@@ -2,13 +2,14 @@ import { defineQueriesWithType, defineQueryWithType } from "@rocicorp/zero";
 import * as z from "zod";
 import { habitsQuerySchema, shiftCalendarDate } from "../habits";
 import { listMediaPageSchema } from "../list-media";
-import { listDetailArgsSchema } from "../lists";
+import { listDetailArgsSchema, listPreviewItemLimit } from "../lists";
 import type { ZeroAuthContext } from "./context";
 import { documentQueries } from "./document-queries";
 import { logQueries } from "./log-queries";
 import { type Schema, zql } from "./schema.gen";
 
 const defineHomeHubQuery = defineQueryWithType<Schema, ZeroAuthContext>();
+
 const defineHomeHubQueries = defineQueriesWithType<Schema>();
 
 const householdIdArgsSchema = z
@@ -107,33 +108,44 @@ const listsByHousehold = defineHomeHubQuery(
       .orderBy("id", "asc"),
 );
 
+const listLibraryQuery = (
+  householdId: string,
+  userId: string,
+  itemLimit: number,
+) =>
+  authorizedLists(householdId, userId)
+    .related("attachments", (a) =>
+      a
+        .where("deletedAt", "IS", null)
+        .whereExists("asset", (m) =>
+          m.where("deletedAt", "IS", null).where("confirmedAt", "IS NOT", null),
+        )
+        .related("asset")
+        .orderBy("sortKey", "desc")
+        .orderBy("id", "asc")
+        .limit(4),
+    )
+    .related("items", (item) =>
+      item
+        .where("status", "IN", ["active", "crossed"])
+        .orderBy("status", "asc")
+        .orderBy("sortKey", "desc")
+        .orderBy("id", "asc")
+        .limit(itemLimit),
+    )
+    .orderBy("sortKey", "desc")
+    .orderBy("id", "asc");
+
+// Preserve both existing query shapes for clients installed before this UI.
 const listsLibrary = defineHomeHubQuery(
   householdIdArgsSchema,
+  ({ args, ctx }) => listLibraryQuery(args.householdId, ctx.userId, 4),
+);
+
+const listsLibraryPreview = defineHomeHubQuery(
+  householdIdArgsSchema,
   ({ args, ctx }) =>
-    authorizedLists(args.householdId, ctx.userId)
-      .related("attachments", (a) =>
-        a
-          .where("deletedAt", "IS", null)
-          .whereExists("asset", (m) =>
-            m
-              .where("deletedAt", "IS", null)
-              .where("confirmedAt", "IS NOT", null),
-          )
-          .related("asset")
-          .orderBy("sortKey", "desc")
-          .orderBy("id", "asc")
-          .limit(4),
-      )
-      .related("items", (item) =>
-        item
-          .where("status", "IN", ["active", "crossed"])
-          .orderBy("status", "asc")
-          .orderBy("sortKey", "desc")
-          .orderBy("id", "asc")
-          .limit(4),
-      )
-      .orderBy("sortKey", "desc")
-      .orderBy("id", "asc"),
+    listLibraryQuery(args.householdId, ctx.userId, listPreviewItemLimit),
 );
 
 const listDetail = defineHomeHubQuery(listDetailArgsSchema, ({ args, ctx }) =>
@@ -175,12 +187,14 @@ const authorizedBoardMedia = (
         ),
     )
     .related("asset");
+
 const listMediaPage = defineHomeHubQuery(listMediaPageSchema, ({ args, ctx }) =>
   authorizedBoardMedia(args.householdId, args.listId, ctx.userId)
     .orderBy("sortKey", "desc")
     .orderBy("id", "asc")
     .limit(args.limit),
 );
+
 const listMediaById = defineHomeHubQuery(
   listDetailArgsSchema.extend({ attachmentId: z.uuid() }).strict(),
   ({ args, ctx }) =>
@@ -314,6 +328,7 @@ const personHabitArgs = z
       args.endOn <= shiftCalendarDate(args.startOn, 30),
     "Invalid calendar period",
   );
+
 const habitWorkoutChoices = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
@@ -333,6 +348,7 @@ const habitWorkoutChoices = defineHomeHubQuery(
       .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
 );
+
 const habitWorkoutSettings = defineHomeHubQuery(
   z.object({ householdId: z.uuid(), habitId: z.uuid() }).strict(),
   ({ args, ctx }) =>
@@ -352,6 +368,7 @@ const habitWorkoutSettings = defineHomeHubQuery(
       )
       .one(),
 );
+
 const authorizedPersonHabits = (
   householdId: string,
   userId: string,
@@ -366,6 +383,7 @@ const authorizedPersonHabits = (
         s.where("moduleKey", "habits").where("enabled", true),
       ),
   );
+
 const recentPersonHabits = defineHomeHubQuery(
   personHabitArgs.refine(
     (args) => args.endOn <= shiftCalendarDate(args.startOn, 6),
@@ -385,6 +403,7 @@ const recentPersonHabits = defineHomeHubQuery(
       .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
 );
+
 const personHabitHistory = defineHomeHubQuery(
   personHabitArgs.safeExtend({ habitId: z.uuid() }),
   ({ args, ctx }) =>
@@ -410,6 +429,7 @@ const authorizedWorkouts = (householdId: string, userId: string) =>
         s.where("moduleKey", "workouts").where("enabled", true),
       ),
   );
+
 const workoutsByHousehold = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
@@ -430,9 +450,11 @@ const workoutsByHousehold = defineHomeHubQuery(
       .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
 );
+
 const workoutDetailArgs = z
   .object({ householdId: z.uuid(), workoutId: z.uuid() })
   .strict();
+
 const workoutDetail = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
   authorizedWorkouts(args.householdId, ctx.userId)
     .where("id", args.workoutId)
@@ -444,6 +466,7 @@ const workoutDetail = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
     )
     .one(),
 );
+
 const authorizedExerciseCatalog = (householdId: string, userId: string) =>
   zql.exercises
     .where("householdId", householdId)
@@ -455,6 +478,7 @@ const authorizedExerciseCatalog = (householdId: string, userId: string) =>
           s.where("moduleKey", "workouts").where("enabled", true),
         ),
     );
+
 const exerciseDefinitions = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
@@ -463,6 +487,7 @@ const exerciseDefinitions = defineHomeHubQuery(
       .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
 );
+
 const exerciseCatalog = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
@@ -482,6 +507,7 @@ const exerciseCatalog = defineHomeHubQuery(
       .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
 );
+
 const previousExercisePerformances = defineHomeHubQuery(
   z
     .object({
@@ -511,6 +537,7 @@ const previousExercisePerformances = defineHomeHubQuery(
           .related("sets", (s) => s.orderBy("round", "asc")),
       ),
 );
+
 const exerciseMediaQuery = defineHomeHubQuery(
   z.object({ householdId: z.uuid(), exerciseId: z.uuid() }).strict(),
   ({ args, ctx }) =>
@@ -538,6 +565,7 @@ const exerciseMediaQuery = defineHomeHubQuery(
       .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
 );
+
 const catalogMediaQuery = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
@@ -564,6 +592,7 @@ const catalogMediaQuery = defineHomeHubQuery(
       .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
 );
+
 const workoutLogs = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
   zql.workoutLogs
     .where("householdId", args.householdId)
@@ -615,6 +644,7 @@ const authorizedWorkoutHistory = (
     .orderBy("id", "desc");
 
 export const workoutHistoryPageSize = 20;
+
 const historyCursor = z
   .object({
     completedOn: z.iso.date(),
@@ -622,20 +652,24 @@ const historyCursor = z
     id: z.uuid(),
   })
   .strict();
+
 const workoutHistoryPage = defineHomeHubQuery(
   workoutDetailArgs.extend({ cursor: historyCursor.optional() }),
   ({ args, ctx }) => {
     const query = authorizedWorkoutHistory(args, ctx);
+
     return (
       args.cursor ? query.start(args.cursor, { inclusive: false }) : query
     ).limit(workoutHistoryPageSize + 1);
   },
 );
+
 const workoutLogById = defineHomeHubQuery(
   workoutDetailArgs.extend({ logId: z.uuid() }),
   ({ args, ctx }) =>
     authorizedWorkoutHistory(args, ctx).where("id", args.logId).limit(1),
 );
+
 const workoutLogForDay = defineHomeHubQuery(
   workoutDetailArgs.extend({ completedOn: z.iso.date() }),
   ({ args, ctx }) =>
@@ -643,6 +677,7 @@ const workoutLogForDay = defineHomeHubQuery(
       .where("completedOn", args.completedOn)
       .limit(1),
 );
+
 // Keep the previous reader compatible with already-loaded clients.
 const workoutLogsV2 = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
   authorizedWorkoutHistory(args, ctx),
@@ -678,6 +713,7 @@ export const queries = defineHomeHubQueries({
   logs: logQueries,
   lists: {
     library: listsLibrary,
+    libraryPreview: listsLibraryPreview,
     mediaPage: listMediaPage,
     mediaById: listMediaById,
     byHousehold: listsByHousehold,

@@ -20,29 +20,35 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createZeroDbProvider } from "./db-provider";
 import { mutateWithHabitWorkouts } from "./mutate-with-habit-workouts";
 
-const databaseUrl = process.env.MEDIA_TEST_DATABASE_URL;
+const databaseUrl = process.env.TEST_DATABASE_URL;
+
 describe.runIf(Boolean(databaseUrl))(
   "workout-linked habits on PostgreSQL",
   () => {
     let client: ReturnType<typeof createDbClient>;
-    let householdId: string,
-      userId: string,
-      otherUser: string,
-      habitId: string,
-      exerciseId: string;
-    let workoutIds: string[], slotIds: string[];
-    const today = calendarDate(Date.now(), "UTC"),
-      yesterday = shiftCalendarDate(today, -1);
+    let householdId: string;
+    let userId: string;
+    let otherUser: string;
+    let habitId: string;
+    let exerciseId: string;
+    let workoutIds: string[];
+    let slotIds: string[];
+    const today = calendarDate(Date.now(), "UTC");
+    const yesterday = shiftCalendarDate(today, -1);
     beforeAll(() => {
       if (
         !databaseUrl ||
-        !new URL(databaseUrl).pathname.startsWith("/media_migration_")
-      )
-        throw Error("Disposable database required");
+        !new URL(databaseUrl).pathname.startsWith("/home_hub_test_")
+      ) {
+        throw Error("Disposable home_hub_test_ database required");
+      }
+
       client = createDbClient(databaseUrl);
     });
     afterAll(async () => {
-      if (client) await client.close();
+      if (client) {
+        await client.close();
+      }
     });
     beforeEach(async () => {
       householdId = randomUUID();
@@ -105,6 +111,7 @@ describe.runIf(Boolean(databaseUrl))(
         })),
       );
     });
+
     const run = (
       name: string,
       args: Parameters<typeof mutateWithHabitWorkouts>[3],
@@ -121,14 +128,15 @@ describe.runIf(Boolean(databaseUrl))(
         workoutIds: ids,
         optimisticTimestamp: Date.now(),
       });
+
     async function save(
       index: number,
       author = userId,
       day = today,
       round = 1,
     ) {
-      const workoutId = workoutIds[index] as string,
-        slot = slotIds[index] as string;
+      const workoutId = workoutIds[index] as string;
+      const slot = slotIds[index] as string;
       const args = {
         householdId,
         workoutId,
@@ -157,8 +165,10 @@ describe.runIf(Boolean(databaseUrl))(
         values: { amount: 0, weightKg: null, rightAmount: null },
       };
       await run("workouts.saveSet", args, author);
+
       return args;
     }
+
     const remove = (args: Awaited<ReturnType<typeof save>>, author = userId) =>
       run(
         "workouts.removeSet",
@@ -218,6 +228,7 @@ describe.runIf(Boolean(databaseUrl))(
       await save(1, otherUser);
       expect((await entry(otherUser))?.workoutCompleted).toBe(true);
       expect(await entry()).toBeUndefined();
+
       const rows = await createZeroDbProvider({ db: client.db }).transaction(
         (tx) =>
           tx.run(
@@ -240,8 +251,9 @@ describe.runIf(Boolean(databaseUrl))(
       await configure("selected", workoutIds.slice(0, 2));
       await save(2);
       expect(await entry()).toBeUndefined();
-      const a = await save(0),
-        b = await save(1);
+
+      const a = await save(0);
+      const b = await save(1);
       const a2 = await save(0, userId, today, 2);
       expect((await entry())?.workoutCompleted).toBe(true);
       await remove(a);
@@ -252,6 +264,7 @@ describe.runIf(Boolean(databaseUrl))(
     });
     it("preserves manual completion and notes through unlinking, history changes and removal", async () => {
       await configure("any");
+
       const a = await save(0);
       const scope = {
         householdId,
@@ -291,8 +304,9 @@ describe.runIf(Boolean(databaseUrl))(
     it("serializes configuration and concurrent writers, freezes archives, and rejects foreign selections", async () => {
       await Promise.all([save(0), configure("any")]);
       expect((await entry())?.workoutCompleted).toBe(true);
-      const foreignHousehold = randomUUID(),
-        foreignWorkout = randomUUID();
+
+      const foreignHousehold = randomUUID();
+      const foreignWorkout = randomUUID();
       await client.db
         .insert(households)
         .values({ id: foreignHousehold, name: "Foreign" });
@@ -316,6 +330,7 @@ describe.runIf(Boolean(databaseUrl))(
         habitId,
         optimisticTimestamp: Date.now(),
       });
+
       const a = await save(0);
       await remove(a);
       expect((await entry())?.workoutCompleted).toBe(true);

@@ -25,9 +25,13 @@ function createConfirmRecipeImageUploadService({
 }
 
 const userId = "9f8a6942-f721-499d-957d-7bb3ed1158db";
+
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
+
 const recipeId = "8d46a4c4-4845-4a6d-a937-139633ae1bb9";
+
 const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
+
 const objectKey = `households/${householdId}/recipes/${recipeId}/${imageId}`;
 
 const input = { userId, householdId, recipeId, imageId };
@@ -58,6 +62,7 @@ function createFakeDatabase({
 } = {}) {
   const userResults = [...users];
   const selectResults: unknown[] = [];
+
   for (
     let index = 0;
     index < Math.max(memberships.length, modules.length, images.length);
@@ -81,25 +86,35 @@ function createFakeDatabase({
     const builder = {
       from: (table: unknown) => {
         tables.push(table);
+
         return builder;
       },
+
       innerJoin: () => builder,
+
       where: (_condition: unknown) => builder,
+
       limit: (_limit: unknown) => builder,
+
       for: async (strength: unknown) => {
         lockStrengths.push(strength);
+
         const result = selectResults.shift();
+
         return result ? [result] : [];
       },
     };
+
     return builder;
   });
 
   const update = vi.fn((table: unknown) => {
     tables.push(table);
+
     return {
       set: (values: Record<string, unknown>) => {
         updatedValues.push(values);
+
         return {
           where: (_condition: unknown) => ({
             returning: async () =>
@@ -146,7 +161,11 @@ describe("confirm recipe image upload service", () => {
     const result = await confirmUpload(input);
 
     expect(result).toMatchObject({ kind: "success", image: { id: imageId } });
-    if (result.kind !== "success") throw new Error("Expected success");
+
+    if (result.kind !== "success") {
+      throw new Error("Expected success");
+    }
+
     expect(result.image.confirmedAt).toBeInstanceOf(Date);
     expect(transaction).toHaveBeenCalledTimes(2);
     expect(inspectObject).toHaveBeenCalledWith({ objectKey });
@@ -228,6 +247,7 @@ describe("confirm recipe image upload service", () => {
       createConfirmRecipeImageUploadService({
         db,
         inspectObject,
+
         processDerivatives: async () => {
           throw error;
         },

@@ -49,12 +49,19 @@ export function getDefaultHouseholdModuleRoute(
   ) {
     return "/households/$householdId/habits";
   }
-  if (settings.some((s) => s.moduleKey === "workouts" && s.enabled))
+
+  if (settings.some((s) => s.moduleKey === "workouts" && s.enabled)) {
     return "/households/$householdId/workouts";
-  if (settings.some((s) => s.moduleKey === "documents" && s.enabled))
+  }
+
+  if (settings.some((s) => s.moduleKey === "documents" && s.enabled)) {
     return "/households/$householdId/documents";
-  if (settings.some((s) => s.moduleKey === "logs" && s.enabled))
+  }
+
+  if (settings.some((s) => s.moduleKey === "logs" && s.enabled)) {
     return "/households/$householdId/logs";
+  }
+
   return "/households/$householdId/settings";
 }
 

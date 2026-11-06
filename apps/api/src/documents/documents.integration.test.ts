@@ -24,16 +24,17 @@ import {
 import { createZeroDbProvider } from "../zero/db-provider";
 import { createDocumentServices, type DocumentStorage } from "./service";
 
-const url = process.env.MEDIA_TEST_DATABASE_URL;
+const url = process.env.TEST_DATABASE_URL;
+
 describe.runIf(!!url)("documents on PostgreSQL", () => {
-  let client: ReturnType<typeof createDbClient>,
-    userId: string,
-    householdId: string,
-    foreignId: string;
+  let client: ReturnType<typeof createDbClient>;
+  let userId: string;
+  let householdId: string;
+  let foreignId: string;
   const bytes = new TextEncoder().encode("%PDF-1.7\n%%EOF");
   const objects = new Map<string, Uint8Array>();
-  let storage: DocumentStorage,
-    service: ReturnType<typeof createDocumentServices>;
+  let storage: DocumentStorage;
+  let service: ReturnType<typeof createDocumentServices>;
   const scope = () => ({ userId, householdId });
   const upload = (documentId?: string) =>
     service.createUpload({
@@ -57,18 +58,25 @@ describe.runIf(!!url)("documents on PostgreSQL", () => {
       >[0],
     ) => Promise<unknown>,
   ) => provider().transaction(fn);
+
   async function confirmed() {
     const u = await upload();
     await service.confirm({ ...scope(), fileId: u.fileId });
+
     return u;
   }
+
   beforeAll(() => {
-    if (!url || !new URL(url).pathname.startsWith("/media_migration_"))
-      throw Error("Disposable database required");
+    if (!url || !new URL(url).pathname.startsWith("/home_hub_test_")) {
+      throw Error("Disposable home_hub_test_ database required");
+    }
+
     client = createDbClient(url);
   });
   afterAll(async () => {
-    if (client) await client.close();
+    if (client) {
+      await client.close();
+    }
   });
   beforeEach(async () => {
     objects.clear();
@@ -97,10 +105,13 @@ describe.runIf(!!url)("documents on PostgreSQL", () => {
       .values({ householdId, moduleKey: "documents", enabled: true });
     storage = {
       signUpload: vi.fn(async () => "https://upload.example/"),
+
       readUpload: vi.fn(async () => bytes),
+
       putVerified: vi.fn(async (key, data) => {
         objects.set(key, data);
       }),
+
       signRead: vi.fn(async () => "https://files.example/authorized"),
     };
     service = createDocumentServices({ db: client.db, storage });
@@ -109,6 +120,7 @@ describe.runIf(!!url)("documents on PostgreSQL", () => {
     const u = await upload();
     expect(await page()).toHaveLength(0);
     await service.confirm({ ...scope(), fileId: u.fileId });
+
     const rows = await page();
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
@@ -133,9 +145,9 @@ describe.runIf(!!url)("documents on PostgreSQL", () => {
     expect(await page()).toHaveLength(1);
   });
   it("keeps metadata, tags and row identity when replacing, retaining old bytes", async () => {
-    const first = await confirmed(),
-      tagId = randomUUID(),
-      ctx = { userId };
+    const first = await confirmed();
+    const tagId = randomUUID();
+    const ctx = { userId };
     await mutate(async (tx) => {
       await mutators.documents.update.fn({
         tx,
@@ -170,10 +182,12 @@ describe.runIf(!!url)("documents on PostgreSQL", () => {
         },
       });
     });
-    const before = (await page())[0],
-      next = await upload(first.documentId);
+
+    const before = (await page())[0];
+    const next = await upload(first.documentId);
     expect((await page())[0]?.fileId).toBe(first.fileId);
     await service.confirm({ ...scope(), fileId: next.fileId });
+
     const after = (await page())[0];
     expect(after).toMatchObject({
       id: first.documentId,
@@ -192,15 +206,16 @@ describe.runIf(!!url)("documents on PostgreSQL", () => {
     expect(objects.size).toBe(2);
   });
   it("only one concurrent replacement wins; stale retry cannot roll it back", async () => {
-    const first = await confirmed(),
-      a = await upload(first.documentId),
-      b = await upload(first.documentId);
+    const first = await confirmed();
+    const a = await upload(first.documentId);
+    const b = await upload(first.documentId);
     const results = await Promise.allSettled([
       service.confirm({ ...scope(), fileId: a.fileId }),
       service.confirm({ ...scope(), fileId: b.fileId }),
     ]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     expect(results.filter((r) => r.status === "rejected")).toHaveLength(1);
+
     const current = (await page())[0]?.fileId;
     await service.confirm({ ...scope(), fileId: first.fileId });
     expect((await page())[0]?.fileId).toBe(current);
@@ -255,8 +270,8 @@ describe.runIf(!!url)("documents on PostgreSQL", () => {
     ).rejects.toMatchObject({ status: 403 });
   });
   it("keeps the old current file after invalid replacement", async () => {
-    const first = await confirmed(),
-      next = await upload(first.documentId);
+    const first = await confirmed();
+    const next = await upload(first.documentId);
     storage.readUpload = vi.fn(async () => new Uint8Array(bytes.length));
     await expect(
       service.confirm({ ...scope(), fileId: next.fileId }),
@@ -286,16 +301,16 @@ describe.runIf(!!url)("documents on PostgreSQL", () => {
     expect(objects.size).toBe(1);
   });
   it("searches filenames/title/description and intersects tags, excluding deleted tags", async () => {
-    const a = await confirmed(),
-      b = await confirmed(),
-      ctx = { userId },
-      t1 = randomUUID(),
-      t2 = randomUUID();
+    const a = await confirmed();
+    const b = await confirmed();
+    const ctx = { userId };
+    const t1 = randomUUID();
+    const t2 = randomUUID();
     await mutate(async (tx) => {
       for (const [tagId, name] of [
         [t1, "House"],
         [t2, "Insurance"],
-      ] as const)
+      ] as const) {
         await mutators.documents.saveTag.fn({
           tx,
           ctx,
@@ -307,16 +322,19 @@ describe.runIf(!!url)("documents on PostgreSQL", () => {
             optimisticTimestamp: 1,
           },
         });
+      }
+
       for (const [documentId, tagId] of [
         [a.documentId, t1],
         [a.documentId, t2],
         [b.documentId, t1],
-      ] as const)
+      ] as const) {
         await mutators.documents.assignTag.fn({
           tx,
           ctx,
           args: { householdId, documentId, tagId, assigned: true },
         });
+      }
     });
     expect(await page({ tagIds: [t1, t2] })).toHaveLength(1);
     expect(await page({ search: "POLICY.PDF" })).toHaveLength(2);
@@ -334,9 +352,9 @@ describe.runIf(!!url)("documents on PostgreSQL", () => {
     expect(await page({ tagIds: [t2] })).toHaveLength(0);
   });
   it("normalizes duplicate tags, preserves IDs on rename and enforces household FKs", async () => {
-    const u = await confirmed(),
-      ctx = { userId },
-      tagId = randomUUID();
+    const u = await confirmed();
+    const ctx = { userId };
+    const tagId = randomUUID();
     await mutate((tx) =>
       mutators.documents.saveTag.fn({
         tx,

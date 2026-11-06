@@ -5,6 +5,7 @@ import type { ZeroAuthContext } from "./context";
 import { type Schema, zql } from "./schema.gen";
 
 const define = defineQueryWithType<Schema, ZeroAuthContext>();
+
 const household = (q: typeof zql.households, user: string) =>
   q
     .where("deletedAt", "IS", null)
@@ -12,11 +13,13 @@ const household = (q: typeof zql.households, user: string) =>
     .whereExists("moduleSettings", (s) =>
       s.where("moduleKey", "documents").where("enabled", true),
     );
+
 const active = (id: string, user: string) =>
   zql.documents
     .where("householdId", id)
     .where("deletedAt", "IS", null)
     .whereExists("household", (h) => household(h, user));
+
 const related = (q: ReturnType<typeof active>) =>
   q
     .related("file")
@@ -25,10 +28,12 @@ const related = (q: ReturnType<typeof active>) =>
         .whereExists("tag", (t) => t.where("deletedAt", "IS", null))
         .related("tag"),
     );
+
 export const documentQueries = {
   page: define(documentPageSchema, ({ args, ctx }) => {
     let q = active(args.householdId, ctx.userId);
     const search = args.search.trim();
+
     if (search) {
       const pattern = `%${search.replace(/[\\%_]/gu, (v) => `\\${v}`)}%`;
       q = q.where(({ or, cmp, exists }) =>
@@ -39,13 +44,16 @@ export const documentQueries = {
         ),
       );
     }
-    for (const id of [...new Set(args.tagIds)])
+
+    for (const id of [...new Set(args.tagIds)]) {
       q = q.whereExists("tags", (a) =>
         a
           .where("tagId", id)
           .whereExists("tag", (t) => t.where("deletedAt", "IS", null)),
       );
-    if (args.untagged)
+    }
+
+    if (args.untagged) {
       q = q.where(({ not, exists }) =>
         not(
           exists("tags", (a) =>
@@ -53,16 +61,20 @@ export const documentQueries = {
           ),
         ),
       );
+    }
+
     return related(q)
       .orderBy(args.sort, args.direction)
       .orderBy("id", "asc")
       .limit(args.limit);
   }),
+
   byId: define(documentScopeSchema, ({ args, ctx }) =>
     related(
       active(args.householdId, ctx.userId).where("id", args.documentId),
     ).one(),
   ),
+
   tags: define(z.object({ householdId: z.uuid() }).strict(), ({ args, ctx }) =>
     zql.documentTags
       .where("householdId", args.householdId)

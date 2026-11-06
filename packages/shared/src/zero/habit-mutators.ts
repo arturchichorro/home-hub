@@ -19,7 +19,9 @@ const activeHabits = (householdId: string) =>
   zql.habits.where("householdId", householdId).where("status", "active");
 
 const defineMutator = defineMutatorWithType<Schema, ZeroAuthContext>();
+
 type Tx = Transaction<Schema>;
+
 const timestamp = (tx: Tx, optimistic: number) =>
   tx.location === "server" ? Date.now() : optimistic;
 
@@ -35,19 +37,25 @@ async function requireAccess(
     moduleKey: "habits",
   });
 }
+
 async function requireHabit(
   tx: Tx,
   ctx: ZeroAuthContext,
   args: { householdId: string; habitId: string },
 ) {
   await requireAccess(tx, ctx, args.householdId);
+
   const habit = await tx.run(
     zql.habits
       .where("householdId", args.householdId)
       .where("id", args.habitId)
       .one(),
   );
-  if (!habit) throw new Error("Habit mutation not allowed");
+
+  if (!habit) {
+    throw new Error("Habit mutation not allowed");
+  }
+
   return habit;
 }
 
@@ -64,11 +72,14 @@ async function requireEntryAccess(
 ) {
   const habit = await requireHabit(tx, ctx, args);
   const now = timestamp(tx, args.optimisticTimestamp);
+
   if (
     habit.status !== "active" ||
     args.entryOn > calendarDate(now, args.timeZone)
-  )
+  ) {
     throw new Error("Daily habit mutation not allowed");
+  }
+
   return {
     now,
     key: {
@@ -85,6 +96,7 @@ export const habitMutatorDefinitions = {
     createHabitMutationSchema,
     async ({ tx, ctx, args }) => {
       await requireAccess(tx, ctx, args.householdId);
+
       const now = timestamp(tx, args.optimisticTimestamp);
       const top = await tx.run(
         activeHabits(args.householdId)
@@ -105,44 +117,58 @@ export const habitMutatorDefinitions = {
       });
     },
   ),
+
   linkWorkouts: defineMutator(
     linkHabitWorkoutsMutationSchema,
     async ({ tx, ctx, args }) => {
       const habit = await requireHabit(tx, ctx, args);
-      if (habit.status !== "active")
+
+      if (habit.status !== "active") {
         throw new Error("Habit linking not allowed");
-      if (args.mode !== "none")
+      }
+
+      if (args.mode !== "none") {
         await requireServerHouseholdModuleAccess({
           tx,
           userId: ctx.userId,
           householdId: args.householdId,
           moduleKey: "workouts",
         });
+      }
+
       if (args.mode === "selected") {
         const allowed = await tx.run(
           zql.workouts
             .where("householdId", args.householdId)
             .where("id", "IN", args.workoutIds),
         );
-        if (allowed.length !== args.workoutIds.length)
+
+        if (allowed.length !== args.workoutIds.length) {
           throw new Error("Workout selection not allowed");
+        }
       }
+
       const links = await tx.run(
         zql.habitWorkoutLinks
           .where("householdId", args.householdId)
           .where("habitId", args.habitId),
       );
-      for (const link of links)
+
+      for (const link of links) {
         await tx.mutate.habitWorkoutLinks.delete({
           habitId: link.habitId,
           workoutId: link.workoutId,
         });
-      for (const workoutId of args.workoutIds)
+      }
+
+      for (const workoutId of args.workoutIds) {
         await tx.mutate.habitWorkoutLinks.insert({
           householdId: args.householdId,
           habitId: args.habitId,
           workoutId,
         });
+      }
+
       await tx.mutate.habits.update({
         id: habit.id,
         workoutMode: args.mode,
@@ -150,12 +176,16 @@ export const habitMutatorDefinitions = {
       });
     },
   ),
+
   reorder: defineMutator(
     reorderHabitsMutationSchema,
     async ({ tx, ctx, args }) => {
       const habit = await requireHabit(tx, ctx, args);
-      if (habit.status !== "active")
+
+      if (habit.status !== "active") {
         throw new Error("Habit reorder not allowed");
+      }
+
       const rows = await tx.run(activeHabits(args.householdId));
       const updates = planReorder(
         rows.map((row) => ({ id: row.id, sortKey: row.sortKey ?? 0 })),
@@ -163,16 +193,22 @@ export const habitMutatorDefinitions = {
         args.habitId,
       );
       const updatedAt = timestamp(tx, args.optimisticTimestamp);
-      for (const update of updates)
+
+      for (const update of updates) {
         await tx.mutate.habits.update({ ...update, updatedAt });
+      }
     },
   ),
+
   rename: defineMutator(
     renameHabitMutationSchema,
     async ({ tx, ctx, args }) => {
       const habit = await requireHabit(tx, ctx, args);
-      if (habit.status !== "active")
+
+      if (habit.status !== "active") {
         throw new Error("Habit mutation not allowed");
+      }
+
       await tx.mutate.habits.update({
         id: habit.id,
         name: args.name,
@@ -180,12 +216,16 @@ export const habitMutatorDefinitions = {
       });
     },
   ),
+
   updateNote: defineMutator(
     updateHabitNoteMutationSchema,
     async ({ tx, ctx, args }) => {
       const habit = await requireHabit(tx, ctx, args);
-      if (habit.status !== "active")
+
+      if (habit.status !== "active") {
         throw new Error("Habit note mutation not allowed");
+      }
+
       await tx.mutate.habits.update({
         id: habit.id,
         note: args.note,
@@ -193,11 +233,16 @@ export const habitMutatorDefinitions = {
       });
     },
   ),
+
   archive: defineMutator(
     archiveHabitMutationSchema,
     async ({ tx, ctx, args }) => {
       const habit = await requireHabit(tx, ctx, args);
-      if (habit.status === "archived") return;
+
+      if (habit.status === "archived") {
+        return;
+      }
+
       const now = timestamp(tx, args.optimisticTimestamp);
       await tx.mutate.habits.update({
         id: habit.id,
@@ -206,6 +251,7 @@ export const habitMutatorDefinitions = {
       });
     },
   ),
+
   setCompleted: defineMutator(
     setHabitCompletedMutationSchema,
     async ({ tx, ctx, args }) => {
@@ -219,6 +265,7 @@ export const habitMutatorDefinitions = {
       });
     },
   ),
+
   updateEntryNote: defineMutator(
     updateHabitEntryNoteMutationSchema,
     async ({ tx, ctx, args }) => {

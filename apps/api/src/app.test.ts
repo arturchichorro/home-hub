@@ -6,46 +6,72 @@ import type { StructuredLogger, StructuredLogRecord } from "./observability";
 import type { ZeroDbProvider } from "./zero/db-provider";
 
 const dbProvider = {} as ZeroDbProvider;
+
 const jwtSecret = "test-jwt-secret";
+
 const silentLogger: StructuredLogger = {
   info() {},
+
   error() {},
 };
 
 const defaultInput: CreateAppInput = {
   auth: {
     signup: async () => ({ kind: "forbidden" }),
+
     login: async () => ({ kind: "invalid_credentials" }),
+
     refresh: async () => ({ kind: "invalid_token" }),
+
     logout: async () => undefined,
+
     getMe: async () => ({ kind: "not_found" }),
   },
   households: {
     acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
+
     createHousehold: async () => ({ kind: "unauthorized" }),
+
     createHouseholdInvite: async () => ({ kind: "forbidden" }),
+
     deleteHousehold: async () => ({ kind: "forbidden" }),
+
     listHouseholds: async () => ({ kind: "unauthorized" }),
+
     listHouseholdInvites: async () => ({ kind: "forbidden" }),
+
     listHouseholdMembers: async () => ({ kind: "forbidden" }),
+
     leaveHousehold: async () => ({ kind: "forbidden" }),
+
     transferHouseholdOwnership: async () => ({ kind: "forbidden" }),
+
     setHouseholdModuleEnabled: async () => ({ kind: "forbidden" }),
+
     renameHousehold: async () => ({ kind: "forbidden" }),
+
     revokeHouseholdInvite: async () => ({ kind: "forbidden" }),
+
     removeHouseholdMember: async () => ({ kind: "forbidden" }),
   },
   exerciseMedia: {
     createUpload: async () => ({ kind: "forbidden" }),
+
     confirmUpload: async () => ({ kind: "forbidden" }),
+
     deleteAttachment: async () => ({ kind: "forbidden" }),
+
     readUrls: async () => ({ kind: "forbidden" }),
   },
   recipeImages: {
     confirmRecipeImageUpload: async () => ({ kind: "forbidden" }),
+
     createRecipeImageReadUrl: async () => ({ kind: "forbidden" }),
+
     createRecipeImageReadUrls: async () => ({ kind: "forbidden" }),
+
     createRecipeImageUpload: async () => ({ kind: "forbidden" }),
+
     deleteRecipeImage: async () => ({ kind: "forbidden" }),
   },
   infrastructure: {
@@ -53,6 +79,7 @@ const defaultInput: CreateAppInput = {
     jwtSecret,
     isProduction: false,
     logger: silentLogger,
+
     readinessCheck: async () => undefined,
   },
 };
@@ -84,6 +111,7 @@ function createMemoryLogger() {
   return {
     logger: {
       info: (record) => infoRecords.push(record),
+
       error: (record) => errorRecords.push(record),
     } satisfies StructuredLogger,
     infoRecords,
@@ -176,6 +204,7 @@ describe("app", () => {
     const createHousehold = async () => {
       const error = new Error(secret);
       error.name = secret;
+
       throw error;
     };
     const app = createTestApp({
