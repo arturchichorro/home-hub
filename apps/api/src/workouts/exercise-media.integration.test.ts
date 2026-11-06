@@ -33,7 +33,7 @@ import { InvalidMediaUploadError } from "../media/process-image";
 import { createZeroDbProvider } from "../zero/db-provider";
 import { createExerciseMediaServices } from "./exercise-media";
 
-const databaseUrl = process.env.MEDIA_TEST_DATABASE_URL;
+const databaseUrl = process.env.TEST_DATABASE_URL;
 
 describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
   let client: ReturnType<typeof createDbClient>;
@@ -69,9 +69,9 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
   beforeAll(() => {
     if (
       !databaseUrl ||
-      !new URL(databaseUrl).pathname.startsWith("/media_migration_")
+      !new URL(databaseUrl).pathname.startsWith("/home_hub_test_")
     ) {
-      throw new Error("Disposable migration database required");
+      throw new Error("Disposable home_hub_test_ database required");
     }
 
     client = createDbClient(databaseUrl);
