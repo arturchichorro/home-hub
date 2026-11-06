@@ -27,6 +27,7 @@ export const diagnosticMessages = {
   HH_REQUEST_REJECTED: "The server rejected the request.",
   HH_SHUTDOWN_FAILED: "Graceful shutdown did not complete successfully.",
 } as const;
+
 export const diagnosticOperations = [
   "http.request",
   "http.health",
@@ -67,18 +68,27 @@ export const diagnosticOperations = [
   "media.process_image",
   "media.process_video",
 ] as const;
+
 export type DiagnosticOperation = (typeof diagnosticOperations)[number];
+
 export type DiagnosticCode = keyof typeof diagnosticMessages;
+
 export const diagnosticCodeSchema = z.enum(
   Object.keys(diagnosticMessages) as [DiagnosticCode, ...DiagnosticCode[]],
 );
+
 export const diagnosticOperationSchema = z.enum(diagnosticOperations);
 
 export function isDiagnosticLocation(value: string): boolean {
   const m = /^([^:\r\n]+):([1-9][0-9]{0,6}):([1-9][0-9]{0,3})$/.exec(value);
-  if (!m) return false;
+
+  if (!m) {
+    return false;
+  }
+
   const source = m[1] as keyof typeof diagnosticSources;
   const limit = diagnosticSources[source];
+
   return (
     Object.hasOwn(diagnosticSources, source) &&
     typeof limit === "number" &&
@@ -86,9 +96,11 @@ export function isDiagnosticLocation(value: string): boolean {
     Number(m[3]) <= 4096
   );
 }
+
 export const diagnosticLocationsSchema = z
   .array(z.string().max(160).refine(isDiagnosticLocation))
   .max(3);
+
 export const diagnosticFieldsSchema = z
   .object({
     errorCode: diagnosticCodeSchema,
@@ -97,4 +109,5 @@ export const diagnosticFieldsSchema = z
     locations: diagnosticLocationsSchema,
   })
   .refine((d) => d.diagnosticMessage === diagnosticMessages[d.errorCode]);
+
 export type Diagnostic = z.infer<typeof diagnosticFieldsSchema>;
