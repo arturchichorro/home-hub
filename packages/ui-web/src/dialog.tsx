@@ -4,9 +4,9 @@ import { Button, type ButtonProps } from "./button";
 
 export const DialogRoot = BaseDialog.Root;
 
-export type DialogSize = "small" | "medium" | "large";
+type DialogSize = "small" | "medium" | "large";
 
-export type DialogAppearance = "default" | "bare";
+type DialogAppearance = "default" | "bare";
 
 type BaseDialogPopupProps = ComponentProps<typeof BaseDialog.Popup>;
 

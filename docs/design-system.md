@@ -236,7 +236,7 @@ breakpoint-specific overrides. Move genuinely repeated interaction styling
 into a shared primitive instead of repeating it across feature components.
 
 The current web vocabulary includes Button, IconButton, Input, Textarea, Field,
-Select, Switch, Menu, Dialog, Drawer, Collapsible, Panel, InlineAlert,
+Select, Switch, Menu, Dialog, Drawer, Panel, InlineAlert,
 ErrorPopover, ConfirmationPopover, StatusIndicator, Tooltip, Combobox and
 divided-list presentation. Tooltip and Combobox already have concrete consumers;
 a Toast or separate Sheet still needs a demonstrated feature requirement. Route-navigation
@@ -393,14 +393,6 @@ submitting dialog must not disappear accidentally if doing so would lose work.
 Use Dialog for login-independent focused tasks and confirmations without
 changing the current module. Do not use it for long household settings or the
 entire recipe screen. A dedicated mobile sheet remains deferred until needed.
-
-### Collapsible
-
-Collapsible combines a labeled trigger and panel. It is open by default when
-its content is part of the page's primary flow, but the user can close it to
-reduce visual density. Use it for independent sections such as recipe
-ingredients and cooking history; use Accordion only if sections later need to
-be mutually exclusive.
 
 ### Panel
 

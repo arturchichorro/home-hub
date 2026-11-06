@@ -48,10 +48,7 @@ export type DocumentStorage = {
   signRead: (cap: DocumentRead) => Promise<string>;
 };
 
-export async function authorizeDocuments(
-  tx: DatabaseTransaction,
-  input: Scope,
-) {
+async function authorizeDocuments(tx: DatabaseTransaction, input: Scope) {
   if (!(await findActiveUser(tx, input.userId))) {
     throw new DocumentServiceError(401, "Unauthorized");
   }

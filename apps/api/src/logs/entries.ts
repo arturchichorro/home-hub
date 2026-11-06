@@ -30,7 +30,7 @@ export class LogEntryError extends Error {
   }
 }
 
-export function entrySnapshot(
+function entrySnapshot(
   row: typeof logEntries.$inferSelect | null | undefined,
 ): LogEntrySnapshot | null {
   return row

@@ -1,5 +1,3 @@
-export type { LucideIcon, LucideProps } from "lucide-react";
-
 export {
   Archive,
   ArrowLeft,
@@ -11,9 +9,7 @@ export {
   ChevronRight,
   CookingPot,
   Crown,
-  Download,
   Dumbbell,
-  Eye,
   FileText,
   Folder,
   FolderPlus,
@@ -23,7 +19,6 @@ export {
   HousePlus,
   ImagePlus,
   Images,
-  LayoutGrid,
   Link2,
   ListTodo,
   LogOut,
@@ -42,6 +37,5 @@ export {
   Trash2,
   Upload,
   UserPlus,
-  Users,
   X,
 } from "lucide-react";

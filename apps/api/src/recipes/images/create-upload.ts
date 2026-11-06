@@ -13,11 +13,11 @@ import {
   findEnabledHouseholdModuleForShare,
   findHouseholdMembershipForShare,
 } from "../../authorization/household-access";
+import { mediaUploadUrlLifetimeSeconds as recipeImageUploadUrlLifetimeSeconds } from "../../media/sign-upload";
 import {
   findRecipeCookLogForShare,
   findRecipeForShare,
 } from "./scoped-entities";
-import { recipeImageUploadUrlLifetimeSeconds } from "./sign-upload";
 
 type SignUpload = (input: {
   objectKey: string;

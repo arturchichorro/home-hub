@@ -125,10 +125,6 @@ export const listHouseholdMembersResponseSchema = z
   })
   .strict();
 
-export type ListHouseholdMembersResponse = z.infer<
-  typeof listHouseholdMembersResponseSchema
->;
-
 const pendingHouseholdInviteSummarySchema = z
   .object({
     id: z.uuid(),

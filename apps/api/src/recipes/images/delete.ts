@@ -6,7 +6,7 @@ import {
   findEnabledHouseholdModuleForShare,
   findHouseholdMembershipForShare,
 } from "../../authorization/household-access";
-import { findRecipeImageObjectForUpdate } from "./scoped-entities";
+import { findRecipeImageForUpdate } from "./scoped-entities";
 
 export type DeleteRecipeImageInput = {
   userId: string;
@@ -52,7 +52,7 @@ export function createDeleteRecipeImageService({ db }: { db: Database }) {
         return { kind: "forbidden" as const };
       }
 
-      const image = await findRecipeImageObjectForUpdate(tx, {
+      const image = await findRecipeImageForUpdate(tx, {
         householdId,
         recipeId,
         imageId,

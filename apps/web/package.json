@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@dnd-kit/dom": "^0.5.1",
-    "@dnd-kit/helpers": "^0.5.1",
     "@dnd-kit/react": "^0.5.1",
     "@home-hub/shared": "workspace:*",
     "@home-hub/ui-web": "workspace:*",

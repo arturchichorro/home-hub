@@ -41,20 +41,14 @@ export const loginResponseSchema = z
   })
   .strict();
 
-export type LoginResponse = z.infer<typeof loginResponseSchema>;
-
 export const refreshResponseSchema = z
   .object({
     accessToken: z.string().min(1),
   })
   .strict();
 
-export type RefreshResponse = z.infer<typeof refreshResponseSchema>;
-
 export const meResponseSchema = z
   .object({
     user: authUserSchema,
   })
   .strict();
-
-export type MeResponse = z.infer<typeof meResponseSchema>;

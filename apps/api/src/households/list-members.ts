@@ -9,7 +9,7 @@ export type ListHouseholdMembersInput = {
   householdId: string;
 };
 
-export type HouseholdMemberSummary = {
+type HouseholdMemberSummary = {
   id: string;
   username: string;
   role: "owner" | "member";
