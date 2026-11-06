@@ -420,6 +420,10 @@ Open review work remains in [Tasks](./tasks.md#work-in-review).
 
 - [x] Replace the list-type select with icon radio choices; fill moodboard desktop columns, preserve the shopping-history viewport on reactivation, and expand bounded checklist previews into taller cards with a final overflow ellipsis. Keep old query shapes and existing editing/upload protections.
 
+## Moodboard reorder reconciliation
+
+- [x] Keep masonry tiles under one stable React list parent to prevent sortable DOM moves and optimistic query updates from causing `removeChild` crashes. Reproduce the previous layout failure and add a CI browser regression with live reordering, rollback, cancellation, touch and responsive resizing.
+
 ## Misc
 
 - [x] Preserve raw seamless-input drafts during debounced saves and normalize them only at editing boundaries

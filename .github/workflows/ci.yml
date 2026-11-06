@@ -51,6 +51,9 @@ jobs:
       - name: Run test suite
         run: pnpm test
 
+      - name: Regress moodboard drag/drop against live query updates
+        run: pnpm --filter @home-hub/web test:moodboard-reorder
+
       - name: Verify generated Zero schema
         run: |
           pnpm --filter @home-hub/database zero:generate

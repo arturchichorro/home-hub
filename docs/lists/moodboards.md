@@ -16,7 +16,10 @@ items/media are not part of this version.
 - Show media in responsive masonry: two columns on phones, three/four on wider
   screens, based on the board container width. Explicit, height-balanced contiguous
   columns preserve down-column order without CSS column balancing leaving an
-  empty right-hand track. Shrinkable grid tracks and bounded image/upload widths prevent
+  empty right-hand track. All keyed tiles stay under one flat list parent; visual
+  positioning must not reparent tiles when optimistic reorder/query updates arrive,
+  because the sortable plugin also moves DOM nodes. The browser regression exercises
+  live updates, rollback and drag cancellation. Bounded tile and upload widths prevent
   horizontal page scrolling, including long filenames. Aspect ratios reserve layout space. Media opens from its image surface;
   a separate handle supports mouse drag, touch hold and Space/arrows/Escape.
 - Initially query/render 50 pins plus a lookahead; Show more adds 50. The current

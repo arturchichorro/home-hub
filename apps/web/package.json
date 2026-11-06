@@ -8,6 +8,7 @@
     "build": "tsc -b && NODE_ENV=production vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:moodboard-reorder": "tsc --noEmit -p test/moodboard-reorder/tsconfig.json && node test/verify-moodboard-reorder.mjs",
     "typecheck": "tsc -b"
   },
   "dependencies": {

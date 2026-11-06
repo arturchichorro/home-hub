@@ -1,4 +1,10 @@
-import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import type { MoodboardPin } from "./moodboard-preview";
 
 export function moodboardColumnCount(width: number) {
@@ -55,10 +61,14 @@ export function MoodboardLayout({
   children,
 }: {
   pins: readonly MoodboardPin[];
-  children: (pin: MoodboardPin, index: number) => ReactNode;
+  children: (
+    pin: MoodboardPin,
+    index: number,
+    style: CSSProperties,
+  ) => ReactNode;
 }) {
-  const container = useRef<HTMLElement>(null);
-  const [count, setCount] = useState(2);
+  const container = useRef<HTMLUListElement>(null);
+  const [width, setWidth] = useState(0);
 
   useLayoutEffect(() => {
     const element = container.current;
@@ -67,7 +77,7 @@ export function MoodboardLayout({
       return;
     }
 
-    const measure = () => setCount(moodboardColumnCount(element.clientWidth));
+    const measure = () => setWidth(element.clientWidth);
     measure();
 
     const observer = new ResizeObserver(measure);
@@ -76,23 +86,50 @@ export function MoodboardLayout({
     return () => observer.disconnect();
   }, []);
 
-  const columns = moodboardColumns(pins, count);
-  let index = 0;
+  const columns = moodboardColumns(pins, moodboardColumnCount(width));
+  const tileWidth = Math.max(
+    0,
+    (width - Math.max(0, columns.length - 1) * 12) /
+      Math.max(1, columns.length),
+  );
+  const positions = new Map<string, CSSProperties>();
+
+  let height = 0;
+
+  for (const [columnIndex, column] of columns.entries()) {
+    let top = 0;
+
+    for (const pin of column.pins) {
+      const ratio =
+        pin.asset?.width && pin.asset?.height
+          ? pin.asset.height / pin.asset.width
+          : 1;
+      const tileHeight = tileWidth * ratio;
+      positions.set(pin.id, {
+        position: "absolute",
+        left: columnIndex * (tileWidth + 12),
+        top,
+        width: tileWidth,
+        height: tileHeight,
+      });
+      top += tileHeight + 12;
+    }
+
+    height = Math.max(height, top);
+  }
 
   return (
-    <section
+    <ul
       ref={container}
       aria-label="Moodboard media"
-      className="grid min-w-0 max-w-full items-start gap-3"
-      style={{
-        gridTemplateColumns: `repeat(${columns.length || 1}, minmax(0, 1fr))`,
-      }}
+      className="relative min-w-0 max-w-full"
+      style={{ height }}
     >
-      {columns.map((column) => (
-        <ul key={column.id} className="min-w-0">
-          {column.pins.map((pin) => children(pin, index++))}
-        </ul>
-      ))}
-    </section>
+      {/* One stable parent lets React reconcile every pin without fighting the
+          sortable plugin when a pin crosses a visual column boundary. */}
+      {pins.map((pin, index) =>
+        children(pin, index, positions.get(pin.id) ?? {}),
+      )}
+    </ul>
   );
 }
