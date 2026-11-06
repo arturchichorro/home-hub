@@ -6,6 +6,6 @@ The fixture mounts the real Moodboard, sortable hooks and layout, with inert ada
 
 The browser uses a fresh temporary profile and a loopback-only Vite server, both cleaned up on exit. No production API/storage/database access is needed.
 
-The diagnostic also samples real translate transitions while mouse/touch dragging, checks keyboard previews and reversals, asserts no hover writes, and tests reduced motion. Geometry is checked after transitions settle; transient overlap while photos pass each other is expected.
+The diagnostic samples each peer’s real translate transitions and frame-to-frame slot positions, detects unexpected transition cancellation through drop/save/rollback, verifies the floating overlay tracks the grabbed point, asserts no hover writes, and tests reduced motion. It includes the eight-portrait recording case, backward/middle/last-item moves, pointer reversals/pauses, drops before transitions finish, non-first keyboard directions, keyboard focus after semantic ordering, and a 50-pin board. Geometry and semantic DOM order are checked after transitions settle; transient overlap while photos pass each other is expected.
 
-For a before/after check, `MOODBOARD_LAYOUT_SOURCE=/absolute/path/to/layout.tsx` overrides only the layout module. The old static flat-parent layout fails the visible-animation assertion. Stable parent/DOM-identity checks continue protecting against the earlier `removeChild` crash.
+For a before/after check, `MOODBOARD_LAYOUT_SOURCE=/absolute/path/to/layout.tsx` overrides only the layout module. Restoring immediate DOM reordering reproduces the backward-drag animation failure, even with one stable parent. Stable parent/DOM-identity checks continue protecting against the earlier `removeChild` crash.
