@@ -21,6 +21,13 @@ workouts; training logs and set values remain private to their author.
   **X** closes logging, and saving never closes it or replaces focused inputs.
   Incomplete/failed edits stay local with clear status and retry. Close/navigation
   asks before discarding them; unload and PWA updates are guarded.
+- While logging, the small **+ Add exercise** picker selects an existing catalog
+  movement for this log only. It excludes current workout/log exercises and cannot
+  create or edit catalog entries. Additions start as guarded local drafts; their
+  first complete set saves an independent private occurrence. Reopening the log
+  restores them, including normal history/previous-value hints, but the workout
+  template and future logs stay unchanged. A log supports at most 40 exercises
+  including its original workout. No database migration is needed.
 - Each author has at most one grouping per workout/local day; logging again opens
   it. Separate workouts on the same day have separate exercise occurrences.
   A grouping is created with the first complete set, not merely by browsing.
@@ -45,7 +52,8 @@ workouts; training logs and set values remain private to their author.
 - Logs capture only the workout title and exercise definitions, never shared
   workout notes. The Notes section always shows the current shared notes, even
   when opening history. Private log notes remain separate. Historical edits
-  retain the original title/exercises and completion dates.
+  retain the original base title/exercises and completion dates; log-only additions
+  have their own frozen occurrence definitions.
 - Add the supplied A/B/C starter workouts. **Add exercise** searches the household
   catalog or creates a new movement. The searchable catalog is listed below the
   workouts. Name, measure, load convention and sides are shared across workouts;
@@ -110,7 +118,9 @@ ownership are enforced in Zero queries and mutations.
   author and household; access always goes through that authorized parent.
 - `workout_log_exercises`: ordered links from a daily grouping and historical slot
   to its occurrence. Composite foreign keys prohibit cross-household/author links;
-  deleting a current slot does not delete its occurrence.
+  deleting a current slot does not delete its occurrence. Log-only links use the
+  catalog UUID as their per-log slot key, rather than a template placement; their
+  definitions are projected from occurrences, never appended to the stored base snapshot.
 - `workout_log_sets`: untouched pre-cutover archive, not the current source of truth.
   The API rejects the retired bulk writer. New writes target one occurrence/round;
   they never replace all sets or modify the prescription.
@@ -144,7 +154,9 @@ Unilateral totals may count both sides using
 The catalog initially mounts 50 rows; Show more appends another 50 while keeping
 focused/new rows mounted. Search covers the full catalog, and gallery metadata
 uses one authorized shared subscription. This bounds initial rendering, not all
-catalog data transfer. The definition-only picker subscribes only when opened.
+catalog data transfer. The normal definition-only picker subscribes on open;
+logging keeps that catalog subscription active so optimistic log-only set writes
+can validate the selected catalog identity after the picker closes.
 
 Private workout history uses 20-entry pages plus a lookahead and an exclusive
 `(completedOn, completedAt, id)` cursor. Current-day and selected logs stay pinned

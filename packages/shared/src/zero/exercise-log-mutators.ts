@@ -1,11 +1,13 @@
 import { defineMutatorWithType } from "@rocicorp/zero";
 import {
   isCompleteExerciseSet,
+  logOnlyWorkoutExercise,
   removeExerciseSetSchema,
   saveExerciseSetSchema,
 } from "../exercise-logs";
 import { calendarDate } from "../habits";
 import {
+  exerciseCatalogSchema,
   workoutExerciseRoleSchema,
   workoutExerciseRolesSnapshotSchema,
   workoutExerciseSchema,
@@ -95,14 +97,6 @@ export const exerciseLogMutators = {
       }));
     }
 
-    const definition = snapshot.exercises.find(
-      (e) => e.id === args.workoutExerciseId,
-    );
-
-    if (!definition) {
-      throw Error("Unknown historical exercise");
-    }
-
     const logId = existing?.id ?? args.logId;
     const link = await tx.run(
       zql.workoutLogExercises
@@ -126,27 +120,28 @@ export const exerciseLogMutators = {
       throw Error("Exercise log not allowed");
     }
 
-    const historical = workoutExerciseSchema.parse(
-      occurrence?.snapshot ?? definition,
-    );
-    const submitted = args.snapshot.exercises.find(
+    const definition = snapshot.exercises.find(
       (e) => e.id === args.workoutExerciseId,
     );
+    const logOnly = !definition;
+
+    if (!definition && !occurrence && !args.logOnlyExercise) {
+      throw Error("Unknown historical exercise");
+    }
 
     if (
-      !submitted ||
-      submitted.unit !== historical.unit ||
-      submitted.load !== historical.load ||
-      submitted.unilateral !== historical.unilateral
+      args.logOnlyExercise &&
+      (!logOnly ||
+        args.logOnlyExercise.id !== args.workoutExerciseId ||
+        args.logOnlyExercise.catalogExerciseId !==
+          (occurrence?.exerciseId ?? args.workoutExerciseId))
     ) {
-      throw Error(
-        "Exercise logging settings changed; reopen logging before continuing",
-      );
+      throw Error("Invalid log-only exercise identity");
     }
 
-    if (!isCompleteExerciseSet(historical, args.values)) {
-      throw Error("Complete every required set value");
-    }
+    let historical = workoutExerciseSchema.parse(
+      occurrence?.snapshot ?? definition ?? args.logOnlyExercise,
+    );
 
     const slot = await tx.run(
       zql.workoutExercises
@@ -158,6 +153,7 @@ export const exerciseLogMutators = {
 
     if (
       !existing &&
+      !logOnly &&
       (!slot ||
         (historical.catalogExerciseId &&
           historical.catalogExerciseId !== slot.exerciseId))
@@ -174,15 +170,97 @@ export const exerciseLogMutators = {
       throw Error("Missing catalog identity");
     }
 
-    const exercise = await tx.run(
-      zql.exercises
-        .where("id", exerciseId)
-        .where("householdId", args.householdId)
-        .one(),
-    );
+    let extraPosition = snapshot.exercises.length;
 
-    if (!exercise || (!existing && exercise.deletedAt !== null)) {
-      throw Error("Exercise no longer available");
+    // Recorded occurrences already have an authorized, frozen definition. A
+    // retired catalog entry may no longer be present in the client's replica.
+    if (!occurrence) {
+      const exercise = await tx.run(
+        zql.exercises
+          .where("id", exerciseId)
+          .where("householdId", args.householdId)
+          .one(),
+      );
+
+      if (
+        !exercise ||
+        ((!existing || logOnly) && exercise.deletedAt !== null)
+      ) {
+        throw Error("Exercise no longer available");
+      }
+
+      if (logOnly) {
+        const placement = await tx.run(
+          zql.workoutExercises
+            .where("householdId", args.householdId)
+            .where("workoutId", args.workoutId)
+            .where("exerciseId", exerciseId)
+            .one(),
+        );
+        const links = await tx.run(
+          zql.workoutLogExercises
+            .where("workoutLogId", logId)
+            .where("householdId", args.householdId)
+            .where("userId", ctx.userId)
+            .related("occurrence", (row) =>
+              row
+                .where("householdId", args.householdId)
+                .where("userId", ctx.userId),
+            ),
+        );
+
+        if (
+          placement ||
+          snapshot.exercises.some(
+            (row) => row.catalogExerciseId === exerciseId,
+          ) ||
+          links.some((row) => row.occurrence?.exerciseId === exerciseId)
+        ) {
+          throw Error("Exercise already belongs to this workout log");
+        }
+
+        const ids = new Set([
+          ...snapshot.exercises.map((row) => row.id),
+          ...links.map((row) => row.workoutExerciseId),
+        ]);
+
+        if (ids.size >= 40) {
+          throw Error("A workout log supports at most 40 exercises");
+        }
+
+        extraPosition = Math.max(
+          extraPosition,
+          ...links.map((row) => row.position + 1),
+        );
+        historical = logOnlyWorkoutExercise(
+          exerciseCatalogSchema.parse({
+            id: exercise.id,
+            name: exercise.name,
+            unit: exercise.unit,
+            load: exercise.load,
+            unilateral: exercise.unilateral,
+          }),
+        );
+      }
+    }
+
+    const submitted =
+      args.logOnlyExercise ??
+      args.snapshot.exercises.find((row) => row.id === args.workoutExerciseId);
+
+    if (
+      !submitted ||
+      submitted.unit !== historical.unit ||
+      submitted.load !== historical.load ||
+      submitted.unilateral !== historical.unilateral
+    ) {
+      throw Error(
+        "Exercise logging settings changed; reopen logging before continuing",
+      );
+    }
+
+    if (!isCompleteExerciseSet(historical, args.values)) {
+      throw Error("Complete every required set value");
     }
 
     if (
@@ -240,9 +318,11 @@ export const exerciseLogMutators = {
         householdId: args.householdId,
         userId: ctx.userId,
 
-        position: snapshot.exercises.findIndex(
-          (e) => e.id === args.workoutExerciseId,
-        ),
+        position: logOnly
+          ? extraPosition
+          : snapshot.exercises.findIndex(
+              (e) => e.id === args.workoutExerciseId,
+            ),
       });
     }
 

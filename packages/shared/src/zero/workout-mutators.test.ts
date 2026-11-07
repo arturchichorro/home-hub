@@ -1,5 +1,6 @@
 import type { Transaction } from "@rocicorp/zero";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { logOnlyWorkoutExercise, type SaveExerciseSet } from "../exercise-logs";
 import { starterWorkouts } from "../workout-seed";
 import {
   normalizeExerciseName,
@@ -1232,6 +1233,294 @@ describe("workout placement roles", () => {
       },
     });
     expect(data.workoutExercises?.[0]?.role).toBe("warmup");
+  });
+});
+
+describe("log-only exercises", () => {
+  const catalog = {
+    id: crypto.randomUUID(),
+    name: "Extra curl",
+    unit: "reps" as const,
+    load: "single" as const,
+    unilateral: false,
+  };
+  const extra = logOnlyWorkoutExercise(catalog);
+  const payload = (): SaveExerciseSet => ({
+    ...scope,
+    optimisticTimestamp: now,
+    logId,
+    snapshot,
+    completedOn: "2026-10-26",
+    timeZone: "Europe/Brussels",
+    workoutExerciseId: extra.id,
+    exerciseLogId: crypto.randomUUID(),
+    logOnlyExercise: extra,
+    round: 1,
+    values: { amount: 12, weightKg: 8, rightAmount: null },
+  });
+  const fixture = (location: "server" | "client" = "server") => {
+    const state = setup(location);
+    state.data.exercises?.push({
+      ...catalog,
+      householdId,
+      normalizedName: normalizeExerciseName(catalog.name),
+      deletedAt: null,
+      sortKey: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return state;
+  };
+
+  it.each(["server", "client"] as const)(
+    "saves an independent occurrence without changing the template, catalog or archive (%s)",
+    async (location) => {
+      const { tx, data, writes } = fixture(location);
+      const before = structuredClone({
+        workouts: data.workouts,
+        slots: data.workoutExercises,
+        catalog: data.exercises,
+        archive: data.workoutLogSets,
+      });
+      const args = payload();
+      await mutators.workouts.saveSet.fn({
+        tx,
+        ctx,
+        args: {
+          ...args,
+          logOnlyExercise: { ...extra, name: "Client-supplied name" },
+        },
+      });
+      expect(data.workoutLogs).toHaveLength(1);
+      expect(data.workoutLogExercises).toHaveLength(1);
+      expect(data.exerciseLogs).toHaveLength(1);
+      expect(data.exerciseLogSets).toHaveLength(1);
+      expect(data.workoutLogExercises?.[0]).toMatchObject({
+        workoutExerciseId: catalog.id,
+        exerciseLogId: args.exerciseLogId,
+        householdId,
+        userId,
+        position: snapshot.exercises.length,
+      });
+      expect(data.exerciseLogs?.[0]).toMatchObject({
+        exerciseId: catalog.id,
+        performedOn: args.completedOn,
+        snapshot: {
+          id: catalog.id,
+          catalogExerciseId: catalog.id,
+          name: catalog.name,
+        },
+      });
+      expect(data.exerciseLogs?.[0]?.snapshot).not.toHaveProperty("role");
+      expect(
+        workoutLogSnapshotSchema.parse(data.workoutLogs?.[0]?.snapshot)
+          .exercises,
+      ).toHaveLength(snapshot.exercises.length);
+      expect({
+        workouts: data.workouts,
+        slots: data.workoutExercises,
+        catalog: data.exercises,
+        archive: data.workoutLogSets,
+      }).toEqual(before);
+      expect(
+        writes.mock.calls.every(([table]) =>
+          [
+            "workoutLogs",
+            "exerciseLogs",
+            "exerciseLogSets",
+            "workoutLogExercises",
+          ].includes(String(table)),
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it("joins the canonical daily log, deduplicates later saves and preserves its snapshot and note", async () => {
+    const { tx, data } = fixture();
+    const args = payload();
+    await mutators.workouts.saveSet.fn({
+      tx,
+      ctx,
+      args: {
+        ...args,
+        workoutExerciseId: snapshot.exercises[0]?.id ?? "",
+        exerciseLogId: crypto.randomUUID(),
+        logOnlyExercise: undefined,
+      },
+    });
+    const stored = fixtureRow(data.workoutLogs);
+    stored.note = "Keep private note";
+    const before = structuredClone(stored);
+    await mutators.workouts.saveSet.fn({
+      tx,
+      ctx,
+      args: { ...args, logId: crypto.randomUUID() },
+    });
+    await mutators.workouts.saveSet.fn({
+      tx,
+      ctx,
+      args: {
+        ...args,
+        logId: crypto.randomUUID(),
+        exerciseLogId: crypto.randomUUID(),
+        round: 2,
+      },
+    });
+    expect(data.workoutLogs).toEqual([before]);
+    expect(data.workoutLogExercises).toHaveLength(2);
+    expect(data.exerciseLogs).toHaveLength(2);
+    expect(data.exerciseLogSets).toHaveLength(3);
+    expect(
+      data.workoutLogExercises?.find(
+        (row) => row.workoutExerciseId === catalog.id,
+      )?.workoutLogId,
+    ).toBe(logId);
+  });
+
+  it("freezes catalog settings and supports correcting/removing extra sets after catalog retirement", async () => {
+    const { tx, data } = fixture();
+    const args = payload();
+    await mutators.workouts.saveSet.fn({ tx, ctx, args });
+    const stored = structuredClone(data.exerciseLogs);
+    const row = data.exercises?.find((row) => row.id === catalog.id);
+
+    if (!row) {
+      throw Error("fixture");
+    }
+
+    Object.assign(row, { name: "Changed", unit: "seconds", deletedAt: now });
+    await mutators.workouts.saveSet.fn({
+      tx,
+      ctx,
+      args: { ...args, values: { ...args.values, amount: 15 } },
+    });
+    expect(data.exerciseLogs).toEqual(stored);
+    expect(data.exerciseLogSets?.[0]).toMatchObject({
+      amount: 15,
+      unit: "reps",
+    });
+    await mutators.workouts.removeSet.fn({
+      tx,
+      ctx,
+      args: {
+        householdId,
+        workoutId,
+        logId,
+        workoutExerciseId: catalog.id,
+        round: 1,
+      },
+    });
+    expect(data.exerciseLogSets).toEqual([]);
+    expect(data.exerciseLogs).toEqual(stored);
+  });
+
+  it("corrects a persisted log-only occurrence after its retired catalog row leaves the client replica", async () => {
+    const { tx, data } = fixture("client");
+    const args = payload();
+    await mutators.workouts.saveSet.fn({ tx, ctx, args });
+    const frozen = structuredClone(data.exerciseLogs);
+    data.exercises =
+      data.exercises?.filter((row) => row.id !== catalog.id) ?? [];
+    await mutators.workouts.saveSet.fn({
+      tx,
+      ctx,
+      args: { ...args, values: { ...args.values, amount: 11 } },
+    });
+    expect(data.exerciseLogs).toEqual(frozen);
+    expect(data.exerciseLogSets?.[0]?.amount).toBe(11);
+  });
+
+  it.each([
+    "deleted",
+    "foreign",
+    "missing",
+    "settings",
+    "identity",
+    "incomplete",
+    "member",
+    "module",
+    "foreign-log",
+    "stolen-occurrence",
+    "limit",
+  ] as const)("rejects %s before writing", async (kind) => {
+    const { tx, data, writes } = fixture();
+    const args = payload();
+    const row = data.exercises?.find((row) => row.id === catalog.id);
+
+    if (!row) {
+      throw Error("fixture");
+    }
+
+    if (kind === "deleted") {
+      row.deletedAt = now;
+    }
+    if (kind === "foreign") {
+      row.householdId = other;
+    }
+    if (kind === "missing") {
+      data.exercises =
+        data.exercises?.filter((row) => row.id !== catalog.id) ?? [];
+    }
+    if (kind === "settings") {
+      row.unit = "seconds";
+    }
+    if (kind === "identity") {
+      args.logOnlyExercise = { ...extra, id: crypto.randomUUID() };
+    }
+    if (kind === "incomplete") {
+      args.values = { ...args.values, weightKg: null };
+    }
+    if (kind === "member") {
+      data.householdMembers = [];
+    }
+    if (kind === "module") {
+      fixtureRow(data.householdModuleSettings).enabled = false;
+    }
+    if (kind === "foreign-log") {
+      data.workoutLogs?.push({
+        id: logId,
+        householdId,
+        workoutId,
+        userId: other,
+      });
+    }
+    if (kind === "stolen-occurrence") {
+      data.exerciseLogs?.push({
+        id: args.exerciseLogId,
+        householdId: other,
+        userId: other,
+        exerciseId: catalog.id,
+      });
+    }
+    if (kind === "limit") {
+      args.snapshot = {
+        ...snapshot,
+        exercises: Array.from({ length: 40 }, () => ({
+          ...extra,
+          id: crypto.randomUUID(),
+          catalogExerciseId: crypto.randomUUID(),
+        })),
+      };
+    }
+
+    await expect(
+      mutators.workouts.saveSet.fn({ tx, ctx, args }),
+    ).rejects.toThrow();
+    expect(writes).not.toHaveBeenCalled();
+  });
+
+  it("rejects adding an exercise already in the current workout, even if omitted from the submitted snapshot", async () => {
+    const { tx, data, writes } = fixture();
+    data.workoutExercises?.push({
+      ...fixtureRow(data.workoutExercises),
+      id: crypto.randomUUID(),
+      exerciseId: catalog.id,
+    });
+    await expect(
+      mutators.workouts.saveSet.fn({ tx, ctx, args: payload() }),
+    ).rejects.toThrow("already belongs");
+    expect(writes).not.toHaveBeenCalled();
   });
 });
 

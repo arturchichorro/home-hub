@@ -1,4 +1,7 @@
-import type { WorkoutExercise } from "@home-hub/shared/workouts";
+import type {
+  CatalogExercise,
+  WorkoutExercise,
+} from "@home-hub/shared/workouts";
 import { workoutSetValuesFromRow } from "@home-hub/shared/workouts";
 import type {
   WorkoutLog as LogRow,
@@ -31,6 +34,7 @@ export type WorkoutLog = Omit<LogRow, "exerciseRoles"> & {
   readonly exerciseRoles?: LogRow["exerciseRoles"] | undefined;
   readonly sets: readonly WorkoutLogSet[];
   readonly exerciseLogIds?: Readonly<Record<string, string>>;
+  readonly logOnlyExerciseIds?: readonly string[];
 };
 
 export function WorkoutLogActions({ onClose }: { onClose: () => void }) {
@@ -56,6 +60,8 @@ export type WorkoutLogging = {
     patch: Partial<WorkoutSetInput>,
   ) => void;
   onFlush: (exerciseId: string, round: number) => void;
+  onAddExercise: (exercise: CatalogExercise) => void;
+  excludedExerciseIds?: readonly string[];
   onAddSet: (exerciseId: string) => void;
   onRemoveSet: (exerciseId: string, round: number) => void;
 };
