@@ -430,6 +430,10 @@ function WorkoutDetailPage({
                   void editor.flush(id, round);
                 },
 
+                onAddExercise: editor.addExercise,
+                excludedExerciseIds: workout.exercises.map(
+                  (row) => row.exerciseId,
+                ),
                 onAddSet: editor.addSet,
 
                 onRemoveSet: (id, round) => {
@@ -556,7 +560,7 @@ function WorkoutDetailPage({
         }}
       >
         <DialogPopup
-          title="Unsaved set details"
+          title="Unsaved log changes"
           actions={
             <>
               <Button variant="ghost" onClick={cancelDiscard}>
@@ -567,8 +571,9 @@ function WorkoutDetailPage({
           }
         >
           <p>
-            Saved sets stay recorded. Discard incomplete or failed edits and
-            leave logging? Sets already being saved will continue saving.
+            Saved sets stay recorded. Discard unsaved exercise additions and
+            incomplete or failed edits and leave logging? Sets already being
+            saved will continue saving.
           </p>
         </DialogPopup>
       </DialogRoot>

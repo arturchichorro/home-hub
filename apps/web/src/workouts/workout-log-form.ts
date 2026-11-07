@@ -26,6 +26,7 @@ export type WorkoutLogForm = {
   completedOn: string | null;
   startedAt?: number;
   exerciseLogIds?: Record<string, string>;
+  logOnlyExerciseIds?: readonly string[];
 };
 
 export const setInputKey = (exerciseId: string, round: number) =>
@@ -154,19 +155,19 @@ export function openWorkoutLog(
   workout: WorkoutLogSnapshot,
   existing?: WorkoutLog,
 ): WorkoutLogForm {
+  const snapshot = workoutLogSnapshotSchema.parse(
+    existing?.snapshot ?? workout,
+  );
+
   return {
     id: existing?.id ?? crypto.randomUUID(),
-    snapshot: existing
-      ? workoutLogSnapshotSchema.parse(existing.snapshot)
-      : workoutLogSnapshotSchema.parse({
-          title: workout.title,
-          exercises: workout.exercises,
-        }),
+    snapshot,
+    logOnlyExerciseIds: existing?.logOnlyExerciseIds ?? [],
     completedAt: existing?.completedAt ?? null,
     completedOn: existing?.completedOn ?? null,
     startedAt: Date.now(),
     exerciseLogIds: Object.fromEntries(
-      workout.exercises.map((exercise) => [
+      snapshot.exercises.map((exercise) => [
         exercise.id,
         existing?.exerciseLogIds?.[exercise.id] ?? crypto.randomUUID(),
       ]),

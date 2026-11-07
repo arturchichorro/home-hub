@@ -1,5 +1,6 @@
 import {
   workoutExerciseRolesSnapshotSchema,
+  workoutExerciseSchema,
   workoutLogSnapshotSchema,
 } from "@home-hub/shared/workouts";
 import type {
@@ -27,17 +28,35 @@ export function projectWorkoutLog(log: WorkoutLogWithExercises): WorkoutLog {
     log.exerciseRoles ?? {},
   );
   const snapshot = workoutLogSnapshotSchema.parse(log.snapshot);
+  const baseIds = new Set(snapshot.exercises.map((exercise) => exercise.id));
+  const extra = [...log.loggedExercises]
+    .sort(
+      (a, b) =>
+        a.position - b.position ||
+        a.workoutExerciseId.localeCompare(b.workoutExerciseId),
+    )
+    .filter((link) => !baseIds.has(link.workoutExerciseId) && link.occurrence)
+    .map((link) => ({
+      ...workoutExerciseSchema.parse(link.occurrence?.snapshot),
+      id: link.workoutExerciseId,
+      catalogExerciseId: link.occurrence?.exerciseId,
+      role: "workout" as const,
+    }));
 
   return {
     ...log,
     snapshot: {
       ...snapshot,
 
-      exercises: snapshot.exercises.map((exercise) => ({
-        ...exercise,
-        role: roles[exercise.id] ?? "workout",
-      })),
+      exercises: [
+        ...snapshot.exercises.map((exercise) => ({
+          ...exercise,
+          role: roles[exercise.id] ?? "workout",
+        })),
+        ...extra,
+      ],
     },
+    logOnlyExerciseIds: extra.map((exercise) => exercise.id),
     exerciseLogIds: Object.fromEntries(
       log.loggedExercises.map((link) => [
         link.workoutExerciseId,

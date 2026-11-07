@@ -1,4 +1,7 @@
-import type { SaveExerciseSet } from "@home-hub/shared/exercise-logs";
+import {
+  logOnlyWorkoutExercise,
+  type SaveExerciseSet,
+} from "@home-hub/shared/exercise-logs";
 import type { WorkoutExercise } from "@home-hub/shared/workouts";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { WorkoutLog } from "./workout-log";
@@ -491,6 +494,143 @@ it("keeps historical dates and original definitions during autosaved corrections
   expect(args?.completedOn).toBe(log.completedOn);
   expect(args?.optimisticTimestamp).toBe(log.completedAt);
   expect(args?.snapshot.title).toBe("Original");
+});
+
+const extraCatalog = {
+  id: crypto.randomUUID(),
+  name: "Extra push-up",
+  unit: "reps" as const,
+  load: "bodyweight" as const,
+  unilateral: false,
+};
+
+it("adds a catalog-only log draft without saving or changing the original workout", () => {
+  const { editor, save } = setup();
+  const before = structuredClone(exercise);
+  editor.addExercise(extraCatalog);
+  editor.addExercise(extraCatalog);
+  editor.addExercise({ ...extraCatalog, id: exercise.catalogExerciseId ?? "" });
+  expect(editor.getSnapshot().form.snapshot.exercises).toHaveLength(2);
+  expect(editor.getSnapshot().form.logOnlyExerciseIds).toEqual([
+    extraCatalog.id,
+  ]);
+  expect(editor.getSnapshot().form.completedAt).toBeNull();
+  expect(editor.getSnapshot().hasChanges).toBe(true);
+  expect(save).not.toHaveBeenCalled();
+  expect(exercise).toEqual(before);
+});
+
+it("persists an added exercise only with a complete set, keeping extras out of the base snapshot", async () => {
+  const { editor, save } = setup();
+  editor.addExercise(extraCatalog);
+  await editor.flush();
+  expect(save).not.toHaveBeenCalled();
+  editor.change(extraCatalog.id, 1, { amount: "10" });
+  await editor.flush();
+  expect(save).toHaveBeenCalledTimes(1);
+  const args = save.mock.calls[0]?.[0];
+  expect(args?.workoutExerciseId).toBe(extraCatalog.id);
+  expect(args?.logOnlyExercise).toEqual(logOnlyWorkoutExercise(extraCatalog));
+  expect(args?.snapshot.exercises).toEqual([exercise]);
+  expect(args?.values).toEqual({
+    amount: 10,
+    weightKg: null,
+    rightAmount: null,
+  });
+  expect(editor.getSnapshot().hasChanges).toBe(false);
+});
+
+it("keeps empty extra drafts out of normal set saves and retains failed extra input for retry", async () => {
+  let success = false;
+  const { editor, save } = setup({ onSave: async () => success });
+  editor.addExercise(extraCatalog);
+  fill(editor);
+  await editor.flush();
+  expect(save.mock.calls[0]?.[0].logOnlyExercise).toBeUndefined();
+  expect(save.mock.calls[0]?.[0].snapshot.exercises).toEqual([exercise]);
+  editor.change(extraCatalog.id, 1, { amount: "9" });
+  await editor.flush(extraCatalog.id);
+  expect(editor.getSnapshot().hasChanges).toBe(true);
+  expect(
+    editor.getSnapshot().errors[setInputKey(extraCatalog.id, 1)],
+  ).toContain("still here");
+  expect(editor.getSnapshot().form.snapshot.exercises).toHaveLength(2);
+  success = true;
+  await editor.flush();
+  expect(editor.getSnapshot().hasChanges).toBe(false);
+});
+
+it("reopens and merges remote log-only exercises without losing incomplete local input", () => {
+  const extra = logOnlyWorkoutExercise(extraCatalog);
+  const occurrenceId = crypto.randomUUID();
+  const log = savedLog({
+    snapshot: { title: "Original", exercises: [exercise, extra] },
+    logOnlyExerciseIds: [extra.id],
+    exerciseLogIds: { [extra.id]: occurrenceId },
+    sets: [],
+  });
+  const reopened = openWorkoutLog(
+    { title: "Template", exercises: [exercise] },
+    log,
+  );
+  expect(reopened.snapshot.exercises).toHaveLength(2);
+  expect(reopened.logOnlyExerciseIds).toEqual([extra.id]);
+  expect(reopened.exerciseLogIds?.[extra.id]).toBe(occurrenceId);
+  const { editor } = setup({ existing: savedLog() });
+  editor.change(exercise.id, 1, { weightKg: "" });
+  editor.sync(log);
+  expect(editor.getSnapshot().form.snapshot.exercises).toHaveLength(2);
+  expect(editor.getSnapshot().form.logOnlyExerciseIds).toEqual([extra.id]);
+  expect(
+    editor.getSnapshot().form.inputs[setInputKey(exercise.id, 1)]?.weightKg,
+  ).toBe("");
+});
+
+it("recognizes an untouched extra draft saved by another device without leaving a discard guard", () => {
+  const { editor } = setup();
+  editor.addExercise(extraCatalog);
+  const extra = logOnlyWorkoutExercise(extraCatalog);
+  const occurrenceId = crypto.randomUUID();
+  editor.sync(
+    savedLog({
+      snapshot: { title: "Original", exercises: [exercise, extra] },
+      logOnlyExerciseIds: [extra.id],
+      exerciseLogIds: { [extra.id]: occurrenceId },
+      sets: [
+        {
+          logId: "remote",
+          householdId,
+          workoutExerciseId: extra.id,
+          exerciseId: extra.id,
+          round: 1,
+          amount: 10,
+          rightAmount: null,
+          weightKg: null,
+          unit: "reps",
+          load: "bodyweight",
+          unilateral: false,
+        },
+      ],
+    }),
+  );
+  expect(editor.getSnapshot().hasChanges).toBe(false);
+  expect(
+    editor.getSnapshot().form.inputs[setInputKey(extra.id, 1)]?.amount,
+  ).toBe("10");
+});
+
+it("ignores log-only additions when access is disabled or the 40-exercise bound is reached", () => {
+  const disabled = setup({ enabled: () => false });
+  disabled.editor.addExercise(extraCatalog);
+  expect(disabled.editor.getSnapshot().form.snapshot.exercises).toHaveLength(1);
+  const full = setup({
+    exercises: Array.from({ length: 40 }, () => ({
+      ...exercise,
+      id: crypto.randomUUID(),
+    })),
+  });
+  full.editor.addExercise(extraCatalog);
+  expect(full.editor.getSnapshot().form.snapshot.exercises).toHaveLength(40);
 });
 
 it("keeps a complete edit pending if an app update or access guard disables writes", async () => {

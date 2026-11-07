@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { createDbClient } from "@home-hub/database/client";
 import {
+  exerciseLogSets,
+  exerciseLogs,
   exercises,
   habitEntries,
   habits,
@@ -10,10 +12,13 @@ import {
   households,
   users,
   workoutExercises,
+  workoutLogExercises,
   workoutLogs,
   workouts,
 } from "@home-hub/database/schema";
+import { logOnlyWorkoutExercise } from "@home-hub/shared/exercise-logs";
 import { calendarDate, shiftCalendarDate } from "@home-hub/shared/habits";
+import { workoutLogSnapshotSchema } from "@home-hub/shared/workouts";
 import { queries } from "@home-hub/shared/zero/queries";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -195,6 +200,254 @@ describe.runIf(Boolean(databaseUrl))(
             ),
           )
       )[0];
+
+    const extraCatalog = async () => {
+      const catalog = {
+        id: randomUUID(),
+        name: "Extra plank",
+        unit: "seconds" as const,
+        load: "bodyweight" as const,
+        unilateral: false,
+      };
+      await client.db
+        .insert(exercises)
+        .values({ ...catalog, householdId, normalizedName: "extra plank" });
+
+      return logOnlyWorkoutExercise(catalog);
+    };
+
+    it("records a log-only exercise in private history without changing its template or frozen snapshot", async () => {
+      await configure("any");
+      const original = await save(0);
+      const extra = await extraCatalog();
+      const before = await client.db
+        .select()
+        .from(workoutLogs)
+        .where(eq(workoutLogs.id, original.logId));
+      const slots = await client.db
+        .select()
+        .from(workoutExercises)
+        .where(eq(workoutExercises.workoutId, original.workoutId));
+      const definition = await client.db
+        .select()
+        .from(workouts)
+        .where(eq(workouts.id, original.workoutId));
+      await run("workouts.saveSet", {
+        ...original,
+        logId: randomUUID(),
+        workoutExerciseId: extra.id,
+        exerciseLogId: randomUUID(),
+        logOnlyExercise: extra,
+        values: { amount: 30, weightKg: null, rightAmount: null },
+      });
+      expect(
+        await client.db
+          .select()
+          .from(workoutLogs)
+          .where(eq(workoutLogs.id, original.logId)),
+      ).toEqual(before);
+      expect(
+        await client.db
+          .select()
+          .from(workoutExercises)
+          .where(eq(workoutExercises.workoutId, original.workoutId)),
+      ).toEqual(slots);
+      expect(
+        await client.db
+          .select()
+          .from(workouts)
+          .where(eq(workouts.id, original.workoutId)),
+      ).toEqual(definition);
+      const history = await createZeroDbProvider({ db: client.db }).run(
+        queries.workouts.historyPage.fn({
+          ctx: { userId },
+          args: { householdId, workoutId: original.workoutId },
+        }),
+      );
+      expect(history[0]?.loggedExercises).toHaveLength(2);
+      const added = history[0]?.loggedExercises.find(
+        (row) => row.workoutExerciseId === extra.id,
+      );
+      expect(added?.occurrence?.snapshot).toMatchObject({
+        name: extra.name,
+        catalogExerciseId: extra.id,
+      });
+      expect(added?.occurrence?.sets).toMatchObject([
+        { amount: 30, unit: "seconds" },
+      ]);
+      const otherHistory = await createZeroDbProvider({ db: client.db }).run(
+        queries.workouts.historyPage.fn({
+          ctx: { userId: otherUser },
+          args: { householdId, workoutId: original.workoutId },
+        }),
+      );
+      expect(otherHistory).toEqual([]);
+      const otherCatalog = await createZeroDbProvider({ db: client.db }).run(
+        queries.workouts.catalog.fn({
+          ctx: { userId: otherUser },
+          args: { householdId },
+        }),
+      );
+      expect(
+        otherCatalog.find((row) => row.id === extra.id)?.performances,
+      ).toEqual([]);
+      const ownCatalog = await createZeroDbProvider({ db: client.db }).run(
+        queries.workouts.catalog.fn({ ctx: { userId }, args: { householdId } }),
+      );
+      expect(
+        ownCatalog.find((row) => row.id === extra.id)?.performances,
+      ).toHaveLength(1);
+      expect((await entry())?.workoutCompleted).toBe(true);
+      const tomorrow = shiftCalendarDate(today, 1);
+      const next = await save(0, userId, tomorrow);
+      const nextLogs = await client.db
+        .select()
+        .from(workoutLogs)
+        .where(
+          and(
+            eq(workoutLogs.householdId, householdId),
+            eq(workoutLogs.completedOn, tomorrow),
+          ),
+        );
+      expect(
+        workoutLogSnapshotSchema.parse(nextLogs[0]?.snapshot).exercises,
+      ).toHaveLength(1);
+      expect(
+        await client.db
+          .select()
+          .from(workoutLogExercises)
+          .where(eq(workoutLogExercises.workoutLogId, next.logId)),
+      ).toHaveLength(1);
+    });
+
+    it("serializes concurrent devices into one daily grouping and one log-only occurrence", async () => {
+      const extra = await extraCatalog();
+      const workoutId = workoutIds[0] as string;
+      const base = {
+        householdId,
+        workoutId,
+        snapshot: {
+          title: workoutId,
+          exercises: [
+            {
+              id: slotIds[0] as string,
+              catalogExerciseId: exerciseId,
+              name: "Squat",
+              unit: "reps",
+              load: "bodyweight",
+              unilateral: false,
+              sets: 2,
+              target: "10",
+            },
+          ],
+        },
+        workoutExerciseId: extra.id,
+        logOnlyExercise: extra,
+        completedOn: today,
+        timeZone: "UTC",
+        optimisticTimestamp: Date.parse(`${today}T12:00:00Z`),
+        values: { amount: 30, weightKg: null, rightAmount: null },
+      };
+      await Promise.all(
+        [1, 2].map((round) =>
+          run("workouts.saveSet", {
+            ...base,
+            logId: randomUUID(),
+            exerciseLogId: randomUUID(),
+            round,
+          }),
+        ),
+      );
+      const logs = await client.db
+        .select()
+        .from(workoutLogs)
+        .where(eq(workoutLogs.householdId, householdId));
+      expect(logs).toHaveLength(1);
+      const links = await client.db
+        .select()
+        .from(workoutLogExercises)
+        .where(eq(workoutLogExercises.householdId, householdId));
+      expect(links).toHaveLength(1);
+      expect(links[0]?.workoutExerciseId).toBe(extra.id);
+      const occurrences = await client.db
+        .select()
+        .from(exerciseLogs)
+        .where(eq(exerciseLogs.householdId, householdId));
+      expect(occurrences).toHaveLength(1);
+      const sets = await client.db
+        .select()
+        .from(exerciseLogSets)
+        .where(eq(exerciseLogSets.exerciseLogId, occurrences[0]?.id ?? ""));
+      expect(sets.map((row) => row.round).sort()).toEqual([1, 2]);
+    });
+
+    it("rejects catalog retirement and template duplicates without creating empty workout activity", async () => {
+      const extra = await extraCatalog();
+      await client.db
+        .update(exercises)
+        .set({ deletedAt: new Date() })
+        .where(eq(exercises.id, extra.id));
+      const workoutId = workoutIds[0] as string;
+      const base = {
+        householdId,
+        workoutId,
+        logId: randomUUID(),
+        exerciseLogId: randomUUID(),
+        snapshot: {
+          title: workoutId,
+          exercises: [
+            {
+              id: slotIds[0] as string,
+              catalogExerciseId: exerciseId,
+              name: "Squat",
+              unit: "reps",
+              load: "bodyweight",
+              unilateral: false,
+              sets: 2,
+              target: "10",
+            },
+          ],
+        },
+        completedOn: today,
+        timeZone: "UTC",
+        optimisticTimestamp: Date.parse(`${today}T12:00:00Z`),
+        round: 1,
+        values: { amount: 10, weightKg: null, rightAmount: null },
+      };
+      await expect(
+        run("workouts.saveSet", {
+          ...base,
+          workoutExerciseId: extra.id,
+          logOnlyExercise: extra,
+        }),
+      ).rejects.toThrow();
+      const duplicate = logOnlyWorkoutExercise({
+        id: exerciseId,
+        name: "Squat",
+        unit: "reps",
+        load: "bodyweight",
+        unilateral: false,
+      });
+      await expect(
+        run("workouts.saveSet", {
+          ...base,
+          workoutExerciseId: duplicate.id,
+          logOnlyExercise: duplicate,
+        }),
+      ).rejects.toThrow();
+      expect(
+        await client.db
+          .select()
+          .from(workoutLogs)
+          .where(eq(workoutLogs.householdId, householdId)),
+      ).toEqual([]);
+      expect(
+        await client.db
+          .select()
+          .from(exerciseLogs)
+          .where(eq(exerciseLogs.householdId, householdId)),
+      ).toEqual([]);
+    });
 
     it("publishes both derived columns and the junction for warm Zero replicas", async () => {
       const result = await client.db.execute(

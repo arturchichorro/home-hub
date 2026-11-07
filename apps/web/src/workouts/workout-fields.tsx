@@ -215,6 +215,19 @@ export function WorkoutExercises({
         <div className="flex shrink-0 items-center gap-2">
           {logging ? (
             <>
+              <AddExercisePicker
+                householdId={householdId}
+                disabled={disabled || current.length >= 40}
+                allowCreate={false}
+                iconOnly
+                excludedExerciseIds={[
+                  ...(logging.excludedExerciseIds ?? []),
+                  ...current.map(
+                    (exercise) => exercise.catalogExerciseId ?? exercise.id,
+                  ),
+                ]}
+                onSelect={logging.onAddExercise}
+              />
               {logging.form.completedOn && (
                 <span className="text-xs text-muted">
                   {logging.form.completedOn}
@@ -330,17 +343,19 @@ export function WorkoutExercises({
                     change(exercise.id, { sets: Number(v) })
                   }
                 />
-                <span>sets ×</span>
+                <span>{!logging || exercise.target ? "sets ×" : "sets"}</span>
               </div>
-              <Input
-                appearance="seamless"
-                aria-label={`Target for ${exercise.name}`}
-                className="h-8! w-16 flex-none! text-sm"
-                readOnly={!!logging}
-                maxLength={100}
-                value={exercise.target}
-                onValueChange={(target) => change(exercise.id, { target })}
-              />
+              {(!logging || Boolean(exercise.target)) && (
+                <Input
+                  appearance="seamless"
+                  aria-label={`Target for ${exercise.name}`}
+                  className="h-8! w-16 flex-none! text-sm"
+                  readOnly={!!logging}
+                  maxLength={100}
+                  value={exercise.target}
+                  onValueChange={(target) => change(exercise.id, { target })}
+                />
+              )}
               <SelectRoot
                 value={exercise.role ?? "workout"}
                 disabled={disabled || starting || !!logging}
