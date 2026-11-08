@@ -439,10 +439,9 @@ const workoutsByHousehold = defineHomeHubQuery(
         logs
           .where("householdId", args.householdId)
           .where("userId", ctx.userId)
-          .whereExists("loggedExercises", (links) =>
-            links.whereExists("occurrence", (occurrence) =>
-              occurrence.whereExists("sets"),
-            ),
+          .where("deletedAt", "IS", null)
+          .whereExists("exercises", (rows) =>
+            rows.where("deletedAt", "IS", null).whereExists("sets"),
           )
           .orderBy("completedOn", "desc")
           .orderBy("id", "desc")
@@ -515,19 +514,26 @@ const previousExercisePerformances = defineHomeHubQuery(
       householdId: z.uuid(),
       exerciseIds: z.array(z.uuid()).max(40),
       beforeAt: z.number().nonnegative(),
+      excludeSessionId: z.uuid().optional(),
     })
     .strict(),
   ({ args, ctx }) =>
     authorizedExerciseCatalog(args.householdId, ctx.userId)
       .where("id", "IN", args.exerciseIds)
       .whereExists("performances", (p) =>
-        p
+        (args.excludeSessionId
+          ? p.where("sessionId", "!=", args.excludeSessionId)
+          : p
+        )
           .where("userId", ctx.userId)
           .where("performedAt", "<", args.beforeAt)
           .whereExists("sets"),
       )
       .related("performances", (p) =>
-        p
+        (args.excludeSessionId
+          ? p.where("sessionId", "!=", args.excludeSessionId)
+          : p
+        )
           .where("householdId", args.householdId)
           .where("userId", ctx.userId)
           .where("performedAt", "<", args.beforeAt)
@@ -594,96 +600,6 @@ const catalogMediaQuery = defineHomeHubQuery(
       .orderBy("id", "asc"),
 );
 
-const workoutLogs = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
-  zql.workoutLogs
-    .where("householdId", args.householdId)
-    .where("workoutId", args.workoutId)
-    .where("userId", ctx.userId)
-    .whereExists("household", (h) =>
-      h
-        .where("deletedAt", "IS", null)
-        .whereExists("members", (m) => m.where("userId", ctx.userId))
-        .whereExists("moduleSettings", (s) =>
-          s.where("moduleKey", "workouts").where("enabled", true),
-        ),
-    )
-    .related("sets")
-    .orderBy("createdAt", "desc")
-    .orderBy("id", "desc"),
-);
-
-const authorizedWorkoutHistory = (
-  args: { householdId: string; workoutId: string },
-  ctx: { userId: string },
-) =>
-  zql.workoutLogs
-    .where("householdId", args.householdId)
-    .where("workoutId", args.workoutId)
-    .where("userId", ctx.userId)
-    .whereExists("household", (h) =>
-      h
-        .where("deletedAt", "IS", null)
-        .whereExists("members", (m) => m.where("userId", ctx.userId))
-        .whereExists("moduleSettings", (s) =>
-          s.where("moduleKey", "workouts").where("enabled", true),
-        ),
-    )
-    .related("loggedExercises", (links) =>
-      links
-        .where("householdId", args.householdId)
-        .where("userId", ctx.userId)
-        .orderBy("position", "asc")
-        .related("occurrence", (p) =>
-          p
-            .where("householdId", args.householdId)
-            .where("userId", ctx.userId)
-            .related("sets", (s) => s.orderBy("round", "asc")),
-        ),
-    )
-    .orderBy("completedOn", "desc")
-    .orderBy("completedAt", "desc")
-    .orderBy("id", "desc");
-
-export const workoutHistoryPageSize = 20;
-
-const historyCursor = z
-  .object({
-    completedOn: z.iso.date(),
-    completedAt: z.number().finite(),
-    id: z.uuid(),
-  })
-  .strict();
-
-const workoutHistoryPage = defineHomeHubQuery(
-  workoutDetailArgs.extend({ cursor: historyCursor.optional() }),
-  ({ args, ctx }) => {
-    const query = authorizedWorkoutHistory(args, ctx);
-
-    return (
-      args.cursor ? query.start(args.cursor, { inclusive: false }) : query
-    ).limit(workoutHistoryPageSize + 1);
-  },
-);
-
-const workoutLogById = defineHomeHubQuery(
-  workoutDetailArgs.extend({ logId: z.uuid() }),
-  ({ args, ctx }) =>
-    authorizedWorkoutHistory(args, ctx).where("id", args.logId).limit(1),
-);
-
-const workoutLogForDay = defineHomeHubQuery(
-  workoutDetailArgs.extend({ completedOn: z.iso.date() }),
-  ({ args, ctx }) =>
-    authorizedWorkoutHistory(args, ctx)
-      .where("completedOn", args.completedOn)
-      .limit(1),
-);
-
-// Keep the previous reader compatible with already-loaded clients.
-const workoutLogsV2 = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
-  authorizedWorkoutHistory(args, ctx),
-);
-
 export const queries = defineHomeHubQueries({
   training: trainingQueries,
   workouts: {
@@ -693,11 +609,6 @@ export const queries = defineHomeHubQueries({
     exerciseMedia: exerciseMediaQuery,
     catalogMedia: catalogMediaQuery,
     detail: workoutDetail,
-    logs: workoutLogs,
-    logsV2: workoutLogsV2,
-    historyPage: workoutHistoryPage,
-    logById: workoutLogById,
-    logForDay: workoutLogForDay,
     previousExercises: previousExercisePerformances,
   },
   habits: {

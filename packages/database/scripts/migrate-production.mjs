@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { Client } from "pg";
 import { withPublicSearchPath } from "../src/connection-url.ts";
 
-export const loggingMigrationWhen = 1793354301869;
+export const loggingMigrationWhen = 1794127975016;
 
 export const bootstrapRequiredExitCode = 78;
 

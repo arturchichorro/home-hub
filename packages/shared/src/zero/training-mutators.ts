@@ -1,28 +1,18 @@
 import { defineMutatorWithType, type Transaction } from "@rocicorp/zero";
-import * as z from "zod";
-import {
-  isCompleteExerciseSet,
-  logOnlyWorkoutExercise,
-} from "../exercise-logs";
 import { calendarDate } from "../habits";
 import {
   deleteTrainingSessionSchema,
+  isCompleteExerciseSet,
   removeTrainingExerciseSchema,
   removeTrainingSetSchema,
   saveTrainingSetSchema,
   updateTrainingSessionSchema,
 } from "../training";
-import {
-  exerciseCatalogSchema,
-  type WorkoutExercise,
-  workoutExerciseSchema,
-} from "../workouts";
 import type { ZeroAuthContext } from "./context";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
-import { type ExerciseLog, type Schema, zql } from "./schema.gen";
+import { type Schema, type TrainingSessionExercise, zql } from "./schema.gen";
 
 const define = defineMutatorWithType<Schema, ZeroAuthContext>();
-
 type Scope = { householdId: string; logId: string };
 
 async function access(
@@ -57,37 +47,56 @@ async function ownSession(
   return row;
 }
 
-const ownLinks = (scope: Scope, userId: string) =>
-  zql.trainingSessionExercises
-    .where("sessionId", scope.logId)
-    .where("householdId", scope.householdId)
-    .where("userId", userId);
-
-async function removeOccurrence(
+async function ownExercise(
   tx: Transaction<Schema>,
-  sessionId: string,
-  exerciseId: string,
-  occurrenceId: string,
+  ctx: ZeroAuthContext,
+  scope: Scope,
+  id: string,
 ) {
-  const sets = await tx.run(
-    zql.exerciseLogSets.where("exerciseLogId", occurrenceId),
-  );
+  const row = await tx.run(zql.trainingSessionExercises.where("id", id).one());
 
-  for (const set of sets) {
-    await tx.mutate.exerciseLogSets.delete({
-      exerciseLogId: occurrenceId,
+  if (
+    !row ||
+    row.sessionId !== scope.logId ||
+    row.householdId !== scope.householdId ||
+    row.userId !== ctx.userId ||
+    row.deletedAt !== null
+  ) {
+    throw Error("Training exercise not allowed");
+  }
+
+  return row;
+}
+
+async function retireExercise(
+  tx: Transaction<Schema>,
+  row: TrainingSessionExercise,
+) {
+  for (const set of await tx.run(
+    zql.trainingSessionSets.where("sessionExerciseId", row.id),
+  )) {
+    await tx.mutate.trainingSessionSets.delete({
+      sessionExerciseId: row.id,
       round: set.round,
     });
   }
 
-  await tx.mutate.trainingSessionExercises.delete({ sessionId, exerciseId });
-  await tx.mutate.exerciseLogs.delete({ id: occurrenceId });
+  await tx.mutate.trainingSessionExercises.update({
+    id: row.id,
+    deletedAt: Date.now(),
+    name: "",
+    unit: "reps",
+    load: "bodyweight",
+    unilateral: false,
+    role: "workout",
+    plannedSets: null,
+    target: null,
+  });
 }
 
 export const trainingMutators = {
   saveSet: define(saveTrainingSetSchema, async ({ tx, ctx, args }) => {
     await access(tx, ctx, args);
-
     const proposed = await tx.run(
       zql.trainingSessions.where("id", args.logId).one(),
     );
@@ -96,146 +105,213 @@ export const trainingMutators = {
       proposed &&
       (proposed.householdId !== args.householdId ||
         proposed.userId !== ctx.userId ||
+        proposed.workoutId !== args.workoutId ||
         proposed.deletedAt !== null)
     ) {
       throw Error("Training session not allowed");
     }
 
+    const daily = zql.trainingSessions
+      .where("householdId", args.householdId)
+      .where("userId", ctx.userId)
+      .where("deletedAt", "IS", null)
+      .where("completedOn", args.completedOn);
     const existing =
       proposed ??
       (await tx.run(
-        zql.trainingSessions
-          .where("householdId", args.householdId)
-          .where("userId", ctx.userId)
-          .where("completedOn", args.completedOn)
-          .where("deletedAt", "IS", null)
-          .one(),
+        (args.workoutId
+          ? daily.where("workoutId", args.workoutId)
+          : daily.where("workoutId", "IS", null)
+        ).one(),
       ));
     const now =
       tx.location === "server" ? Date.now() : args.optimisticTimestamp;
 
     if (!existing && calendarDate(now, args.timeZone) !== args.completedOn) {
-      throw Error("Invalid training day");
+      throw Error("Only today's training can be created");
+    }
+
+    const workout = args.workoutId
+      ? await tx.run(
+          zql.workouts
+            .where("id", args.workoutId)
+            .where("householdId", args.householdId)
+            .one(),
+        )
+      : undefined;
+
+    if (args.workoutId && !workout) {
+      throw Error("Workout not available");
+    }
+
+    const placements = workout
+      ? await tx.run(
+          zql.workoutExercises
+            .where("householdId", args.householdId)
+            .where("workoutId", workout.id)
+            .orderBy("sortKey", "desc")
+            .orderBy("id", "asc"),
+        )
+      : [];
+    const suppliedSlots = args.exercises.flatMap((row) =>
+      row.templateExerciseId ? [row.templateExerciseId] : [],
+    );
+
+    if (
+      !existing &&
+      (placements.length !== suppliedSlots.length ||
+        placements.some((row) => !suppliedSlots.includes(row.id)))
+    ) {
+      throw Error("Workout changed; reopen logging");
     }
 
     const sessionId = existing?.id ?? args.logId;
-    const scope = { householdId: args.householdId, logId: sessionId };
-    const links = await tx.run(ownLinks(scope, ctx.userId));
-    const known = new Map(links.map((link) => [link.exerciseId, link]));
-    const removed = new Set(
-      z.array(z.uuid()).parse(existing?.removedExerciseLogIds ?? []),
-    );
-    const ids = new Set([
-      ...known.keys(),
-      ...args.exercises.map((row) => row.exercise.id),
-    ]);
-
-    if (ids.size > 40) {
-      throw Error("A training session supports at most 40 exercises");
-    }
-
-    let position = Math.max(-1, ...links.map((link) => link.position)) + 1;
-    const additions = [];
-    let current: { definition: WorkoutExercise; id: string } | undefined;
-
-    for (const item of args.exercises) {
-      const definition = item.exercise;
-
-      if (removed.has(item.exerciseLogId)) {
-        throw Error("This exercise was removed; reopen the log");
-      }
-      if (definition.id !== definition.catalogExerciseId) {
-        throw Error("Invalid training exercise identity");
-      }
-      const link = known.get(definition.id);
-      let occurrence: ExerciseLog | undefined;
-      if (link) {
-        if (
-          link.exerciseLogId !== item.exerciseLogId &&
-          (!item.isNew ||
-            (await tx.run(
-              zql.exerciseLogs.where("id", item.exerciseLogId).one(),
-            )))
-        ) {
-          throw Error("Exercise occurrence changed; reopen the log");
-        }
-        occurrence = await tx.run(
-          zql.exerciseLogs
-            .where("id", link.exerciseLogId)
+    const rows = existing
+      ? await tx.run(
+          zql.trainingSessionExercises
+            .where("sessionId", sessionId)
             .where("householdId", args.householdId)
             .where("userId", ctx.userId)
-            .one(),
+            .where("deletedAt", "IS", null),
+        )
+      : [];
+    const key = (row: {
+      templateExerciseId: string | null;
+      exerciseId: string;
+    }) => row.templateExerciseId ?? row.exerciseId;
+    const known = new Map(rows.map((row) => [key(row), row]));
+    const additions: TrainingSessionExercise[] = [];
+    let current: TrainingSessionExercise | undefined;
+    let position = Math.max(-1, ...rows.map((row) => row.position)) + 1;
+
+    for (const item of args.exercises) {
+      const identity = item.templateExerciseId ?? item.catalogExerciseId;
+      const prior = await tx.run(
+        zql.trainingSessionExercises.where("id", item.id).one(),
+      );
+
+      if (
+        prior &&
+        (prior.deletedAt !== null ||
+          prior.sessionId !== sessionId ||
+          prior.householdId !== args.householdId ||
+          prior.userId !== ctx.userId ||
+          prior.exerciseId !== item.catalogExerciseId)
+      ) {
+        throw Error(
+          "Exercise identity belongs to a different or removed occurrence",
         );
-        if (!occurrence || occurrence.exerciseId !== definition.id) {
-          throw Error("Exercise occurrence not allowed");
-        }
       }
-      let frozen: WorkoutExercise;
-      if (occurrence) {
-        frozen = workoutExerciseSchema.parse(occurrence.snapshot);
-      } else {
+
+      let row = known.get(identity);
+
+      if (row && row.id !== item.id && (!item.isNew || prior)) {
+        throw Error("Exercise changed; reopen logging");
+      }
+
+      if (!row) {
         if (!item.isNew) {
-          throw Error("Training exercises changed; reopen this log");
+          throw Error("Exercise removed; reopen logging");
         }
+
+        if (existing && item.templateExerciseId) {
+          throw Error("Historical prescriptions cannot be extended");
+        }
+
+        if (
+          !item.templateExerciseId &&
+          ([...known.values()].some(
+            (value) => value.exerciseId === item.catalogExerciseId,
+          ) ||
+            placements.some(
+              (value) => value.exerciseId === item.catalogExerciseId,
+            ))
+        ) {
+          throw Error("Exercise already selected");
+        }
+
         const catalog = await tx.run(
           zql.exercises
-            .where("id", definition.id)
+            .where("id", item.catalogExerciseId)
             .where("householdId", args.householdId)
             .where("deletedAt", "IS", null)
             .one(),
         );
-        if (!catalog) {
+        const placement = placements.find(
+          (value) => value.id === item.templateExerciseId,
+        );
+
+        if (
+          !catalog ||
+          (item.templateExerciseId && placement?.exerciseId !== catalog.id)
+        ) {
           throw Error("Exercise no longer available");
         }
-        frozen = logOnlyWorkoutExercise(
-          exerciseCatalogSchema.parse({
-            id: catalog.id,
-            name: catalog.name,
-            unit: catalog.unit,
-            load: catalog.load,
-            unilateral: catalog.unilateral,
-          }),
-        );
-        if (
-          await tx.run(zql.exerciseLogs.where("id", item.exerciseLogId).one())
-        ) {
-          throw Error("Exercise occurrence already belongs to another context");
-        }
-        additions.push({
-          definition: frozen,
-          id: item.exerciseLogId,
+
+        row = {
+          id: item.id,
+          sessionId,
+          householdId: args.householdId,
+          userId: ctx.userId,
+          exerciseId: catalog.id,
+          templateExerciseId: item.templateExerciseId,
           position: position++,
-        });
-      }
-      if (definition.id === args.exerciseId) {
-        if (
-          definition.unit !== frozen.unit ||
-          definition.load !== frozen.load ||
-          definition.unilateral !== frozen.unilateral
-        ) {
-          throw Error("Exercise settings changed; reopen this log");
-        }
-        current = {
-          definition: frozen,
-          id: occurrence?.id ?? item.exerciseLogId,
+          name: catalog.name,
+          unit: catalog.unit,
+          load: catalog.load,
+          unilateral: catalog.unilateral,
+          role: placement?.role ?? "workout",
+          plannedSets: placement?.sets ?? null,
+          target: placement?.target ?? null,
+          performedOn: existing?.completedOn ?? args.completedOn,
+          performedAt: existing?.completedAt ?? now,
+          deletedAt: null,
         };
+        additions.push(row);
+        known.set(identity, row);
+      }
+
+      if (item.id === args.sessionExerciseId) {
+        current = row;
       }
     }
 
-    if (!current || !isCompleteExerciseSet(current.definition, args.values)) {
-      throw Error("Complete every required set value");
+    if (known.size > 40 || !current) {
+      throw Error("Invalid training exercise selection");
     }
 
-    // The first complete set atomically stores all selected exercises in added
-    // order. Empty occurrences never count as a past performance/completion.
+    const recorded = await tx.run(
+      zql.trainingSessionSets
+        .where("sessionExerciseId", current.id)
+        .where("round", args.round)
+        .one(),
+    );
+    const measurement = recorded ?? current;
+    const submitted = args.exercises.find(
+      (item) => item.id === args.sessionExerciseId,
+    );
+
+    if (
+      !submitted ||
+      submitted.unit !== measurement.unit ||
+      submitted.load !== measurement.load ||
+      submitted.unilateral !== measurement.unilateral
+    ) {
+      throw Error("Exercise settings changed; reopen logging");
+    }
+
+    if (!isCompleteExerciseSet(measurement, args.values)) {
+      throw Error("Incomplete training set");
+    }
+
     if (!existing) {
       await tx.mutate.trainingSessions.insert({
         id: sessionId,
         householdId: args.householdId,
         userId: ctx.userId,
-        name: args.name,
+        workoutId: args.workoutId,
+        name: workout?.title ?? args.name,
         note: args.note,
-        removedExerciseLogIds: [],
         completedOn: args.completedOn,
         completedAt: now,
         createdAt: now,
@@ -243,101 +319,83 @@ export const trainingMutators = {
       });
     }
 
-    for (const addition of additions) {
-      const { role: _role, ...snapshot } = addition.definition;
-      await tx.mutate.exerciseLogs.insert({
-        id: addition.id,
-        householdId: args.householdId,
-        userId: ctx.userId,
-        exerciseId: addition.definition.id,
-        performedOn: existing?.completedOn ?? args.completedOn,
-        performedAt: existing?.completedAt ?? now,
-        snapshot,
-      });
-      await tx.mutate.trainingSessionExercises.insert({
-        sessionId,
-        exerciseId: addition.definition.id,
-        exerciseLogId: addition.id,
-        householdId: args.householdId,
-        userId: ctx.userId,
-        position: addition.position,
-      });
+    for (const row of additions) {
+      await tx.mutate.trainingSessionExercises.insert(row);
     }
 
-    await tx.mutate.exerciseLogSets.upsert({
-      exerciseLogId: current.id,
+    await tx.mutate.trainingSessionSets.upsert({
+      sessionExerciseId: current.id,
       round: args.round,
       ...args.values,
-      unit: current.definition.unit,
-      load: current.definition.load,
-      unilateral: current.definition.unilateral,
+      unit: measurement.unit,
+      load: measurement.load,
+      unilateral: measurement.unilateral,
     });
   }),
+
   removeSet: define(removeTrainingSetSchema, async ({ tx, ctx, args }) => {
     await access(tx, ctx, args);
     await ownSession(tx, ctx, args);
-    const link = await tx.run(
-      ownLinks(args, ctx.userId).where("exerciseId", args.exerciseId).one(),
-    );
-    if (!link) {
-      throw Error("Exercise occurrence not allowed");
-    }
-    await tx.mutate.exerciseLogSets.delete({
-      exerciseLogId: link.exerciseLogId,
+    await ownExercise(tx, ctx, args, args.sessionExerciseId);
+    await tx.mutate.trainingSessionSets.delete({
+      sessionExerciseId: args.sessionExerciseId,
       round: args.round,
     });
   }),
+
   removeExercise: define(
     removeTrainingExerciseSchema,
     async ({ tx, ctx, args }) => {
       await access(tx, ctx, args);
       const session = await ownSession(tx, ctx, args);
-      const link = await tx.run(
-        ownLinks(args, ctx.userId).where("exerciseId", args.exerciseId).one(),
-      );
-      if (link) {
-        await tx.mutate.trainingSessions.update({
-          id: args.logId,
-          removedExerciseLogIds: [
-            ...z.array(z.uuid()).parse(session.removedExerciseLogIds ?? []),
-            link.exerciseLogId,
-          ],
-        });
-        await removeOccurrence(
-          tx,
-          args.logId,
-          link.exerciseId,
-          link.exerciseLogId,
-        );
+
+      if (session.workoutId !== null) {
+        throw Error("Only free training exercises can be removed");
       }
+
+      await retireExercise(
+        tx,
+        await ownExercise(tx, ctx, args, args.sessionExerciseId),
+      );
     },
   ),
+
   update: define(updateTrainingSessionSchema, async ({ tx, ctx, args }) => {
     await access(tx, ctx, args);
-    await ownSession(tx, ctx, args);
+    const session = await ownSession(tx, ctx, args);
+
+    if (session.workoutId !== null && args.changes.name !== undefined) {
+      throw Error("A recorded workout title is immutable");
+    }
+
     await tx.mutate.trainingSessions.update({
       id: args.logId,
       ...args.changes,
     });
   }),
+
   delete: define(deleteTrainingSessionSchema, async ({ tx, ctx, args }) => {
     await access(tx, ctx, args);
-    await ownSession(tx, ctx, args);
-    for (const link of await tx.run(ownLinks(args, ctx.userId))) {
-      await removeOccurrence(
-        tx,
-        args.logId,
-        link.exerciseId,
-        link.exerciseLogId,
-      );
+    const session = await ownSession(tx, ctx, args);
+
+    if (session.workoutId !== null) {
+      throw Error("Only free training sessions can be deleted");
     }
-    // A content-free tombstone rejects a stale device's attempts to recreate
-    // this deleted log. A new explicit daily log can have a new identity.
+
+    for (const row of await tx.run(
+      zql.trainingSessionExercises
+        .where("sessionId", args.logId)
+        .where("householdId", args.householdId)
+        .where("userId", ctx.userId)
+        .where("deletedAt", "IS", null),
+    )) {
+      await retireExercise(tx, row);
+    }
+
     await tx.mutate.trainingSessions.update({
       id: args.logId,
       name: "",
       note: "",
-      removedExerciseLogIds: [],
       deletedAt:
         tx.location === "server" ? Date.now() : args.optimisticTimestamp,
     });

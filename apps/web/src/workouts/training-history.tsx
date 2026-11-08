@@ -1,9 +1,7 @@
 import {
-  compareTrainingHistory,
   type TrainingHistoryCursor,
   trainingHistoryPageSize,
 } from "@home-hub/shared/training";
-import { workoutLogSnapshotSchema } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import {
@@ -16,7 +14,7 @@ import {
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
@@ -32,26 +30,12 @@ export function TrainingHistoryPage({ householdId }: { householdId: string }) {
   useAppHeaderRightComponent(null);
 
   const args = { householdId, cursor: cursors.at(-1) };
-  const [free, freeResult] = useQuery(queries.training.history(args));
-  const [workouts, workoutResult] = useQuery(queries.training.workouts(args));
-  const rows = useMemo(
-    () =>
-      [
-        ...free.map((log) => ({
-          kind: "free" as const,
-          log,
-          title: log.name || "Free training",
-        })),
-        ...workouts.map((log) => ({
-          kind: "workout" as const,
-          log,
-          title: workoutLogSnapshotSchema.parse(log.snapshot).title,
-        })),
-      ].sort(compareTrainingHistory),
-    [free, workouts],
-  );
-  const ready =
-    freeResult.type === "complete" && workoutResult.type === "complete";
+  const [sessions, result] = useQuery(queries.training.history(args));
+  const rows = sessions.map((log) => ({
+    log,
+    title: log.name || "Free training",
+  }));
+  const ready = result.type === "complete";
 
   async function remove(logId: string) {
     if (!enabled || busy) {
@@ -84,20 +68,19 @@ export function TrainingHistoryPage({ householdId }: { householdId: string }) {
 
   return (
     <section className="grid min-w-0 gap-2" aria-label="Training history">
-      {(error ||
-        freeResult.type === "error" ||
-        workoutResult.type === "error") && (
+      {(error || result.type === "error") && (
         <InlineAlert role="alert" variant="danger">
           {error || "Unable to load training history."}
         </InlineAlert>
       )}
       <ul className="divide-y divide-border">
         {rows.slice(0, trainingHistoryPageSize).map((entry) => {
-          const origin = entry.kind === "free" ? "Free training" : "Workout";
+          const origin =
+            entry.log.workoutId === null ? "Free training" : "Workout";
 
           return (
             <li
-              key={`${entry.kind}:${entry.log.id}`}
+              key={entry.log.id}
               className="flex min-w-0 items-center gap-2 py-1"
             >
               <button
@@ -105,7 +88,7 @@ export function TrainingHistoryPage({ householdId }: { householdId: string }) {
                 disabled={!ready || busy}
                 className="flex min-h-11 min-w-0 flex-1 items-center gap-3 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                 onClick={() => {
-                  if (entry.kind === "free") {
+                  if (entry.log.workoutId === null) {
                     void navigate({
                       to: "/households/$householdId/workouts/sessions/$logId",
                       params: { householdId, logId: entry.log.id },
@@ -131,7 +114,7 @@ export function TrainingHistoryPage({ householdId }: { householdId: string }) {
                   <span className="block truncate">{entry.title}</span>
                 </span>
               </button>
-              {entry.kind === "free" && (
+              {entry.log.workoutId === null && (
                 <ConfirmationPopover
                   trigger={
                     <IconButton
@@ -154,9 +137,9 @@ export function TrainingHistoryPage({ householdId }: { householdId: string }) {
           );
         })}
       </ul>
-      {!ready &&
-        freeResult.type !== "error" &&
-        workoutResult.type !== "error" && <p role="status">Loading history…</p>}
+      {!ready && result.type !== "error" && (
+        <p role="status">Loading history…</p>
+      )}
       {ready && !rows.length && (
         <p className="text-sm text-muted">No training logged yet.</p>
       )}
@@ -184,7 +167,6 @@ export function TrainingHistoryPage({ householdId }: { householdId: string }) {
                     id: entry.log.id,
                     completedOn: entry.log.completedOn,
                     completedAt: entry.log.completedAt,
-                    kind: entry.kind,
                   },
                 ]);
               }

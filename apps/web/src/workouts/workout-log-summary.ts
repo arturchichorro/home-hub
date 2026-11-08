@@ -1,28 +1,17 @@
 import {
-  type WorkoutExercise,
   type WorkoutSetValues,
-  workoutExerciseSchema,
   workoutLogSnapshotSchema,
   workoutSetValuesFromRow,
 } from "@home-hub/shared/workouts";
+import type { ExercisePerformance } from "./training-log-projection";
 import type { WorkoutLog } from "./workout-log";
-import type { ExercisePerformance } from "./workout-log-projection";
 
 export function summarizeExercisePerformance(
-  performance: Pick<ExercisePerformance, "snapshot" | "sets">,
+  performance: Pick<ExercisePerformance, "sets">,
 ) {
-  const definition = workoutExerciseSchema.parse(performance.snapshot);
   const sets = [...performance.sets].sort((a, b) => a.round - b.round);
   const descriptions = sets.map((set) =>
-    describeSet(
-      workoutExerciseSchema.parse({
-        ...definition,
-        unit: set.unit,
-        load: set.load,
-        unilateral: set.unilateral,
-      }),
-      workoutSetValuesFromRow(set),
-    ),
+    describeSet(set, workoutSetValuesFromRow(set)),
   );
 
   if (!descriptions.length) {
@@ -36,7 +25,10 @@ export function summarizeExercisePerformance(
         .join("; ");
 }
 
-function describeSet(exercise: WorkoutExercise, values: WorkoutSetValues) {
+function describeSet(
+  exercise: { unit: string; load: string; unilateral: boolean },
+  values: WorkoutSetValues,
+) {
   const amount = exercise.unilateral
     ? `Left ${values.amount} / Right ${values.rightAmount ?? values.amount} ${exercise.unit}`
     : `${values.amount} ${exercise.unit}`;
@@ -65,7 +57,7 @@ export function summarizeWorkoutLog(
       }
 
       const descriptions = sets.map((s) =>
-        describeSet(exercise, workoutSetValuesFromRow(s)),
+        describeSet(s, workoutSetValuesFromRow(s)),
       );
       const same = descriptions.every((value) => value === descriptions[0]);
       const details = same

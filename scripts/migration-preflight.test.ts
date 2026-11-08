@@ -28,7 +28,7 @@ it("keeps the database gate aligned with the immutable migration journal", () =>
   );
   expect(loggingMigrationWhen).toBe(
     journal.entries.find(
-      (entry: { tag: string }) => entry.tag === "0046_tense_miss_america",
+      (entry: { tag: string }) => entry.tag === "0053_unified_training",
     ).when,
   );
 });

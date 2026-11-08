@@ -1,12 +1,19 @@
 import * as z from "zod";
 import { calendarDateSchema, timeZoneSchema } from "./habits";
-import { workoutExerciseSchema, workoutSetValuesSchema } from "./workouts";
+import type {
+  CatalogExercise,
+  WorkoutExercise,
+  WorkoutSetValues,
+} from "./workouts";
+import { workoutSetValuesSchema } from "./workouts";
 
 export const trainingScopeSchema = z
   .object({ householdId: z.uuid(), logId: z.uuid() })
   .strict();
+
 export const saveTrainingSetSchema = trainingScopeSchema
   .extend({
+    workoutId: z.uuid().nullable(),
     completedOn: calendarDateSchema,
     timeZone: timeZoneSchema,
     optimisticTimestamp: z.number().int().nonnegative(),
@@ -16,8 +23,12 @@ export const saveTrainingSetSchema = trainingScopeSchema
       .array(
         z
           .object({
-            exercise: workoutExerciseSchema,
-            exerciseLogId: z.uuid(),
+            id: z.uuid(),
+            catalogExerciseId: z.uuid(),
+            templateExerciseId: z.uuid().nullable(),
+            unit: z.enum(["reps", "seconds"]),
+            load: z.enum(["bodyweight", "single", "per-hand"]),
+            unilateral: z.boolean(),
             isNew: z.boolean(),
           })
           .strict(),
@@ -26,23 +37,27 @@ export const saveTrainingSetSchema = trainingScopeSchema
       .max(40)
       .refine(
         (rows) =>
-          new Set(rows.map((row) => row.exercise.id)).size === rows.length &&
-          new Set(rows.map((row) => row.exerciseLogId)).size === rows.length,
+          new Set(rows.map((row) => row.id)).size === rows.length &&
+          new Set(
+            rows.map((row) => row.templateExerciseId ?? row.catalogExerciseId),
+          ).size === rows.length,
         "Duplicate exercise identity",
       ),
-    exerciseId: z.uuid(),
+    sessionExerciseId: z.uuid(),
     round: z.number().int().min(1).max(10),
     values: workoutSetValuesSchema,
   })
   .strict();
+
 export const removeTrainingSetSchema = trainingScopeSchema
   .extend({
-    exerciseId: z.uuid(),
+    sessionExerciseId: z.uuid(),
     round: z.number().int().min(1).max(10),
   })
   .strict();
+
 export const removeTrainingExerciseSchema = trainingScopeSchema
-  .extend({ exerciseId: z.uuid() })
+  .extend({ sessionExerciseId: z.uuid() })
   .strict();
 export const deleteTrainingSessionSchema = trainingScopeSchema
   .extend({ optimisticTimestamp: z.number().int().nonnegative() })
@@ -58,36 +73,51 @@ export const updateTrainingSessionSchema = trainingScopeSchema
       .refine((value) => Object.keys(value).length > 0, "No changes"),
   })
   .strict();
+
 export const trainingLogSearchSchema = z.object({ log: z.uuid().optional() });
 export const trainingHistoryPageSize = 20;
+const trainingHistoryCursorSchema = z
+  .object({
+    completedOn: calendarDateSchema,
+    completedAt: z.number().finite(),
+    id: z.uuid(),
+  })
+  .strict();
 export const trainingHistoryArgsSchema = z
   .object({
     householdId: z.uuid(),
-    cursor: z
-      .object({
-        completedOn: calendarDateSchema,
-        completedAt: z.number().finite(),
-        id: z.uuid(),
-        kind: z.enum(["workout", "free"]),
-      })
-      .strict()
-      .optional(),
+    workoutId: z.uuid().optional(),
+    includeExercises: z.boolean().optional(),
+    cursor: trainingHistoryCursorSchema.optional(),
   })
   .strict();
-export type SaveTrainingSet = z.infer<typeof saveTrainingSetSchema>;
-type HistoryPosition = {
-  kind: "workout" | "free";
-  log: { completedOn: string; completedAt: number; id: string };
-};
-export function compareTrainingHistory(a: HistoryPosition, b: HistoryPosition) {
+
+// Local draft key only; persisted occurrences always have their own UUID.
+export function logOnlyWorkoutExercise(
+  exercise: CatalogExercise,
+): WorkoutExercise {
+  return {
+    ...exercise,
+    catalogExerciseId: exercise.id,
+    role: "workout",
+    sets: 2,
+    target: "",
+  };
+}
+
+export function isCompleteExerciseSet(
+  exercise: { load: string; unilateral: boolean },
+  values: WorkoutSetValues,
+) {
   return (
-    b.log.completedOn.localeCompare(a.log.completedOn) ||
-    b.log.completedAt - a.log.completedAt ||
-    b.log.id.localeCompare(a.log.id) ||
-    (a.kind === b.kind ? 0 : a.kind === "workout" ? -1 : 1)
+    (exercise.load === "bodyweight"
+      ? values.weightKg === null
+      : values.weightKg !== null) &&
+    (exercise.unilateral
+      ? values.rightAmount !== null
+      : values.rightAmount === null)
   );
 }
 
-export type TrainingHistoryCursor = NonNullable<
-  z.infer<typeof trainingHistoryArgsSchema>["cursor"]
->;
+export type SaveTrainingSet = z.infer<typeof saveTrainingSetSchema>;
+export type TrainingHistoryCursor = z.infer<typeof trainingHistoryCursorSchema>;

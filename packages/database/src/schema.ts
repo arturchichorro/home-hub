@@ -6,7 +6,6 @@ import {
   foreignKey,
   index,
   integer,
-  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -145,7 +144,7 @@ export const householdInvites = pgTable(
 
 export const householdsRelations = relations(households, ({ many }) => ({
   workouts: many(workouts),
-  workoutLogs: many(workoutLogs),
+  trainingSessions: many(trainingSessions),
   habits: many(habits),
   media: many(media),
   images: many(recipeMedia),
@@ -839,7 +838,7 @@ export const exerciseMediaRelations = relations(exerciseMedia, ({ one }) => ({
 
 export const exercisesRelations = relations(exercises, ({ one, many }) => ({
   images: many(exerciseMedia),
-  performances: many(exerciseLogs),
+  performances: many(trainingSessionExercises),
   household: one(households, {
     fields: [exercises.householdId],
     references: [households.id],
@@ -947,196 +946,7 @@ export const workoutExercisesRelations = relations(
   }),
 );
 
-export const workoutLogs = pgTable(
-  "workout_logs",
-  {
-    id: uuid("id").primaryKey(),
-    note: text("note").notNull().default(""),
-    // Immutable placement-role snapshot, separate from legacy strict definition JSON.
-    exerciseRoles: jsonb("exercise_roles").notNull().default({}),
-    householdId: uuid("household_id").notNull(),
-
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id),
-
-    workoutId: uuid("workout_id").notNull(),
-    snapshot: jsonb("snapshot").notNull(),
-    completedOn: text("completed_on").notNull(),
-    completedAt: timestamp("completed_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [
-    foreignKey({
-      columns: [t.householdId, t.workoutId],
-      foreignColumns: [workouts.householdId, workouts.id],
-    }),
-    unique("workout_logs_household_id_id").on(t.householdId, t.id),
-    unique("workout_logs_author_id").on(t.householdId, t.userId, t.id),
-    uniqueIndex("workout_logs_one_per_day").on(
-      t.householdId,
-      t.userId,
-      t.workoutId,
-      t.completedOn,
-    ),
-    index("workout_logs_owner").on(
-      t.householdId,
-      t.userId,
-      t.workoutId,
-      t.createdAt,
-    ),
-  ],
-);
-
-export const workoutLogSets = pgTable(
-  "workout_log_sets",
-  {
-    logId: uuid("log_id").notNull(),
-    householdId: uuid("household_id").notNull(),
-    workoutExerciseId: uuid("workout_exercise_id").notNull(),
-    exerciseId: uuid("exercise_id").notNull(),
-    round: integer("round").notNull(),
-    amount: integer("amount").notNull(),
-    rightAmount: integer("right_amount"),
-    weightKg: numeric("weight_kg", { mode: "number" }),
-    unit: text("unit").notNull(),
-    load: text("load").notNull(),
-    unilateral: boolean("unilateral").notNull(),
-  },
-  (t) => [
-    primaryKey({ columns: [t.logId, t.workoutExerciseId, t.round] }),
-    foreignKey({
-      name: "workout_log_sets_log_fk",
-      columns: [t.householdId, t.logId],
-      foreignColumns: [workoutLogs.householdId, workoutLogs.id],
-    }),
-    foreignKey({
-      name: "workout_log_sets_catalog_fk",
-      columns: [t.householdId, t.exerciseId],
-      foreignColumns: [exercises.householdId, exercises.id],
-    }),
-    index("workout_log_sets_exercise").on(t.householdId, t.exerciseId, t.logId),
-    check("workout_log_sets_round", sql`${t.round} between 1 and 10`),
-    check("workout_log_sets_amount", sql`${t.amount} between 0 and 600`),
-    check(
-      "workout_log_sets_right_amount",
-      sql`${t.rightAmount} is null or (${t.unilateral} and ${t.rightAmount} between 0 and 600)`,
-    ),
-    check(
-      "workout_log_sets_weight",
-      sql`${t.weightKg} is null or (${t.load} <> 'bodyweight' and ${t.weightKg} between 0 and 1000)`,
-    ),
-    check("workout_log_sets_unit", sql`${t.unit} in ('reps', 'seconds')`),
-    check(
-      "workout_log_sets_load",
-      sql`${t.load} in ('per-hand', 'single', 'bodyweight')`,
-    ),
-  ],
-);
-
-// Exercise occurrences are independent of their optional workout grouping.
-export const exerciseLogs = pgTable(
-  "exercise_logs",
-  {
-    id: uuid("id").primaryKey(),
-    householdId: uuid("household_id").notNull(),
-
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id),
-
-    exerciseId: uuid("exercise_id").notNull(),
-    performedOn: text("performed_on").notNull(),
-    performedAt: timestamp("performed_at", { withTimezone: true }).notNull(),
-    snapshot: jsonb("snapshot").notNull(),
-  },
-  (t) => [
-    unique("exercise_logs_author_id").on(t.householdId, t.userId, t.id),
-    foreignKey({
-      columns: [t.householdId, t.exerciseId],
-      foreignColumns: [exercises.householdId, exercises.id],
-    }),
-    index("exercise_logs_latest").on(
-      t.householdId,
-      t.userId,
-      t.exerciseId,
-      t.performedOn,
-      t.performedAt,
-      t.id,
-    ),
-  ],
-);
-
-export const exerciseLogSets = pgTable(
-  "exercise_log_sets",
-  {
-    exerciseLogId: uuid("exercise_log_id").notNull(),
-    round: integer("round").notNull(),
-    amount: integer("amount").notNull(),
-    rightAmount: integer("right_amount"),
-    weightKg: numeric("weight_kg", { mode: "number" }),
-    unit: text("unit").notNull(),
-    load: text("load").notNull(),
-    unilateral: boolean("unilateral").notNull(),
-  },
-  (t) => [
-    primaryKey({ columns: [t.exerciseLogId, t.round] }),
-    foreignKey({
-      columns: [t.exerciseLogId],
-      foreignColumns: [exerciseLogs.id],
-    }),
-    check("exercise_log_sets_round", sql`${t.round} between 1 and 10`),
-    check("exercise_log_sets_amount", sql`${t.amount} between 0 and 600`),
-    check(
-      "exercise_log_sets_right",
-      sql`${t.rightAmount} is null or (${t.unilateral} and ${t.rightAmount} between 0 and 600)`,
-    ),
-    check(
-      "exercise_log_sets_weight",
-      sql`${t.weightKg} is null or (${t.load} <> 'bodyweight' and ${t.weightKg} between 0 and 1000)`,
-    ),
-    check("exercise_log_sets_unit", sql`${t.unit} in ('reps', 'seconds')`),
-    check(
-      "exercise_log_sets_load",
-      sql`${t.load} in ('per-hand', 'single', 'bodyweight')`,
-    ),
-  ],
-);
-
-export const workoutLogExercises = pgTable(
-  "workout_log_exercises",
-  {
-    workoutLogId: uuid("workout_log_id").notNull(),
-    workoutExerciseId: uuid("workout_exercise_id").notNull(),
-    exerciseLogId: uuid("exercise_log_id").notNull().unique(),
-    householdId: uuid("household_id").notNull(),
-    userId: uuid("user_id").notNull(),
-    position: integer("position").notNull(),
-  },
-  (t) => [
-    primaryKey({ columns: [t.workoutLogId, t.workoutExerciseId] }),
-    foreignKey({
-      columns: [t.householdId, t.userId, t.workoutLogId],
-      foreignColumns: [
-        workoutLogs.householdId,
-        workoutLogs.userId,
-        workoutLogs.id,
-      ],
-    }),
-    foreignKey({
-      columns: [t.householdId, t.userId, t.exerciseLogId],
-      foreignColumns: [
-        exerciseLogs.householdId,
-        exerciseLogs.userId,
-        exerciseLogs.id,
-      ],
-    }),
-  ],
-);
-
-// Free-form daily groupings are separate from immutable workout-backed headers.
+// One private model for prescribed and free-form training.
 export const trainingSessions = pgTable(
   "training_sessions",
   {
@@ -1147,12 +957,9 @@ export const trainingSessions = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
-    name: text("name").notNull().default(""),
+    workoutId: uuid("workout_id"),
+    name: text("name").notNull(),
     note: text("note").notNull().default(""),
-    removedExerciseLogIds: jsonb("removed_exercise_log_ids")
-      .$type<string[]>()
-      .notNull()
-      .default([]),
     completedOn: text("completed_on").notNull(),
     completedAt: timestamp("completed_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -1162,9 +969,17 @@ export const trainingSessions = pgTable(
   },
   (t) => [
     unique("training_sessions_author_id").on(t.householdId, t.userId, t.id),
-    uniqueIndex("training_sessions_one_per_day")
+    foreignKey({
+      name: "training_sessions_workout_fk",
+      columns: [t.householdId, t.workoutId],
+      foreignColumns: [workouts.householdId, workouts.id],
+    }),
+    uniqueIndex("training_sessions_workout_day")
+      .on(t.householdId, t.userId, t.workoutId, t.completedOn)
+      .where(sql`${t.workoutId} is not null and ${t.deletedAt} is null`),
+    uniqueIndex("training_sessions_free_day")
       .on(t.householdId, t.userId, t.completedOn)
-      .where(sql`${t.deletedAt} is null`),
+      .where(sql`${t.workoutId} is null and ${t.deletedAt} is null`),
     index("training_sessions_history").on(
       t.householdId,
       t.userId,
@@ -1172,23 +987,35 @@ export const trainingSessions = pgTable(
       t.completedAt,
       t.id,
     ),
-    check("training_sessions_name", sql`char_length(${t.name}) <= 150`),
   ],
 );
 
 export const trainingSessionExercises = pgTable(
   "training_session_exercises",
   {
+    id: uuid("id").primaryKey(),
     sessionId: uuid("session_id").notNull(),
-    exerciseId: uuid("exercise_id").notNull(),
-    exerciseLogId: uuid("exercise_log_id").notNull().unique(),
     householdId: uuid("household_id").notNull(),
     userId: uuid("user_id").notNull(),
+    exerciseId: uuid("exercise_id").notNull(),
+    // Historical provenance, not an FK to a mutable/deletable template placement.
+    templateExerciseId: uuid("template_exercise_id"),
     position: integer("position").notNull(),
+    name: text("name").notNull(),
+    unit: text("unit").notNull(),
+    load: text("load").notNull(),
+    unilateral: boolean("unilateral").notNull(),
+    role: text("role", { enum: ["warmup", "workout", "stretching"] }).notNull(),
+    plannedSets: integer("planned_sets"),
+    target: text("target"),
+    // Preserve the original occurrence dates, even if they differ from its session.
+    performedOn: text("performed_on").notNull(),
+    performedAt: timestamp("performed_at", { withTimezone: true }).notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    primaryKey({ columns: [t.sessionId, t.exerciseId] }),
     foreignKey({
+      name: "training_exercises_session_fk",
       columns: [t.householdId, t.userId, t.sessionId],
       foreignColumns: [
         trainingSessions.householdId,
@@ -1197,17 +1024,69 @@ export const trainingSessionExercises = pgTable(
       ],
     }),
     foreignKey({
-      columns: [t.householdId, t.userId, t.exerciseLogId],
-      foreignColumns: [
-        exerciseLogs.householdId,
-        exerciseLogs.userId,
-        exerciseLogs.id,
-      ],
-    }),
-    foreignKey({
+      name: "training_exercises_catalog_fk",
       columns: [t.householdId, t.exerciseId],
       foreignColumns: [exercises.householdId, exercises.id],
     }),
+    uniqueIndex("training_exercises_template_slot")
+      .on(t.sessionId, t.templateExerciseId)
+      .where(
+        sql`${t.templateExerciseId} is not null and ${t.deletedAt} is null`,
+      ),
+    uniqueIndex("training_exercises_extra_catalog")
+      .on(t.sessionId, t.exerciseId)
+      .where(sql`${t.templateExerciseId} is null and ${t.deletedAt} is null`),
+    index("training_exercises_latest").on(
+      t.householdId,
+      t.userId,
+      t.exerciseId,
+      t.performedOn,
+      t.performedAt,
+      t.id,
+    ),
+    check(
+      "training_exercises_definition",
+      sql`${t.unit} in ('reps', 'seconds') and ${t.load} in ('per-hand', 'single', 'bodyweight') and ${t.role} in ('warmup', 'workout', 'stretching')`,
+    ),
+    check(
+      "training_exercises_prescription",
+      sql`${t.plannedSets} is null or ${t.plannedSets} between 1 and 10`,
+    ),
+  ],
+);
+
+export const trainingSessionSets = pgTable(
+  "training_session_sets",
+  {
+    sessionExerciseId: uuid("session_exercise_id")
+      .notNull()
+      .references(() => trainingSessionExercises.id),
+    round: integer("round").notNull(),
+    amount: integer("amount").notNull(),
+    rightAmount: integer("right_amount"),
+    weightKg: numeric("weight_kg", { mode: "number" }),
+    // Actual recorded conventions are facts, not aliases for a current definition.
+    unit: text("unit").notNull(),
+    load: text("load").notNull(),
+    unilateral: boolean("unilateral").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.sessionExerciseId, t.round] }),
+    check("training_sets_round", sql`${t.round} between 1 and 10`),
+    check("training_sets_amount", sql`${t.amount} between 0 and 600`),
+    check(
+      "training_sets_right",
+      sql`${t.rightAmount} is null or (${t.unilateral} and ${t.rightAmount} between 0 and 600)`,
+    ),
+    check(
+      "training_sets_weight",
+      sql`${t.weightKg} is null or (${t.load} <> 'bodyweight' and ${t.weightKg} between 0 and 1000)`,
+    ),
+    check("training_sets_unit", sql`${t.unit} in ('reps', 'seconds')`),
+    check(
+      "training_sets_load",
+      sql`${t.load} in ('per-hand', 'single', 'bodyweight')`,
+    ),
   ],
 );
 
@@ -1218,13 +1097,17 @@ export const trainingSessionsRelations = relations(
       fields: [trainingSessions.householdId],
       references: [households.id],
     }),
-    loggedExercises: many(trainingSessionExercises),
+    workout: one(workouts, {
+      fields: [trainingSessions.householdId, trainingSessions.workoutId],
+      references: [workouts.householdId, workouts.id],
+    }),
+    exercises: many(trainingSessionExercises),
   }),
 );
 
 export const trainingSessionExercisesRelations = relations(
   trainingSessionExercises,
-  ({ one }) => ({
+  ({ one, many }) => ({
     session: one(trainingSessions, {
       fields: [
         trainingSessionExercises.householdId,
@@ -1237,68 +1120,27 @@ export const trainingSessionExercisesRelations = relations(
         trainingSessions.id,
       ],
     }),
-    occurrence: one(exerciseLogs, {
-      fields: [
-        trainingSessionExercises.householdId,
-        trainingSessionExercises.userId,
-        trainingSessionExercises.exerciseLogId,
-      ],
-      references: [
-        exerciseLogs.householdId,
-        exerciseLogs.userId,
-        exerciseLogs.id,
-      ],
-    }),
-  }),
-);
-
-export const exerciseLogsRelations = relations(
-  exerciseLogs,
-  ({ one, many }) => ({
-    exercise: one(exercises, {
-      fields: [exerciseLogs.householdId, exerciseLogs.exerciseId],
-      references: [exercises.householdId, exercises.id],
-    }),
     household: one(households, {
-      fields: [exerciseLogs.householdId],
+      fields: [trainingSessionExercises.householdId],
       references: [households.id],
     }),
-    sets: many(exerciseLogSets),
+    exercise: one(exercises, {
+      fields: [
+        trainingSessionExercises.householdId,
+        trainingSessionExercises.exerciseId,
+      ],
+      references: [exercises.householdId, exercises.id],
+    }),
+    sets: many(trainingSessionSets),
   }),
 );
 
-export const exerciseLogSetsRelations = relations(
-  exerciseLogSets,
+export const trainingSessionSetsRelations = relations(
+  trainingSessionSets,
   ({ one }) => ({
-    occurrence: one(exerciseLogs, {
-      fields: [exerciseLogSets.exerciseLogId],
-      references: [exerciseLogs.id],
-    }),
-  }),
-);
-
-export const workoutLogExercisesRelations = relations(
-  workoutLogExercises,
-  ({ one }) => ({
-    log: one(workoutLogs, {
-      fields: [
-        workoutLogExercises.householdId,
-        workoutLogExercises.userId,
-        workoutLogExercises.workoutLogId,
-      ],
-      references: [workoutLogs.householdId, workoutLogs.userId, workoutLogs.id],
-    }),
-    occurrence: one(exerciseLogs, {
-      fields: [
-        workoutLogExercises.householdId,
-        workoutLogExercises.userId,
-        workoutLogExercises.exerciseLogId,
-      ],
-      references: [
-        exerciseLogs.householdId,
-        exerciseLogs.userId,
-        exerciseLogs.id,
-      ],
+    occurrence: one(trainingSessionExercises, {
+      fields: [trainingSessionSets.sessionExerciseId],
+      references: [trainingSessionExercises.id],
     }),
   }),
 );
@@ -1308,28 +1150,8 @@ export const workoutsRelations = relations(workouts, ({ one, many }) => ({
     fields: [workouts.householdId],
     references: [households.id],
   }),
-  logs: many(workoutLogs),
+  logs: many(trainingSessions),
   exercises: many(workoutExercises),
-}));
-
-export const workoutLogsRelations = relations(workoutLogs, ({ one, many }) => ({
-  household: one(households, {
-    fields: [workoutLogs.householdId],
-    references: [households.id],
-  }),
-  workout: one(workouts, {
-    fields: [workoutLogs.householdId, workoutLogs.workoutId],
-    references: [workouts.householdId, workouts.id],
-  }),
-  sets: many(workoutLogSets),
-  loggedExercises: many(workoutLogExercises),
-}));
-
-export const workoutLogSetsRelations = relations(workoutLogSets, ({ one }) => ({
-  log: one(workoutLogs, {
-    fields: [workoutLogSets.logId],
-    references: [workoutLogs.id],
-  }),
 }));
 
 export const recipeMediaRelations = relations(recipeMedia, ({ one }) => ({

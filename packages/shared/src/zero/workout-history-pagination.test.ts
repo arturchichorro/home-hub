@@ -1,6 +1,7 @@
 import type { AST } from "@rocicorp/zero";
 import { expect, it } from "vitest";
-import { queries, workoutHistoryPageSize } from "./queries";
+import { trainingHistoryPageSize as workoutHistoryPageSize } from "../training";
+import { queries } from "./queries";
 
 const householdId = crypto.randomUUID();
 
@@ -17,7 +18,7 @@ it("uses an exclusive stable composite cursor with a bounded lookahead", () => {
     id: crypto.randomUUID(),
   };
   const q = ast(
-    queries.workouts.historyPage.fn({
+    queries.training.history.fn({
       args: { householdId, workoutId, cursor },
       ctx: { userId },
     }),
@@ -42,7 +43,7 @@ it("uses an exclusive stable composite cursor with a bounded lookahead", () => {
     expect(serialized).toContain(scope);
   }
 
-  expect(serialized).toContain("loggedExercises");
+  expect(serialized).toContain("exercises");
 });
 
 it("pins a selected historical log or current local day independently of the page", () => {
@@ -50,13 +51,13 @@ it("pins a selected historical log or current local day independently of the pag
 
   for (const q of [
     ast(
-      queries.workouts.logById.fn({
+      queries.training.session.fn({
         args: { householdId, workoutId, logId },
         ctx: { userId },
       }),
     ),
     ast(
-      queries.workouts.logForDay.fn({
+      queries.training.session.fn({
         args: { householdId, workoutId, completedOn: "2026-10-02" },
         ctx: { userId },
       }),
@@ -68,8 +69,8 @@ it("pins a selected historical log or current local day independently of the pag
       householdId,
       workoutId,
       userId,
-      "workoutLogExercises",
-      "exerciseLogSets",
+      "trainingSessionExercises",
+      "trainingSessionSets",
     ]) {
       expect(JSON.stringify(q)).toContain(value);
     }

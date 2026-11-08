@@ -1,7 +1,5 @@
-import {
-  logOnlyWorkoutExercise,
-  type SaveExerciseSet,
-} from "@home-hub/shared/exercise-logs";
+import type { SaveTrainingSet as SaveExerciseSet } from "@home-hub/shared/training";
+import { logOnlyWorkoutExercise } from "@home-hub/shared/training";
 import type { WorkoutExercise } from "@home-hub/shared/workouts";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { WorkoutLog } from "./workout-log";
@@ -159,8 +157,8 @@ it("reconciles canonical occurrence IDs even if the measurements did not change"
   const log = savedLog();
   const id = crypto.randomUUID();
   const { editor } = setup({ existing: log });
-  editor.sync({ ...log, exerciseLogIds: { [exercise.id]: id } });
-  expect(editor.getSnapshot().form.exerciseLogIds?.[exercise.id]).toBe(id);
+  editor.sync({ ...log, sessionExerciseIds: { [exercise.id]: id } });
+  expect(editor.getSnapshot().form.sessionExerciseIds?.[exercise.id]).toBe(id);
 });
 
 it("removes a clean optional row when another device removes that recorded set", () => {
@@ -256,6 +254,52 @@ it("requires explicit weight and both unilateral counts, including valid zeros",
   });
 });
 
+it("edits historical round conventions without relabeling its values or the exercise prescription", async () => {
+  const log = savedLog();
+  const original = log.sets[0];
+
+  if (!original) {
+    throw Error("Missing recorded set");
+  }
+
+  const { editor, save } = setup({
+    existing: {
+      ...log,
+      sets: [
+        {
+          ...original,
+          unit: "seconds",
+          load: "single",
+          unilateral: true,
+          rightAmount: null,
+        },
+      ],
+    },
+  });
+  editor.change(exercise.id, 1, {
+    amount: "14",
+    rightAmount: "9",
+    weightKg: "8",
+  });
+  await editor.flush();
+
+  expect(save.mock.calls[0]?.[0].exercises[0]).toMatchObject({
+    unit: "seconds",
+    load: "single",
+    unilateral: true,
+  });
+  expect(save.mock.calls[0]?.[0].values).toEqual({
+    amount: 14,
+    rightAmount: 9,
+    weightKg: 8,
+  });
+  expect(editor.getSnapshot().form.snapshot.exercises[0]).toMatchObject({
+    unit: "reps",
+    load: "per-hand",
+    unilateral: false,
+  });
+});
+
 it("a partial row does not block a different complete row", async () => {
   const other = {
     ...exercise,
@@ -267,7 +311,9 @@ it("a partial row does not block a different complete row", async () => {
   editor.change(other.id, 1, { amount: "8", weightKg: "15" });
   await editor.flush();
   expect(save).toHaveBeenCalledTimes(1);
-  expect(save.mock.calls[0]?.[0].workoutExerciseId).toBe(other.id);
+  expect(save.mock.calls[0]?.[0].sessionExerciseId).toBe(
+    editor.getSnapshot().form.sessionExerciseIds?.[other.id],
+  );
   expect(
     editor.getSnapshot().form.inputs[setInputKey(exercise.id, 1)]?.amount,
   ).toBe("10");
@@ -493,7 +539,7 @@ it("keeps historical dates and original definitions during autosaved corrections
   expect(args?.logId).toBe(log.id);
   expect(args?.completedOn).toBe(log.completedOn);
   expect(args?.optimisticTimestamp).toBe(log.completedAt);
-  expect(args?.snapshot.title).toBe("Original");
+  expect(args?.name).toBe("Original");
 });
 
 const extraCatalog = {
@@ -529,9 +575,14 @@ it("persists an added exercise only with a complete set, keeping extras out of t
   await editor.flush();
   expect(save).toHaveBeenCalledTimes(1);
   const args = save.mock.calls[0]?.[0];
-  expect(args?.workoutExerciseId).toBe(extraCatalog.id);
-  expect(args?.logOnlyExercise).toEqual(logOnlyWorkoutExercise(extraCatalog));
-  expect(args?.snapshot.exercises).toEqual([exercise]);
+  expect(args?.sessionExerciseId).toBe(
+    editor.getSnapshot().form.sessionExerciseIds?.[extraCatalog.id],
+  );
+  expect(args?.exercises.map((row) => row.catalogExerciseId)).toEqual([
+    exercise.catalogExerciseId,
+    extraCatalog.id,
+  ]);
+  expect(args?.exercises.at(-1)?.templateExerciseId).toBeNull();
   expect(args?.values).toEqual({
     amount: 10,
     weightKg: null,
@@ -546,8 +597,10 @@ it("keeps empty extra drafts out of normal set saves and retains failed extra in
   editor.addExercise(extraCatalog);
   fill(editor);
   await editor.flush();
-  expect(save.mock.calls[0]?.[0].logOnlyExercise).toBeUndefined();
-  expect(save.mock.calls[0]?.[0].snapshot.exercises).toEqual([exercise]);
+  expect(save.mock.calls[0]?.[0].exercises).toHaveLength(1);
+  expect(save.mock.calls[0]?.[0].exercises[0]?.templateExerciseId).toBe(
+    exercise.id,
+  );
   editor.change(extraCatalog.id, 1, { amount: "9" });
   await editor.flush(extraCatalog.id);
   expect(editor.getSnapshot().hasChanges).toBe(true);
@@ -566,7 +619,7 @@ it("reopens and merges remote log-only exercises without losing incomplete local
   const log = savedLog({
     snapshot: { title: "Original", exercises: [exercise, extra] },
     logOnlyExerciseIds: [extra.id],
-    exerciseLogIds: { [extra.id]: occurrenceId },
+    sessionExerciseIds: { [extra.id]: occurrenceId },
     sets: [],
   });
   const reopened = openWorkoutLog(
@@ -575,7 +628,7 @@ it("reopens and merges remote log-only exercises without losing incomplete local
   );
   expect(reopened.snapshot.exercises).toHaveLength(2);
   expect(reopened.logOnlyExerciseIds).toEqual([extra.id]);
-  expect(reopened.exerciseLogIds?.[extra.id]).toBe(occurrenceId);
+  expect(reopened.sessionExerciseIds?.[extra.id]).toBe(occurrenceId);
   const { editor } = setup({ existing: savedLog() });
   editor.change(exercise.id, 1, { weightKg: "" });
   editor.sync(log);
@@ -595,7 +648,7 @@ it("recognizes an untouched extra draft saved by another device without leaving 
     savedLog({
       snapshot: { title: "Original", exercises: [exercise, extra] },
       logOnlyExerciseIds: [extra.id],
-      exerciseLogIds: { [extra.id]: occurrenceId },
+      sessionExerciseIds: { [extra.id]: occurrenceId },
       sets: [
         {
           logId: "remote",

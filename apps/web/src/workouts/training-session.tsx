@@ -139,39 +139,18 @@ function TrainingLogger({
         {
           householdId,
           workoutId: null,
-          persistAllExercises: true,
           timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           enabled: () => enabledRef.current,
-          save: (args, form, newIds) =>
+          save: (args) =>
             performRef.current(
               mutators.training.saveSet({
-                householdId,
-                logId: args.logId,
-                completedOn: args.completedOn,
-                timeZone: args.timeZone,
-                optimisticTimestamp: args.optimisticTimestamp,
+                ...args,
                 name: metadata.current.name,
                 note: metadata.current.note,
-                exerciseId: args.workoutExerciseId,
-                round: args.round,
-                values: args.values,
-                exercises: form.snapshot.exercises.map((exercise) => ({
-                  exercise,
-                  exerciseLogId:
-                    form.exerciseLogIds?.[exercise.id] ?? crypto.randomUUID(),
-                  isNew: newIds.includes(exercise.id),
-                })),
               }),
             ),
           remove: (args) =>
-            performRef.current(
-              mutators.training.removeSet({
-                householdId,
-                logId: args.logId,
-                exerciseId: args.workoutExerciseId,
-                round: args.round,
-              }),
-            ),
+            performRef.current(mutators.training.removeSet(args)),
         },
       ),
   );
@@ -265,6 +244,7 @@ function TrainingLogger({
   }, [metadataTarget]);
   const [previousRows] = useQuery(
     queries.workouts.previousExercises({
+      excludeSessionId: state.form.id,
       householdId,
       exerciseIds: state.form.snapshot.exercises.map(
         (exercise) => exercise.catalogExerciseId ?? exercise.id,
@@ -350,8 +330,8 @@ function TrainingLogger({
     if (busy || state.saving.size) {
       return;
     }
-    const saved = latestRow.current?.loggedExercises.some(
-      (link) => link.exerciseId === exerciseId,
+    const saved = latestRow.current?.exercises.some(
+      (row) => row.exerciseId === exerciseId && row.deletedAt === null,
     );
     if (!saved) {
       forgetExercise(exerciseId);
@@ -366,7 +346,8 @@ function TrainingLogger({
           mutators.training.removeExercise({
             householdId,
             logId: state.form.id,
-            exerciseId,
+            sessionExerciseId:
+              state.form.sessionExerciseIds?.[exerciseId] ?? "",
           }),
         ),
       );

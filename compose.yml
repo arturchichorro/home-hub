@@ -38,7 +38,7 @@ services:
       ZERO_UPSTREAM_DB: postgres://home_hub:home_hub@postgres:5432/home_hub
       ZERO_CVR_DB: postgres://home_hub:home_hub@postgres:5432/home_hub
       ZERO_CHANGE_DB: postgres://home_hub:home_hub@postgres:5432/home_hub
-      ZERO_REPLICA_FILE: /data/replica.db
+      ZERO_REPLICA_FILE: /data/training-sessions-v1.db
       ZERO_ADMIN_PASSWORD: ${ZERO_ADMIN_PASSWORD}
       ZERO_APP_ID: home_hub
       ZERO_APP_PUBLICATIONS: home_hub_zero

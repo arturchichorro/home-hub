@@ -6,7 +6,6 @@ import {
   workoutExerciseSchema,
   workoutExercisesFromRows,
   workoutLogSnapshotSchema,
-  workoutSnapshotWithoutRoles,
 } from "./workouts";
 
 const exercise = {
@@ -47,21 +46,15 @@ it("sends only the changed placement role, not shared catalog settings", () => {
   });
 });
 
-it("persists old-reader-compatible definition JSON while roles are snapshotted separately", () => {
-  const snapshot = workoutSnapshotWithoutRoles({
+it("keeps frozen roles in editor views without an old-reader adapter", () => {
+  const snapshot = workoutLogSnapshotSchema.parse({
     title: "New",
     exercises: [{ ...exercise, role: "warmup" }],
   });
-  expect(snapshot.exercises[0]).not.toHaveProperty("role");
-  expect(
-    workoutExerciseSchema
-      .omit({ role: true })
-      .strict()
-      .safeParse(snapshot.exercises[0]).success,
-  ).toBe(true);
+  expect(snapshot.exercises[0]?.role).toBe("warmup");
 });
 
-it("reads legacy snapshots without inventing or rewriting classifications", () => {
+it("accepts unclassified drafts without inventing recorded roles", () => {
   const snapshot = { title: "Old workout", exercises: [exercise] };
   expect(workoutLogSnapshotSchema.parse(snapshot)).toEqual(snapshot);
   expect(workoutExerciseSchema.parse(exercise).role).toBeUndefined();

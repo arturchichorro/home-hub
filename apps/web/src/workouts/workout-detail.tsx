@@ -1,11 +1,12 @@
 import { calendarDate } from "@home-hub/shared/habits";
+import { trainingHistoryPageSize as workoutHistoryPageSize } from "@home-hub/shared/training";
 import {
   planExerciseEdits,
   workoutExercisesFromRows,
   workoutLogSnapshotSchema,
 } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
-import { queries, workoutHistoryPageSize } from "@home-hub/shared/zero/queries";
+import { queries } from "@home-hub/shared/zero/queries";
 import {
   AccordionHeader,
   AccordionItem,
@@ -32,6 +33,10 @@ import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { blockAppUpdate, useBlockAppUpdate } from "../updates/activity";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import {
+  type ExercisePerformance,
+  projectTrainingSession,
+} from "./training-log-projection";
 import { WorkoutExercises, WorkoutText } from "./workout-fields";
 import { WorkoutHistoryEntry } from "./workout-history-entry";
 import { type WorkoutLog, WorkoutLogActions } from "./workout-log";
@@ -40,10 +45,6 @@ import {
   WorkoutLogEditor,
 } from "./workout-log-editor";
 import { findDailyWorkoutLog, openWorkoutLog } from "./workout-log-form";
-import {
-  type ExercisePerformance,
-  projectWorkoutLog,
-} from "./workout-log-projection";
 
 const emptySubscribe = () => () => {};
 
@@ -100,7 +101,8 @@ function WorkoutDetailPage({
     { completedOn: string; completedAt: number; id: string }[]
   >([]);
   const [logRows, logResult] = useQuery(
-    queries.workouts.historyPage({
+    queries.training.history({
+      includeExercises: true,
       householdId,
       workoutId,
       cursor: cursors.at(-1),
@@ -139,11 +141,11 @@ function WorkoutDetailPage({
   }, []);
 
   const [dailyRows, dailyResult] = useQuery(
-    queries.workouts.logForDay({ householdId, workoutId, completedOn: day }),
+    queries.training.session({ householdId, workoutId, completedOn: day }),
   );
   const [selectedRows] = useQuery(
     requestedLogId
-      ? queries.workouts.logById({
+      ? queries.training.session({
           householdId,
           workoutId,
           logId: requestedLogId,
@@ -158,12 +160,12 @@ function WorkoutDetailPage({
             (row) => [row.id, row],
           ),
         ).values(),
-      ].map(projectWorkoutLog),
+      ].map(projectTrainingSession),
     [logRows, dailyRows, selectedRows],
   );
   const visibleLogs = logRows
     .slice(0, workoutHistoryPageSize)
-    .map(projectWorkoutLog);
+    .map(projectTrainingSession);
   const selected = logs.find((log) => log.id === activeLogId);
 
   if (selected && !visibleLogs.some((log) => log.id === selected.id)) {
@@ -226,6 +228,7 @@ function WorkoutDetailPage({
   const [previousRows] = useQuery(
     form
       ? queries.workouts.previousExercises({
+          excludeSessionId: state.form.id,
           householdId,
           exerciseIds: [
             ...new Set(
@@ -333,9 +336,9 @@ function WorkoutDetailPage({
 
             enabled: () => enabledRef.current,
 
-            save: (args) => perform(mutators.workouts.saveSet(args)),
+            save: (args) => perform(mutators.training.saveSet(args)),
 
-            remove: (args) => perform(mutators.workouts.removeSet(args)),
+            remove: (args) => perform(mutators.training.removeSet(args)),
           },
         ),
       );
@@ -529,7 +532,6 @@ function WorkoutDetailPage({
               entry={entry}
               onDraftChange={noteDraftChanged}
               householdId={householdId}
-              workoutId={workoutId}
               selected={form?.id === entry.id}
               disabled={
                 disabled ||

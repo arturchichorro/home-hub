@@ -1,7 +1,5 @@
-import {
-  logOnlyWorkoutExercise,
-  type SaveExerciseSet,
-} from "@home-hub/shared/exercise-logs";
+import type { SaveTrainingSet } from "@home-hub/shared/training";
+import { logOnlyWorkoutExercise } from "@home-hub/shared/training";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { WorkoutLog } from "./workout-log";
 import { WorkoutLogEditor } from "./workout-log-editor";
@@ -20,9 +18,7 @@ const catalog = (name: string, unilateral = false) => ({
 const a = catalog("A");
 const b = catalog("B");
 type Save = (
-  args: Omit<SaveExerciseSet, "workoutId"> & { workoutId: null },
-  form: WorkoutLogForm,
-  ids: readonly string[],
+  args: Omit<SaveTrainingSet, "workoutId"> & { workoutId: null },
 ) => Promise<boolean>;
 function setup(onSave?: Save) {
   const save = vi.fn<Save>(onSave ?? (async () => true));
@@ -31,7 +27,6 @@ function setup(onSave?: Save) {
     {
       householdId,
       workoutId: null,
-      persistAllExercises: true,
       timeZone: "UTC",
       enabled: () => true,
       save,
@@ -58,7 +53,7 @@ function optimistic(form: WorkoutLogForm): WorkoutLog {
     completedAt: Date.now(),
     createdAt: Date.now(),
     snapshot: form.snapshot,
-    exerciseLogIds: form.exerciseLogIds ?? {},
+    sessionExerciseIds: form.sessionExerciseIds ?? {},
     logOnlyExerciseIds: form.logOnlyExerciseIds ?? [],
     sets: [],
   };
@@ -84,12 +79,12 @@ it("guards local selections without creating a log and saves every selection in 
   fill(editor, b.id);
   await editor.flush(b.id, 1);
   const call = save.mock.calls[0];
-  expect(call?.[1].snapshot.exercises.map((row) => row.id)).toEqual([
+  expect(call?.[0].exercises.map((row) => row.catalogExerciseId)).toEqual([
     a.id,
     b.id,
   ]);
-  expect(call?.[2]).toEqual([a.id, b.id]);
-  expect(call?.[0].snapshot.exercises).toEqual([]);
+  expect(call?.[0].exercises.every((row) => row.isNew)).toBe(true);
+  expect(call?.[0].workoutId).toBeNull();
   expect(editor.getSnapshot().headerConfirmed).toBe(true);
   expect(editor.getSnapshot().hasChanges).toBe(false);
   expect(editor.getSnapshot().recorded.size).toBe(1);
@@ -98,14 +93,14 @@ it("guards local selections without creating a log and saves every selection in 
 it("retains selections and values after failure, ignores an unacknowledged optimistic header, and retries with stable identities on the new day", async () => {
   let controller: WorkoutLogEditor<null>;
   let fail = true;
-  const { editor, save } = setup(async (_args, form) => {
-    controller.sync(optimistic(form));
+  const { editor, save } = setup(async () => {
+    controller.sync(optimistic(controller.getSnapshot().form));
     return !fail;
   });
   controller = editor;
   editor.addExercise(a);
   editor.addExercise(b);
-  const ids = { ...editor.getSnapshot().form.exerciseLogIds };
+  const ids = { ...editor.getSnapshot().form.sessionExerciseIds };
   fill(editor, b.id);
   await editor.flush(b.id, 1);
   expect(editor.getSnapshot().headerConfirmed).toBe(false);
@@ -116,8 +111,10 @@ it("retains selections and values after failure, ignores an unacknowledged optim
   vi.setSystemTime(new Date("2026-11-09T00:00:01Z"));
   await editor.flush(b.id, 1);
   expect(save.mock.calls[1]?.[0].completedOn).toBe("2026-11-09");
-  expect(save.mock.calls[1]?.[2]).toEqual([a.id, b.id]);
-  expect(editor.getSnapshot().form.exerciseLogIds).toEqual(ids);
+  expect(save.mock.calls[1]?.[0].exercises.every((row) => row.isNew)).toBe(
+    true,
+  );
+  expect(editor.getSnapshot().form.sessionExerciseIds).toEqual(ids);
   expect(editor.getSnapshot().hasChanges).toBe(false);
 });
 
@@ -148,11 +145,15 @@ it("keeps exercises added while a set save is in flight as guarded drafts", asyn
   await pending;
   expect(editor.getSnapshot().hasChanges).toBe(true);
   expect(
-    save.mock.calls[0]?.[1].snapshot.exercises.map((row) => row.id),
+    save.mock.calls[0]?.[0].exercises.map((row) => row.catalogExerciseId),
   ).toEqual([a.id, b.id]);
   fill(editor, c.id);
   await editor.flush(c.id, 1);
-  expect(save.mock.calls[1]?.[2]).toEqual([c.id]);
+  expect(
+    save.mock.calls[1]?.[0].exercises
+      .filter((row) => row.isNew)
+      .map((row) => row.catalogExerciseId),
+  ).toEqual([c.id]);
   expect(editor.getSnapshot().hasChanges).toBe(false);
 });
 
@@ -166,11 +167,11 @@ it("reconciles a canonical daily identity without overwriting dirty inputs or pr
     ...optimistic(editor.getSnapshot().form),
     id,
     completedAt: 100,
-    exerciseLogIds: { [a.id]: occurrence },
+    sessionExerciseIds: { [a.id]: occurrence },
   };
   editor.sync(log);
   expect(editor.getSnapshot().form.id).toBe(id);
-  expect(editor.getSnapshot().form.exerciseLogIds?.[a.id]).toBe(occurrence);
+  expect(editor.getSnapshot().form.sessionExerciseIds?.[a.id]).toBe(occurrence);
   expect(editor.getSnapshot().form.inputs[`${a.id}:1`]?.amount).toBe("5");
   expect(editor.getSnapshot().hasChanges).toBe(true);
 });
@@ -202,7 +203,7 @@ it("can discard a selected exercise and its timers without deleting the catalog 
   expect(
     editor.getSnapshot().form.snapshot.exercises.map((row) => row.id),
   ).toEqual([b.id]);
-  expect(editor.getSnapshot().form.exerciseLogIds?.[a.id]).toBeUndefined();
+  expect(editor.getSnapshot().form.sessionExerciseIds?.[a.id]).toBeUndefined();
   expect(editor.getSnapshot().form.inputs[`${a.id}:1`]).toBeUndefined();
   expect(editor.getSnapshot().form.inputs[`${b.id}:1`]?.amount).toBe("7");
   expect(editor.getSnapshot().hasChanges).toBe(true);

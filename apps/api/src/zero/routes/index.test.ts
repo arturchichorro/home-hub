@@ -174,7 +174,9 @@ describe("Zero routes", () => {
       body: JSON.stringify(body),
     });
     expect(response.status).toBe(200);
-    expect(JSON.stringify(await response.json())).toContain("Reload Home Hub");
+    expect(JSON.stringify(await response.json())).toContain(
+      "Mutator not found",
+    );
     expect(provider.run).not.toHaveBeenCalled();
     expect(provider.update).not.toHaveBeenCalled();
   });
@@ -187,26 +189,23 @@ describe("Zero routes", () => {
     const request = createMutationRequest();
     const args = {
       householdId,
-      workoutId: listId,
+      workoutId: null,
       logId: itemId,
-      workoutExerciseId: itemId,
-      exerciseLogId: crypto.randomUUID(),
+      sessionExerciseId: itemId,
       round: 1,
-      snapshot: {
-        title: "Test",
-        exercises: [
-          {
-            id: itemId,
-            catalogExerciseId: itemId,
-            name: "Row",
-            sets: 2,
-            target: "",
-            unit: "reps",
-            load: "single",
-            unilateral: false,
-          },
-        ],
-      },
+      name: "Test",
+      note: "",
+      exercises: [
+        {
+          id: itemId,
+          catalogExerciseId: itemId,
+          templateExerciseId: null,
+          unit: "reps",
+          load: "single",
+          unilateral: false,
+          isNew: true,
+        },
+      ],
       completedOn: "1970-01-01",
       optimisticTimestamp: 0,
       timeZone: "UTC",
@@ -217,7 +216,7 @@ describe("Zero routes", () => {
 
       mutations: request.mutations.map((m) => ({
         ...m,
-        name: "workouts.saveSet",
+        name: "training.saveSet",
         args: [args],
       })),
     };

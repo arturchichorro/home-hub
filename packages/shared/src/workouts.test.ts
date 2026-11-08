@@ -2,41 +2,12 @@ import { describe, expect, it } from "vitest";
 import { starterWorkouts } from "./workout-seed";
 import {
   reorderWorkoutsSchema,
-  saveWorkoutLogSchema,
-  updateWorkoutLogNoteSchema,
   updateWorkoutSchema,
   workoutContentSchema,
   workoutExercisesSchema,
 } from "./workouts";
 
 describe("workouts", () => {
-  it("validates private note updates independently and rejects actor spoofing", () => {
-    const args = {
-      householdId: crypto.randomUUID(),
-      workoutId: crypto.randomUUID(),
-      logId: crypto.randomUUID(),
-      note: "  Felt good.\nWrist rehab.  ",
-    };
-    expect(updateWorkoutLogNoteSchema.parse(args).note).toBe(
-      "Felt good.\nWrist rehab.",
-    );
-    expect(updateWorkoutLogNoteSchema.parse({ ...args, note: "" }).note).toBe(
-      "",
-    );
-    expect(
-      updateWorkoutLogNoteSchema.safeParse({
-        ...args,
-        userId: crypto.randomUUID(),
-      }).success,
-    ).toBe(false);
-    expect(
-      updateWorkoutLogNoteSchema.safeParse({
-        ...args,
-        note: "a".repeat(1000001),
-      }).success,
-    ).toBe(false);
-  });
-
   it("ships three standalone workouts with one notes field", () => {
     expect(starterWorkouts.map((w) => w.title)).toEqual([
       "Workout A",
@@ -113,57 +84,5 @@ describe("workouts", () => {
       reorderWorkoutsSchema.safeParse({ ...args, orderedWorkoutIds: [other] })
         .success,
     ).toBe(false);
-  });
-  it("validates a complete submission and rejects spoofed actors and duplicate sets", () => {
-    const set = {
-      workoutExerciseId: crypto.randomUUID(),
-      round: 1,
-      values: { weightKg: 8, amount: 10, rightAmount: null },
-    };
-    const request = {
-      householdId: crypto.randomUUID(),
-      workoutId: crypto.randomUUID(),
-      logId: crypto.randomUUID(),
-      optimisticTimestamp: 1,
-      snapshot: {
-        title: starterWorkouts[0]?.title,
-        exercises: starterWorkouts[0]?.exercises,
-      },
-      note: "",
-      timeZone: "UTC",
-      sets: [set],
-    };
-    expect(saveWorkoutLogSchema.safeParse(request).success).toBe(true);
-    expect(
-      saveWorkoutLogSchema.safeParse({
-        ...request,
-        snapshot: { ...request.snapshot, notes: "Do not copy workout notes" },
-      }).success,
-    ).toBe(false);
-    expect(
-      saveWorkoutLogSchema.safeParse({
-        ...request,
-        userId: crypto.randomUUID(),
-      }).success,
-    ).toBe(false);
-    expect(
-      saveWorkoutLogSchema.safeParse({ ...request, action: "start" }).success,
-    ).toBe(false);
-    expect(
-      saveWorkoutLogSchema.safeParse({ ...request, sets: [set, set] }).success,
-    ).toBe(false);
-
-    for (const values of [
-      { ...set.values, amount: -1 },
-      { ...set.values, weightKg: -1 },
-      { ...set.values, amount: 1.5 },
-    ]) {
-      expect(
-        saveWorkoutLogSchema.safeParse({
-          ...request,
-          sets: [{ ...set, values }],
-        }).success,
-      ).toBe(false);
-    }
   });
 });

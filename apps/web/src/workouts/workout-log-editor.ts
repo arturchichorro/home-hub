@@ -1,9 +1,6 @@
-import {
-  logOnlyWorkoutExercise,
-  type RemoveExerciseSet,
-  type SaveExerciseSet,
-} from "@home-hub/shared/exercise-logs";
 import { calendarDate } from "@home-hub/shared/habits";
+import type { SaveTrainingSet } from "@home-hub/shared/training";
+import { logOnlyWorkoutExercise } from "@home-hub/shared/training";
 import type {
   CatalogExercise,
   WorkoutExercise,
@@ -11,6 +8,7 @@ import type {
 import type { WorkoutLog } from "./workout-log";
 import {
   completeSetValues,
+  exerciseForSet,
   exerciseRoundCount,
   exerciseRounds,
   nextExerciseRound,
@@ -32,17 +30,17 @@ const fingerprint = (input: WorkoutSetInput | undefined) =>
 type Options<Scope extends string | null> = {
   householdId: string;
   workoutId: Scope;
-  persistAllExercises?: boolean;
   timeZone: string;
   enabled: () => boolean;
   save: (
-    args: Omit<SaveExerciseSet, "workoutId"> & { workoutId: Scope },
-    form: WorkoutLogForm,
-    newExerciseIds: readonly string[],
+    args: Omit<SaveTrainingSet, "workoutId"> & { workoutId: Scope },
   ) => Promise<boolean>;
-  remove: (
-    args: Omit<RemoveExerciseSet, "workoutId"> & { workoutId: Scope },
-  ) => Promise<boolean>;
+  remove: (args: {
+    householdId: string;
+    logId: string;
+    sessionExerciseId: string;
+    round: number;
+  }) => Promise<boolean>;
 };
 
 export type WorkoutEditorState = {
@@ -149,7 +147,11 @@ export class WorkoutLogEditor<Scope extends string | null = string> {
 
     const exercise = this.form.snapshot.exercises.find((e) => e.id === id);
 
-    if (exercise && this.dirty.has(key) && completeSetValues(exercise, input)) {
+    if (
+      exercise &&
+      this.dirty.has(key) &&
+      completeSetValues(exerciseForSet(exercise, this.form, round), input)
+    ) {
       this.timers.set(
         key,
         setTimeout(() => {
@@ -183,7 +185,10 @@ export class WorkoutLogEditor<Scope extends string | null = string> {
           !this.dirty.has(key) ||
           this.queued.has(key) ||
           this.deleting.has(key) ||
-          !completeSetValues(exercise, this.form.inputs[key])
+          !completeSetValues(
+            exerciseForSet(exercise, this.form, n),
+            this.form.inputs[key],
+          )
         ) {
           continue;
         }
@@ -191,7 +196,7 @@ export class WorkoutLogEditor<Scope extends string | null = string> {
         this.queued.add(key);
         this.chain = this.chain
           .catch(() => {})
-          .then(() => this.drain(exercise, n))
+          .then(() => this.drain(exerciseForSet(exercise, this.form, n), n))
           .finally(() => {
             this.queued.delete(key);
             this.emit();
@@ -224,13 +229,13 @@ export class WorkoutLogEditor<Scope extends string | null = string> {
         };
       }
 
-      const exerciseLogId =
-        this.form.exerciseLogIds?.[exercise.id] ?? crypto.randomUUID();
+      const sessionExerciseId =
+        this.form.sessionExerciseIds?.[exercise.id] ?? crypto.randomUUID();
       this.form = {
         ...this.form,
-        exerciseLogIds: {
-          ...this.form.exerciseLogIds,
-          [exercise.id]: exerciseLogId,
+        sessionExerciseIds: {
+          ...this.form.sessionExerciseIds,
+          [exercise.id]: sessionExerciseId,
         },
       };
       // Publish the chosen day before Zero can emit an optimistic/remote header.
@@ -238,41 +243,48 @@ export class WorkoutLogEditor<Scope extends string | null = string> {
 
       const savingForm = this.form;
       const newExerciseIds = [...this.unsavedExercises];
+      const persistedRows = savingForm.snapshot.exercises.filter(
+        (row) =>
+          this.options.workoutId === null ||
+          !savingForm.logOnlyExerciseIds?.includes(row.id) ||
+          !newExerciseIds.includes(row.id) ||
+          row.id === exercise.id,
+      );
       const performedAt = this.form.completedAt ?? Date.now();
       let success = false;
 
       try {
-        success = await this.options.save(
-          {
-            householdId: this.options.householdId,
-            workoutId: this.options.workoutId,
-            logId: this.form.id,
-            workoutExerciseId: exercise.id,
-            exerciseLogId,
-            round,
-            values,
-            snapshot: {
-              ...this.form.snapshot,
-              exercises: this.form.snapshot.exercises.filter(
-                (row) => !this.form.logOnlyExerciseIds?.includes(row.id),
-              ),
-            },
-            ...(this.form.logOnlyExerciseIds?.includes(exercise.id)
-              ? { logOnlyExercise: exercise }
-              : {}),
-            completedOn:
-              this.form.completedOn ??
-              calendarDate(performedAt, this.options.timeZone),
-            optimisticTimestamp: performedAt,
-            timeZone: this.options.timeZone,
-          },
-          savingForm,
-          newExerciseIds,
-        );
+        success = await this.options.save({
+          householdId: this.options.householdId,
+          workoutId: this.options.workoutId,
+          logId: savingForm.id,
+          completedOn:
+            savingForm.completedOn ??
+            calendarDate(performedAt, this.options.timeZone),
+          optimisticTimestamp: performedAt,
+          timeZone: this.options.timeZone,
+          name: savingForm.snapshot.title,
+          note: "",
+          sessionExerciseId: sessionExerciseId,
+          round,
+          values,
+          exercises: persistedRows.map((row) => ({
+            id: savingForm.sessionExerciseIds?.[row.id] ?? crypto.randomUUID(),
+            catalogExerciseId: row.catalogExerciseId ?? row.id,
+            templateExerciseId: savingForm.logOnlyExerciseIds?.includes(row.id)
+              ? null
+              : row.id,
+            unit: row.id === exercise.id ? exercise.unit : row.unit,
+            load: row.id === exercise.id ? exercise.load : row.load,
+            unilateral:
+              row.id === exercise.id ? exercise.unilateral : row.unilateral,
+            isNew: !this.headerConfirmed || newExerciseIds.includes(row.id),
+          })),
+        });
       } catch {}
 
       if (!success) {
-        if (this.options.persistAllExercises && !this.headerConfirmed) {
+        if (!this.headerConfirmed) {
           this.form = { ...this.form, completedAt: null, completedOn: null };
         }
         this.errors[key] = "Unable to save this set. Your input is still here.";
@@ -281,9 +293,7 @@ export class WorkoutLogEditor<Scope extends string | null = string> {
       }
 
       this.headerConfirmed = true;
-      for (const row of this.options.persistAllExercises
-        ? savingForm.snapshot.exercises
-        : [exercise]) {
+      for (const row of persistedRows) {
         this.unsavedExercises.delete(row.id);
       }
       this.saved.set(key, input);
@@ -322,8 +332,8 @@ export class WorkoutLogEditor<Scope extends string | null = string> {
         ...(this.form.logOnlyExerciseIds ?? []),
         exercise.id,
       ],
-      exerciseLogIds: {
-        ...this.form.exerciseLogIds,
+      sessionExerciseIds: {
+        ...this.form.sessionExerciseIds,
         [exercise.id]: crypto.randomUUID(),
       },
     };
@@ -345,13 +355,19 @@ export class WorkoutLogEditor<Scope extends string | null = string> {
         delete this.errors[key];
       }
     }
-    const exerciseLogIds = { ...this.form.exerciseLogIds };
-    delete exerciseLogIds[id];
+    const setDefinitions = Object.fromEntries(
+      Object.entries(this.form.setDefinitions ?? {}).filter(
+        ([key]) => !key.startsWith(`${id}:`),
+      ),
+    );
+    const sessionExerciseIds = { ...this.form.sessionExerciseIds };
+    delete sessionExerciseIds[id];
     this.unsavedExercises.delete(id);
     this.form = {
       ...this.form,
       inputs,
-      exerciseLogIds,
+      setDefinitions,
+      sessionExerciseIds,
       snapshot: {
         ...this.form.snapshot,
         exercises: this.form.snapshot.exercises.filter((row) => row.id !== id),
@@ -416,13 +432,9 @@ export class WorkoutLogEditor<Scope extends string | null = string> {
         try {
           success = await this.options.remove({
             householdId: this.options.householdId,
-            workoutId: this.options.workoutId,
             logId: this.form.id,
-            workoutExerciseId: id,
+            sessionExerciseId: this.form.sessionExerciseIds?.[id] ?? "",
             round,
-            ...(this.form.completedOn
-              ? { completedOn: this.form.completedOn }
-              : {}),
           });
         } catch {}
 
@@ -448,16 +460,14 @@ export class WorkoutLogEditor<Scope extends string | null = string> {
     this.saved.delete(key);
     this.dirty.delete(key);
     delete this.errors[key];
-    this.form = { ...this.form, inputs };
+    const setDefinitions = { ...this.form.setDefinitions };
+    delete setDefinitions[key];
+    this.form = { ...this.form, inputs, setDefinitions };
     this.emit();
   }
 
   sync(log: WorkoutLog) {
-    if (
-      this.options.persistAllExercises &&
-      !this.headerConfirmed &&
-      this.queued.size
-    ) {
+    if (!this.headerConfirmed && this.queued.size && log.id === this.form.id) {
       return;
     }
     let changed =
@@ -468,8 +478,8 @@ export class WorkoutLogEditor<Scope extends string | null = string> {
       changed = true;
     }
 
-    for (const [id, value] of Object.entries(log.exerciseLogIds ?? {})) {
-      if (this.form.exerciseLogIds?.[id] !== value) {
+    for (const [id, value] of Object.entries(log.sessionExerciseIds ?? {})) {
+      if (this.form.sessionExerciseIds?.[id] !== value) {
         changed = true;
       }
     }
@@ -496,8 +506,8 @@ export class WorkoutLogEditor<Scope extends string | null = string> {
     for (const id of remote.logOnlyExerciseIds ?? []) {
       if (
         this.unsavedExercises.has(id) &&
-        !(this.options.persistAllExercises && this.queued.size) &&
-        log.exerciseLogIds?.[id] &&
+        !this.queued.size &&
+        log.sessionExerciseIds?.[id] &&
         ![...this.dirty, ...this.queued, ...this.deleting].some((key) =>
           key.startsWith(`${id}:`),
         )
@@ -508,6 +518,29 @@ export class WorkoutLogEditor<Scope extends string | null = string> {
     }
 
     const inputs = { ...this.form.inputs };
+    const setDefinitions = { ...this.form.setDefinitions };
+
+    for (const key of new Set([
+      ...Object.keys(setDefinitions),
+      ...Object.keys(remote.setDefinitions ?? {}),
+    ])) {
+      if (
+        this.dirty.has(key) ||
+        this.queued.has(key) ||
+        this.deleting.has(key)
+      ) {
+        continue;
+      }
+      const next = remote.setDefinitions?.[key];
+      if (JSON.stringify(setDefinitions[key]) !== JSON.stringify(next)) {
+        changed = true;
+        if (next) {
+          setDefinitions[key] = next;
+        } else {
+          delete setDefinitions[key];
+        }
+      }
+    }
 
     for (const key of new Set([
       ...Object.keys(inputs),
@@ -562,13 +595,17 @@ export class WorkoutLogEditor<Scope extends string | null = string> {
         id: log.id,
         completedAt: log.completedAt,
         completedOn: log.completedOn,
-        exerciseLogIds: { ...this.form.exerciseLogIds, ...log.exerciseLogIds },
+        sessionExerciseIds: {
+          ...this.form.sessionExerciseIds,
+          ...log.sessionExerciseIds,
+        },
         snapshot: {
           ...this.form.snapshot,
           exercises: [...this.form.snapshot.exercises, ...additions],
         },
         logOnlyExerciseIds: logOnlyIds,
         inputs,
+        setDefinitions,
       };
       this.emit();
     }

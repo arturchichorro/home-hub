@@ -12,7 +12,6 @@ import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 
 export function WorkoutLogNoteInput({
   householdId,
-  workoutId,
   logId,
   note,
   focusOnMount = false,
@@ -22,7 +21,6 @@ export function WorkoutLogNoteInput({
   onDirtyChange,
 }: {
   householdId: string;
-  workoutId: string;
   logId: string;
   note: string;
   focusOnMount?: boolean;
@@ -45,12 +43,7 @@ export function WorkoutLogNoteInput({
 
     save: async (note) => {
       const mutation = zero.mutate(
-        mutators.workouts.updateLogNote({
-          householdId,
-          workoutId,
-          logId,
-          note,
-        }),
+        mutators.training.update({ householdId, logId, changes: { note } }),
       );
       const result = await acknowledgeMutation(mutation);
 

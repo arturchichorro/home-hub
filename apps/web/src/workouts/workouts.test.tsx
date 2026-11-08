@@ -1,4 +1,4 @@
-import { logOnlyWorkoutExercise } from "@home-hub/shared/exercise-logs";
+import { logOnlyWorkoutExercise } from "@home-hub/shared/training";
 import { starterWorkouts } from "@home-hub/shared/workout-seed";
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -145,22 +145,19 @@ it("renders a compact mixed history with dates, names and origin, leaving notes 
     name: "Private mix",
     note: "Do not preview this note",
     deletedAt: null,
-    removedExerciseLogIds: [],
+    workoutId: null,
+    exercises: [],
   };
   const normal = {
     ...common,
     id: crypto.randomUUID(),
     workoutId,
     note: "Original private note",
-    snapshot: { title: "Original lift", exercises: [] },
-    exerciseRoles: {},
+    name: "Original lift",
+    exercises: [],
   };
   useQuery.mockImplementation((request) => [
-    request?.query?.queryName === "training.history"
-      ? [free]
-      : request?.query?.queryName === "training.workouts"
-        ? [normal]
-        : [],
+    request?.query?.queryName === "training.history" ? [free, normal] : [],
     { type: "complete" },
   ]);
   const html = renderToStaticMarkup(
@@ -252,7 +249,6 @@ describe("simple workouts", () => {
       <WorkoutHistoryEntry
         entry={entry}
         householdId={householdId}
-        workoutId={workoutId}
         disabled={false}
         selected={false}
         onSelect={() => {}}
@@ -282,7 +278,6 @@ describe("simple workouts", () => {
       <WorkoutHistoryEntry
         entry={entry}
         householdId={householdId}
-        workoutId={workoutId}
         disabled={false}
         selected={false}
         onSelect={() => {}}
@@ -469,40 +464,51 @@ describe("simple workouts", () => {
 
     const entry = {
       id: "history",
+      householdId,
+      userId: crypto.randomUUID(),
+      workoutId,
+      name: starter.title,
+      note: "",
       completedOn: "2026-10-25",
+      completedAt: 1,
       createdAt: Date.now(),
-      snapshot: { title: starter.title, exercises: starter.exercises },
-
-      sets: [1, 2].map((round) => ({
-        logId: "history",
-        exerciseId: exercise.id,
-        workoutExerciseId: exercise.id,
-        householdId,
-        round,
-        weightKg: 8,
-        amount: 10,
-        rightAmount: null,
-        unit: exercise.unit,
-        load: exercise.load,
-        unilateral: exercise.unilateral,
-      })),
+      deletedAt: null,
+      exercises: [
+        {
+          id: "occurrence",
+          sessionId: "history",
+          householdId,
+          userId: crypto.randomUUID(),
+          exerciseId: exercise.catalogExerciseId ?? exercise.id,
+          templateExerciseId: exercise.id,
+          name: exercise.name,
+          role: exercise.role ?? "workout",
+          position: 0,
+          unit: exercise.unit,
+          load: exercise.load,
+          unilateral: exercise.unilateral,
+          plannedSets: exercise.sets,
+          target: exercise.target,
+          performedOn: "2026-10-25",
+          performedAt: 1,
+          deletedAt: null,
+          sets: [1, 2].map((round) => ({
+            sessionExerciseId: "occurrence",
+            round,
+            weightKg: 8,
+            amount: 10,
+            rightAmount: null,
+            unit: exercise.unit,
+            load: exercise.load,
+            unilateral: exercise.unilateral,
+          })),
+        },
+      ],
     };
     useQuery
       .mockReturnValueOnce([workout, { type: "complete" }])
       .mockReturnValueOnce([
-        [
-          {
-            ...entry,
-            loggedExercises: [
-              {
-                workoutExerciseId: exercise.id,
-                exerciseLogId: "occurrence",
-                occurrence: { exerciseId: exercise.id, sets: entry.sets },
-              },
-            ],
-          },
-          { ...entry, id: "empty", sets: [], loggedExercises: [] },
-        ],
+        [entry, { ...entry, id: "empty", exercises: [] }],
         { type: "complete" },
       ]);
 

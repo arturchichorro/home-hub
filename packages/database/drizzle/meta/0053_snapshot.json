@@ -1,5 +1,5 @@
 {
-  "id": "fd212a61-1550-4d14-a419-07239700f765",
+  "id": "18cc5086-3dd8-4b86-8b2d-8d344b57cb83",
   "prevId": "7f72a63b-ccba-4e55-8a4f-5cc27b3f6713",
   "version": "7",
   "dialect": "postgresql",
@@ -501,254 +501,6 @@
           "value": "\"documents\".\"description\" IS NULL OR length(\"documents\".\"description\") <= 1000"
         }
       },
-      "isRLSEnabled": false
-    },
-    "public.exercise_log_sets": {
-      "name": "exercise_log_sets",
-      "schema": "",
-      "columns": {
-        "exercise_log_id": {
-          "name": "exercise_log_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "round": {
-          "name": "round",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "amount": {
-          "name": "amount",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "right_amount": {
-          "name": "right_amount",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "weight_kg": {
-          "name": "weight_kg",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "unit": {
-          "name": "unit",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "load": {
-          "name": "load",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "unilateral": {
-          "name": "unilateral",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "exercise_log_sets_exercise_log_id_exercise_logs_id_fk": {
-          "name": "exercise_log_sets_exercise_log_id_exercise_logs_id_fk",
-          "tableFrom": "exercise_log_sets",
-          "tableTo": "exercise_logs",
-          "columnsFrom": [
-            "exercise_log_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "exercise_log_sets_exercise_log_id_round_pk": {
-          "name": "exercise_log_sets_exercise_log_id_round_pk",
-          "columns": [
-            "exercise_log_id",
-            "round"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "exercise_log_sets_round": {
-          "name": "exercise_log_sets_round",
-          "value": "\"exercise_log_sets\".\"round\" between 1 and 10"
-        },
-        "exercise_log_sets_amount": {
-          "name": "exercise_log_sets_amount",
-          "value": "\"exercise_log_sets\".\"amount\" between 0 and 600"
-        },
-        "exercise_log_sets_right": {
-          "name": "exercise_log_sets_right",
-          "value": "\"exercise_log_sets\".\"right_amount\" is null or (\"exercise_log_sets\".\"unilateral\" and \"exercise_log_sets\".\"right_amount\" between 0 and 600)"
-        },
-        "exercise_log_sets_weight": {
-          "name": "exercise_log_sets_weight",
-          "value": "\"exercise_log_sets\".\"weight_kg\" is null or (\"exercise_log_sets\".\"load\" <> 'bodyweight' and \"exercise_log_sets\".\"weight_kg\" between 0 and 1000)"
-        },
-        "exercise_log_sets_unit": {
-          "name": "exercise_log_sets_unit",
-          "value": "\"exercise_log_sets\".\"unit\" in ('reps', 'seconds')"
-        },
-        "exercise_log_sets_load": {
-          "name": "exercise_log_sets_load",
-          "value": "\"exercise_log_sets\".\"load\" in ('per-hand', 'single', 'bodyweight')"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.exercise_logs": {
-      "name": "exercise_logs",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "household_id": {
-          "name": "household_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "exercise_id": {
-          "name": "exercise_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "performed_on": {
-          "name": "performed_on",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "performed_at": {
-          "name": "performed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "snapshot": {
-          "name": "snapshot",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "exercise_logs_latest": {
-          "name": "exercise_logs_latest",
-          "columns": [
-            {
-              "expression": "household_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "exercise_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "performed_on",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "performed_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "exercise_logs_user_id_users_id_fk": {
-          "name": "exercise_logs_user_id_users_id_fk",
-          "tableFrom": "exercise_logs",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "exercise_logs_household_id_exercise_id_exercises_household_id_id_fk": {
-          "name": "exercise_logs_household_id_exercise_id_exercises_household_id_id_fk",
-          "tableFrom": "exercise_logs",
-          "tableTo": "exercises",
-          "columnsFrom": [
-            "household_id",
-            "exercise_id"
-          ],
-          "columnsTo": [
-            "household_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "exercise_logs_author_id": {
-          "name": "exercise_logs_author_id",
-          "nullsNotDistinct": false,
-          "columns": [
-            "household_id",
-            "user_id",
-            "id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.exercise_media": {
@@ -3561,20 +3313,14 @@
       "name": "training_session_exercises",
       "schema": "",
       "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
         "session_id": {
           "name": "session_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "exercise_id": {
-          "name": "exercise_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "exercise_log_id": {
-          "name": "exercise_log_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -3591,17 +3337,179 @@
           "primaryKey": false,
           "notNull": true
         },
+        "exercise_id": {
+          "name": "exercise_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "template_exercise_id": {
+          "name": "template_exercise_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "position": {
           "name": "position",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit": {
+          "name": "unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "load": {
+          "name": "load",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unilateral": {
+          "name": "unilateral",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "planned_sets": {
+          "name": "planned_sets",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target": {
+          "name": "target",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "performed_on": {
+          "name": "performed_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "performed_at": {
+          "name": "performed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "training_exercises_template_slot": {
+          "name": "training_exercises_template_slot",
+          "columns": [
+            {
+              "expression": "session_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "template_exercise_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"training_session_exercises\".\"template_exercise_id\" is not null and \"training_session_exercises\".\"deleted_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "training_exercises_extra_catalog": {
+          "name": "training_exercises_extra_catalog",
+          "columns": [
+            {
+              "expression": "session_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "exercise_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"training_session_exercises\".\"template_exercise_id\" is null and \"training_session_exercises\".\"deleted_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "training_exercises_latest": {
+          "name": "training_exercises_latest",
+          "columns": [
+            {
+              "expression": "household_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "exercise_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "performed_on",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "performed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
-        "training_session_exercises_household_id_user_id_session_id_training_sessions_household_id_user_id_id_fk": {
-          "name": "training_session_exercises_household_id_user_id_session_id_training_sessions_household_id_user_id_id_fk",
+        "training_exercises_session_fk": {
+          "name": "training_exercises_session_fk",
           "tableFrom": "training_session_exercises",
           "tableTo": "training_sessions",
           "columnsFrom": [
@@ -3617,25 +3525,8 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "training_session_exercises_household_id_user_id_exercise_log_id_exercise_logs_household_id_user_id_id_fk": {
-          "name": "training_session_exercises_household_id_user_id_exercise_log_id_exercise_logs_household_id_user_id_id_fk",
-          "tableFrom": "training_session_exercises",
-          "tableTo": "exercise_logs",
-          "columnsFrom": [
-            "household_id",
-            "user_id",
-            "exercise_log_id"
-          ],
-          "columnsTo": [
-            "household_id",
-            "user_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "training_session_exercises_household_id_exercise_id_exercises_household_id_id_fk": {
-          "name": "training_session_exercises_household_id_exercise_id_exercises_household_id_id_fk",
+        "training_exercises_catalog_fk": {
+          "name": "training_exercises_catalog_fk",
           "tableFrom": "training_session_exercises",
           "tableTo": "exercises",
           "columnsFrom": [
@@ -3650,26 +3541,127 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "training_session_exercises_session_id_exercise_id_pk": {
-          "name": "training_session_exercises_session_id_exercise_id_pk",
-          "columns": [
-            "session_id",
-            "exercise_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "training_session_exercises_exercise_log_id_unique": {
-          "name": "training_session_exercises_exercise_log_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "exercise_log_id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "training_exercises_definition": {
+          "name": "training_exercises_definition",
+          "value": "\"training_session_exercises\".\"unit\" in ('reps', 'seconds') and \"training_session_exercises\".\"load\" in ('per-hand', 'single', 'bodyweight') and \"training_session_exercises\".\"role\" in ('warmup', 'workout', 'stretching')"
+        },
+        "training_exercises_prescription": {
+          "name": "training_exercises_prescription",
+          "value": "\"training_session_exercises\".\"planned_sets\" is null or \"training_session_exercises\".\"planned_sets\" between 1 and 10"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.training_session_sets": {
+      "name": "training_session_sets",
+      "schema": "",
+      "columns": {
+        "session_exercise_id": {
+          "name": "session_exercise_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "round": {
+          "name": "round",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount": {
+          "name": "amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "right_amount": {
+          "name": "right_amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "weight_kg": {
+          "name": "weight_kg",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unit": {
+          "name": "unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "load": {
+          "name": "load",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unilateral": {
+          "name": "unilateral",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "training_session_sets_session_exercise_id_training_session_exercises_id_fk": {
+          "name": "training_session_sets_session_exercise_id_training_session_exercises_id_fk",
+          "tableFrom": "training_session_sets",
+          "tableTo": "training_session_exercises",
+          "columnsFrom": [
+            "session_exercise_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "training_session_sets_session_exercise_id_round_pk": {
+          "name": "training_session_sets_session_exercise_id_round_pk",
+          "columns": [
+            "session_exercise_id",
+            "round"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "training_sets_round": {
+          "name": "training_sets_round",
+          "value": "\"training_session_sets\".\"round\" between 1 and 10"
+        },
+        "training_sets_amount": {
+          "name": "training_sets_amount",
+          "value": "\"training_session_sets\".\"amount\" between 0 and 600"
+        },
+        "training_sets_right": {
+          "name": "training_sets_right",
+          "value": "\"training_session_sets\".\"right_amount\" is null or (\"training_session_sets\".\"unilateral\" and \"training_session_sets\".\"right_amount\" between 0 and 600)"
+        },
+        "training_sets_weight": {
+          "name": "training_sets_weight",
+          "value": "\"training_session_sets\".\"weight_kg\" is null or (\"training_session_sets\".\"load\" <> 'bodyweight' and \"training_session_sets\".\"weight_kg\" between 0 and 1000)"
+        },
+        "training_sets_unit": {
+          "name": "training_sets_unit",
+          "value": "\"training_session_sets\".\"unit\" in ('reps', 'seconds')"
+        },
+        "training_sets_load": {
+          "name": "training_sets_load",
+          "value": "\"training_session_sets\".\"load\" in ('per-hand', 'single', 'bodyweight')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.training_sessions": {
@@ -3694,12 +3686,17 @@
           "primaryKey": false,
           "notNull": true
         },
+        "workout_id": {
+          "name": "workout_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "''"
+          "notNull": true
         },
         "note": {
           "name": "note",
@@ -3707,13 +3704,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "''"
-        },
-        "removed_exercise_log_ids": {
-          "name": "removed_exercise_log_ids",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
         },
         "completed_on": {
           "name": "completed_on",
@@ -3742,8 +3732,42 @@
         }
       },
       "indexes": {
-        "training_sessions_one_per_day": {
-          "name": "training_sessions_one_per_day",
+        "training_sessions_workout_day": {
+          "name": "training_sessions_workout_day",
+          "columns": [
+            {
+              "expression": "household_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "workout_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "completed_on",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"training_sessions\".\"workout_id\" is not null and \"training_sessions\".\"deleted_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "training_sessions_free_day": {
+          "name": "training_sessions_free_day",
           "columns": [
             {
               "expression": "household_id",
@@ -3765,7 +3789,7 @@
             }
           ],
           "isUnique": true,
-          "where": "\"training_sessions\".\"deleted_at\" is null",
+          "where": "\"training_sessions\".\"workout_id\" is null and \"training_sessions\".\"deleted_at\" is null",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -3836,6 +3860,21 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "training_sessions_workout_fk": {
+          "name": "training_sessions_workout_fk",
+          "tableFrom": "training_sessions",
+          "tableTo": "workouts",
+          "columnsFrom": [
+            "household_id",
+            "workout_id"
+          ],
+          "columnsTo": [
+            "household_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -3851,12 +3890,7 @@
         }
       },
       "policies": {},
-      "checkConstraints": {
-        "training_sessions_name": {
-          "name": "training_sessions_name",
-          "value": "char_length(\"training_sessions\".\"name\") <= 150"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.users": {
@@ -4086,468 +4120,6 @@
           "value": "length(\"workout_exercises\".\"target\") <= 100"
         }
       },
-      "isRLSEnabled": false
-    },
-    "public.workout_log_exercises": {
-      "name": "workout_log_exercises",
-      "schema": "",
-      "columns": {
-        "workout_log_id": {
-          "name": "workout_log_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "workout_exercise_id": {
-          "name": "workout_exercise_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "exercise_log_id": {
-          "name": "exercise_log_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "household_id": {
-          "name": "household_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "position": {
-          "name": "position",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "workout_log_exercises_household_id_user_id_workout_log_id_workout_logs_household_id_user_id_id_fk": {
-          "name": "workout_log_exercises_household_id_user_id_workout_log_id_workout_logs_household_id_user_id_id_fk",
-          "tableFrom": "workout_log_exercises",
-          "tableTo": "workout_logs",
-          "columnsFrom": [
-            "household_id",
-            "user_id",
-            "workout_log_id"
-          ],
-          "columnsTo": [
-            "household_id",
-            "user_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "workout_log_exercises_household_id_user_id_exercise_log_id_exercise_logs_household_id_user_id_id_fk": {
-          "name": "workout_log_exercises_household_id_user_id_exercise_log_id_exercise_logs_household_id_user_id_id_fk",
-          "tableFrom": "workout_log_exercises",
-          "tableTo": "exercise_logs",
-          "columnsFrom": [
-            "household_id",
-            "user_id",
-            "exercise_log_id"
-          ],
-          "columnsTo": [
-            "household_id",
-            "user_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "workout_log_exercises_workout_log_id_workout_exercise_id_pk": {
-          "name": "workout_log_exercises_workout_log_id_workout_exercise_id_pk",
-          "columns": [
-            "workout_log_id",
-            "workout_exercise_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "workout_log_exercises_exercise_log_id_unique": {
-          "name": "workout_log_exercises_exercise_log_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "exercise_log_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.workout_log_sets": {
-      "name": "workout_log_sets",
-      "schema": "",
-      "columns": {
-        "log_id": {
-          "name": "log_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "household_id": {
-          "name": "household_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "workout_exercise_id": {
-          "name": "workout_exercise_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "exercise_id": {
-          "name": "exercise_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "round": {
-          "name": "round",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "amount": {
-          "name": "amount",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "right_amount": {
-          "name": "right_amount",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "weight_kg": {
-          "name": "weight_kg",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "unit": {
-          "name": "unit",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "load": {
-          "name": "load",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "unilateral": {
-          "name": "unilateral",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "workout_log_sets_exercise": {
-          "name": "workout_log_sets_exercise",
-          "columns": [
-            {
-              "expression": "household_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "exercise_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "log_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "workout_log_sets_log_fk": {
-          "name": "workout_log_sets_log_fk",
-          "tableFrom": "workout_log_sets",
-          "tableTo": "workout_logs",
-          "columnsFrom": [
-            "household_id",
-            "log_id"
-          ],
-          "columnsTo": [
-            "household_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "workout_log_sets_catalog_fk": {
-          "name": "workout_log_sets_catalog_fk",
-          "tableFrom": "workout_log_sets",
-          "tableTo": "exercises",
-          "columnsFrom": [
-            "household_id",
-            "exercise_id"
-          ],
-          "columnsTo": [
-            "household_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "workout_log_sets_log_id_workout_exercise_id_round_pk": {
-          "name": "workout_log_sets_log_id_workout_exercise_id_round_pk",
-          "columns": [
-            "log_id",
-            "workout_exercise_id",
-            "round"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "workout_log_sets_round": {
-          "name": "workout_log_sets_round",
-          "value": "\"workout_log_sets\".\"round\" between 1 and 10"
-        },
-        "workout_log_sets_amount": {
-          "name": "workout_log_sets_amount",
-          "value": "\"workout_log_sets\".\"amount\" between 0 and 600"
-        },
-        "workout_log_sets_right_amount": {
-          "name": "workout_log_sets_right_amount",
-          "value": "\"workout_log_sets\".\"right_amount\" is null or (\"workout_log_sets\".\"unilateral\" and \"workout_log_sets\".\"right_amount\" between 0 and 600)"
-        },
-        "workout_log_sets_weight": {
-          "name": "workout_log_sets_weight",
-          "value": "\"workout_log_sets\".\"weight_kg\" is null or (\"workout_log_sets\".\"load\" <> 'bodyweight' and \"workout_log_sets\".\"weight_kg\" between 0 and 1000)"
-        },
-        "workout_log_sets_unit": {
-          "name": "workout_log_sets_unit",
-          "value": "\"workout_log_sets\".\"unit\" in ('reps', 'seconds')"
-        },
-        "workout_log_sets_load": {
-          "name": "workout_log_sets_load",
-          "value": "\"workout_log_sets\".\"load\" in ('per-hand', 'single', 'bodyweight')"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.workout_logs": {
-      "name": "workout_logs",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "note": {
-          "name": "note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "''"
-        },
-        "exercise_roles": {
-          "name": "exercise_roles",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "household_id": {
-          "name": "household_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "workout_id": {
-          "name": "workout_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "snapshot": {
-          "name": "snapshot",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "completed_on": {
-          "name": "completed_on",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "completed_at": {
-          "name": "completed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "workout_logs_one_per_day": {
-          "name": "workout_logs_one_per_day",
-          "columns": [
-            {
-              "expression": "household_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "workout_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "completed_on",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "workout_logs_owner": {
-          "name": "workout_logs_owner",
-          "columns": [
-            {
-              "expression": "household_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "workout_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "workout_logs_user_id_users_id_fk": {
-          "name": "workout_logs_user_id_users_id_fk",
-          "tableFrom": "workout_logs",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "workout_logs_household_id_workout_id_workouts_household_id_id_fk": {
-          "name": "workout_logs_household_id_workout_id_workouts_household_id_id_fk",
-          "tableFrom": "workout_logs",
-          "tableTo": "workouts",
-          "columnsFrom": [
-            "household_id",
-            "workout_id"
-          ],
-          "columnsTo": [
-            "household_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "workout_logs_household_id_id": {
-          "name": "workout_logs_household_id_id",
-          "nullsNotDistinct": false,
-          "columns": [
-            "household_id",
-            "id"
-          ]
-        },
-        "workout_logs_author_id": {
-          "name": "workout_logs_author_id",
-          "nullsNotDistinct": false,
-          "columns": [
-            "household_id",
-            "user_id",
-            "id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.workouts": {

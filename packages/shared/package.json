@@ -11,7 +11,6 @@
     "./habits": "./src/habits.ts",
     "./training": "./src/training.ts",
     "./workouts": "./src/workouts.ts",
-    "./exercise-logs": "./src/exercise-logs.ts",
     "./workout-seed": "./src/workout-seed.ts",
     "./households": "./src/households.ts",
     "./modules": "./src/modules.ts",
