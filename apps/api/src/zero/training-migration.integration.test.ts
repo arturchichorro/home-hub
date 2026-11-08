@@ -23,7 +23,7 @@ const migrations = fileURLToPath(
 describe.runIf(Boolean(databaseUrl))(
   "populated canonical training cutover",
   () => {
-    it("fails safely on orphan data, then migrates every value and retains read-only originals without replaying the stale archive", async () => {
+    it("fails safely on orphan data, then migrates every current value and drops legacy tables without replaying the stale archive", async () => {
       if (
         !databaseUrl ||
         !new URL(databaseUrl).pathname.startsWith("/home_hub_test_")
@@ -209,6 +209,28 @@ describe.runIf(Boolean(databaseUrl))(
           sql`UPDATE workout_log_exercises SET position=0 WHERE exercise_log_id=${occurrence}::uuid`,
         );
 
+        await db.execute(
+          sql`CREATE TABLE external_training_reference (log_id uuid REFERENCES workout_logs(id))`,
+        );
+        await expect(
+          migrate(db, { migrationsFolder: migrations }),
+        ).rejects.toThrow();
+        expect(
+          (
+            await db.execute(
+              sql`SELECT count(*)::int AS count FROM workout_logs`,
+            )
+          ).rows[0],
+        ).toMatchObject({ count: 2 });
+        expect(
+          (
+            await db.execute(
+              sql`SELECT to_regclass('public.training_sessions') AS table_name`,
+            )
+          ).rows[0],
+        ).toMatchObject({ table_name: null });
+        await db.execute(sql`DROP TABLE external_training_reference`);
+
         const tables = (
           await db.execute(
             sql`SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename`,
@@ -243,12 +265,21 @@ describe.runIf(Boolean(databaseUrl))(
         await migrate(db, { migrationsFolder: migrations });
 
         for (const table of tables) {
-          const schema = retired.has(table) ? "training_archive" : "public";
+          if (retired.has(table)) {
+            expect(
+              (
+                await db.execute(
+                  sql`SELECT to_regclass(${`public.${table}`}) AS table_name`,
+                )
+              ).rows[0],
+            ).toMatchObject({ table_name: null });
+            continue;
+          }
           expect(
             (
               await db.execute(
                 sql.raw(
-                  `SELECT to_jsonb(t) AS value FROM ${schema}."${table}" t ORDER BY to_jsonb(t)::text`,
+                  `SELECT to_jsonb(t) AS value FROM public."${table}" t ORDER BY to_jsonb(t)::text`,
                 ),
               )
             ).rows,
@@ -332,18 +363,24 @@ describe.runIf(Boolean(databaseUrl))(
             unilateral: true,
           },
         ]);
-        await expect(
-          db.execute(
-            sql`UPDATE training_archive.workout_logs SET note='Forbidden'`,
-          ),
-        ).rejects.toThrow();
+        expect(
+          (
+            await db.execute(
+              sql`SELECT to_regnamespace('training_archive') AS schema_name`,
+            )
+          ).rows[0],
+        ).toMatchObject({ schema_name: null });
         const published = (
           await db.execute(
             sql`SELECT schemaname,tablename FROM pg_publication_tables WHERE pubname='home_hub_zero'`,
           )
         ).rows;
         expect(
-          published.filter((row) => row.schemaname === "training_archive"),
+          published.filter(
+            (row) =>
+              retired.has(String(row.tablename)) ||
+              row.schemaname === "training_archive",
+          ),
         ).toEqual([]);
         expect(
           published

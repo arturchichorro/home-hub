@@ -151,9 +151,10 @@ or parallel workout/free-session stores. Form snapshots are projections, not per
 copies. Both paths use `training.*` mutations and one paged history query. Shared
 templates/catalog data never change as a side effect of private logging.
 
-The five original logging tables remain read-only in `training_archive`, outside
-Zero's publication and all application queries. They preserve recovery records,
-including the already-legacy set archive; they are not adapters or dual-write targets.
+The migration transfers and verifies current records, then drops all five original
+logging tables. No archive schema, adapters or dual-write targets remain. The
+superseded `workout_log_sets` archive is not replayed into current measurements;
+its obsolete versions survive only in the pre-release backup.
 
 Exercise autosaves send field-level patches and explicit additions/deletions,
 never a replacement array. Unrelated concurrent edits and unseen additions are
@@ -212,12 +213,14 @@ private log notes, sets or snapshots.
 
 These are forward-upgrade notes for installations below the named migrations,
 not instructions to replay completed cutovers. Preserve applied SQL, historical
-identities and archive tables; consult release/deployment state before acting.
+identities; consult release/deployment state before acting. The 0053 cutover
+explicitly drops the original tables after verification and a fresh backup.
 
 `0053_unified_training.sql` replaces the unmerged additive free-training migration.
 It migrates every existing header, occurrence and current set, normalizes frozen
 prescriptions/roles (including unperformed slots), preserves existing IDs/dates/notes/
-measurements, and moves the original five tables to the read-only archive. Ambiguous
+measurements, then drops all five original tables after in-transaction transfer
+checks. Superseded archive values remain only in the release backup. Ambiguous
 snapshots, orphan rows or inconsistent ownership abort the transaction.
 
 This is a coordinated breaking cutover, not a rolling upgrade. Resolve drafts and

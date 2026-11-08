@@ -53,7 +53,7 @@ CREATE TABLE "training_sessions" (
 );
 --> statement-breakpoint
 -- Coordinated cutover: no old writers may run during/after this transaction.
--- Preserve every original table (including strict snapshots) outside the live model.
+-- A verified pre-release backup is required; source tables are dropped only after transfer checks.
 LOCK TABLE workout_logs, workout_log_exercises, exercise_logs, exercise_log_sets, workout_log_sets IN ACCESS EXCLUSIVE MODE;
 
 DO $$ BEGIN
@@ -158,26 +158,35 @@ DO $$ BEGIN
   (SELECT session_exercise_id,round,amount,right_amount,weight_kg,unit,load,unilateral FROM training_session_sets
    EXCEPT ALL SELECT exercise_log_id,round,amount,right_amount,weight_kg,unit,load,unilateral FROM exercise_log_sets)
  ) THEN RAISE EXCEPTION 'Training migration: recorded measurements changed'; END IF;
+ IF EXISTS (
+  SELECT 1 FROM workout_logs l
+  CROSS JOIN LATERAL jsonb_array_elements(l.snapshot->'exercises') WITH ORDINALITY e(value,position)
+  LEFT JOIN training_session_exercises n ON n.session_id=l.id AND n.template_exercise_id=(e.value->>'id')::uuid
+  WHERE n.id IS NULL OR ROW(n.name,n.unit,n.load,n.unilateral,n.role,n.planned_sets,n.target,n.position)
+   IS DISTINCT FROM ROW(e.value->>'name',e.value->>'unit',e.value->>'load',(e.value->>'unilateral')::boolean,
+    coalesce(l.exercise_roles->>(e.value->>'id'),e.value->>'role','workout'),(e.value->>'sets')::integer,e.value->>'target',(e.position-1)::integer)
+ ) THEN RAISE EXCEPTION 'Training migration: frozen prescriptions changed'; END IF;
+ IF EXISTS (
+  SELECT 1 FROM exercise_logs x JOIN workout_log_exercises w ON w.exercise_log_id=x.id
+  JOIN training_session_exercises n ON n.id=x.id WHERE n.template_exercise_id IS NULL
+   AND ROW(n.name,n.unit,n.load,n.unilateral,n.role,n.planned_sets,n.target,n.position)
+    IS DISTINCT FROM ROW(x.snapshot->>'name',x.snapshot->>'unit',x.snapshot->>'load',(x.snapshot->>'unilateral')::boolean,
+     coalesce(x.snapshot->>'role','workout'),(x.snapshot->>'sets')::integer,x.snapshot->>'target',w.position)
+ ) THEN RAISE EXCEPTION 'Training migration: log-only definitions changed'; END IF;
+ IF (SELECT count(*) FROM training_session_exercises) <>
+  (SELECT coalesce(sum(jsonb_array_length(snapshot->'exercises')),0) FROM workout_logs) +
+  (SELECT count(*) FROM exercise_logs x JOIN workout_log_exercises w ON w.exercise_log_id=x.id
+   JOIN workout_logs l ON l.id=w.workout_log_id
+   WHERE NOT EXISTS (SELECT 1 FROM jsonb_array_elements(l.snapshot->'exercises') e WHERE e->>'id'=w.workout_exercise_id::text))
+ THEN RAISE EXCEPTION 'Training migration: occurrence count changed'; END IF;
 END $$;
 --> statement-breakpoint
-CREATE SCHEMA training_archive;
-REVOKE ALL ON SCHEMA training_archive FROM PUBLIC;
---> statement-breakpoint
+-- Remove legacy publication entries before dropping their tables.
 DO $$ DECLARE source text; BEGIN
  FOREACH source IN ARRAY ARRAY['workout_logs','workout_log_exercises','exercise_logs','exercise_log_sets','workout_log_sets'] LOOP
   IF EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname='home_hub_zero' AND schemaname='public' AND tablename=source) THEN
    EXECUTE format('ALTER PUBLICATION home_hub_zero DROP TABLE public.%I',source);
   END IF;
-  EXECUTE format('ALTER TABLE public.%I SET SCHEMA training_archive',source);
- END LOOP;
-END $$;
---> statement-breakpoint
-CREATE FUNCTION training_archive.reject_writes() RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN RAISE EXCEPTION 'Training archive is read-only'; END $$;
---> statement-breakpoint
-DO $$ DECLARE source text; BEGIN
- FOREACH source IN ARRAY ARRAY['workout_logs','workout_log_exercises','exercise_logs','exercise_log_sets','workout_log_sets'] LOOP
-  EXECUTE format('CREATE TRIGGER training_archive_read_only BEFORE INSERT OR UPDATE OR DELETE OR TRUNCATE ON training_archive.%I FOR EACH STATEMENT EXECUTE FUNCTION training_archive.reject_writes()',source);
  END LOOP;
 END $$;
 --> statement-breakpoint
@@ -195,3 +204,7 @@ CREATE UNIQUE INDEX "training_sessions_free_day" ON "training_sessions" USING bt
 CREATE INDEX "training_sessions_history" ON "training_sessions" USING btree ("household_id","user_id","completed_on","completed_at","id");
 --> statement-breakpoint
 ALTER PUBLICATION home_hub_zero ADD TABLE training_sessions, training_session_exercises, training_session_sets;
+--> statement-breakpoint
+-- No CASCADE: unexpected dependencies abort the entire migration.
+-- workout_log_sets is a superseded archive, not current performance data.
+DROP TABLE workout_log_sets, workout_log_exercises, exercise_log_sets, exercise_logs, workout_logs;

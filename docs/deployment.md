@@ -128,11 +128,14 @@ readiness for this release.
    It cannot verify device readiness; complete step 1 before releasing.
 3. Run the matching migrator with writers stopped. Ambiguous mappings, ownership
    inconsistencies and orphans must fail closed, never be repaired by dropping rows.
-   Verify header/occurrence/set values, original IDs/dates/notes/roles/order and
-   unperformed prescriptions against the retained originals.
+   The transaction verifies headers, occurrences, actual sets, frozen prescriptions,
+   roles, ordering and unperformed slots against the originals before dropping all
+   five legacy tables. Verify canonical records against the backup afterwards;
+   superseded archive measurements are intentionally not replayed.
 4. Start matching API and official Zero using `/data/training-sessions-v1.db`.
    Retain `/data/replica.db` and its sidecars for recovery; never reset PostgreSQL,
-   prune unrelated resources, drop the archive or patch the SDK. The app namespace
+   prune unrelated resources or patch the SDK. The five legacy logging tables are
+   intentionally dropped by the verified migration; keep the release backup. The app namespace
    stays `home_hub`; only the disposable replica filename changes.
 5. Load matching web clients (`storageKey="training-sessions-v1"`), verify private
    history/corrections, both session kinds and habit completion, then resume users.

@@ -241,7 +241,7 @@ replication allowlist. It publishes the columns required from `households`,
 `recipe_ingredients`, `recipe_cook_logs`, `recipe_media`, `exercise_media`, `media`, `habits`, and
 `habit_entries`, plus shared workout definitions/catalog and the three canonical
 private training session/exercise/set tables. All five original logging tables
-are read-only in `training_archive` and excluded from publication. `users` publishes **only `id`
+are dropped after verified transfer and removed from publication. `users` publishes **only `id`
 and `username`** for authorized safe member profiles; it does not publish email,
 password hashes or account timestamps. `refresh_tokens` and `household_invites`
 are excluded entirely, so token hashes never enter the Zero replica. The
@@ -329,7 +329,8 @@ household owners. Queries and writes require a live household, membership, and
 enabled Workouts setting. Measurements are returned through author-filtered
 sessions and their directly owned occurrences, never another member's performance
 relations. Composite ownership FKs and server guards enforce this boundary.
-The recovery archive is neither published nor queried by the application.
+No legacy logging tables or recovery schema remain in the application database;
+recovery uses the pre-release backup.
 See [Workouts](./workouts/).
 
 ## Module storage security

@@ -181,8 +181,8 @@ source workout and private name/note/dates; occurrences directly own frozen
 prescriptions/roles/order/catalog identity; sets retain their actual measurement
 conventions. Composite author/household FKs protect ownership. Row tombstones reject
 stale resurrection. There are no active header arrays, role maps or occurrence-link
-tables. The five original logging tables remain read-only in `training_archive`,
-excluded from application queries and Zero publication. `exercise_media` attaches
+tables. The five original logging tables are dropped after verified transfer;
+superseded archive values remain only in the release backup. `exercise_media` attaches
 shared assets to the catalog.
 See the [Workouts data model](./workouts/#data-model) and its forward migration.
 
