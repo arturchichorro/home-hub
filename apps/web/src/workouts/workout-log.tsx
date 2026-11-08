@@ -3,10 +3,7 @@ import type {
   WorkoutExercise,
 } from "@home-hub/shared/workouts";
 import { workoutSetValuesFromRow } from "@home-hub/shared/workouts";
-import type {
-  WorkoutLog as LogRow,
-  WorkoutLogSet,
-} from "@home-hub/shared/zero/schema";
+import type { TrainingSessionSet } from "@home-hub/shared/zero/schema";
 import {
   Button,
   ConfirmationPopover,
@@ -17,10 +14,13 @@ import {
   Trash2,
   X,
 } from "@home-hub/ui-web";
+import type { ReadonlyJSONValue } from "@rocicorp/zero";
 import { useId, useRef } from "react";
+import type { ExercisePerformance } from "./training-log-projection";
 import type { WorkoutEditorState } from "./workout-log-editor";
 import {
   completeSetValues,
+  exerciseForSet,
   exerciseRounds,
   nextExerciseRound,
   setInputErrors,
@@ -28,12 +28,26 @@ import {
   type WorkoutLogForm,
   type WorkoutSetInput,
 } from "./workout-log-form";
-import type { ExercisePerformance } from "./workout-log-projection";
 
-export type WorkoutLog = Omit<LogRow, "exerciseRoles"> & {
-  readonly exerciseRoles?: LogRow["exerciseRoles"] | undefined;
+type WorkoutLogSet = Omit<TrainingSessionSet, "sessionExerciseId"> & {
+  readonly logId: string;
+  readonly householdId: string;
+  readonly workoutExerciseId: string;
+  readonly exerciseId: string;
+};
+
+export type WorkoutLog = {
+  readonly id: string;
+  readonly householdId: string;
+  readonly userId: string;
+  readonly workoutId?: string | null;
+  readonly note: string | null;
+  readonly completedOn: string;
+  readonly completedAt: number;
+  readonly createdAt: number | null;
+  readonly snapshot: ReadonlyJSONValue;
   readonly sets: readonly WorkoutLogSet[];
-  readonly exerciseLogIds?: Readonly<Record<string, string>>;
+  readonly sessionExerciseIds?: Readonly<Record<string, string>>;
   readonly logOnlyExerciseIds?: readonly string[];
 };
 
@@ -61,10 +75,55 @@ export type WorkoutLogging = {
   ) => void;
   onFlush: (exerciseId: string, round: number) => void;
   onAddExercise: (exercise: CatalogExercise) => void;
+  onRemoveExercise?: (exerciseId: string) => void;
+  freeForm?: boolean;
   excludedExerciseIds?: readonly string[];
   onAddSet: (exerciseId: string) => void;
   onRemoveSet: (exerciseId: string, round: number) => void;
 };
+
+export function LoggedExerciseRemove({
+  exercise,
+  logging,
+  disabled,
+}: {
+  exercise: WorkoutExercise;
+  logging: WorkoutLogging;
+  disabled: boolean;
+}) {
+  if (!logging.onRemoveExercise) {
+    return null;
+  }
+  const remove = () => logging.onRemoveExercise?.(exercise.id);
+  const recorded = [...logging.state.recorded, ...logging.state.dirty].some(
+    (key) => key.startsWith(`${exercise.id}:`),
+  );
+  const trigger = (
+    <IconButton
+      aria-label={`Remove ${exercise.name} from this session`}
+      title="Remove exercise"
+      className="size-7!"
+      disabled={
+        disabled ||
+        logging.state.saving.size > 0 ||
+        logging.state.deleting.size > 0
+      }
+      onClick={recorded ? undefined : remove}
+    >
+      <Trash2 aria-hidden="true" className="size-4" />
+    </IconButton>
+  );
+  return recorded ? (
+    <ConfirmationPopover
+      trigger={trigger}
+      message={`Remove ${exercise.name} and its sets from this log?`}
+      confirmLabel="Remove exercise"
+      onConfirm={remove}
+    />
+  ) : (
+    trigger
+  );
+}
 
 export function WorkoutExerciseSets({
   exercise,
@@ -85,27 +144,31 @@ export function WorkoutExerciseSets({
     : undefined;
   const complete = rounds
     .map((round) =>
-      completeSetValues(exercise, form.inputs[setInputKey(exercise.id, round)]),
+      completeSetValues(
+        exerciseForSet(exercise, form, round),
+        form.inputs[setInputKey(exercise.id, round)],
+      ),
     )
     .every(Boolean);
 
   return (
     <div ref={container} className="py-1">
       {rounds.map((round) => {
+        const definition = exerciseForSet(exercise, form, round);
         const key = setInputKey(exercise.id, round);
         const input = form.inputs[key] ?? {
           weightKg: "",
           amount: "",
           rightAmount: "",
         };
-        const validation = setInputErrors(exercise, input);
+        const validation = setInputErrors(definition, input);
         const invalid = Object.keys(validation).length > 0;
         const prior = old?.sets.find(
           (s) =>
             s.round === round &&
-            s.unit === exercise.unit &&
-            s.load === exercise.load &&
-            s.unilateral === exercise.unilateral,
+            s.unit === definition.unit &&
+            s.load === definition.load &&
+            s.unilateral === definition.unilateral,
         );
         const last = prior ? workoutSetValuesFromRow(prior) : undefined;
         const label = `${exercise.name}, set ${round}`;
@@ -155,7 +218,7 @@ export function WorkoutExerciseSets({
               }}
             >
               <span className="w-10">Set {round}</span>
-              {exercise.load !== "bodyweight" && (
+              {definition.load !== "bodyweight" && (
                 <div className="flex items-center gap-1">
                   <Input
                     appearance="seamless"
@@ -178,14 +241,14 @@ export function WorkoutExerciseSets({
                       onChange(exercise.id, round, { weightKg })
                     }
                   />
-                  <span>kg{exercise.load === "per-hand" ? "/hand" : ""}</span>
+                  <span>kg{definition.load === "per-hand" ? "/hand" : ""}</span>
                 </div>
               )}
               <div className="flex items-center gap-1">
-                {exercise.unilateral && <span>Left</span>}
+                {definition.unilateral && <span>Left</span>}
                 <Input
                   appearance="seamless"
-                  aria-label={`${exercise.unilateral ? "Left " : ""}${exercise.unit} for ${label}`}
+                  aria-label={`${definition.unilateral ? "Left " : ""}${definition.unit} for ${label}`}
                   aria-invalid={Boolean(validation.amount) || undefined}
                   aria-errormessage={
                     validation.amount
@@ -203,14 +266,14 @@ export function WorkoutExerciseSets({
                     onChange(exercise.id, round, { amount })
                   }
                 />
-                <span>{exercise.unit}</span>
+                <span>{definition.unit}</span>
               </div>
-              {exercise.unilateral && (
+              {definition.unilateral && (
                 <div className="flex items-center gap-1">
                   <span>Right</span>
                   <Input
                     appearance="seamless"
-                    aria-label={`Right ${exercise.unit} for ${label}`}
+                    aria-label={`Right ${definition.unit} for ${label}`}
                     aria-invalid={Boolean(validation.rightAmount) || undefined}
                     aria-errormessage={
                       validation.rightAmount
@@ -230,7 +293,7 @@ export function WorkoutExerciseSets({
                       onChange(exercise.id, round, { rightAmount })
                     }
                   />
-                  <span>{exercise.unit}</span>
+                  <span>{definition.unit}</span>
                 </div>
               )}
               <span className="text-xs text-muted" role="status">
@@ -238,7 +301,7 @@ export function WorkoutExerciseSets({
                   ? "Saving…"
                   : invalid
                     ? "Invalid"
-                    : completeSetValues(exercise, input)
+                    : completeSetValues(definition, input)
                       ? state.dirty.has(key)
                         ? "Unsaved"
                         : "Saved"
@@ -280,10 +343,10 @@ export function WorkoutExerciseSets({
                 {last.amount}
                 {last.rightAmount !== null
                   ? ` / ${last.rightAmount}`
-                  : exercise.unilateral
+                  : definition.unilateral
                     ? ` / ${last.amount}`
                     : ""}{" "}
-                {exercise.unit}
+                {definition.unit}
                 {last.weightKg !== null ? ` · ${last.weightKg} kg` : ""}
               </p>
             )}

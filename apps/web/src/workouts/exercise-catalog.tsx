@@ -30,12 +30,12 @@ import {
 } from "./catalog-page";
 import { CatalogMediaProvider, ExerciseMedia } from "./exercise-media";
 import { ExerciseSettings } from "./exercise-settings";
+import type { ExercisePerformance } from "./training-log-projection";
 import {
   type CatalogSaveResult,
   useCatalogExerciseEditor,
 } from "./use-catalog-exercise-editor";
 import { formatLastDoneDate, workoutOrderingSensors } from "./workout-list";
-import type { ExercisePerformance } from "./workout-log-projection";
 import { summarizeExercisePerformance } from "./workout-log-summary";
 
 type Draft = { id: string; saved?: boolean };

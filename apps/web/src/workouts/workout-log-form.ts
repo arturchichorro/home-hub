@@ -1,9 +1,10 @@
-import { isCompleteExerciseSet } from "@home-hub/shared/exercise-logs";
 import { calendarDate } from "@home-hub/shared/habits";
+import { isCompleteExerciseSet } from "@home-hub/shared/training";
 import {
   type WorkoutExercise,
   type WorkoutLogSnapshot,
   type WorkoutSetValues,
+  workoutExerciseSchema,
   workoutLogSnapshotSchema,
   workoutSetValuesFromRow,
   workoutSetValuesSchema,
@@ -22,10 +23,14 @@ export type WorkoutLogForm = {
   id: string;
   snapshot: WorkoutLogSnapshot;
   inputs: WorkoutSetInputs;
+  setDefinitions?: Record<
+    string,
+    Pick<WorkoutExercise, "unit" | "load" | "unilateral">
+  >;
   completedAt: number | null;
   completedOn: string | null;
   startedAt?: number;
-  exerciseLogIds?: Record<string, string>;
+  sessionExerciseIds?: Record<string, string>;
   logOnlyExerciseIds?: readonly string[];
 };
 
@@ -97,6 +102,17 @@ export function completeSetValues(
     : undefined;
 }
 
+export function exerciseForSet(
+  exercise: WorkoutExercise,
+  form: WorkoutLogForm,
+  round: number,
+): WorkoutExercise {
+  return {
+    ...exercise,
+    ...form.setDefinitions?.[setInputKey(exercise.id, round)],
+  };
+}
+
 export function nextExerciseRound(
   exercise: WorkoutExercise,
   inputs: WorkoutSetInputs,
@@ -166,11 +182,32 @@ export function openWorkoutLog(
     completedAt: existing?.completedAt ?? null,
     completedOn: existing?.completedOn ?? null,
     startedAt: Date.now(),
-    exerciseLogIds: Object.fromEntries(
+    sessionExerciseIds: Object.fromEntries(
       snapshot.exercises.map((exercise) => [
         exercise.id,
-        existing?.exerciseLogIds?.[exercise.id] ?? crypto.randomUUID(),
+        existing?.sessionExerciseIds?.[exercise.id] ?? crypto.randomUUID(),
       ]),
+    ),
+    setDefinitions: Object.fromEntries(
+      (existing?.sets ?? []).map((set) => {
+        const original = snapshot.exercises.find(
+          (row) => row.id === set.workoutExerciseId,
+        );
+        const definition = workoutExerciseSchema.parse({
+          ...original,
+          unit: set.unit,
+          load: set.load,
+          unilateral: set.unilateral,
+        });
+        return [
+          setInputKey(set.workoutExerciseId, set.round),
+          {
+            unit: definition.unit,
+            load: definition.load,
+            unilateral: definition.unilateral,
+          },
+        ];
+      }),
     ),
     inputs: Object.fromEntries(
       (existing?.sets ?? []).map((set) => {

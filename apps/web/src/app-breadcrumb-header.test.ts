@@ -1,5 +1,49 @@
-import { describe, expect, it } from "vitest";
-import { getBreadcrumbLocation } from "./app-breadcrumb-header";
+import { createElement, type ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
+import {
+  AppBreadcrumbHeader,
+  getBreadcrumbLocation,
+} from "./app-breadcrumb-header";
+
+const location = vi.hoisted(() => ({ pathname: "/" }));
+
+vi.mock("@rocicorp/zero/react", () => ({
+  useQuery: () => [[], { type: "complete" }],
+}));
+vi.mock("@tanstack/react-router", () => ({
+  useRouterState: ({
+    select,
+  }: {
+    select: (state: { location: { pathname: string } }) => string;
+  }) => select({ location }),
+  Link: ({
+    to,
+    params,
+    children,
+  }: {
+    to: string;
+    params: { householdId: string };
+    children: ReactNode;
+  }) =>
+    createElement(
+      "a",
+      { href: to.replace("$householdId", params.householdId) },
+      children,
+    ),
+}));
+
+it("keeps Workouts as the back link on training pages with only one current breadcrumb", () => {
+  const householdId = crypto.randomUUID();
+  location.pathname = `/households/${householdId}/workouts/history`;
+  const html = renderToStaticMarkup(
+    createElement(AppBreadcrumbHeader, { onOpenSidebar() {} }),
+  );
+
+  expect(html).toContain(`href="/households/${householdId}/workouts"`);
+  expect(html.match(/aria-current="page"/g)).toHaveLength(1);
+  expect(html).toContain("Training history");
+});
 
 describe("getBreadcrumbLocation", () => {
   it("describes household module and recipe routes", () => {
@@ -28,6 +72,19 @@ describe("getBreadcrumbLocation", () => {
       workoutId: "workout-a",
     });
   });
+
+  it.each([
+    ["session", "session"],
+    ["sessions/log-id", "session"],
+    ["history", "history"],
+  ])(
+    "does not mistake the training route %s for a workout UUID",
+    (path, training) => {
+      expect(
+        getBreadcrumbLocation(`/households/home/workouts/${path}`),
+      ).toEqual({ householdId: "home", module: "workouts", training });
+    },
+  );
 
   it("returns the home location outside a household", () => {
     expect(getBreadcrumbLocation("/")).toEqual({});

@@ -38,6 +38,8 @@ export function HomeHubZeroProvider({
       cacheURL={cacheURL}
       schema={schema}
       userID={userId}
+      // Coordinated cutover: retain, but never replay, the deprecated client DB.
+      storageKey="training-sessions-v1"
       auth={accessToken}
       context={context}
       mutators={mutators}

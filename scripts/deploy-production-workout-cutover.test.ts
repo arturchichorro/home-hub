@@ -86,7 +86,7 @@ it("keeps the one-time writer cutover aligned with the actual migration journal"
     ),
   ) as { entries: { tag: string; when: number }[] };
   const migration = journal.entries.find(
-    (entry) => entry.tag === "0046_tense_miss_america",
+    (entry) => entry.tag === "0053_unified_training",
   );
   expect(migration).toBeDefined();
   expect(source).toContain(`created_at >= ${migration?.when}`);

@@ -1,5 +1,4 @@
 import * as z from "zod";
-import { timeZoneSchema } from "./habits";
 
 export const workoutExerciseRoleSchema = z.enum([
   "warmup",
@@ -8,11 +7,6 @@ export const workoutExerciseRoleSchema = z.enum([
 ]);
 
 export type WorkoutExerciseRole = z.infer<typeof workoutExerciseRoleSchema>;
-
-export const workoutExerciseRolesSnapshotSchema = z.record(
-  z.uuid(),
-  workoutExerciseRoleSchema,
-);
 
 export const workoutExerciseRoleOptions = [
   { value: "warmup", label: "Warm-up" },
@@ -33,7 +27,7 @@ export const workoutExerciseSchema = z
   .object({
     id: z.uuid(),
     catalogExerciseId: z.uuid().optional(),
-    // Optional only for pre-classification historical snapshots and old clients.
+    // Draft definitions may omit the default Workout classification.
     role: workoutExerciseRoleSchema.optional(),
     name: title,
     sets: z.number().int().min(1).max(10),
@@ -110,26 +104,13 @@ export const workoutContentSchema = z
   })
   .strict();
 
-// Ignore legacy copied notes when reading; new mutation payloads remain strict.
+// Editor views contain only title/exercises, never shared workout notes.
 export const workoutLogSnapshotSchema = workoutContentSchema
   .pick({
     title: true,
     exercises: true,
   })
   .strip();
-
-// Keep persisted definition JSON readable by older clients' strict parsers.
-export function workoutSnapshotWithoutRoles(
-  snapshot: z.infer<typeof workoutLogSnapshotSchema>,
-) {
-  return {
-    ...snapshot,
-
-    exercises: snapshot.exercises.map(
-      ({ role: _role, ...exercise }) => exercise,
-    ),
-  };
-}
 
 export type WorkoutLogSnapshot = z.infer<typeof workoutLogSnapshotSchema>;
 
@@ -325,40 +306,3 @@ export const workoutSetValuesSchema = z
   .strict();
 
 export type WorkoutSetValues = z.infer<typeof workoutSetValuesSchema>;
-
-const workoutLogSetSchema = z
-  .object({
-    workoutExerciseId: z.uuid(),
-    round: z.number().int().min(1).max(10),
-    values: workoutSetValuesSchema,
-  })
-  .strict();
-
-export const updateWorkoutLogNoteSchema = z
-  .object({
-    householdId: z.uuid(),
-    workoutId: z.uuid(),
-    logId: z.uuid(),
-    note: z.string().trim().max(1000000),
-  })
-  .strict();
-
-export const saveWorkoutLogSchema = z
-  .object({
-    ...scope,
-    logId: z.uuid(),
-    snapshot: workoutLogSnapshotSchema.strict(),
-    note: z.string().max(1000000).optional(),
-    timeZone: timeZoneSchema,
-
-    sets: z
-      .array(workoutLogSetSchema)
-      .max(400)
-      .refine(
-        (rows) =>
-          new Set(rows.map((row) => `${row.workoutExerciseId}:${row.round}`))
-            .size === rows.length,
-        "Set keys must be unique",
-      ),
-  })
-  .strict();

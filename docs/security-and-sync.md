@@ -239,9 +239,9 @@ Zero uses a custom PostgreSQL publication named `home_hub_zero` as a coarse
 replication allowlist. It publishes the columns required from `households`,
 `household_members`, `household_module_settings`, `lists`, `list_items`, `recipes`,
 `recipe_ingredients`, `recipe_cook_logs`, `recipe_media`, `exercise_media`, `media`, `habits`, and
-`habit_entries`, plus shared workout definitions/catalog and author-private log,
-occurrence, set and link tables. The pre-cutover `workout_log_sets` archive remains
-published for compatibility, not current writes. `users` publishes **only `id`
+`habit_entries`, plus shared workout definitions/catalog and the three canonical
+private training session/exercise/set tables. All five original logging tables
+are dropped after verified transfer and removed from publication. `users` publishes **only `id`
 and `username`** for authorized safe member profiles; it does not publish email,
 password hashes or account timestamps. `refresh_tokens` and `household_invites`
 are excluded entirely, so token hashes never enter the Zero replica. The
@@ -324,12 +324,13 @@ Calendar and schema details are in the [Habits module](./habits/).
 ## Workouts authorization
 
 Workout definitions and notes are household-shared; training logs, their
-snapshots, and sets are private to the verified actor, including from household
-owners. Queries and writes require a live household, membership, and enabled
-Workouts setting. Measurements are returned only through author-filtered daily
-groupings or independent exercise occurrences, never another member's performance
-relations. Current occurrence/set/link tables and the read-compatible archive are
-published, but publication is not client authorization.
+frozen definitions, and sets are private to the verified actor, including from
+household owners. Queries and writes require a live household, membership, and
+enabled Workouts setting. Measurements are returned through author-filtered
+sessions and their directly owned occurrences, never another member's performance
+relations. Composite ownership FKs and server guards enforce this boundary.
+No legacy logging tables or recovery schema remain in the application database;
+recovery uses the pre-release backup.
 See [Workouts](./workouts/).
 
 ## Module storage security

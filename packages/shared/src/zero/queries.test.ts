@@ -33,8 +33,8 @@ describe("workout linking queries", () => {
       expect(scope).toContain(key);
     }
 
-    expect(scope).not.toContain("workoutLogs");
-    expect(scope).not.toContain("exerciseLogs");
+    expect(scope).not.toContain("trainingSessions");
+    expect(scope).not.toContain("trainingSessionExercises");
   });
 });
 
@@ -144,7 +144,7 @@ describe("catalog media subscription", () => {
     expect(
       ast.related?.some((relation) => relation.subquery.table === "media"),
     ).toBe(true);
-    expect(scope).not.toContain("exerciseLogs");
+    expect(scope).not.toContain("trainingSessionExercises");
   });
 });
 
@@ -157,7 +157,7 @@ describe("workout library last completion", () => {
       }),
     );
     const logs = ast.related?.find(
-      (relation) => relation.subquery.table === "workoutLogs",
+      (relation) => relation.subquery.table === "trainingSessions",
     )?.subquery;
     expect(logs).toMatchObject({
       where: {

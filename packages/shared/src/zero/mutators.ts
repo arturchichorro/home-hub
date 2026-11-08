@@ -23,6 +23,7 @@ import { logMutators } from "./log-mutators";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
 import { appendSortKey, nextSortKey, planReorder } from "./ordering";
 import { type Schema, zql } from "./schema.gen";
+import { trainingMutators } from "./training-mutators";
 import { workoutMutatorDefinitions } from "./workout-mutators";
 
 const defineHomeHubMutator = defineMutatorWithType<Schema, ZeroAuthContext>();
@@ -520,6 +521,7 @@ export const mutators = defineHomeHubMutators({
   lists: listMutatorDefinitions,
   habits: habitMutatorDefinitions,
   workouts: workoutMutatorDefinitions,
+  training: trainingMutators,
   recipes: {
     create: createRecipe,
     update: updateRecipe,

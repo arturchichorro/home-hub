@@ -112,6 +112,46 @@ when upgrading an installation that has not applied these migrations; deploy the
 backward-compatible Worker first. Already-upgraded installations must not repeat
 the contract cutover or rebuild replicas for routine deployments.
 
+## Training schema cutover (0053)
+
+This replaces the active workout logging model; all older clients are deprecated.
+Do not treat the historical 0046 acknowledgement or additive-upgrade evidence as
+readiness for this release.
+
+1. Bring every device/profile online, resolve drafts in **all modules**, wait for
+   every queued mutation to be acknowledged, then pause users. The new browser
+   Zero storage key quarantines the old local database; it cannot migrate unsent
+   edits. Close/reload old clients only after their work is resolved.
+2. Approve a maintenance window and take fresh PostgreSQL and Zero-volume backups.
+   The deployment entrypoint checks the 0053 journal timestamp, stops API/Zero
+   writers and backs up before granting its one-run migration acknowledgement.
+   It cannot verify device readiness; complete step 1 before releasing.
+3. Run the matching migrator with writers stopped. Ambiguous mappings, ownership
+   inconsistencies and orphans must fail closed, never be repaired by dropping rows.
+   The transaction verifies headers, occurrences, actual sets, frozen prescriptions,
+   roles, ordering and unperformed slots against the originals before dropping all
+   five legacy tables. Verify canonical records against the backup afterwards;
+   superseded archive measurements are intentionally not replayed.
+4. Start matching API and official Zero using `/data/training-sessions-v1.db`.
+   Retain `/data/replica.db` and its sidecars for recovery; never reset PostgreSQL,
+   prune unrelated resources or patch the SDK. The five legacy logging tables are
+   intentionally dropped by the verified migration; keep the release backup. The app namespace
+   stays `home_hub`; only the disposable replica filename changes.
+5. Load matching web clients (`storageKey="training-sessions-v1"`), verify private
+   history/corrections, both session kinds and habit completion, then resume users.
+   Keep old writers stopped throughout verification.
+
+Before new writes, rollback restores the PostgreSQL/Zero backups and matching old
+code together. After new writes, stop and plan recovery explicitly; blindly restoring
+a backup would lose those writes. An installation that applied the superseded,
+unmerged additive 0053 requires inspection rather than ledger edits or a reset.
+
+Local evidence uses synthetic populated 0052 data, repeat migration and fail-closed
+tests. An official Zero 1.11.3 rehearsal warms the old replica, stops it, migrates,
+then reads migrated measurements from a fresh SQLite replica under the same app
+namespace while retaining the original file. This is not a production-data rehearsal
+or permission to deploy.
+
 ## Exercise-log autosave cutover (0046)
 
 For an installation upgrading from pre-`0046` logging, bring every device/profile online,
