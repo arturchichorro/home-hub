@@ -23,6 +23,7 @@ type BreadcrumbLocation = {
   recipeId?: string;
   listId?: string;
   workoutId?: string;
+  training?: "history" | "session";
   logId?: string;
 };
 
@@ -59,7 +60,13 @@ export function getBreadcrumbLocation(pathname: string): BreadcrumbLocation {
   }
 
   if (module === "workouts" && segments[3]) {
-    location.workoutId = segments[3];
+    if (segments[3] === "history") {
+      location.training = "history";
+    } else if (segments[3] === "session" || segments[3] === "sessions") {
+      location.training = "session";
+    } else {
+      location.workoutId = segments[3];
+    }
   }
 
   if (module === "logs" && segments[3]) {
@@ -260,7 +267,7 @@ export function AppBreadcrumbHeader({
                   >
                     Logs
                   </Link>
-                ) : location.workoutId ? (
+                ) : location.workoutId || location.training ? (
                   <Link
                     to="/households/$householdId/workouts"
                     activeOptions={{ exact: true }}
@@ -293,6 +300,18 @@ export function AppBreadcrumbHeader({
               workoutId={location.workoutId}
             />
           ) : null}
+          {location.training && (
+            <>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <span aria-current="page">
+                  {location.training === "history"
+                    ? "Training history"
+                    : "Free training"}
+                </span>
+              </BreadcrumbItem>
+            </>
+          )}
           {location.householdId && location.logId ? (
             <LogBreadcrumb
               householdId={location.householdId}

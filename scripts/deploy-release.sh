@@ -11,8 +11,8 @@ docker compose \
   --profile tools \
   build api web migrate
 
-# 0046 changes the canonical log writer. Never copy while the old API can write.
-# Keep the cutoff aligned with 0046's timestamp in drizzle/meta/_journal.json.
+# The latest logging cutover replaces the active schema. Stop old writers before
+# copying any records; keep this cutoff aligned with 0053 in the migration journal.
 migration_table="$(docker compose --env-file "$environment_file" -f "$compose_file" \
   exec -T postgres psql -X -U home_hub -d home_hub -At -v ON_ERROR_STOP=1 \
   -c "SELECT to_regclass('drizzle.__drizzle_migrations') IS NOT NULL;")"
@@ -20,7 +20,7 @@ needs_logging_cutover=t
 if [[ "$migration_table" == "t" ]]; then
   needs_logging_cutover="$(docker compose --env-file "$environment_file" -f "$compose_file" \
     exec -T postgres psql -X -U home_hub -d home_hub -At -v ON_ERROR_STOP=1 \
-    -c 'SELECT NOT EXISTS (SELECT FROM drizzle.__drizzle_migrations WHERE created_at >= 1793354301869);')"
+    -c 'SELECT NOT EXISTS (SELECT FROM drizzle.__drizzle_migrations WHERE created_at >= 1794127975016);')"
 fi
 migration_options=(--rm)
 if [[ "$needs_logging_cutover" != "f" ]]; then

@@ -8,7 +8,6 @@ import { summarizeWorkoutLog } from "./workout-log-summary";
 export function WorkoutHistoryEntry({
   entry,
   householdId,
-  workoutId,
   selected,
   disabled,
   onSelect,
@@ -16,7 +15,6 @@ export function WorkoutHistoryEntry({
 }: {
   entry: WorkoutLog;
   householdId: string;
-  workoutId: string;
   selected: boolean;
   disabled: boolean;
   onSelect: () => void;
@@ -53,7 +51,6 @@ export function WorkoutHistoryEntry({
           {hasNoteEditor && (
             <WorkoutLogNoteInput
               householdId={householdId}
-              workoutId={workoutId}
               logId={entry.id}
               onDirtyChange={dirtyChanged}
               note={entry.note ?? ""}

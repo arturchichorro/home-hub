@@ -122,6 +122,7 @@ import { ExerciseMedia } from "./exercise-media";
 import { ExerciseSettings } from "./exercise-settings";
 import { useWorkoutExercisesEditor } from "./use-workout-exercises-editor";
 import {
+  LoggedExerciseRemove,
   WorkoutExerciseSets,
   WorkoutLogActions,
   type WorkoutLogging,
@@ -304,6 +305,13 @@ export function WorkoutExercises({
                 required
                 onValueChange={(name) => change(exercise.id, { name })}
               />
+              {logging && (
+                <LoggedExerciseRemove
+                  exercise={exercise}
+                  logging={logging}
+                  disabled={disabled}
+                />
+              )}
               {!logging && (
                 <>
                   <ExerciseSettings
@@ -327,82 +335,84 @@ export function WorkoutExercises({
                 </>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-              <div className="flex items-center gap-1">
-                <Input
-                  appearance="seamless"
-                  aria-label={`Sets for ${exercise.name}`}
-                  className="h-8! w-8 flex-none! text-sm"
-                  readOnly={!!logging}
-                  type="number"
-                  min="1"
-                  max="10"
-                  required
-                  value={exercise.sets || ""}
-                  onValueChange={(v) =>
-                    change(exercise.id, { sets: Number(v) })
-                  }
-                />
-                <span>{!logging || exercise.target ? "sets ×" : "sets"}</span>
-              </div>
-              {(!logging || Boolean(exercise.target)) && (
-                <Input
-                  appearance="seamless"
-                  aria-label={`Target for ${exercise.name}`}
-                  className="h-8! w-16 flex-none! text-sm"
-                  readOnly={!!logging}
-                  maxLength={100}
-                  value={exercise.target}
-                  onValueChange={(target) => change(exercise.id, { target })}
-                />
-              )}
-              <SelectRoot
-                value={exercise.role ?? "workout"}
-                disabled={disabled || starting || !!logging}
-                items={workoutExerciseRoleOptions}
-                onValueChange={(value) => {
-                  const role = workoutExerciseRoleSchema.safeParse(value);
+            {!logging?.freeForm && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                <div className="flex items-center gap-1">
+                  <Input
+                    appearance="seamless"
+                    aria-label={`Sets for ${exercise.name}`}
+                    className="h-8! w-8 flex-none! text-sm"
+                    readOnly={!!logging}
+                    type="number"
+                    min="1"
+                    max="10"
+                    required
+                    value={exercise.sets || ""}
+                    onValueChange={(v) =>
+                      change(exercise.id, { sets: Number(v) })
+                    }
+                  />
+                  <span>{!logging || exercise.target ? "sets ×" : "sets"}</span>
+                </div>
+                {(!logging || Boolean(exercise.target)) && (
+                  <Input
+                    appearance="seamless"
+                    aria-label={`Target for ${exercise.name}`}
+                    className="h-8! w-16 flex-none! text-sm"
+                    readOnly={!!logging}
+                    maxLength={100}
+                    value={exercise.target}
+                    onValueChange={(target) => change(exercise.id, { target })}
+                  />
+                )}
+                <SelectRoot
+                  value={exercise.role ?? "workout"}
+                  disabled={disabled || starting || !!logging}
+                  items={workoutExerciseRoleOptions}
+                  onValueChange={(value) => {
+                    const role = workoutExerciseRoleSchema.safeParse(value);
 
-                  if (role.success) {
-                    change(exercise.id, { role: role.data }, true);
-                  }
-                }}
-              >
-                <SelectTrigger
-                  aria-label={`Role for ${exercise.name}`}
-                  className="h-8! w-28! gap-2! px-2! text-xs"
-                />
-                <SelectPopup>
-                  {workoutExerciseRoleOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectPopup>
-              </SelectRoot>
-              <SelectRoot
-                value={exercise.unit}
-                disabled={disabled || starting || !!logging}
-                items={[
-                  { value: "reps", label: "Reps" },
-                  { value: "seconds", label: "Seconds" },
-                ]}
-                onValueChange={(unit) => {
-                  if (unit === "reps" || unit === "seconds") {
-                    change(exercise.id, { unit }, true);
-                  }
-                }}
-              >
-                <SelectTrigger
-                  aria-label={`Measure for ${exercise.name}`}
-                  className="h-8! w-28! gap-2! px-2! text-xs"
-                />
-                <SelectPopup>
-                  <SelectItem value="reps">Reps</SelectItem>
-                  <SelectItem value="seconds">Seconds</SelectItem>
-                </SelectPopup>
-              </SelectRoot>
-            </div>
+                    if (role.success) {
+                      change(exercise.id, { role: role.data }, true);
+                    }
+                  }}
+                >
+                  <SelectTrigger
+                    aria-label={`Role for ${exercise.name}`}
+                    className="h-8! w-28! gap-2! px-2! text-xs"
+                  />
+                  <SelectPopup>
+                    {workoutExerciseRoleOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectPopup>
+                </SelectRoot>
+                <SelectRoot
+                  value={exercise.unit}
+                  disabled={disabled || starting || !!logging}
+                  items={[
+                    { value: "reps", label: "Reps" },
+                    { value: "seconds", label: "Seconds" },
+                  ]}
+                  onValueChange={(unit) => {
+                    if (unit === "reps" || unit === "seconds") {
+                      change(exercise.id, { unit }, true);
+                    }
+                  }}
+                >
+                  <SelectTrigger
+                    aria-label={`Measure for ${exercise.name}`}
+                    className="h-8! w-28! gap-2! px-2! text-xs"
+                  />
+                  <SelectPopup>
+                    <SelectItem value="reps">Reps</SelectItem>
+                    <SelectItem value="seconds">Seconds</SelectItem>
+                  </SelectPopup>
+                </SelectRoot>
+              </div>
+            )}
             {exercise.catalogExerciseId && (
               <ExerciseMedia
                 householdId={householdId}

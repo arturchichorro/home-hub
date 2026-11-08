@@ -5,6 +5,7 @@ import { queries } from "@home-hub/shared/zero/queries";
 import {
   Button,
   Check,
+  History,
   IconButton,
   InlineAlert,
   Input,
@@ -33,17 +34,45 @@ export function WorkoutsLibrary({ householdId }: { householdId: string }) {
   const [error, setError] = useState("");
   const header = useMemo(
     () => (
-      <Button
-        variant="ghost"
-        className="h-7! px-1.5! font-normal text-muted"
-        disabled={!enabled || busy}
-        onClick={() => setCreating(true)}
-      >
-        <Plus aria-hidden="true" className="size-4" />
-        Add workout
-      </Button>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          className="h-7! px-1.5! font-normal text-muted"
+          disabled={!enabled || busy}
+          onClick={() => {
+            void navigate({
+              to: "/households/$householdId/workouts/session",
+              params: { householdId },
+            });
+          }}
+        >
+          Log session
+        </Button>
+        <IconButton
+          aria-label="Training history"
+          title="Training history"
+          className="size-7!"
+          onClick={() => {
+            void navigate({
+              to: "/households/$householdId/workouts/history",
+              params: { householdId },
+            });
+          }}
+        >
+          <History aria-hidden="true" className="size-4" />
+        </IconButton>
+        <IconButton
+          aria-label="Add workout"
+          title="Add workout"
+          className="size-7!"
+          disabled={!enabled || busy}
+          onClick={() => setCreating(true)}
+        >
+          <Plus aria-hidden="true" className="size-4" />
+        </IconButton>
+      </div>
     ),
-    [enabled, busy],
+    [enabled, busy, householdId, navigate],
   );
   useAppHeaderRightComponent(header);
 

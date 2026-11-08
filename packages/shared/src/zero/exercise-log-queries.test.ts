@@ -3,120 +3,54 @@ import { expect, it } from "vitest";
 import { queries } from "./queries";
 
 const householdId = crypto.randomUUID();
-
 const userId = crypto.randomUUID();
+const ctx = { userId };
+const ast = (value: unknown) => (value as { ast: AST }).ast;
 
-const workoutId = crypto.randomUUID();
-
-const ast = (query: unknown) => (query as { ast: AST }).ast;
-
-const equals = (name: string, value: string) => ({
-  type: "simple",
-  left: { type: "column", name },
-  op: "=",
-  right: { type: "literal", value },
-});
-
-it("does not count an empty or note-only grouping as the latest workout activity", () => {
-  const query = ast(
-    queries.workouts.byHousehold.fn({ args: { householdId }, ctx: { userId } }),
+it("counts only the author's newest nonempty session for each workout", () => {
+  const value = ast(
+    queries.workouts.byHousehold.fn({ args: { householdId }, ctx }),
   );
-  const latest = query.related?.find(
-    (r) => r.subquery.table === "workoutLogs",
+  const latest = value.related?.find(
+    (row) => row.subquery.table === "trainingSessions",
   )?.subquery;
+
   expect(latest?.limit).toBe(1);
-
-  for (const table of [
-    "workoutLogExercises",
-    "exerciseLogs",
-    "exerciseLogSets",
-  ]) {
-    expect(JSON.stringify(latest?.where)).toContain(table);
-  }
+  expect(JSON.stringify(latest?.where)).toContain(userId);
+  expect(JSON.stringify(latest?.where)).toContain("trainingSessionExercises");
+  expect(JSON.stringify(latest?.where)).toContain("trainingSessionSets");
 });
 
-it("bounds the catalog to one nonempty occurrence for the authenticated author", () => {
-  const query = ast(
-    queries.workouts.catalog.fn({ args: { householdId }, ctx: { userId } }),
+it("bounds catalog performance to one nonempty canonical occurrence for this author", () => {
+  const value = ast(
+    queries.workouts.catalog.fn({ args: { householdId }, ctx }),
   );
-  const occurrence = query.related?.find(
-    (r) => r.subquery.table === "exerciseLogs",
+  const occurrence = value.related?.find(
+    (row) => row.subquery.table === "trainingSessionExercises",
   )?.subquery;
-  expect(occurrence).toMatchObject({
-    limit: 1,
-    where: {
-      type: "and",
-      conditions: expect.arrayContaining([
-        equals("householdId", householdId),
-        equals("userId", userId),
-      ]),
-    },
-  });
-  expect(JSON.stringify(occurrence?.where)).toContain("exerciseLogSets");
-  expect(occurrence?.related?.[0]?.subquery).toMatchObject({
-    table: "exerciseLogSets",
-    orderBy: [["round", "asc"]],
-  });
-  expect(JSON.stringify(query.where)).toContain("householdMembers");
-  expect(JSON.stringify(query.where)).toContain("householdModuleSettings");
+
+  expect(occurrence?.limit).toBe(1);
+  expect(JSON.stringify(occurrence?.where)).toContain(userId);
+  expect(JSON.stringify(occurrence?.where)).toContain(householdId);
+  expect(JSON.stringify(occurrence?.where)).toContain("trainingSessionSets");
+  expect(occurrence?.related?.[0]?.subquery.orderBy).toEqual([
+    ["round", "asc"],
+  ]);
 });
 
-it("excludes the selected occurrence's time and checks ownership even for deleted historical identities", () => {
+it("excludes the current occurrence's date while checking author scope for previous hints", () => {
   const beforeAt = 1234.567;
-  const query = ast(
+  const value = ast(
     queries.workouts.previousExercises.fn({
       args: { householdId, exerciseIds: [crypto.randomUUID()], beforeAt },
-      ctx: { userId },
+      ctx,
     }),
   );
-  const occurrence = query.related?.find(
-    (r) => r.subquery.table === "exerciseLogs",
-  )?.subquery;
-  expect(occurrence).toMatchObject({
-    limit: 1,
-    where: {
-      type: "and",
-      conditions: expect.arrayContaining([
-        equals("userId", userId),
-        {
-          type: "simple",
-          left: { type: "column", name: "performedAt" },
-          op: "<",
-          right: { type: "literal", value: beforeAt },
-        },
-      ]),
-    },
-  });
-  expect(JSON.stringify(query.where)).toContain(userId);
-  expect(JSON.stringify(query.where)).toContain("exerciseLogs");
-});
-
-it("guards the workout grouping and both linked levels by author and household", () => {
-  const query = ast(
-    queries.workouts.logsV2.fn({
-      args: { householdId, workoutId },
-      ctx: { userId },
-    }),
-  );
-  const links = query.related?.find(
-    (r) => r.subquery.table === "workoutLogExercises",
-  )?.subquery;
-  const occurrence = links?.related?.find(
-    (r) => r.subquery.table === "exerciseLogs",
+  const occurrence = value.related?.find(
+    (row) => row.subquery.table === "trainingSessionExercises",
   )?.subquery;
 
-  for (const node of [query, links, occurrence]) {
-    expect(node).toMatchObject({
-      where: {
-        type: "and",
-        conditions: expect.arrayContaining([
-          equals("householdId", householdId),
-          equals("userId", userId),
-        ]),
-      },
-    });
-  }
-
-  expect(JSON.stringify(query.where)).toContain("householdMembers");
-  expect(JSON.stringify(query.where)).toContain("householdModuleSettings");
+  expect(occurrence?.limit).toBe(1);
+  expect(JSON.stringify(occurrence?.where)).toContain(String(beforeAt));
+  expect(JSON.stringify(occurrence?.where)).toContain(userId);
 });

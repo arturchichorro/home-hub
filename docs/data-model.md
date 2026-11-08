@@ -1,7 +1,7 @@
 # Data model
 
 The [Workouts module](./workouts/) documents its shared workout and private
-log snapshot and per-set storage boundaries.
+session, frozen occurrence and per-set storage boundaries.
 
 This document owns persisted entities, columns, relationships, constraints,
 and schema-level invariants. Authorization, transaction locking, and
@@ -39,13 +39,11 @@ erDiagram
   households ||--o{ exercises : catalogs
   workouts ||--o{ workout_exercises : prescribes
   exercises ||--o{ workout_exercises : references
-  workouts ||--o{ workout_logs : groups
-  users ||--o{ workout_logs : authors
-  users ||--o{ exercise_logs : authors
-  exercises ||--o{ exercise_logs : identifies
-  exercise_logs ||--o{ exercise_log_sets : measures
-  workout_logs ||--o{ workout_log_exercises : links
-  exercise_logs ||--o{ workout_log_exercises : appears_in
+  workouts |o--o{ training_sessions : sources
+  users ||--o{ training_sessions : authors
+  training_sessions ||--o{ training_session_exercises : owns
+  exercises ||--o{ training_session_exercises : identifies
+  training_session_exercises ||--o{ training_session_sets : measures
   households ||--o{ recipes : owns
   recipes ||--o{ recipe_ingredients : contains
   recipes ||--o{ recipe_cook_logs : records
@@ -177,13 +175,15 @@ key and calendar-date constraints are documented in the [Habits module](./habits
 ### Workouts module tables
 
 Shared definitions live in `workouts`, `exercises` and `workout_exercises`.
-Private measurements live in `exercise_logs` and `exercise_log_sets`, independently
-of workouts. `workout_logs` groups occurrences by author/workout/local day and owns
-private notes; `workout_log_exercises` enforces same-household/author links.
-`exercise_media` attaches shared assets to the catalog. Placement roles live on
-`workout_exercises`, while `workout_logs.exercise_roles` freezes historical roles
-separately from strict definition JSON. The pre-cutover `workout_log_sets` table
-is retained as an archive, not a write target.
+Private workout and free training share `training_sessions` →
+`training_session_exercises` → `training_session_sets`. Headers have an optional
+source workout and private name/note/dates; occurrences directly own frozen
+prescriptions/roles/order/catalog identity; sets retain their actual measurement
+conventions. Composite author/household FKs protect ownership. Row tombstones reject
+stale resurrection. There are no active header arrays, role maps or occurrence-link
+tables. The five original logging tables are dropped after verified transfer;
+superseded archive values remain only in the release backup. `exercise_media` attaches
+shared assets to the catalog.
 See the [Workouts data model](./workouts/#data-model) and its forward migration.
 
 ## Schema invariants

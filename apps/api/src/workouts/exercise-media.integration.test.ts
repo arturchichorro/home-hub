@@ -1,22 +1,19 @@
 import { randomUUID } from "node:crypto";
 import { createDbClient } from "@home-hub/database/client";
 import {
-  exerciseLogSets,
-  exerciseLogs,
   exerciseMedia,
   exercises,
   householdMembers,
   householdModuleSettings,
   households,
   media,
+  trainingSessionExercises,
+  trainingSessionSets,
+  trainingSessions,
   users,
   workoutExercises,
-  workoutLogExercises,
-  workoutLogSets,
-  workoutLogs,
   workouts,
 } from "@home-hub/database/schema";
-import { workoutLogSnapshotSchema } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import { and, eq, sql } from "drizzle-orm";
@@ -230,45 +227,36 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       ],
     });
 
-  const definition = (slotId: string) => ({
-    id: slotId,
-    catalogExerciseId: exerciseId,
-    name: "Push-up",
-    sets: 3,
-    target: "8",
-    unit: "reps",
-    load: "bodyweight",
-    unilateral: false,
-  });
-
   async function seedPerformance(
-    log: typeof workoutLogs.$inferSelect,
+    log: typeof trainingSessions.$inferSelect,
     slotId: string,
     amounts: number[] = [8],
   ) {
     const id = randomUUID();
-    await client.db.insert(exerciseLogs).values({
+
+    await client.db.insert(trainingSessionExercises).values({
       id,
+      sessionId: log.id,
       householdId,
       userId: log.userId,
       exerciseId,
+      templateExerciseId: slotId,
+      position: 0,
+      name: "Push-up",
+      unit: "reps",
+      load: "bodyweight",
+      unilateral: false,
+      role: "workout",
+      plannedSets: 3,
+      target: "8",
       performedOn: log.completedOn,
       performedAt: log.completedAt,
-      snapshot: definition(slotId),
-    });
-    await client.db.insert(workoutLogExercises).values({
-      householdId,
-      userId: log.userId,
-      workoutLogId: log.id,
-      workoutExerciseId: slotId,
-      exerciseLogId: id,
-      position: 0,
     });
 
     if (amounts.length) {
-      await client.db.insert(exerciseLogSets).values(
+      await client.db.insert(trainingSessionSets).values(
         amounts.map((amount, index) => ({
-          exerciseLogId: id,
+          sessionExerciseId: id,
           round: index + 1,
           amount,
           rightAmount: null,
@@ -317,11 +305,11 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
     const base = {
       householdId,
       workoutId,
-      snapshot: { title: "Logged", exercises: [definition(slotId)] },
+      name: "Logged",
       completedAt: new Date("2026-06-17T18:00:00Z"),
     };
     const recorded = await client.db
-      .insert(workoutLogs)
+      .insert(trainingSessions)
       .values([
         {
           ...base,
@@ -354,7 +342,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
     }
 
     const [empty] = await client.db
-      .insert(workoutLogs)
+      .insert(trainingSessions)
       .values({
         ...base,
         id: randomUUID(),
@@ -369,7 +357,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
     }
 
     await seedPerformance(empty, slotId, []);
-    await client.db.insert(workoutLogs).values({
+    await client.db.insert(trainingSessions).values({
       ...base,
       id: randomUUID(),
       userId,
@@ -413,7 +401,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
     ).toBe("2026-10-27");
     expect(JSON.stringify(theirs)).not.toContain("Own private note");
   });
-  it("deletes catalog links atomically, preserves completed logs/media, and recreates names with fresh identities", async () => {
+  it("deletes catalog links atomically without changing private training or media and permits historical corrections", async () => {
     const workoutId = randomUUID();
     const slotId = randomUUID();
     const logId = randomUUID();
@@ -433,76 +421,34 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
       target: "8",
       sortKey: 1,
     });
-    await client.db.insert(workoutLogs).values({
-      id: logId,
-      householdId,
-      userId,
-      workoutId,
-      note: "Private note",
-      completedOn: "2026-10-27",
-      completedAt: new Date(),
-      snapshot: {
-        title: "Before",
-        exercises: [
-          {
-            id: slotId,
-            catalogExerciseId: exerciseId,
-            name: "Push-up",
-            sets: 3,
-            target: "8",
-            unit: "reps",
-            load: "bodyweight",
-            unilateral: false,
-          },
-        ],
-      },
-    });
-    await client.db.insert(workoutLogSets).values({
-      logId,
-      householdId,
-      workoutExerciseId: slotId,
-      exerciseId,
-      round: 1,
-      amount: 8,
-      rightAmount: null,
-      weightKg: null,
-      unit: "reps",
-      load: "bodyweight",
-      unilateral: false,
-    });
+    const [stored] = await client.db
+      .insert(trainingSessions)
+      .values({
+        id: logId,
+        householdId,
+        userId,
+        workoutId,
+        name: "Before",
+        note: "Private note",
+        completedOn: "2026-10-27",
+        completedAt: new Date(),
+      })
+      .returning();
 
-    const [storedLog] = await client.db
-      .select()
-      .from(workoutLogs)
-      .where(eq(workoutLogs.id, logId));
-
-    if (!storedLog) {
-      throw Error("fixture");
+    if (!stored) {
+      throw Error("Missing fixture");
     }
 
-    const occurrenceId = await seedPerformance(storedLog, slotId);
-    const beforeOccurrence = await client.db
+    const occurrenceId = await seedPerformance(stored, slotId);
+    const before = await client.db
       .select()
-      .from(exerciseLogs)
-      .where(eq(exerciseLogs.id, occurrenceId));
-    const beforeMeasurements = await client.db
-      .select()
-      .from(exerciseLogSets)
-      .where(eq(exerciseLogSets.exerciseLogId, occurrenceId));
+      .from(trainingSessionExercises)
+      .where(eq(trainingSessionExercises.id, occurrenceId));
     const image = await pending();
     await services().confirmUpload({
       ...scope(),
       attachmentId: image.attachmentId,
     });
-
-    const beforeLogs = await client.db
-      .select()
-      .from(workoutLogs)
-      .where(eq(workoutLogs.id, logId));
-    const beforeSets = await client.db
-      .select()
-      .from(workoutLogSets)
-      .where(eq(workoutLogSets.logId, logId));
     const provider = createZeroDbProvider({ db: client.db });
     await provider.transaction((tx) =>
       mutators.workouts.deleteExercise.fn({
@@ -511,24 +457,25 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
         args: { householdId, exerciseId, optimisticTimestamp: 1 },
       }),
     );
+
     expect(
       await client.db
         .select()
         .from(workoutExercises)
         .where(eq(workoutExercises.exerciseId, exerciseId)),
-    ).toHaveLength(0);
+    ).toEqual([]);
     expect(
       await client.db
         .select()
-        .from(workoutLogs)
-        .where(eq(workoutLogs.id, logId)),
-    ).toEqual(beforeLogs);
+        .from(trainingSessions)
+        .where(eq(trainingSessions.id, logId)),
+    ).toEqual([stored]);
     expect(
       await client.db
         .select()
-        .from(workoutLogSets)
-        .where(eq(workoutLogSets.logId, logId)),
-    ).toEqual(beforeSets);
+        .from(trainingSessionExercises)
+        .where(eq(trainingSessionExercises.id, occurrenceId)),
+    ).toEqual(before);
     expect(
       await client.db
         .select()
@@ -548,6 +495,7 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
         ctx: { userId },
         args: {
           householdId,
+          optimisticTimestamp: 1,
           exercise: {
             id: replacement,
             name: "Push-up",
@@ -555,71 +503,53 @@ describe.runIf(Boolean(databaseUrl))("exercise media on PostgreSQL", () => {
             load: "single",
             unilateral: true,
           },
-          optimisticTimestamp: 1,
         },
       }),
     );
-
     const visible = await provider.run(
       queries.workouts.catalog.fn({ ctx: { userId }, args: { householdId } }),
     );
     expect(visible.map((row) => row.id)).toEqual([replacement]);
-    expect(visible[0]?.load).toBe("single");
     expect(visible[0]?.performances).toEqual([]);
-    expect(
-      await client.db
-        .select()
-        .from(exerciseLogs)
-        .where(eq(exerciseLogs.id, occurrenceId)),
-    ).toEqual(beforeOccurrence);
-    expect(
-      await client.db
-        .select()
-        .from(exerciseLogSets)
-        .where(eq(exerciseLogSets.exerciseLogId, occurrenceId)),
-    ).toEqual(beforeMeasurements);
+
     await provider.transaction((tx) =>
-      mutators.workouts.saveSet.fn({
+      mutators.training.saveSet.fn({
         tx,
         ctx: { userId },
         args: {
           householdId,
           workoutId,
           logId,
-          workoutExerciseId: slotId,
-          exerciseLogId: occurrenceId,
-          round: 1,
-          snapshot: workoutLogSnapshotSchema.parse(storedLog.snapshot),
-          completedOn: storedLog.completedOn,
-          optimisticTimestamp: storedLog.completedAt.getTime(),
+          completedOn: stored.completedOn,
+          optimisticTimestamp: stored.completedAt.getTime(),
           timeZone: "UTC",
+          name: "Before",
+          note: "",
+          sessionExerciseId: occurrenceId,
+          round: 1,
           values: { amount: 9, weightKg: null, rightAmount: null },
+          exercises: [
+            {
+              id: occurrenceId,
+              catalogExerciseId: exerciseId,
+              templateExerciseId: slotId,
+              unit: "reps",
+              load: "bodyweight",
+              unilateral: false,
+              isNew: false,
+            },
+          ],
         },
       }),
     );
-    expect(
-      await client.db
-        .select()
-        .from(workoutLogSets)
-        .where(eq(workoutLogSets.logId, logId)),
-    ).toEqual(beforeSets);
-    expect(
-      (
-        await client.db
-          .select()
-          .from(exerciseLogSets)
-          .where(eq(exerciseLogSets.exerciseLogId, occurrenceId))
-      )[0]?.amount,
-    ).toBe(9);
-
     const history = await provider.run(
-      queries.workouts.logsV2.fn({
+      queries.training.history.fn({
         ctx: { userId },
-        args: { householdId, workoutId },
+        args: { includeExercises: true, householdId, workoutId },
       }),
     );
     expect(history[0]?.note).toBe("Private note");
-    expect(history[0]?.loggedExercises[0]?.occurrence?.sets[0]?.amount).toBe(9);
+    expect(history[0]?.exercises[0]?.sets[0]?.amount).toBe(9);
     expect(
       await provider.run(
         queries.workouts.exerciseMedia.fn({

@@ -24,10 +24,10 @@ workouts; training logs and set values remain private to their author.
 - While logging, the small **+ Add exercise** picker selects an existing catalog
   movement for this log only. It excludes current workout/log exercises and cannot
   create or edit catalog entries. Additions start as guarded local drafts; their
-  first complete set saves an independent private occurrence. Reopening the log
+  first complete set saves a private session occurrence. Reopening the log
   restores them, including normal history/previous-value hints, but the workout
   template and future logs stay unchanged. A log supports at most 40 exercises
-  including its original workout. No database migration is needed.
+  including its original workout.
 - Each author has at most one grouping per workout/local day; logging again opens
   it. Separate workouts on the same day have separate exercise occurrences.
   A grouping is created with the first complete set, not merely by browsing.
@@ -61,10 +61,8 @@ workouts; training logs and set values remain private to their author.
   has a simple role selector: **Warm-up**, **Workout** (default), or **Stretching**.
   The same catalog movement can have different roles in different workouts (or
   slots); classification does not group, reorder, or split performance history.
-  Roles are captured in new log snapshots. Reopening/correcting a log keeps its
-  recorded role; pre-classification history displays Workout without rewriting
-  stored snapshots. Frozen roles are stored separately from strict definition
-  JSON so already-open older clients can still read and correct logs.
+  Roles freeze directly on session exercise rows. Reopening/correcting a log keeps
+  its recorded role; pre-classification history migrates as Workout.
 - Catalog rows show **Your last**: the latest nonempty, author-private exercise
   occurrence across workouts, with date and actual sets/counts/weights. Historical
   corrections retain their original date and measurement conventions; they do
@@ -94,6 +92,31 @@ There are no plans, cycles, scheduling, timers, progression suggestions, or
 configured weight increments. Membership, module availability, and private-log
 ownership are enforced in Zero queries and mutations.
 
+## Free-form training
+
+**Log session** on Workouts opens or resumes your one free-form session for the
+current local day; **Add workout** stays separate. Pick existing catalog
+movements with **+**. Names default to “Free training”; names and notes are private.
+Selections/text remain guarded drafts until a first complete set atomically saves
+the session and all selected exercises in their added order. Autosave, previous
+values, retry/discard and navigation/unload/PWA protections match workout logging.
+Limits remain 40 exercises and ten sets. Older sessions stay editable without
+changing their dates; backdated creation and exercise reordering are not offered.
+
+The History icon opens a newest-first private timeline of workouts and free
+training, paged twenty entries at a time. Each row opens the original editable
+log; existing per-workout history and inline notes are unchanged. The combined
+index does not preview notes or load all performance sets.
+
+Free-form exercises and whole sessions can be removed explicitly, with
+confirmation for recorded data. Removing the last set/exercise keeps an empty
+entry with its name/notes until deletion; it does not count as completed training.
+Saved free-form sets support **any workout** habits, never selected-template
+habits. Removing them preserves completion supported by another log; archived
+habit completion stays frozen. Deletion clears the session's text/occurrences/sets,
+not catalog entries or other logs. Session/exercise row tombstones, with text and
+measurements cleared, prevent stale devices from recreating removed data.
+
 ## Data model
 
 - `workouts`: household-shared title, notes, ordering and timestamps.
@@ -109,21 +132,29 @@ ownership are enforced in Zero queries and mutations.
   and timestamps. Composite household foreign keys protect both parent links.
   The primary key remains `(workout_id, id)`; removing a slot does not delete the
   movement or its history.
-- `workout_logs`: author-private daily grouping, notes and immutable title/exercise
-  snapshot, plus a separate `exercise_roles` snapshot keyed by placement ID. One grouping per household/author/workout/local day.
-- `exercise_logs`: independent author-private occurrences, catalog identity,
-  original local day/time and historical exercise definition. No workout FK.
-- `exercise_log_sets`: numeric amount/right amount/weight and original unit/load/
-  sides, keyed by `(exercise_log_id, round)`. Their single occurrence FK determines
-  author and household; access always goes through that authorized parent.
-- `workout_log_exercises`: ordered links from a daily grouping and historical slot
-  to its occurrence. Composite foreign keys prohibit cross-household/author links;
-  deleting a current slot does not delete its occurrence. Log-only links use the
-  catalog UUID as their per-log slot key, rather than a template placement; their
-  definitions are projected from occurrences, never appended to the stored base snapshot.
-- `workout_log_sets`: untouched pre-cutover archive, not the current source of truth.
-  The API rejects the retired bulk writer. New writes target one occurrence/round;
-  they never replace all sets or modify the prescription.
+- `training_sessions`: private headers for both workout and free training. Optional
+  `workout_id` records the source; name/title, note, original local day/timestamps and
+  a deletion tombstone live here. Partial unique indexes permit one active session
+  per author/household/workout/day and one free session per author/household/day.
+- `training_session_exercises`: occurrences directly owned by a required session,
+  with composite household/author FKs, catalog identity, optional historical template
+  placement ID, position, frozen name/measure/load/sides/role/prescription, original
+  performance dates and row tombstones. Repeated template movements keep separate
+  occurrences; free selections are unique. Unperformed prescribed slots remain rows.
+- `training_session_sets`: actual amount/right amount/weight and recorded unit/load/
+  sides, keyed by `(session_exercise_id, round)`. Access goes through the scoped
+  occurrence/session. Existing-round corrections retain that round's conventions,
+  even when they differ from its prescription; new rounds use the frozen definition.
+
+There are no active header exercise arrays, role maps, independent occurrence links,
+or parallel workout/free-session stores. Form snapshots are projections, not persisted
+copies. Both paths use `training.*` mutations and one paged history query. Shared
+templates/catalog data never change as a side effect of private logging.
+
+The migration transfers and verifies current records, then drops all five original
+logging tables. No archive schema, adapters or dual-write targets remain. The
+superseded `workout_log_sets` archive is not replayed into current measurements;
+its obsolete versions survive only in the pre-release backup.
 
 Exercise autosaves send field-level patches and explicit additions/deletions,
 never a replacement array. Unrelated concurrent edits and unseen additions are
@@ -131,19 +162,21 @@ preserved. Mutations serialize through the parent workout before checking the
 current row count/order and applying changes atomically. Shared catalog updates
 patch only changed fields; settings edits do not overwrite concurrent renames.
 
-Set mutations serialize per household/author/workout before resolving the daily
-group and occurrence. Concurrent devices converge on one grouping without
-overwriting other rows; historical corrections retain original snapshots/dates.
+Set mutations serialize per household/author before resolving the daily session
+and occurrence. Concurrent devices converge without overwriting other rows;
+historical corrections retain original definitions/dates.
 
 For statistics, join measurements to occurrences (no workout join), filter by
 author and measurement unit, and group by catalog ID rather than name:
 
 ```sql
 SELECT sum(s.amount) AS reps
-FROM exercise_log_sets s
-JOIN exercise_logs l ON l.id = s.exercise_log_id
-WHERE l.household_id = $1 AND l.user_id = $2
-  AND l.exercise_id = $3 AND s.unit = 'reps';
+FROM training_session_sets s
+JOIN training_session_exercises e ON e.id = s.session_exercise_id
+JOIN training_sessions t ON t.id = e.session_id
+WHERE t.household_id = $1 AND t.user_id = $2
+  AND t.deleted_at IS NULL AND e.deleted_at IS NULL
+  AND e.exercise_id = $3 AND s.unit = 'reps';
 ```
 
 Unilateral totals may count both sides using
@@ -180,7 +213,30 @@ private log notes, sets or snapshots.
 
 These are forward-upgrade notes for installations below the named migrations,
 not instructions to replay completed cutovers. Preserve applied SQL, historical
-identities and archive tables; consult release/deployment state before acting.
+identities; consult release/deployment state before acting. The 0053 cutover
+explicitly drops the original tables after verification and a fresh backup.
+
+`0053_unified_training.sql` replaces the unmerged additive free-training migration.
+It migrates every existing header, occurrence and current set, normalizes frozen
+prescriptions/roles (including unperformed slots), preserves existing IDs/dates/notes/
+measurements, then drops all five original tables after in-transaction transfer
+checks. Superseded archive values remain only in the release backup. Ambiguous
+snapshots, orphan rows or inconsistent ownership abort the transaction.
+
+This is a coordinated breaking cutover, not a rolling upgrade. Resolve drafts and
+acknowledge queued writes on **every device/profile and in every module**; pause
+users, stop old API/Zero writers and take a fresh PostgreSQL/replica backup. Apply
+the migration, verify counts/values/publication, then start matching API/official
+Zero/web. Compose selects a fresh derived replica file while retaining the old
+file; the browser selects a new Zero storage key without deleting its old database.
+Neither can recover unacknowledged old-device edits automatically. No PostgreSQL
+reset, SDK patch, compatibility adapter or dual writes are used.
+
+The deploy preflight now gates on `0053`, not the historical `0046` cutoff. Its
+acknowledgement covers stopped writers/fresh backup, **not** browser-draft readiness.
+Follow [Training schema cutover](../deployment.md#training-schema-cutover-0053).
+An environment that applied the superseded unmerged `0053` needs separate inspection;
+do not overwrite its ledger or reset application data.
 
 `0047_chemical_hemingway.sql` adds the placement role (Workout by default) and its
 three-value constraint. `0048_lively_maestro.sql` adds the independent historical
@@ -214,7 +270,8 @@ local verification required no replica rebuild. The standalone
 `scripts/verify-exercise-catalog-migration.sh <container>` fixture currently needs
 its whole-row comparisons updated for the additive role columns in `0047`–`0048`;
 see [Backlog](../backlog.md). Do not confuse that stale assertion with lost history
-or bypass the fidelity checks. The canonical logging/media rehearsals run in CI.
+or bypass the fidelity checks. Historical scripts remain manual; normal integration
+tests cover the populated canonical training upgrade and fail-closed cases.
 
 `0044_faulty_the_anarchist.sql` adds `exercise_media` and its Zero publication entry.
 It is additive: no existing exercise, asset, recipe or log data is rewritten, and

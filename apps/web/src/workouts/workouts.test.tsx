@@ -1,7 +1,10 @@
+import { logOnlyWorkoutExercise } from "@home-hub/shared/training";
 import { starterWorkouts } from "@home-hub/shared/workout-seed";
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TrainingHistoryPage } from "./training-history";
+import { TrainingSessionPage } from "./training-session";
 import { WorkoutDetail } from "./workout-detail";
 import { WorkoutExercises } from "./workout-fields";
 import { WorkoutHistoryEntry } from "./workout-history-entry";
@@ -80,6 +83,96 @@ beforeEach(() => {
   });
 });
 
+it("opens an empty free-form logger with guarded name/note fields without creating a workout or performance", () => {
+  const html = renderToStaticMarkup(
+    <TrainingSessionPage householdId={householdId} />,
+  );
+  expect(html).toContain('aria-label="Session name"');
+  expect(html).toContain('aria-label="Session note"');
+  expect(html).toContain("Add exercise");
+  expect(html).not.toContain("Log workout");
+  expect(mutate).not.toHaveBeenCalled();
+});
+
+it("keeps free-form set inputs and removal while hiding non-existent workout prescriptions and role controls", () => {
+  const exercise = logOnlyWorkoutExercise({
+    id: crypto.randomUUID(),
+    name: "Free squat",
+    unit: "reps",
+    load: "bodyweight",
+    unilateral: false,
+  });
+  const form = openWorkoutLog({
+    title: "Free training",
+    exercises: [exercise],
+  });
+  const logging = {
+    ...loggingFixture(form),
+    freeForm: true,
+    onRemoveExercise: vi.fn(),
+  };
+  const html = renderToStaticMarkup(
+    <WorkoutExercises
+      householdId={householdId}
+      title="Free training"
+      current={[exercise]}
+      disabled={false}
+      onSave={async () => false}
+      onStartLogging={async () => {}}
+      onCloseLogging={() => {}}
+      logging={logging}
+    />,
+  );
+  expect(html).toContain("reps for Free squat, set 1");
+  expect(html).toContain("Remove Free squat from this session");
+  expect(html).not.toContain("Sets for Free squat");
+  expect(html).not.toContain("Role for Free squat");
+  expect(html).not.toContain("Target for Free squat");
+  expect(html).not.toContain("Measure for Free squat");
+});
+
+it("renders a compact mixed history with dates, names and origin, leaving notes and set details in their original editors", () => {
+  const common = {
+    householdId,
+    userId: crypto.randomUUID(),
+    completedOn: "2026-11-08",
+    completedAt: 100,
+    createdAt: 100,
+  };
+  const free = {
+    ...common,
+    id: crypto.randomUUID(),
+    name: "Private mix",
+    note: "Do not preview this note",
+    deletedAt: null,
+    workoutId: null,
+    exercises: [],
+  };
+  const normal = {
+    ...common,
+    id: crypto.randomUUID(),
+    workoutId,
+    note: "Original private note",
+    name: "Original lift",
+    exercises: [],
+  };
+  useQuery.mockImplementation((request) => [
+    request?.query?.queryName === "training.history" ? [free, normal] : [],
+    { type: "complete" },
+  ]);
+  const html = renderToStaticMarkup(
+    <TrainingHistoryPage householdId={householdId} />,
+  );
+  expect(html).toContain("Private mix");
+  expect(html).toContain("Original lift");
+  expect(html).toContain("Free training");
+  expect(html).toContain("Workout");
+  expect(html).toContain("2026-11-08");
+  expect(html).not.toContain("Do not preview this note");
+  expect(html).not.toContain("Original private note");
+  expect(html).not.toContain("No sets logged.");
+});
+
 function loggingFixture(form: WorkoutLogForm) {
   const editor = new WorkoutLogEditor(form, {
     householdId,
@@ -156,7 +249,6 @@ describe("simple workouts", () => {
       <WorkoutHistoryEntry
         entry={entry}
         householdId={householdId}
-        workoutId={workoutId}
         disabled={false}
         selected={false}
         onSelect={() => {}}
@@ -186,7 +278,6 @@ describe("simple workouts", () => {
       <WorkoutHistoryEntry
         entry={entry}
         householdId={householdId}
-        workoutId={workoutId}
         disabled={false}
         selected={false}
         onSelect={() => {}}
@@ -373,40 +464,51 @@ describe("simple workouts", () => {
 
     const entry = {
       id: "history",
+      householdId,
+      userId: crypto.randomUUID(),
+      workoutId,
+      name: starter.title,
+      note: "",
       completedOn: "2026-10-25",
+      completedAt: 1,
       createdAt: Date.now(),
-      snapshot: { title: starter.title, exercises: starter.exercises },
-
-      sets: [1, 2].map((round) => ({
-        logId: "history",
-        exerciseId: exercise.id,
-        workoutExerciseId: exercise.id,
-        householdId,
-        round,
-        weightKg: 8,
-        amount: 10,
-        rightAmount: null,
-        unit: exercise.unit,
-        load: exercise.load,
-        unilateral: exercise.unilateral,
-      })),
+      deletedAt: null,
+      exercises: [
+        {
+          id: "occurrence",
+          sessionId: "history",
+          householdId,
+          userId: crypto.randomUUID(),
+          exerciseId: exercise.catalogExerciseId ?? exercise.id,
+          templateExerciseId: exercise.id,
+          name: exercise.name,
+          role: exercise.role ?? "workout",
+          position: 0,
+          unit: exercise.unit,
+          load: exercise.load,
+          unilateral: exercise.unilateral,
+          plannedSets: exercise.sets,
+          target: exercise.target,
+          performedOn: "2026-10-25",
+          performedAt: 1,
+          deletedAt: null,
+          sets: [1, 2].map((round) => ({
+            sessionExerciseId: "occurrence",
+            round,
+            weightKg: 8,
+            amount: 10,
+            rightAmount: null,
+            unit: exercise.unit,
+            load: exercise.load,
+            unilateral: exercise.unilateral,
+          })),
+        },
+      ],
     };
     useQuery
       .mockReturnValueOnce([workout, { type: "complete" }])
       .mockReturnValueOnce([
-        [
-          {
-            ...entry,
-            loggedExercises: [
-              {
-                workoutExerciseId: exercise.id,
-                exerciseLogId: "occurrence",
-                occurrence: { exerciseId: exercise.id, sets: entry.sets },
-              },
-            ],
-          },
-          { ...entry, id: "empty", sets: [], loggedExercises: [] },
-        ],
+        [entry, { ...entry, id: "empty", exercises: [] }],
         { type: "complete" },
       ]);
 

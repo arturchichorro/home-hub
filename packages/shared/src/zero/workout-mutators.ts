@@ -10,14 +10,11 @@ import {
   normalizeExerciseName,
   reorderCatalogExercisesSchema,
   reorderWorkoutsSchema,
-  saveWorkoutLogSchema,
   updateCatalogExerciseSchema,
-  updateWorkoutLogNoteSchema,
   updateWorkoutSchema,
   type WorkoutExercise,
 } from "../workouts";
 import type { ZeroAuthContext } from "./context";
-import { exerciseLogMutators } from "./exercise-log-mutators";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
 import { appendSortKey, nextSortKey, planReorder } from "./ordering";
 import { type Schema, zql } from "./schema.gen";
@@ -136,19 +133,6 @@ async function patchCatalog(
   });
 }
 
-const ownLog = (
-  householdId: string,
-  workoutId: string,
-  userId: string,
-  id: string,
-) =>
-  zql.workoutLogs
-    .where("householdId", householdId)
-    .where("workoutId", workoutId)
-    .where("userId", userId)
-    .where("id", id)
-    .one();
-
 async function access(
   tx: Transaction<Schema>,
   householdId: string,
@@ -166,8 +150,6 @@ const timestamp = (tx: Transaction<Schema>, optimistic: number) =>
   tx.location === "server" ? Date.now() : optimistic;
 
 export const workoutMutatorDefinitions = {
-  ...exerciseLogMutators,
-
   reorderExerciseMedia: define(
     reorderExerciseMediaSchema,
     async ({ tx, ctx, args }) => {
@@ -627,29 +609,5 @@ export const workoutMutatorDefinitions = {
         });
       }
     }
-  }),
-
-  updateLogNote: define(
-    updateWorkoutLogNoteSchema,
-    async ({ tx, ctx, args }) => {
-      await access(tx, args.householdId, ctx.userId);
-
-      const log = await tx.run(
-        ownLog(args.householdId, args.workoutId, ctx.userId, args.logId),
-      );
-
-      if (!log) {
-        throw new Error("Workout log note update not allowed");
-      }
-
-      await tx.mutate.workoutLogs.update({ id: log.id, note: args.note });
-    },
-  ),
-
-  // Preserve the protocol name for stale clients, never write the archive.
-  saveLog: define(saveWorkoutLogSchema, async () => {
-    throw new Error(
-      "Workout logging has changed. Reload Home Hub before logging.",
-    );
   }),
 };
