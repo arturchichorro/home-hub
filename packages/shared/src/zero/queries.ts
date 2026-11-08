@@ -7,6 +7,7 @@ import type { ZeroAuthContext } from "./context";
 import { documentQueries } from "./document-queries";
 import { logQueries } from "./log-queries";
 import { type Schema, zql } from "./schema.gen";
+import { trainingQueries } from "./training-queries";
 
 const defineHomeHubQuery = defineQueryWithType<Schema, ZeroAuthContext>();
 
@@ -684,6 +685,7 @@ const workoutLogsV2 = defineHomeHubQuery(workoutDetailArgs, ({ args, ctx }) =>
 );
 
 export const queries = defineHomeHubQueries({
+  training: trainingQueries,
   workouts: {
     byHousehold: workoutsByHousehold,
     catalog: exerciseCatalog,

@@ -52,6 +52,7 @@ const emptySnapshot = () => undefined;
 export function WorkoutDetail(props: {
   householdId: string;
   workoutId: string;
+  initialLogId?: string | undefined;
 }) {
   return (
     <WorkoutDetailPage
@@ -64,9 +65,11 @@ export function WorkoutDetail(props: {
 function WorkoutDetailPage({
   householdId,
   workoutId,
+  initialLogId,
 }: {
   householdId: string;
   workoutId: string;
+  initialLogId?: string | undefined;
 }) {
   const zero = useZero();
   const enabled = useZeroMutationEnabled();
@@ -112,6 +115,7 @@ function WorkoutDetailPage({
   const form = state?.form;
   const activeLogId = form?.id;
   const activeLogDay = form?.completedOn;
+  const requestedLogId = activeLogId ?? initialLogId;
   const startedAt = form?.startedAt;
   const [day, setDay] = useState(() =>
     calendarDate(Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone),
@@ -138,8 +142,12 @@ function WorkoutDetailPage({
     queries.workouts.logForDay({ householdId, workoutId, completedOn: day }),
   );
   const [selectedRows] = useQuery(
-    activeLogId
-      ? queries.workouts.logById({ householdId, workoutId, logId: activeLogId })
+    requestedLogId
+      ? queries.workouts.logById({
+          householdId,
+          workoutId,
+          logId: requestedLogId,
+        })
       : undefined,
   );
   const logs = useMemo(
@@ -291,7 +299,18 @@ function WorkoutDetailPage({
   function startLog(existing?: WorkoutLog) {
     const current = latestWorkout.current;
 
-    if (!current || disabled) {
+    if ((!current && !existing) || disabled) {
+      return;
+    }
+    const snapshot = existing
+      ? workoutLogSnapshotSchema.parse(existing.snapshot)
+      : current
+        ? workoutLogSnapshotSchema.parse({
+            title: current.title,
+            exercises: workoutExercisesFromRows(current.exercises),
+          })
+        : undefined;
+    if (!snapshot) {
       return;
     }
 
@@ -299,10 +318,7 @@ function WorkoutDetailPage({
       setEditor(
         new WorkoutLogEditor(
           openWorkoutLog(
-            workoutLogSnapshotSchema.parse({
-              title: current.title,
-              exercises: workoutExercisesFromRows(current.exercises),
-            }),
+            snapshot,
             existing ??
               findDailyWorkoutLog(
                 latestLogs.current,
@@ -326,6 +342,24 @@ function WorkoutDetailPage({
       setError("");
     });
   }
+
+  const openedFromHistory = useRef<string | undefined>(undefined);
+  const startFromHistory = useRef(startLog);
+  startFromHistory.current = startLog;
+  useEffect(() => {
+    if (
+      !initialLogId ||
+      openedFromHistory.current === initialLogId ||
+      disabled
+    ) {
+      return;
+    }
+    const entry = logs.find((log) => log.id === initialLogId);
+    if (entry) {
+      openedFromHistory.current = initialLogId;
+      startFromHistory.current(entry);
+    }
+  }, [initialLogId, logs, disabled]);
 
   function closeLog() {
     requestAction(() => {
@@ -360,7 +394,10 @@ function WorkoutDetailPage({
     );
   }
 
-  if (!workout) {
+  const historicalSource = initialLogId
+    ? logs.find((log) => log.id === initialLogId)
+    : undefined;
+  if (!workout && !form && !historicalSource) {
     return result.type === "complete" ? (
       <p className="text-muted">Workout not found.</p>
     ) : null;
@@ -379,102 +416,107 @@ function WorkoutDetailPage({
           {error}
         </InlineAlert>
       )}
-      <WorkoutExercises
-        householdId={householdId}
-        title={
-          <WorkoutText
-            label="Workout name"
-            value={form?.snapshot.title ?? workout.title}
-            disabled={disabled}
-            readOnly={!!form}
-            onSave={(title) =>
-              perform(
-                mutators.workouts.update({ ...scope(), changes: { title } }),
-                true,
-              )
-            }
-          />
-        }
-        current={
-          form?.snapshot.exercises ??
-          workoutExercisesFromRows(workout.exercises)
-        }
-        disabled={disabled}
-        onSave={async (exercises, previous) => {
-          const edits = planExerciseEdits(previous, exercises);
-
-          if (
-            !edits.creates.length &&
-            !edits.updates.length &&
-            !edits.deletes.length
-          ) {
-            return true;
-          }
-
-          return perform(
-            mutators.workouts.editExercises({ ...scope(), ...edits }),
-            true,
-          );
-        }}
-        onStartLogging={async () => startLog()}
-        onCloseLogging={closeLog}
-        logging={
-          form && state && editor
-            ? {
-                form,
-                state,
-                previous,
-                onChange: editor.change,
-
-                onFlush: (id, round) => {
-                  void editor.flush(id, round);
-                },
-
-                onAddExercise: editor.addExercise,
-                excludedExerciseIds: workout.exercises.map(
-                  (row) => row.exerciseId,
-                ),
-                onAddSet: editor.addSet,
-
-                onRemoveSet: (id, round) => {
-                  void editor.removeSet(id, round);
-                },
+      {workout || form ? (
+        <WorkoutExercises
+          householdId={householdId}
+          title={
+            <WorkoutText
+              label="Workout name"
+              value={form?.snapshot.title ?? workout?.title ?? "Workout"}
+              disabled={disabled}
+              readOnly={!!form}
+              onSave={(title) =>
+                perform(
+                  mutators.workouts.update({ ...scope(), changes: { title } }),
+                  true,
+                )
               }
-            : undefined
-        }
-      />
+            />
+          }
+          current={
+            form?.snapshot.exercises ??
+            workoutExercisesFromRows(workout?.exercises ?? [])
+          }
+          disabled={disabled}
+          onSave={async (exercises, previous) => {
+            const edits = planExerciseEdits(previous, exercises);
+
+            if (
+              !edits.creates.length &&
+              !edits.updates.length &&
+              !edits.deletes.length
+            ) {
+              return true;
+            }
+
+            return perform(
+              mutators.workouts.editExercises({ ...scope(), ...edits }),
+              true,
+            );
+          }}
+          onStartLogging={async () => startLog()}
+          onCloseLogging={closeLog}
+          logging={
+            form && state && editor
+              ? {
+                  form,
+                  state,
+                  previous,
+                  onChange: editor.change,
+
+                  onFlush: (id, round) => {
+                    void editor.flush(id, round);
+                  },
+
+                  onAddExercise: editor.addExercise,
+                  excludedExerciseIds:
+                    workout?.exercises.map((row) => row.exerciseId) ?? [],
+                  onAddSet: editor.addSet,
+
+                  onRemoveSet: (id, round) => {
+                    void editor.removeSet(id, round);
+                  },
+                }
+              : undefined
+          }
+        />
+      ) : (
+        <p className="text-sm text-muted">Workout template removed.</p>
+      )}
       {form && (
         <div className="flex justify-end" data-log-actions>
           <WorkoutLogActions onClose={closeLog} />
         </div>
       )}
-      <section className="grid gap-1" aria-label="Workout notes">
-        <AccordionRoot>
-          <AccordionItem value="notes">
-            <AccordionHeader render={(props) => <h2 {...props} />}>
-              <AccordionTrigger>Notes</AccordionTrigger>
-            </AccordionHeader>
-            <AccordionPanel>
-              <WorkoutText
-                label="Notes"
-                value={workout.notes ?? ""}
-                multiline
-                disabled={disabled}
-                readOnly={!!form}
-                onSave={(notes) =>
-                  perform(
-                    mutators.workouts.update({
-                      ...scope(),
-                      changes: { notes },
-                    }),
-                    true,
-                  )
-                }
-              />
-            </AccordionPanel>
-          </AccordionItem>
-        </AccordionRoot>
-      </section>
+      {workout && (
+        <section className="grid gap-1" aria-label="Workout notes">
+          <AccordionRoot>
+            <AccordionItem value="notes">
+              <AccordionHeader render={(props) => <h2 {...props} />}>
+                <AccordionTrigger>Notes</AccordionTrigger>
+              </AccordionHeader>
+              <AccordionPanel>
+                <WorkoutText
+                  label="Notes"
+                  value={workout.notes ?? ""}
+                  multiline
+                  disabled={disabled}
+                  readOnly={!!form}
+                  onSave={(notes) =>
+                    perform(
+                      mutators.workouts.update({
+                        ...scope(),
+                        changes: { notes },
+                      }),
+                      true,
+                    )
+                  }
+                />
+              </AccordionPanel>
+            </AccordionItem>
+          </AccordionRoot>
+        </section>
+      )}
       <section className="min-w-0">
         <h2 className="flex items-center gap-2 py-3 font-semibold">
           <History aria-hidden="true" className="size-4" />

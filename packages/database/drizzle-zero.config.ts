@@ -42,6 +42,8 @@ export default drizzleZeroConfig(drizzleSchema, {
     exerciseLogs: true,
     exerciseLogSets: true,
     workoutLogExercises: true,
+    trainingSessions: true,
+    trainingSessionExercises: true,
     habits: true,
     habitWorkoutLinks: true,
     habitEntries: true,

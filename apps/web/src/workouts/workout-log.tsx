@@ -30,7 +30,8 @@ import {
 } from "./workout-log-form";
 import type { ExercisePerformance } from "./workout-log-projection";
 
-export type WorkoutLog = Omit<LogRow, "exerciseRoles"> & {
+export type WorkoutLog = Omit<LogRow, "exerciseRoles" | "workoutId"> & {
+  readonly workoutId?: string | null;
   readonly exerciseRoles?: LogRow["exerciseRoles"] | undefined;
   readonly sets: readonly WorkoutLogSet[];
   readonly exerciseLogIds?: Readonly<Record<string, string>>;
@@ -61,10 +62,55 @@ export type WorkoutLogging = {
   ) => void;
   onFlush: (exerciseId: string, round: number) => void;
   onAddExercise: (exercise: CatalogExercise) => void;
+  onRemoveExercise?: (exerciseId: string) => void;
+  freeForm?: boolean;
   excludedExerciseIds?: readonly string[];
   onAddSet: (exerciseId: string) => void;
   onRemoveSet: (exerciseId: string, round: number) => void;
 };
+
+export function LoggedExerciseRemove({
+  exercise,
+  logging,
+  disabled,
+}: {
+  exercise: WorkoutExercise;
+  logging: WorkoutLogging;
+  disabled: boolean;
+}) {
+  if (!logging.onRemoveExercise) {
+    return null;
+  }
+  const remove = () => logging.onRemoveExercise?.(exercise.id);
+  const recorded = [...logging.state.recorded, ...logging.state.dirty].some(
+    (key) => key.startsWith(`${exercise.id}:`),
+  );
+  const trigger = (
+    <IconButton
+      aria-label={`Remove ${exercise.name} from this session`}
+      title="Remove exercise"
+      className="size-7!"
+      disabled={
+        disabled ||
+        logging.state.saving.size > 0 ||
+        logging.state.deleting.size > 0
+      }
+      onClick={recorded ? undefined : remove}
+    >
+      <Trash2 aria-hidden="true" className="size-4" />
+    </IconButton>
+  );
+  return recorded ? (
+    <ConfirmationPopover
+      trigger={trigger}
+      message={`Remove ${exercise.name} and its sets from this log?`}
+      confirmLabel="Remove exercise"
+      onConfirm={remove}
+    />
+  ) : (
+    trigger
+  );
+}
 
 export function WorkoutExerciseSets({
   exercise,

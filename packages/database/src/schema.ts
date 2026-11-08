@@ -1136,6 +1136,122 @@ export const workoutLogExercises = pgTable(
   ],
 );
 
+// Free-form daily groupings are separate from immutable workout-backed headers.
+export const trainingSessions = pgTable(
+  "training_sessions",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    name: text("name").notNull().default(""),
+    note: text("note").notNull().default(""),
+    removedExerciseLogIds: jsonb("removed_exercise_log_ids")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    completedOn: text("completed_on").notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    unique("training_sessions_author_id").on(t.householdId, t.userId, t.id),
+    uniqueIndex("training_sessions_one_per_day")
+      .on(t.householdId, t.userId, t.completedOn)
+      .where(sql`${t.deletedAt} is null`),
+    index("training_sessions_history").on(
+      t.householdId,
+      t.userId,
+      t.completedOn,
+      t.completedAt,
+      t.id,
+    ),
+    check("training_sessions_name", sql`char_length(${t.name}) <= 150`),
+  ],
+);
+
+export const trainingSessionExercises = pgTable(
+  "training_session_exercises",
+  {
+    sessionId: uuid("session_id").notNull(),
+    exerciseId: uuid("exercise_id").notNull(),
+    exerciseLogId: uuid("exercise_log_id").notNull().unique(),
+    householdId: uuid("household_id").notNull(),
+    userId: uuid("user_id").notNull(),
+    position: integer("position").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.sessionId, t.exerciseId] }),
+    foreignKey({
+      columns: [t.householdId, t.userId, t.sessionId],
+      foreignColumns: [
+        trainingSessions.householdId,
+        trainingSessions.userId,
+        trainingSessions.id,
+      ],
+    }),
+    foreignKey({
+      columns: [t.householdId, t.userId, t.exerciseLogId],
+      foreignColumns: [
+        exerciseLogs.householdId,
+        exerciseLogs.userId,
+        exerciseLogs.id,
+      ],
+    }),
+    foreignKey({
+      columns: [t.householdId, t.exerciseId],
+      foreignColumns: [exercises.householdId, exercises.id],
+    }),
+  ],
+);
+
+export const trainingSessionsRelations = relations(
+  trainingSessions,
+  ({ one, many }) => ({
+    household: one(households, {
+      fields: [trainingSessions.householdId],
+      references: [households.id],
+    }),
+    loggedExercises: many(trainingSessionExercises),
+  }),
+);
+
+export const trainingSessionExercisesRelations = relations(
+  trainingSessionExercises,
+  ({ one }) => ({
+    session: one(trainingSessions, {
+      fields: [
+        trainingSessionExercises.householdId,
+        trainingSessionExercises.userId,
+        trainingSessionExercises.sessionId,
+      ],
+      references: [
+        trainingSessions.householdId,
+        trainingSessions.userId,
+        trainingSessions.id,
+      ],
+    }),
+    occurrence: one(exerciseLogs, {
+      fields: [
+        trainingSessionExercises.householdId,
+        trainingSessionExercises.userId,
+        trainingSessionExercises.exerciseLogId,
+      ],
+      references: [
+        exerciseLogs.householdId,
+        exerciseLogs.userId,
+        exerciseLogs.id,
+      ],
+    }),
+  }),
+);
+
 export const exerciseLogsRelations = relations(
   exerciseLogs,
   ({ one, many }) => ({

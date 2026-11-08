@@ -29,13 +29,20 @@ const blank = (): WorkoutSetInput => ({
 const fingerprint = (input: WorkoutSetInput | undefined) =>
   JSON.stringify(input ?? blank());
 
-type Options = {
+type Options<Scope extends string | null> = {
   householdId: string;
-  workoutId: string;
+  workoutId: Scope;
+  persistAllExercises?: boolean;
   timeZone: string;
   enabled: () => boolean;
-  save: (args: SaveExerciseSet) => Promise<boolean>;
-  remove: (args: RemoveExerciseSet) => Promise<boolean>;
+  save: (
+    args: Omit<SaveExerciseSet, "workoutId"> & { workoutId: Scope },
+    form: WorkoutLogForm,
+    newExerciseIds: readonly string[],
+  ) => Promise<boolean>;
+  remove: (
+    args: Omit<RemoveExerciseSet, "workoutId"> & { workoutId: Scope },
+  ) => Promise<boolean>;
 };
 
 export type WorkoutEditorState = {
@@ -49,7 +56,7 @@ export type WorkoutEditorState = {
   hasChanges: boolean;
 };
 
-export class WorkoutLogEditor {
+export class WorkoutLogEditor<Scope extends string | null = string> {
   private form: WorkoutLogForm;
   private readonly saved = new Map<string, WorkoutSetInput>();
   private readonly dirty = new Set<string>();
@@ -63,9 +70,9 @@ export class WorkoutLogEditor {
   private disposed = false;
   private headerConfirmed: boolean;
   private state: WorkoutEditorState;
-  private readonly options: Options;
+  private readonly options: Options<Scope>;
 
-  constructor(form: WorkoutLogForm, options: Options) {
+  constructor(form: WorkoutLogForm, options: Options<NoInfer<Scope>>) {
     this.form = form;
     this.options = options;
     this.headerConfirmed = form.completedAt !== null;
@@ -200,7 +207,7 @@ export class WorkoutLogEditor {
   private async drain(exercise: WorkoutExercise, round: number) {
     const key = setInputKey(exercise.id, round);
 
-    while (this.dirty.has(key) && this.options.enabled()) {
+    while (!this.disposed && this.dirty.has(key) && this.options.enabled()) {
       const input = { ...blank(), ...this.form.inputs[key] };
       const values = completeSetValues(exercise, input);
 
@@ -229,43 +236,56 @@ export class WorkoutLogEditor {
       // Publish the chosen day before Zero can emit an optimistic/remote header.
       this.emit();
 
+      const savingForm = this.form;
+      const newExerciseIds = [...this.unsavedExercises];
       const performedAt = this.form.completedAt ?? Date.now();
       let success = false;
 
       try {
-        success = await this.options.save({
-          householdId: this.options.householdId,
-          workoutId: this.options.workoutId,
-          logId: this.form.id,
-          workoutExerciseId: exercise.id,
-          exerciseLogId,
-          round,
-          values,
-          snapshot: {
-            ...this.form.snapshot,
-            exercises: this.form.snapshot.exercises.filter(
-              (row) => !this.form.logOnlyExerciseIds?.includes(row.id),
-            ),
+        success = await this.options.save(
+          {
+            householdId: this.options.householdId,
+            workoutId: this.options.workoutId,
+            logId: this.form.id,
+            workoutExerciseId: exercise.id,
+            exerciseLogId,
+            round,
+            values,
+            snapshot: {
+              ...this.form.snapshot,
+              exercises: this.form.snapshot.exercises.filter(
+                (row) => !this.form.logOnlyExerciseIds?.includes(row.id),
+              ),
+            },
+            ...(this.form.logOnlyExerciseIds?.includes(exercise.id)
+              ? { logOnlyExercise: exercise }
+              : {}),
+            completedOn:
+              this.form.completedOn ??
+              calendarDate(performedAt, this.options.timeZone),
+            optimisticTimestamp: performedAt,
+            timeZone: this.options.timeZone,
           },
-          ...(this.form.logOnlyExerciseIds?.includes(exercise.id)
-            ? { logOnlyExercise: exercise }
-            : {}),
-          completedOn:
-            this.form.completedOn ??
-            calendarDate(performedAt, this.options.timeZone),
-          optimisticTimestamp: performedAt,
-          timeZone: this.options.timeZone,
-        });
+          savingForm,
+          newExerciseIds,
+        );
       } catch {}
 
       if (!success) {
+        if (this.options.persistAllExercises && !this.headerConfirmed) {
+          this.form = { ...this.form, completedAt: null, completedOn: null };
+        }
         this.errors[key] = "Unable to save this set. Your input is still here.";
         this.emit();
         break;
       }
 
       this.headerConfirmed = true;
-      this.unsavedExercises.delete(exercise.id);
+      for (const row of this.options.persistAllExercises
+        ? savingForm.snapshot.exercises
+        : [exercise]) {
+        this.unsavedExercises.delete(row.id);
+      }
       this.saved.set(key, input);
       delete this.errors[key];
 
@@ -302,9 +322,46 @@ export class WorkoutLogEditor {
         ...(this.form.logOnlyExerciseIds ?? []),
         exercise.id,
       ],
+      exerciseLogIds: {
+        ...this.form.exerciseLogIds,
+        [exercise.id]: crypto.randomUUID(),
+      },
     };
     this.unsavedExercises.add(exercise.id);
     this.emit();
+  };
+
+  discardExercise = (id: string) => {
+    if (this.disposed || this.queued.size || this.deleting.size) {
+      return false;
+    }
+    const inputs = { ...this.form.inputs };
+    for (const key of Object.keys(inputs)) {
+      if (key.startsWith(`${id}:`)) {
+        this.cancel(key);
+        delete inputs[key];
+        this.dirty.delete(key);
+        this.saved.delete(key);
+        delete this.errors[key];
+      }
+    }
+    const exerciseLogIds = { ...this.form.exerciseLogIds };
+    delete exerciseLogIds[id];
+    this.unsavedExercises.delete(id);
+    this.form = {
+      ...this.form,
+      inputs,
+      exerciseLogIds,
+      snapshot: {
+        ...this.form.snapshot,
+        exercises: this.form.snapshot.exercises.filter((row) => row.id !== id),
+      },
+      logOnlyExerciseIds: (this.form.logOnlyExerciseIds ?? []).filter(
+        (value) => value !== id,
+      ),
+    };
+    this.emit();
+    return true;
   };
 
   addSet = (id: string) => {
@@ -396,6 +453,13 @@ export class WorkoutLogEditor {
   }
 
   sync(log: WorkoutLog) {
+    if (
+      this.options.persistAllExercises &&
+      !this.headerConfirmed &&
+      this.queued.size
+    ) {
+      return;
+    }
     let changed =
       this.form.id !== log.id || this.form.completedAt !== log.completedAt;
 
@@ -432,6 +496,7 @@ export class WorkoutLogEditor {
     for (const id of remote.logOnlyExerciseIds ?? []) {
       if (
         this.unsavedExercises.has(id) &&
+        !(this.options.persistAllExercises && this.queued.size) &&
         log.exerciseLogIds?.[id] &&
         ![...this.dirty, ...this.queued, ...this.deleting].some((key) =>
           key.startsWith(`${id}:`),
@@ -507,6 +572,10 @@ export class WorkoutLogEditor {
       };
       this.emit();
     }
+  }
+
+  activate() {
+    this.disposed = false;
   }
 
   dispose() {

@@ -6,6 +6,7 @@ import {
   archiveHabitMutationSchema,
   linkHabitWorkoutsMutationSchema,
 } from "@home-hub/shared/habits";
+import { trainingScopeSchema } from "@home-hub/shared/training";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { zql } from "@home-hub/shared/zero/schema";
 import { mustGetMutator, type ReadonlyJSONValue } from "@rocicorp/zero";
@@ -40,6 +41,13 @@ export async function mutateWithHabitWorkouts(
       : name === "workouts.removeSet"
         ? removeExerciseSetSchema.parse(args)
         : undefined;
+  const trainingScope =
+    name.startsWith("training.") && args
+      ? trainingScopeSchema.parse({
+          householdId: (args as { householdId?: string }).householdId,
+          logId: (args as { logId?: string }).logId,
+        })
+      : undefined;
   const habitScope =
     name === "habits.linkWorkouts"
       ? linkHabitWorkoutsMutationSchema.parse(args)
@@ -47,7 +55,9 @@ export async function mutateWithHabitWorkouts(
         ? archiveHabitMutationSchema.parse(args)
         : undefined;
   const completionHousehold =
-    workoutScope?.householdId ?? habitScope?.householdId;
+    workoutScope?.householdId ??
+    trainingScope?.householdId ??
+    habitScope?.householdId;
   const db = tx.dbTransaction.wrappedTransaction;
 
   if (completionHousehold) {
@@ -60,6 +70,13 @@ export async function mutateWithHabitWorkouts(
     // without announcing private logging through shared updated_at fields.
     const key = [userId, scope.householdId, scope.workoutId].join(":");
     await tx.dbTransaction.wrappedTransaction.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${key}, 0))`,
+    );
+  }
+
+  if (trainingScope) {
+    const key = [userId, trainingScope.householdId, "free-training"].join(":");
+    await db.execute(
       sql`select pg_advisory_xact_lock(hashtextextended(${key}, 0))`,
     );
   }
@@ -90,6 +107,21 @@ export async function mutateWithHabitWorkouts(
         entryOn: log.completedOn,
       });
     }
+  } else if (trainingScope) {
+    const row = await tx.run(
+      zql.trainingSessions
+        .where("id", trainingScope.logId)
+        .where("householdId", trainingScope.householdId)
+        .where("userId", userId)
+        .one(),
+    );
+    // A canonical daily header can differ from a stale client\'s proposed ID.
+    // Refreshing this author across days also safely covers that convergence.
+    await refreshHabitWorkoutCompletion(db, {
+      householdId: trainingScope.householdId,
+      userId,
+      ...(row ? { entryOn: row.completedOn } : {}),
+    });
   } else if (name === "habits.linkWorkouts" && habitScope) {
     await refreshHabitWorkoutCompletion(db, {
       householdId: habitScope.householdId,

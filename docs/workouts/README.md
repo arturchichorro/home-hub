@@ -94,6 +94,31 @@ There are no plans, cycles, scheduling, timers, progression suggestions, or
 configured weight increments. Membership, module availability, and private-log
 ownership are enforced in Zero queries and mutations.
 
+## Free-form training
+
+**Log session** on Workouts opens or resumes your one free-form session for the
+current local day; **Add workout** stays separate. Pick existing catalog
+movements with **+**. Names default to “Free training”; names and notes are private.
+Selections/text remain guarded drafts until a first complete set atomically saves
+the session and all selected exercises in their added order. Autosave, previous
+values, retry/discard and navigation/unload/PWA protections match workout logging.
+Limits remain 40 exercises and ten sets. Older sessions stay editable without
+changing their dates; backdated creation and exercise reordering are not offered.
+
+The History icon opens a newest-first private timeline of workouts and free
+training, paged twenty entries at a time. Each row opens the original editable
+log; existing per-workout history and inline notes are unchanged. The combined
+index does not preview notes or load all performance sets.
+
+Free-form exercises and whole sessions can be removed explicitly, with
+confirmation for recorded data. Removing the last set/exercise keeps an empty
+entry with its name/notes until deletion; it does not count as completed training.
+Saved free-form sets support **any workout** habits, never selected-template
+habits. Removing them preserves completion supported by another log; archived
+habit completion stays frozen. Deletion clears the session's text/occurrences/sets,
+not catalog entries or other logs. Content-free header/occurrence-ID tombstones
+prevent stale devices from recreating removed data.
+
 ## Data model
 
 - `workouts`: household-shared title, notes, ordering and timestamps.
@@ -111,6 +136,11 @@ ownership are enforced in Zero queries and mutations.
   movement or its history.
 - `workout_logs`: author-private daily grouping, notes and immutable title/exercise
   snapshot, plus a separate `exercise_roles` snapshot keyed by placement ID. One grouping per household/author/workout/local day.
+- `training_sessions`: private, genuinely workout-less daily headers, optional name,
+  notes, original dates and deletion/removed-occurrence tombstones. A partial unique
+  index permits one active header per household/author/local day.
+- `training_session_exercises`: stable added-order links to the same independent
+  occurrences, with composite household/author foreign keys; no shared template.
 - `exercise_logs`: independent author-private occurrences, catalog identity,
   original local day/time and historical exercise definition. No workout FK.
 - `exercise_log_sets`: numeric amount/right amount/weight and original unit/load/
@@ -181,6 +211,11 @@ private log notes, sets or snapshots.
 These are forward-upgrade notes for installations below the named migrations,
 not instructions to replay completed cutovers. Preserve applied SQL, historical
 identities and archive tables; consult release/deployment state before acting.
+
+`0053_red_vision.sql` adds and publishes the two free-form tables. It does not
+alter existing workout headers, snapshots, dates, measurements or archive tables.
+Deploy the migration and matching API/cache before the new web client; no replica
+reset or historical data rewrite is required.
 
 `0047_chemical_hemingway.sql` adds the placement role (Workout by default) and its
 three-value constraint. `0048_lively_maestro.sql` adds the independent historical

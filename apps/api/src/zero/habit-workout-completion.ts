@@ -29,6 +29,12 @@ export async function refreshHabitWorkoutCompletion(
   const logDay = scope.entryOn
     ? sql`and l.completed_on=${scope.entryOn}`
     : sql``;
+  const trainingPerson = scope.userId
+    ? sql`and t.user_id=${scope.userId}::uuid`
+    : sql``;
+  const trainingDay = scope.entryOn
+    ? sql`and t.completed_on=${scope.entryOn}`
+    : sql``;
   const entryPerson = scope.userId
     ? sql`and e.user_id=${scope.userId}::uuid`
     : sql``;
@@ -53,6 +59,19 @@ export async function refreshHabitWorkoutCompletion(
           WHERE w.workout_log_id=l.id AND w.household_id=l.household_id AND w.user_id=l.user_id
         )
       GROUP BY h.household_id, h.id, l.user_id, l.completed_on
+      UNION
+      SELECT h.household_id, h.id AS habit_id, t.user_id, t.completed_on AS entry_on
+      FROM habits h JOIN training_sessions t ON t.household_id=h.household_id
+      WHERE h.household_id=${scope.householdId}::uuid AND h.status='active'
+        AND h.workout_mode='any' AND t.deleted_at IS NULL
+        ${habit} ${trainingPerson} ${trainingDay}
+        AND EXISTS (
+          SELECT 1 FROM training_session_exercises w
+          JOIN exercise_logs x ON x.id=w.exercise_log_id AND x.household_id=t.household_id AND x.user_id=t.user_id
+          JOIN exercise_log_sets s ON s.exercise_log_id=x.id
+          WHERE w.session_id=t.id AND w.household_id=t.household_id AND w.user_id=t.user_id
+        )
+      GROUP BY h.household_id, h.id, t.user_id, t.completed_on
     ), cleared AS (
       UPDATE habit_entries e SET workout_completed=false, updated_at=now()
       FROM habits h
