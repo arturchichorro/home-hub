@@ -1,7 +1,20 @@
 name: home-hub-production
 
+# Rotation is local and independent of the opt-in collector. No remote logging driver.
+x-operational-logging: &operational-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+    mode: non-blocking
+    max-buffer-size: 1m
+    labels: com.docker.compose.project,com.docker.compose.service,org.opencontainers.image.revision
+x-release-labels: &release-labels
+  org.opencontainers.image.revision: ${HOME_HUB_REVISION:-unknown}
+
 services:
   postgres:
+    logging: *operational-logging
     image: postgres:17
     restart: unless-stopped
     environment:
@@ -18,6 +31,8 @@ services:
       - max_wal_senders=10
       - -c
       - max_replication_slots=10
+      - -c
+      - "log_line_prefix=%m [%p] %e "
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -27,6 +42,8 @@ services:
       retries: 10
 
   migrate:
+    logging: *operational-logging
+    labels: *release-labels
     profiles: ["tools"]
     build:
       context: .
@@ -39,6 +56,8 @@ services:
         condition: service_healthy
 
   api:
+    logging: *operational-logging
+    labels: *release-labels
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -72,6 +91,7 @@ services:
       retries: 10
 
   zero-cache:
+    logging: *operational-logging
     image: rocicorp/zero:1.11.3
     restart: unless-stopped
     stop_grace_period: 10m
@@ -87,6 +107,7 @@ services:
       ZERO_MUTATE_URL: http://api:3000/api/zero/mutate
       ZERO_ENABLE_CRUD_MUTATIONS: "false"
       ZERO_NUM_SYNC_WORKERS: "1"
+      ZERO_LOG_FORMAT: json
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,6 +123,8 @@ services:
       retries: 10
 
   web:
+    logging: *operational-logging
+    labels: *release-labels
     build:
       context: .
       dockerfile: apps/web/Dockerfile

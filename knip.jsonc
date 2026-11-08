@@ -2,6 +2,13 @@
   "$schema": "./node_modules/knip/schema.json",
   "includeEntryExports": true,
   "workspaces": {
+    ".": {
+      "entry": ["scripts/generate-diagnostics.mjs"]
+    },
+    "apps/ops": {
+      // Real Alloy/Loki verification remains an explicit manual tool.
+      "entry": ["test/pipeline.ts"]
+    },
     "apps/web": {
       // The second Vite app is an intentional, manual browser diagnostic.
       "entry": ["src/main.tsx", "test/moodboard-reorder/main.tsx"]

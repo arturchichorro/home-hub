@@ -37,6 +37,7 @@ Connected changes should appear immediately and converge across clients. Previou
 - [Workouts](./workouts/) owns shared definitions/catalog/media and private logging/history.
 - [Shared media](./media/) owns reusable asset storage, delivery and attachment security.
 - [Maintenance](./maintenance.md) records editing boundaries, bounded views and measured audit follow-ups.
+- [Operational logs](./operations/) owns opt-in, privacy-projected production diagnostics and read-only agent access (not the household Logs module).
 
 ## Feature specifications and historical plans
 

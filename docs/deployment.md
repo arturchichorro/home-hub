@@ -346,6 +346,15 @@ and only that job can read the `production` environment's SSH material. The
 VPS accepts that key only with `restrict` and a forced command pointing to the
 deployment script.
 
+### Searchable operational logs
+
+The opt-in [operational logs runbook](./operations/) covers Grafana Cloud Free,
+Alloy, local rotation, deployment/backup outcomes and restricted read-only MCP
+queries. Export is a separate collector project and is never started by normal
+app deployment. Provisioning, credentials, region selection and the production
+canary require deliberate activation; there are no production changes from CI.
+App logging changes require a one-time container recreation, including PostgreSQL.
+
 ### CI and deployment troubleshooting
 
 Run the CI checks locally in the same order before investigating a runner-only

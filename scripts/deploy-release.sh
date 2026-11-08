@@ -4,6 +4,19 @@ set -euo pipefail
 
 readonly compose_file="compose.production.yml"
 readonly environment_file=".env.production"
+export HOME_HUB_REVISION="$(git rev-parse HEAD)"
+readonly event_writer="./scripts/record-ops-event.sh"
+phase=build
+bash "$event_writer" deployment_started 0 "$HOME_HUB_REVISION" 2>/dev/null || true
+finish_release() {
+  local status=$?
+  trap - EXIT
+  local event=deployment_failed
+  [[ "$status" == 0 ]] && event=deployment_succeeded
+  bash "$event_writer" "$event" "$status" "$HOME_HUB_REVISION" "$phase" 2>/dev/null || true
+  exit "$status"
+}
+trap finish_release EXIT
 
 docker compose \
   --env-file "$environment_file" \
@@ -11,6 +24,7 @@ docker compose \
   --profile tools \
   build api web migrate
 
+phase=cutover
 # 0046 changes the canonical log writer. Never copy while the old API can write.
 # Keep the cutoff aligned with 0046's timestamp in drizzle/meta/_journal.json.
 migration_table="$(docker compose --env-file "$environment_file" -f "$compose_file" \
@@ -29,22 +43,26 @@ if [[ "$needs_logging_cutover" != "f" ]]; then
   migration_options+=(-e HOME_HUB_LOGGING_CUTOVER_READY=1)
 fi
 
+phase=migrate
 docker compose \
   --env-file "$environment_file" \
   -f "$compose_file" \
   --profile tools \
   run "${migration_options[@]}" migrate
 
+phase=backend
 docker compose \
   --env-file "$environment_file" \
   -f "$compose_file" \
   up -d --no-build --wait api zero-cache
 
+phase=web
 docker compose \
   --env-file "$environment_file" \
   -f "$compose_file" \
   up -d --no-build --wait web
 
+phase=health
 curl --fail --silent --show-error \
   https://home.achichorro.com/api/ready >/dev/null
 curl --fail --silent --show-error \
@@ -52,4 +70,4 @@ curl --fail --silent --show-error \
 curl --fail --silent --show-error \
   https://home.achichorro.com/ >/dev/null
 
-printf 'Deployment completed successfully: %s\n' "$(git rev-parse HEAD)"
+printf 'Deployment completed successfully: %s\n' "$HOME_HUB_REVISION"

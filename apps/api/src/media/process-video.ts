@@ -18,6 +18,7 @@ import {
   type MediaIdentity,
   mediaOriginalObjectKey,
 } from "@home-hub/shared/media-delivery";
+import { instrumentOperation } from "../diagnostics";
 import { InvalidMediaUploadError } from "./process-image";
 
 const exec = promisify(execFile);
@@ -126,7 +127,12 @@ let active = 0;
 
 export class VideoProcessingBusyError extends Error {}
 
-export async function processMediaVideo({
+export const processMediaVideo = instrumentOperation(
+  "media.process_video",
+  processMediaVideoImplementation,
+);
+
+async function processMediaVideoImplementation({
   client,
   bucket,
   identity,

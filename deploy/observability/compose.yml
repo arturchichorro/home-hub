@@ -1,0 +1,38 @@
+# Deliberately separate: normal app deployment never starts or configures export.
+name: home-hub-observability
+services:
+  alloy:
+    image: grafana/alloy:v1.21.0
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/data
+      - --disable-reporting
+      - /etc/alloy/config.alloy
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    cpus: 0.25
+    pids_limit: 64
+    ports: ["127.0.0.1:12345:12345"]
+    environment:
+      LOKI_WRITE_URL: ${LOKI_WRITE_URL:?Dedicated Grafana Cloud HTTPS push URL required}
+      LOKI_TENANT: ${LOKI_TENANT:?Tenant required}
+      LOKI_WRITE_TOKEN: ${LOKI_WRITE_TOKEN:?Separate logs:write token required}
+    volumes:
+      - ./config.alloy:/etc/alloy/config.alloy:ro
+      - ${DOCKER_LOG_DIRECTORY:-/var/lib/docker/containers}:/docker-logs:ro
+      - ${HOME_HUB_OPS_LOG_DIRECTORY:-/var/log/home-hub}:/operations:ro
+      - alloy_positions:/data
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "2"
+        mode: non-blocking
+        max-buffer-size: 1m
+volumes:
+  alloy_positions:
