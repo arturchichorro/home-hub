@@ -21,6 +21,10 @@ import {
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { type Ref, useId, useImperativeHandle, useRef, useState } from "react";
+import {
+  TextDraftActions,
+  TextDraftGuard,
+} from "../editing/text-draft-actions";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
@@ -28,6 +32,7 @@ import {
   catalogPage,
   reorderNeighborhood,
 } from "./catalog-page";
+import { ExerciseDetailLink } from "./exercise-detail-link";
 import { CatalogMediaProvider, ExerciseMedia } from "./exercise-media";
 import { ExerciseSettings } from "./exercise-settings";
 import type { ExercisePerformance } from "./training-log-projection";
@@ -377,7 +382,7 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
   );
 }
 
-function CatalogRow({
+export function CatalogRow({
   householdId,
   initial,
   current,
@@ -392,7 +397,9 @@ function CatalogRow({
   index,
   canOrder,
   onDelete,
+  detail = false,
 }: {
+  detail?: boolean;
   householdId: string;
   initial: CatalogExercise;
   current: CatalogExercise | undefined;
@@ -444,15 +451,17 @@ function CatalogRow({
       onFocusCapture={onFocus}
     >
       <div className="flex min-w-0 items-center gap-2">
-        <IconButton
-          ref={sortable.handleRef}
-          aria-label={`Reorder ${value.name || "new exercise"}`}
-          title="Reorder exercise"
-          className="size-7! shrink-0 touch-pan-y cursor-grab"
-          disabled={!canOrder || !editor.persistedId}
-        >
-          <GripVertical aria-hidden="true" className="size-4" />
-        </IconButton>
+        {!detail && (
+          <IconButton
+            ref={sortable.handleRef}
+            aria-label={`Reorder ${value.name || "new exercise"}`}
+            title="Reorder exercise"
+            className="size-7! shrink-0 touch-pan-y cursor-grab"
+            disabled={!canOrder || !editor.persistedId}
+          >
+            <GripVertical aria-hidden="true" className="size-4" />
+          </IconButton>
+        )}
         <Input
           ref={input}
           appearance="seamless"
@@ -490,6 +499,13 @@ function CatalogRow({
             }
           }}
         />
+        {!detail && editor.persistedId && (
+          <ExerciseDetailLink
+            householdId={householdId}
+            exerciseId={editor.persistedId}
+            name={value.name}
+          />
+        )}
         <ExerciseSettings
           exercise={value}
           disabled={!enabled}
@@ -549,6 +565,17 @@ function CatalogRow({
           name={value.name}
         />
       )}
+      {editor.hasChanges && (
+        <TextDraftGuard
+          editor={{
+            ...editor,
+            retry: () => {
+              void editor.flush();
+            },
+            discard: editor.revert,
+          }}
+        />
+      )}
       <ErrorPopover
         anchor={input}
         id={errorId}
@@ -556,6 +583,17 @@ function CatalogRow({
         onDismiss={editor.dismissError}
       >
         {editor.error}
+        {
+          <TextDraftActions
+            editor={{
+              ...editor,
+              retry: () => {
+                void editor.flush();
+              },
+              discard: editor.revert,
+            }}
+          />
+        }
       </ErrorPopover>
     </li>
   );

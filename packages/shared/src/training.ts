@@ -88,6 +88,7 @@ export const trainingHistoryArgsSchema = z
     householdId: z.uuid(),
     workoutId: z.uuid().optional(),
     includeExercises: z.boolean().optional(),
+    exerciseId: z.uuid().optional(),
     cursor: trainingHistoryCursorSchema.optional(),
   })
   .strict();

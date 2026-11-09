@@ -63,6 +63,16 @@ describe("getBreadcrumbLocation", () => {
     });
   });
 
+  it("describes exercise detail pages without mistaking exercises for a workout ID", () => {
+    expect(
+      getBreadcrumbLocation("/households/home/workouts/exercises/exercise-a"),
+    ).toEqual({
+      householdId: "home",
+      module: "workouts",
+      exerciseId: "exercise-a",
+    });
+  });
+
   it("includes the opened workout", () => {
     expect(
       getBreadcrumbLocation("/households/home/workouts/workout-a"),

@@ -131,7 +131,7 @@ it("keeps free-form set inputs and removal while hiding non-existent workout pre
   expect(html).not.toContain("Measure for Free squat");
 });
 
-it("renders a compact mixed history with dates, names and origin, leaving notes and set details in their original editors", () => {
+it("renders expanded mixed history with private notes and empty logs, without redundant origin badges", () => {
   const common = {
     householdId,
     userId: crypto.randomUUID(),
@@ -165,12 +165,11 @@ it("renders a compact mixed history with dates, names and origin, leaving notes 
   );
   expect(html).toContain("Private mix");
   expect(html).toContain("Original lift");
-  expect(html).toContain("Free training");
-  expect(html).toContain("Workout");
+  expect(html).not.toContain(" · Workout");
   expect(html).toContain("2026-11-08");
-  expect(html).not.toContain("Do not preview this note");
-  expect(html).not.toContain("Original private note");
-  expect(html).not.toContain("No sets logged.");
+  expect(html).toContain("Do not preview this note");
+  expect(html).toContain("Original private note");
+  expect(html).toContain("No sets logged.");
 });
 
 function loggingFixture(form: WorkoutLogForm) {

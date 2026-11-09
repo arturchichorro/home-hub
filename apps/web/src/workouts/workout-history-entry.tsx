@@ -1,6 +1,7 @@
 import { workoutExerciseRoleLabel } from "@home-hub/shared/workouts";
 import { Check, IconButton, MessageSquare } from "@home-hub/ui-web";
 import { useCallback, useId, useState } from "react";
+import { ExerciseDetailLink } from "./exercise-detail-link";
 import type { WorkoutLog } from "./workout-log";
 import { WorkoutLogNoteInput } from "./workout-log-note-input";
 import { summarizeWorkoutLog } from "./workout-log-summary";
@@ -85,6 +86,13 @@ export function WorkoutHistoryEntry({
                 <span> · {workoutExerciseRoleLabel(exercise.role)}</span>
               )}{" "}
               — {exercise.details}
+              {exercise.catalogExerciseId && (
+                <ExerciseDetailLink
+                  householdId={householdId}
+                  exerciseId={exercise.catalogExerciseId}
+                  name={exercise.name}
+                />
+              )}
             </span>
           ))
         ) : (

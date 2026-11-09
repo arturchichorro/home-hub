@@ -70,6 +70,9 @@ export function summarizeWorkoutLog(
         {
           id: exercise.id,
           name: exercise.name,
+          ...(exercise.catalogExerciseId
+            ? { catalogExerciseId: exercise.catalogExerciseId }
+            : {}),
           details,
           ...(exercise.role && exercise.role !== "workout"
             ? { role: exercise.role }

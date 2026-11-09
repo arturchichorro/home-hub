@@ -33,6 +33,19 @@ it("uses one canonical, bounded private history for both sources", () => {
   );
 });
 
+it("bounds exercise history and filters both parent eligibility and returned children", () => {
+  const exerciseId = crypto.randomUUID();
+  const query = ast(
+    queries.training.history.fn({ args: { householdId, exerciseId }, ctx }),
+  );
+  expect(query.limit).toBe(21);
+  expect(JSON.stringify(query.where)).toContain(exerciseId);
+  const child = query.related?.[0]?.subquery;
+  expect(JSON.stringify(child?.where)).toContain(exerciseId);
+  expect(JSON.stringify(child?.where)).toContain(userId);
+  expect(JSON.stringify(child?.where)).toContain("trainingSessionSets");
+});
+
 it("filters per-workout history without changing the storage/query model", () => {
   const workoutId = crypto.randomUUID();
   const value = ast(

@@ -225,6 +225,11 @@ export function useCatalogExerciseEditor({
     error,
     isSaving,
     persistedId: confirmed.current?.id,
+    hasChanges:
+      isSaving ||
+      fields.some(
+        (field) => value[field] !== (confirmed.current ?? initial)[field],
+      ),
     change,
     flush,
     revert,
