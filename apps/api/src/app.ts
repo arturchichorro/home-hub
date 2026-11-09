@@ -21,7 +21,9 @@ import {
   createRecipeRoutes,
 } from "./recipes/routes";
 import type { ExerciseMediaServices } from "./workouts/exercise-media";
+import type { ExerciseStatsService } from "./workouts/exercise-stats";
 import { createExerciseMediaRoutes } from "./workouts/routes";
+import { createExerciseStatsRoutes } from "./workouts/stats-routes";
 import { type CreateZeroRoutesInput, createZeroRoutes } from "./zero/routes";
 
 type AuthServices = Omit<CreateAuthRoutesInput, "isProduction" | "jwtSecret">;
@@ -35,6 +37,7 @@ export type CreateAppInput = {
   households: HouseholdServices;
   recipeImages: RecipeImageServices;
   exerciseMedia: ExerciseMediaServices;
+  exerciseStats?: ExerciseStatsService;
   documents?: DocumentServices;
   listMedia?: ListMediaServices;
   logs?: LogEntryServices;
@@ -80,6 +83,13 @@ export function createApp(input: CreateAppInput) {
     "/api/households/:householdId/workouts/exercises",
     createExerciseMediaRoutes({ jwtSecret, services: input.exerciseMedia }),
   );
+
+  if (input.exerciseStats) {
+    app.route(
+      "/api/households/:householdId/workouts/exercises",
+      createExerciseStatsRoutes({ jwtSecret, stats: input.exerciseStats }),
+    );
+  }
 
   if (input.documents) {
     app.route(

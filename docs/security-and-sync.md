@@ -331,6 +331,12 @@ sessions and their directly owned occurrences, never another member's performanc
 relations. Composite ownership FKs and server guards enforce this boundary.
 No legacy logging tables or recovery schema remain in the application database;
 recovery uses the pre-release backup.
+Exercise-detail queries and the lifetime-statistics endpoint apply the same
+actor/household/live-membership/module boundary. Retired detail access requires
+the actor’s own recorded performance; statistics responses use `Cache-Control:
+no-store`. Shared catalog/media controls do not authorize viewing another member’s
+statistics. Timeline age restrictions are presentation rules, not a global ban on
+historical corrections.
 See [Workouts](./workouts/).
 
 ## Module storage security

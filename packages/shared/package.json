@@ -17,6 +17,7 @@
     "./media": "./src/media.ts",
     "./list-media": "./src/list-media.ts",
     "./video-delivery": "./src/video-delivery.ts",
+    "./exercise-stats": "./src/exercise-stats.ts",
     "./exercise-media": "./src/exercise-media.ts",
     "./media-delivery": "./src/media-delivery.ts",
     "./lists": "./src/lists.ts",

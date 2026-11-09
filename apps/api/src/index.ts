@@ -43,6 +43,7 @@ import { createDeleteRecipeImageService } from "./recipes/images/delete";
 import { recipeImageMediaIdentity } from "./recipes/images/media-identity";
 import { closeHttpServer, createGracefulShutdown } from "./server-lifecycle";
 import { createExerciseMediaServices } from "./workouts/exercise-media";
+import { createExerciseStatsService } from "./workouts/exercise-stats";
 import { createZeroDbProvider } from "./zero/db-provider";
 
 const { db, close: closeDatabase } = createDbClient(config.DATABASE_URL);
@@ -229,6 +230,7 @@ const app = createApp({
   households,
   recipeImages,
   exerciseMedia,
+  exerciseStats: createExerciseStatsService({ db }),
   documents: createDocumentServices({
     db,
     storage: createDocumentStorage({
