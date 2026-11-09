@@ -23,6 +23,7 @@ import {
   TextDraftGuard,
 } from "../editing/text-draft-actions";
 import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
+import { ExerciseDetailLink } from "./exercise-detail-link";
 
 export function WorkoutText({
   label,
@@ -305,6 +306,13 @@ export function WorkoutExercises({
                 required
                 onValueChange={(name) => change(exercise.id, { name })}
               />
+              {exercise.catalogExerciseId && (
+                <ExerciseDetailLink
+                  householdId={householdId}
+                  exerciseId={exercise.catalogExerciseId}
+                  name={exercise.name}
+                />
+              )}
               {logging && (
                 <LoggedExerciseRemove
                   exercise={exercise}

@@ -104,9 +104,12 @@ Limits remain 40 exercises and ten sets. Older sessions stay editable without
 changing their dates; backdated creation and exercise reordering are not offered.
 
 The History icon opens a newest-first private timeline of workouts and free
-training, paged twenty entries at a time. Each row opens the original editable
-log; existing per-workout history and inline notes are unchanged. The combined
-index does not preview notes or load all performance sets.
+training, paged twenty sessions at a time. Each entry shows its frozen title/name,
+original date, actual exercises/sets and private note. Only today’s note edits
+inline; past notes and all set summaries are read-only here. The explicit source
+log action still permits deliberate historical corrections in the original logger;
+there is no global age lock. Destructive actions stay in that logger. Retained
+note drafts guard navigation, paging, unload and PWA updates, including midnight.
 
 Free-form exercises and whole sessions can be removed explicitly, with
 confirmation for recorded data. Removing the last set/exercise keeps an empty
@@ -116,6 +119,46 @@ habits. Removing them preserves completion supported by another log; archived
 habit completion stays frozen. Deletion clears the session's text/occurrences/sets,
 not catalog entries or other logs. Session/exercise row tombstones, with text and
 measurements cleared, prevent stale devices from recreating removed data.
+
+## Exercise details and lifetime statistics
+
+Compact detail actions in the catalog, workout rows and recorded history open an
+exercise page without replacing existing inline editing. Active pages reuse the
+shared name/measure/load/side editor and gallery (upload, preview, removal and
+ordering). Those edits never rewrite frozen performances. Removed catalog entries
+remain readable through your own recorded history, with catalog/media editing
+removed and existing retired-gallery restrictions unchanged.
+
+Private exercise history groups actual sets by session, preserving repeated slots,
+roles and original occurrence dates. It returns only the selected exercise, not
+other movements or the session’s note. Pages contain twenty sessions plus a
+lookahead; the source-log action opens the original logger for corrections.
+
+Lifetime statistics are author/household/catalog-ID scoped across workout and free
+training, including all roles. Distinct sessions and actual set rows count once;
+drafts, unperformed prescriptions and deleted sessions/occurrences do not count.
+Reps and seconds remain separate. Unilateral totals sum both sides and expose a
+left/right breakdown; historical null right amounts retain their left-equals-right
+meaning, while explicit zero remains zero.
+
+External-load volume uses rep-based loaded sets only:
+`kg × (2 for per-hand, otherwise 1) × (left + right for unilateral, otherwise amount)`.
+Single load is the entered total load; per-hand means two equal weights even when
+reps are per side. Body mass and timed holds are excluded. Missing historical
+weights produce an explicitly partial/not-recorded result rather than invented
+volume. Heaviest kilograms stay separate by recorded measure/load/side convention,
+not one estimated strength score.
+
+The summary is compact, with side/load records under Stats details; no charts or
+date filters. Statistics refresh on entry/resume, visible performance changes and
+acknowledged catalog changes, with retry and stale-response protection. This is
+not a second-by-second dashboard.
+
+No schema, publication, index or migration change is needed: bounded Zero queries
+read canonical sessions/occurrences/sets, and the authenticated
+`GET /api/households/:householdId/workouts/exercises/:exerciseId/stats` endpoint
+aggregates lifetime values in PostgreSQL. It never downloads lifetime sets into the
+browser or maintains duplicate counters. Responses are not cacheable.
 
 ## Data model
 
