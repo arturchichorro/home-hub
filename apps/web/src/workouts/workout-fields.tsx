@@ -1,21 +1,15 @@
 import {
   type WorkoutExercise,
-  workoutExerciseRoleOptions,
-  workoutExerciseRoleSchema,
+  workoutExerciseRoleLabel,
 } from "@home-hub/shared/workouts";
 import {
   Button,
   ErrorPopover,
-  IconButton,
   InlineAlert,
   Input,
+  MenuItem,
   Play,
-  SelectItem,
-  SelectPopup,
-  SelectRoot,
-  SelectTrigger,
   Textarea,
-  Trash2,
 } from "@home-hub/ui-web";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
@@ -95,7 +89,7 @@ export function WorkoutText({
           {...props}
           ref={input}
           maxLength={150}
-          className="text-2xl font-semibold text-primary"
+          className="h-8! text-sm font-medium"
           onValueChange={editor.changeValue}
           onKeyDown={(e) => {
             if (!readOnly) {
@@ -210,10 +204,10 @@ export function WorkoutExercises({
       }}
     >
       <div
-        className="flex min-w-0 items-center gap-2 py-1"
+        className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 py-2"
         data-workout-heading
       >
-        <div className="flex min-w-0 flex-1 items-center">{title}</div>
+        <div className="flex min-w-40 flex-1 items-center">{title}</div>
         <div className="flex shrink-0 items-center gap-2">
           {logging ? (
             <>
@@ -293,13 +287,13 @@ export function WorkoutExercises({
           <div
             key={exercise.id}
             data-exercise-id={exercise.id}
-            className="grid min-w-0 gap-0 py-1"
+            className="grid min-w-0 gap-1 py-3"
           >
             <div className="flex min-w-0 items-center gap-2">
               <Input
                 appearance="seamless"
                 aria-label={`Name for ${exercise.name}`}
-                className="h-7!"
+                className="h-7! font-medium"
                 readOnly={!!logging}
                 value={exercise.name}
                 maxLength={150}
@@ -325,100 +319,67 @@ export function WorkoutExercises({
                   <ExerciseSettings
                     exercise={exercise}
                     disabled={disabled || starting}
+                    includeMeasure
+                    role={exercise.role ?? "workout"}
+                    onRoleChange={(role) => change(exercise.id, { role }, true)}
                     onChange={(patch) => change(exercise.id, patch, true)}
-                  />
-                  <IconButton
-                    aria-label={`Remove ${exercise.name}`}
-                    title="Remove exercise"
-                    className="size-7!"
-                    onClick={() =>
-                      editor.change(
-                        (rows) => rows.filter((e) => e.id !== exercise.id),
-                        true,
-                      )
-                    }
                   >
-                    <Trash2 aria-hidden="true" className="size-4" />
-                  </IconButton>
+                    <MenuItem
+                      variant="danger"
+                      aria-label={`Remove ${exercise.name}`}
+                      onClick={() =>
+                        editor.change(
+                          (rows) =>
+                            rows.filter((row) => row.id !== exercise.id),
+                          true,
+                        )
+                      }
+                    >
+                      Remove from workout
+                    </MenuItem>
+                  </ExerciseSettings>
                 </>
               )}
             </div>
             {!logging?.freeForm && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-                <div className="flex items-center gap-1">
-                  <Input
-                    appearance="seamless"
-                    aria-label={`Sets for ${exercise.name}`}
-                    className="h-8! w-8 flex-none! text-sm"
-                    readOnly={!!logging}
-                    type="number"
-                    min="1"
-                    max="10"
-                    required
-                    value={exercise.sets || ""}
-                    onValueChange={(v) =>
-                      change(exercise.id, { sets: Number(v) })
-                    }
-                  />
-                  <span>{!logging || exercise.target ? "sets ×" : "sets"}</span>
-                </div>
-                {(!logging || Boolean(exercise.target)) && (
-                  <Input
-                    appearance="seamless"
-                    aria-label={`Target for ${exercise.name}`}
-                    className="h-8! w-16 flex-none! text-sm"
-                    readOnly={!!logging}
-                    maxLength={100}
-                    value={exercise.target}
-                    onValueChange={(target) => change(exercise.id, { target })}
-                  />
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+                {logging ? (
+                  <span className="min-w-0 break-words whitespace-pre-wrap">
+                    {exercise.sets} sets
+                    {exercise.target ? ` × ${exercise.target}` : ""}
+                  </span>
+                ) : (
+                  <>
+                    <Input
+                      appearance="seamless"
+                      aria-label={`Sets for ${exercise.name}`}
+                      className="h-8! w-8 flex-none! text-sm"
+                      type="number"
+                      min="1"
+                      max="10"
+                      required
+                      value={exercise.sets || ""}
+                      onValueChange={(value) =>
+                        change(exercise.id, { sets: Number(value) })
+                      }
+                    />
+                    <span>sets ×</span>
+                    <Input
+                      appearance="seamless"
+                      aria-label={`Target for ${exercise.name}`}
+                      className="h-8! w-20 flex-none! text-sm"
+                      maxLength={100}
+                      value={exercise.target}
+                      onValueChange={(target) =>
+                        change(exercise.id, { target })
+                      }
+                    />
+                  </>
                 )}
-                <SelectRoot
-                  value={exercise.role ?? "workout"}
-                  disabled={disabled || starting || !!logging}
-                  items={workoutExerciseRoleOptions}
-                  onValueChange={(value) => {
-                    const role = workoutExerciseRoleSchema.safeParse(value);
-
-                    if (role.success) {
-                      change(exercise.id, { role: role.data }, true);
-                    }
-                  }}
-                >
-                  <SelectTrigger
-                    aria-label={`Role for ${exercise.name}`}
-                    className="h-8! w-28! gap-2! px-2! text-xs"
-                  />
-                  <SelectPopup>
-                    {workoutExerciseRoleOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectPopup>
-                </SelectRoot>
-                <SelectRoot
-                  value={exercise.unit}
-                  disabled={disabled || starting || !!logging}
-                  items={[
-                    { value: "reps", label: "Reps" },
-                    { value: "seconds", label: "Seconds" },
-                  ]}
-                  onValueChange={(unit) => {
-                    if (unit === "reps" || unit === "seconds") {
-                      change(exercise.id, { unit }, true);
-                    }
-                  }}
-                >
-                  <SelectTrigger
-                    aria-label={`Measure for ${exercise.name}`}
-                    className="h-8! w-28! gap-2! px-2! text-xs"
-                  />
-                  <SelectPopup>
-                    <SelectItem value="reps">Reps</SelectItem>
-                    <SelectItem value="seconds">Seconds</SelectItem>
-                  </SelectPopup>
-                </SelectRoot>
+                <span>{exercise.unit}</span>
+                {exercise.role && exercise.role !== "workout" && (
+                  <span>· {workoutExerciseRoleLabel(exercise.role)}</span>
+                )}
               </div>
             )}
             {exercise.catalogExerciseId && (

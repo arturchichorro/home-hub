@@ -174,6 +174,17 @@ export function WorkoutExerciseSets({
         const label = `${exercise.name}, set ${round}`;
         const saving = state.saving.has(key);
         const error = state.errors[key];
+        const validSet = Boolean(completeSetValues(definition, input));
+        let status = "";
+        if (saving) {
+          status = "Saving…";
+        } else if (invalid) {
+          status = "Invalid";
+        } else if (state.dirty.has(key)) {
+          status = validSet ? "Unsaved" : "Incomplete";
+        } else if (validSet) {
+          status = "Saved";
+        }
         const removable =
           state.recorded.has(key) ||
           round > exercise.sets ||
@@ -296,18 +307,13 @@ export function WorkoutExerciseSets({
                   <span>{definition.unit}</span>
                 </div>
               )}
-              <span className="text-xs text-muted" role="status">
-                {saving
-                  ? "Saving…"
-                  : invalid
-                    ? "Invalid"
-                    : completeSetValues(definition, input)
-                      ? state.dirty.has(key)
-                        ? "Unsaved"
-                        : "Saved"
-                      : state.dirty.has(key)
-                        ? "Incomplete"
-                        : ""}
+              <span
+                className={
+                  status === "Saved" ? "sr-only" : "text-xs text-muted"
+                }
+                role="status"
+              >
+                {status}
               </span>
               {removable &&
                 (state.recorded.has(key) ? (

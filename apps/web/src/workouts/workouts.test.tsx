@@ -3,6 +3,7 @@ import { starterWorkouts } from "@home-hub/shared/workout-seed";
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CatalogExerciseEditor } from "./exercise-catalog";
 import { TrainingHistoryPage } from "./training-history";
 import { TrainingSessionPage } from "./training-session";
 import { WorkoutDetail } from "./workout-detail";
@@ -201,6 +202,66 @@ function loggingFixture(form: WorkoutLogForm) {
 }
 
 describe("simple workouts", () => {
+  it("renders the shared catalog editor without a fake sortable context on detail pages", () => {
+    const exercise = {
+      id: crypto.randomUUID(),
+      name: "My stored exercise",
+      unit: "reps" as const,
+      load: "single" as const,
+      unilateral: false,
+    };
+    const html = renderToStaticMarkup(
+      <CatalogExerciseEditor
+        householdId={householdId}
+        initial={exercise}
+        current={exercise}
+        enabled
+        showDetails={false}
+        save={async (value) => ({ exercise: value })}
+        onDelete={() => {}}
+      />,
+    );
+    expect(html).toContain('value="My stored exercise"');
+    expect(html).toContain('aria-label="Settings for My stored exercise"');
+    expect(html).not.toContain("Reorder");
+    expect(html).toContain('aria-label="Delete My stored exercise"');
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it("keeps every stored workout instruction rather than treating it as UI guidance", () => {
+    useQuery.mockReturnValueOnce([workout, { type: "complete" }]);
+    const html = renderToStaticMarkup(
+      <WorkoutDetail householdId={householdId} workoutId={workoutId} />,
+    );
+    const encodedNotes = renderToStaticMarkup(
+      <textarea defaultValue={workout.notes} />,
+    ).replace(/^<textarea>|<\/textarea>$/g, "");
+    expect(html).toContain(encodedNotes);
+    expect(html).toContain('aria-label="Notes"');
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it("renders frozen prescriptions as text while logging rather than disabled settings controls", () => {
+    const form = openWorkoutLog(starter);
+    const html = renderToStaticMarkup(
+      <WorkoutExercises
+        householdId={householdId}
+        current={form.snapshot.exercises}
+        disabled={false}
+        onSave={async () => true}
+        onStartLogging={async () => {}}
+        onCloseLogging={() => {}}
+        logging={loggingFixture(form)}
+      />,
+    );
+    expect(html).toContain("8–12");
+    expect(html).not.toContain('aria-label="Sets for');
+    expect(html).not.toContain('aria-label="Target for');
+    expect(html).not.toContain('aria-label="Role for');
+    expect(html).not.toContain('aria-label="Settings for');
+    expect(html).toContain('aria-label="Weight in kg for');
+  });
+
   it("shows the shared exercise catalog below the workouts", () => {
     useQuery
       .mockReturnValueOnce([[workout], { type: "complete" }])
@@ -351,7 +412,7 @@ describe("simple workouts", () => {
     expect(heading).toMatch(/lucide-plus[\s\S]*Add exercise/);
     expect(mutate).not.toHaveBeenCalled();
   });
-  it("uses a Base UI measure select and a settings-icon menu", () => {
+  it("keeps prescription inputs seamless and groups secondary controls in the shared settings menu", () => {
     useQuery
       .mockReturnValueOnce([workout, { type: "complete" }])
       .mockReturnValueOnce([[], { type: "complete" }]);
@@ -360,7 +421,10 @@ describe("simple workouts", () => {
       <WorkoutDetail householdId={householdId} workoutId={workoutId} />,
     );
     expect(html).toContain('role="combobox"');
-    expect(html).toContain('aria-label="Measure for Goblet squat"');
+    expect(html).not.toContain('aria-label="Measure for Goblet squat"');
+    expect(html).not.toContain('aria-label="Role for Goblet squat"');
+    expect(html).toContain('aria-label="Sets for Goblet squat"');
+    expect(html).toContain('aria-label="Target for Goblet squat"');
     expect(html).toContain('aria-label="Settings for Goblet squat"');
     expect(html).toContain('aria-haspopup="menu"');
     expect(html).not.toContain("<select");
