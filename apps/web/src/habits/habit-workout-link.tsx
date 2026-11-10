@@ -312,7 +312,7 @@ function WorkoutLinkEditor({
           </p>
           <p className="text-xs text-muted">
             Manual checks and notes stay separate. Removing the last matching
-            set only removes the automatic X; changing links recalculates
+            set only removes automatic completion; changing links recalculates
             automatic history.
           </p>
           <p className="text-xs text-muted">

@@ -1,34 +1,60 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { HabitRow } from "./habit-days";
 import { HabitsPage } from "./habits-page";
 
 const { useQuery, enabled } = vi.hoisted(() => ({
   useQuery: vi.fn(),
   enabled: vi.fn(),
 }));
-
 vi.mock("@rocicorp/zero/react", () => ({
   useZero: () => ({ userID: "me", mutate: vi.fn() }),
-
   useQuery,
 }));
-
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => vi.fn(),
+  useBlocker: () => ({ status: "idle" }),
+  Link: ({
+    to,
+    params,
+    search,
+    disabled,
+    children,
+    ...props
+  }: {
+    to: string;
+    params: Record<string, string>;
+    search: unknown;
+    disabled: boolean;
+    children: import("react").ReactNode;
+  }) => (
+    <a
+      {...props}
+      href={
+        disabled
+          ? undefined
+          : Object.entries(params).reduce(
+              (path, [key, value]) => path.replace(`$${key}`, value),
+              to,
+            )
+      }
+    >
+      {children}
+    </a>
+  ),
+}));
 vi.mock("../app-header-right-component", () => ({
   useAppHeaderRightComponent: vi.fn(),
 }));
-
 vi.mock("../zero/use-zero-mutation-enabled", () => ({
   useZeroMutationEnabled: enabled,
 }));
-
 const householdId = "d92e5c4e-1c68-4942-9cc9-710207661bca";
-
 const members = [
   { userId: "me", user: { username: "Alice" } },
   { userId: "other", user: { username: "Bob" } },
 ];
-
-const habit = {
+const habit: HabitRow = {
   id: "habit-1",
   name: "Read",
   entries: [
@@ -46,13 +72,11 @@ const habit = {
     },
   ],
 };
-
 function setup(rows = [habit], type = "complete") {
   useQuery
     .mockReturnValueOnce([members, { type: "complete" }])
     .mockReturnValueOnce([rows, { type }]);
 }
-
 beforeEach(() => {
   vi.clearAllMocks();
   useQuery.mockReset();
@@ -60,91 +84,97 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
 });
-
 afterEach(() => vi.useRealTimers());
-
-const render = () =>
-  renderToStaticMarkup(<HabitsPage householdId={householdId} />);
-
-describe("today-first habits", () => {
-  it("renders seven adjacent boxes with today last and no separate header toggle or mounted calendars", () => {
+const render = (props = {}) =>
+  renderToStaticMarkup(<HabitsPage householdId={householdId} {...props} />);
+describe("quick habits overview", () => {
+  it("has one obvious today toggle, a name link and seven non-interactive preview days, not management/calendars", () => {
     setup();
-
     const html = render();
-    expect(html).toContain('aria-label="Read, 2026-10-15. Mark done"');
-    expect(html).toContain(
-      'aria-label="History for Read" aria-expanded="false"',
-    );
-    expect(
-      html.match(/aria-label="Read, 2026-10-(09|10|11|12|13|14)\./g),
-    ).toHaveLength(6);
-    expect(
-      html.match(/aria-label="Read, 2026-10-(09|10|11|12|13|14|15)\./g),
-    ).toHaveLength(7);
-    expect(html.indexOf('aria-label="Read, 2026-10-14.')).toBeLessThan(
-      html.indexOf('aria-label="Read, 2026-10-15.'),
-    );
     expect(
       html.match(/aria-label="Read, 2026-10-15. Mark done"/g),
     ).toHaveLength(1);
-    expect(html).toContain('aria-current="date"');
-    expect(html).toContain("grid-cols-7 gap-0");
-    expect(html).not.toContain("<table");
-    expect(html).not.toContain("Previous month");
-    expect(html).not.toContain("Today's habits");
-    expect(html).toContain('aria-label="Habit name"');
+    expect(html).toContain(`href="/households/${householdId}/habits/habit-1"`);
+    expect(html.match(/role="img"/g)).toHaveLength(7);
+    expect(html).not.toMatch(
+      /<table|Previous month|Habit name|Workout link|Reorder Read|History for Read/,
+    );
     expect(useQuery).toHaveBeenCalledTimes(2);
   });
-  it("keeps the seven boxes chronological across a month boundary, with today last", () => {
-    vi.setSystemTime(new Date("2026-11-03T12:00:00Z"));
+  it("defaults to me and never mixes another person's completion or note into previews", () => {
     setup();
-
     const html = render();
-    const dates = [...html.matchAll(/aria-label="Read, ([0-9-]+)\./g)].map(
-      (match) => match[1],
-    );
-    expect(dates).toEqual([
-      "2026-10-28",
-      "2026-10-29",
-      "2026-10-30",
-      "2026-10-31",
-      "2026-11-01",
-      "2026-11-02",
-      "2026-11-03",
-    ]);
-  });
-  it("defaults to me, lists the roster, and does not mix another person's completion or note into the row", () => {
-    setup();
-
-    const html = render();
-    expect(html).toContain('value="me" selected="">Me');
-    expect(html).toContain(">Bob<");
+    expect(html).toContain(">Me<");
     expect(html).not.toContain("Other note");
+    expect(html).toContain("2026-10-15: Not recorded");
     expect(html).not.toContain("Clear completion");
   });
-  it("exposes note-only dates without falsely marking them completed", () => {
+  it("shows another member's progress read-only while retaining the shared name link", () => {
     setup();
-
-    const html = render();
-    expect(html).toContain(
-      "Read, 2026-10-14. Not recorded. Note: Tram reading",
-    );
-    expect(html).not.toContain("Read, 2026-10-14. Completed");
+    const html = render({ person: "other" });
+    expect(html).toContain("2026-10-15: Completed");
+    expect(html).not.toContain("Mark done");
+    expect(html).not.toContain("Clear completion");
+    expect(html).not.toContain("<textarea");
+    expect(html).toContain(">Read</a>");
+    expect(html).toContain("Other note");
   });
-  it("keeps inspection available offline while disabling today's write", () => {
+  it("shows saved today notes directly and keeps notes from earlier dates in the detail flow", () => {
+    setup([
+      {
+        ...habit,
+        entries: [
+          ...habit.entries,
+          {
+            userId: "me",
+            entryOn: "2026-10-15",
+            completed: false,
+            note: "Stored today text",
+          },
+        ],
+      },
+    ]);
+    const html = render();
+    expect(html).toContain("Stored today text");
+    expect(html).toContain("<textarea");
+    expect(html).toContain("2026-10-14: Not recorded, has note");
+  });
+  it("makes automatic completion inspectable without an undo control", () => {
+    setup([
+      {
+        ...habit,
+        entries: [
+          {
+            userId: "me",
+            entryOn: "2026-10-15",
+            completed: true,
+            note: "",
+            workoutCompleted: true,
+          },
+        ],
+      },
+    ]);
+    const html = render();
+    expect(html).toContain("Completed from training");
+    expect(html).not.toContain("Clear completion");
+    expect(html).not.toContain("Mark done");
+  });
+  it("keeps archived progress inspectable without write controls", () => {
+    setup();
+    expect(render({ archived: true })).not.toMatch(
+      /Mark done|Clear completion|<textarea/,
+    );
+  });
+  it("keeps detail navigation available offline while disabling today's write", () => {
     enabled.mockReturnValue(false);
     setup();
-
     const html = render();
     expect(
       html.match(
-        /<button[^>]*aria-label="Read, 2026-10-15\. Mark done"[^>]*>/,
+        /<button[^>]*aria-label="Read, 2026-10-15. Mark done"[^>]*>/,
       )?.[0],
     ).toContain('disabled=""');
-    expect(
-      html.match(/<button[^>]*aria-label="History for Read"[^>]*>/)?.[0],
-    ).not.toContain('disabled=""');
-    expect(html).not.toContain("Read-only");
+    expect(html).toContain(`href="/households/${householdId}/habits/habit-1"`);
   });
   it.each(["unknown", "error", "complete"])(
     "handles %s query state",
@@ -155,7 +185,7 @@ describe("today-first habits", () => {
           ? "Loading habits"
           : type === "error"
             ? "Unable to load"
-            : "No habits.",
+            : "No habits yet.",
       );
     },
   );

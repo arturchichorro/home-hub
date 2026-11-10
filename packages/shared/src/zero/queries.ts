@@ -385,6 +385,14 @@ const authorizedPersonHabits = (
       ),
   );
 
+const habitDetail = defineHomeHubQuery(
+  z.object({ householdId: z.uuid(), habitId: z.uuid() }).strict(),
+  ({ args, ctx }) =>
+    authorizedPersonHabits(args.householdId, ctx.userId, ctx.userId)
+      .where("id", args.habitId)
+      .one(),
+);
+
 const recentPersonHabits = defineHomeHubQuery(
   personHabitArgs.refine(
     (args) => args.endOn <= shiftCalendarDate(args.startOn, 6),
@@ -612,6 +620,7 @@ export const queries = defineHomeHubQueries({
     previousExercises: previousExercisePerformances,
   },
   habits: {
+    detail: habitDetail,
     byHousehold: habitsByHousehold,
     recentForPerson: recentPersonHabits,
     workoutChoices: habitWorkoutChoices,

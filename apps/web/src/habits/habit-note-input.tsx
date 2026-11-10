@@ -8,7 +8,10 @@ import {
 } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { useEffect, useRef, useState } from "react";
-import { TextDraftActions } from "../editing/text-draft-actions";
+import {
+  TextDraftActions,
+  TextDraftGuard,
+} from "../editing/text-draft-actions";
 import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
@@ -24,6 +27,7 @@ type Props = {
   disabled?: boolean;
   readOnly?: boolean;
   entryOn?: string;
+  multiline?: boolean;
 };
 
 export function HabitNoteInput({
@@ -35,6 +39,7 @@ export function HabitNoteInput({
   disabled = false,
   onDirtyChange,
   readOnly = false,
+  multiline = false,
 }: Props) {
   const zero = useZero();
   const enabled = useZeroMutationEnabled() && !disabled && !readOnly;
@@ -85,7 +90,11 @@ export function HabitNoteInput({
   if (readOnly) {
     return currentNote ? (
       <span
-        className="min-w-0 flex-1 truncate text-xs text-muted"
+        className={
+          multiline
+            ? "whitespace-pre-wrap break-words text-sm text-muted"
+            : "min-w-0 flex-1 truncate text-xs text-muted"
+        }
         title={currentNote}
       >
         {currentNote}
@@ -95,6 +104,9 @@ export function HabitNoteInput({
 
   return (
     <>
+      {(editor.hasChanges || editor.isSaving) && (
+        <TextDraftGuard editor={{ ...editor, hasChanges: true }} />
+      )}
       {currentNote !== null ||
       editing ||
       editor.value !== "" ||
@@ -106,7 +118,12 @@ export function HabitNoteInput({
           aria-busy={editor.isSaving || undefined}
           aria-invalid={editor.error ? true : undefined}
           aria-errormessage={editor.error ? editor.errorId : undefined}
-          className="field-sizing-fixed! h-7! min-h-7! w-full min-w-0 flex-1 overflow-x-auto overflow-y-hidden py-0! text-xs leading-7 text-muted whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className={
+            multiline
+              ? "w-full min-w-0 text-sm text-muted"
+              : "field-sizing-fixed! h-7! min-h-7! w-full min-w-0 flex-1 overflow-x-auto overflow-y-hidden py-0! text-xs leading-7 text-muted whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          }
+          placeholder={multiline ? "Shared note…" : undefined}
           disabled={!enabled}
           maxLength={500}
           rows={1}
