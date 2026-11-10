@@ -146,7 +146,10 @@ it("renders compact totals, side/record breakdown and real zero distinctly from 
   expect(html).toContain("0 kg");
   expect(html).toContain("Left 0 · Right 0");
   expect(html).toContain("Stats details");
-  expect(html).toContain("without recorded weight");
+  expect(html).toContain("missing weight");
+  expect(html).not.toContain("<details");
+  expect(html).toContain('aria-expanded="false"');
+  expect(html).not.toContain("estimated strength");
   expect(
     renderToStaticMarkup(
       <ExerciseStatistics stats={{ ...stats, volumeKg: null }} />,

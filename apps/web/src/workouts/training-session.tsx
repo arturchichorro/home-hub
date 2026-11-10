@@ -381,7 +381,7 @@ function TrainingLogger({
             label="Session name"
             placeholder="Free training"
             disabled={disabled}
-            className="h-9! min-w-0 text-2xl! font-semibold"
+            className="h-8! min-w-0 text-sm! font-medium"
           />
         }
         current={state.form.snapshot.exercises}
@@ -408,9 +408,6 @@ function TrainingLogger({
           },
         }}
       />
-      {!state.form.snapshot.exercises.length && (
-        <p className="text-sm text-muted">Add an exercise to begin.</p>
-      )}
       <TrainingText
         editor={note}
         label="Session note"

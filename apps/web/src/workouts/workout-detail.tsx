@@ -521,7 +521,7 @@ function WorkoutDetailPage({
         </section>
       )}
       <section className="min-w-0">
-        <h2 className="flex items-center gap-2 py-3 font-semibold">
+        <h2 className="flex items-center gap-2 py-3 text-sm font-medium">
           <History aria-hidden="true" className="size-4" />
           History
         </h2>
