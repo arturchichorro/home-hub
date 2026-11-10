@@ -96,6 +96,14 @@ describe("getBreadcrumbLocation", () => {
     },
   );
 
+  it("describes a dedicated habit page", () => {
+    expect(getBreadcrumbLocation("/households/home/habits/habit-a")).toEqual({
+      householdId: "home",
+      module: "habits",
+      habitId: "habit-a",
+    });
+  });
+
   it("returns the home location outside a household", () => {
     expect(getBreadcrumbLocation("/")).toEqual({});
   });

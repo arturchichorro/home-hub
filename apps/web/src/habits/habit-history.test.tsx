@@ -115,11 +115,15 @@ describe("single habit history", () => {
     const html = renderToStaticMarkup(
       <HabitHistory {...base} {...flags} selectedDate="2026-10-14" />,
     );
-    expect(
-      html.match(
-        /<button[^>]*aria-label="Read, 2026-10-14. Mark done"[^>]*>/,
-      )?.[0],
-    ).toContain('disabled=""');
+    if ("enabled" in flags && !flags.enabled) {
+      expect(
+        html.match(
+          /<button[^>]*aria-label="Read, 2026-10-14. Mark done"[^>]*>/,
+        )?.[0],
+      ).toContain('disabled=""');
+    } else {
+      expect(html).not.toContain("Mark done");
+    }
 
     if (!flags.own || flags.archived) {
       expect(html).not.toContain("<textarea");

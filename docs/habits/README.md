@@ -2,56 +2,57 @@
 
 Habits (`habits`) is an opt-in household module. Any current member may create,
 rename, annotate or archive shared habits. Each person records their own daily completions and notes;
-every current member can see progress. No joining, targets or streaks are required.
+every current member can see progress. No joining or targets are required.
 
 ## Interface
 
-Habits is a phone-first, today-first list. It defaults to **Me**; a person selector
-shows another current member's activity read-only. Definitions and ordering remain
-shared. No targets, schedules, amounts, streaks or scores are introduced: each
-person decides when a daily completion makes sense.
+The overview defaults to **Me**, with the existing person selector and shared ordering.
 
-- Each compact row contains a seamless name, a daily-note action and history
-  disclosure, followed by seven adjacent day boxes: six previous dates and
-  **Today** on the far right. Completed days show an X; unrecorded days stay blank.
-  Today's box is the completion toggle, not a separate checkbox in the header.
-  The strip fits narrow screens without horizontal page scrolling. Completions
-  never move rows.
-- Today's manual completion is one tap; workout-derived completion opens inspection
-  instead of allowing undo. Its optional note opens inline and autosaves.
-  Note-bearing dates have a subtle marker, including note-only dates.
-- History starts collapsed. Expand one habit at a time to mount one monthly
-  calendar, with previous/next/current-month navigation. No future months.
-- Hover/focus previews a historical note. Selecting a historical date inspects
-  it first, without toggling completion. The selected day's details offer explicit
-  completion and note editing for the author; other members' records are read-only.
-  Touch does not require hover. All actual past dates, even before creation, remain
-  editable; future dates and archived records are read-only.
-- Daily notes survive unchecking. Rejected/pending drafts remain mounted and block
-  person, history/date/month and archive-view changes until saved or explicitly
-  reverted with Escape. Existing PWA update guards protect these drafts too.
-  Today refreshes on focus and periodically, but does not change editor identity
-  while a draft is pending.
-- Keep name-only quick add, seamless debounced naming, optional shared habit notes,
-  and confirmation before archiving. Shared notes and archive live in the expanded
-  habit's secondary actions. Archive stops tracking for everyone and retains
-  read-only history; no restore or permanent-delete UI.
-- Ordering is shared and supports mouse drag, touch hold and Space/arrow keys;
-  Escape cancels. Daily saves do not disable ordering. Archived ordering is fixed.
-- Use stable calendar-date labels and the current device timezone, not timestamps
-  that shift recorded days during travel. Authoritative server validation still
-  rejects future writes.
-- Offline cached data stays inspectable, with writes disabled and no duplicate
-  connection copy. Keep loading, authorization and rejected-save states explicit.
+- Each row has one today-completion control, a habit-name link to detail, an optional
+  inline today note, and a **non-interactive last-seven-days preview**, ending today.
+  Pending saves show a spinner; manual checks stay one tap/keypress. Training-derived
+  checks open detail instead of allowing undo. Existing notes remain visible.
+- Quick creation stays name-only. Header options hold archived viewing and explicit
+  reorder mode (mouse drag, touch hold, Space/arrows; Escape cancels). Completions
+  never reorder rows; archived ordering is fixed.
+- Detail opens today's direct day editor and one monthly calendar. Selecting a date
+  directly opens its editor; previous/next/current-month controls do not mount extra
+  calendars. Authors can correct any past date, even before habit creation.
+  Others' entries, future dates and archived entries are read-only.
+- Shared descriptions remain intact and editable on active detail pages. Shared
+  renaming, workout links and confirmed archiving stay secondary. Archive retains
+  history; there is no restore/permanent-delete workflow.
+- Daily notes survive unchecking. Failed drafts support retry/discard, retain their
+  scope and block person/date/month/reorder/archive-view changes. Navigation/unload
+  and PWA guards protect unsaved text. Today refreshes on focus/periodically without
+  retargeting a pending editor across midnight.
+- Cached Zero history remains inspectable offline, with writes disabled. Statistics
+  report unavailable/retry when HTTP access is unavailable.
 
-Only the selected person's seven-day window is queried for the list. An expanded
-habit additionally loads its own selected month. No calendar is mounted per row,
-no day subscribes independently, and there are no per-cell ResizeObservers or
-member-overflow marks. Date formatters are reused.
+Only the selected person's seven-day window loads on overview. Detail uses
+`habits.detail` for metadata and `habits.historyForPerson` for one selected month.
+`habits.recentForPerson` remains bounded to seven dates. The older
+`habits.byHousehold` query remains available to existing clients. No per-day
+subscriptions, per-row calendars or lifetime-entry download is introduced.
 
-The new named queries are `habits.recentForPerson` and
-`habits.historyForPerson`. The old `habits.byHousehold` contract remains available
-for already-open clients. The display-only redesign requires no database migration.
+## Derived statistics
+
+Detail shows completed-day totals, last completion, explicit last-7/30-calendar-day
+counts, and current/best **weekly activity streaks**. A completed day is manual
+**OR** training-derived, counted once; notes/empty entries and future dates do not
+count. A week is Monday–Sunday with any completion; an open current week preserves
+a run ending last week. Gaps break runs, and historical corrections update totals.
+Archived detail omits an active current streak but retains totals, best run and recency.
+There are no daily streaks, adherence scores, targets or charts.
+
+`GET /api/households/:householdId/habits/:habitId/stats?personId=…&timeZone=…`
+aggregates existing entries in PostgreSQL, returning counts/date labels only with
+`no-store`. Reads validate the authenticated viewer, live viewer/selected-person
+memberships, live household and enabled Habits module. Server time in the validated
+device timezone determines today; stored date labels determine weeks/windows.
+The client refreshes on entry, relevant visible completion changes, focus/resume,
+date/person changes and explicit retry, with abort/timeout and stale-scope protection.
+There are **no new tables, migrations, indexes, persisted counters or publication changes**.
 
 ## Optional workout links
 
@@ -171,7 +172,5 @@ restart the updated API/Zero schema, and reload clients, rebuilding Zero replica
 if required. Rollback requires the backup. Fresh and populated upgrades are verified
 in disposable PostgreSQL only; the normal local database is not migrated.
 
-Deferred: goals, streaks, schedules, reminders, quantities and participation history.
-Consecutive-day streaks could later use manual-or-automatic completed entries, with
-history beyond the displayed month; note-only entries do not count. No streak UI
-or persisted counters are part of the notes change.
+Deferred: goals, daily streaks, schedules, reminders, quantities and participation history.
+Weekly activity streaks are derived on detail; no streak counters are persisted.
