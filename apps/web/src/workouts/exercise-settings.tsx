@@ -1,4 +1,9 @@
-import type { CatalogExercise } from "@home-hub/shared/workouts";
+import {
+  type CatalogExercise,
+  type WorkoutExerciseRole,
+  workoutExerciseRoleOptions,
+  workoutExerciseRoleSchema,
+} from "@home-hub/shared/workouts";
 import {
   IconButton,
   MenuPopup,
@@ -9,16 +14,23 @@ import {
   MenuTrigger,
   Settings,
 } from "@home-hub/ui-web";
+import type { ReactNode } from "react";
 
 export function ExerciseSettings({
   exercise,
   disabled,
   onChange,
   includeMeasure = false,
+  role,
+  onRoleChange,
+  children,
 }: {
   exercise: Pick<CatalogExercise, "name" | "unit" | "load" | "unilateral">;
   disabled: boolean;
   includeMeasure?: boolean;
+  role?: WorkoutExerciseRole;
+  onRoleChange?: (role: WorkoutExerciseRole) => void;
+  children?: ReactNode;
   onChange: (
     patch: Partial<Pick<CatalogExercise, "unit" | "load" | "unilateral">>,
   ) => void;
@@ -61,6 +73,32 @@ export function ExerciseSettings({
             <MenuSeparator />
           </>
         )}
+        {onRoleChange && (
+          <>
+            <div className="px-3 py-1 text-xs text-muted">Role</div>
+            <MenuRadioGroup
+              aria-label="Role"
+              value={role ?? "workout"}
+              onValueChange={(value) => {
+                const parsed = workoutExerciseRoleSchema.safeParse(value);
+                if (parsed.success) {
+                  onRoleChange(parsed.data);
+                }
+              }}
+            >
+              {workoutExerciseRoleOptions.map((option) => (
+                <MenuRadioItem
+                  key={option.value}
+                  value={option.value}
+                  closeOnClick={false}
+                >
+                  {option.label}
+                </MenuRadioItem>
+              ))}
+            </MenuRadioGroup>
+            <MenuSeparator />
+          </>
+        )}
         <div className="px-3 py-1 text-xs text-muted">Load</div>
         <MenuRadioGroup
           aria-label="Load"
@@ -79,7 +117,7 @@ export function ExerciseSettings({
             kg per hand
           </MenuRadioItem>
           <MenuRadioItem closeOnClick={false} value="single">
-            kg single dumbbell
+            kg total
           </MenuRadioItem>
           <MenuRadioItem closeOnClick={false} value="bodyweight">
             Bodyweight
@@ -98,6 +136,12 @@ export function ExerciseSettings({
             Each side
           </MenuRadioItem>
         </MenuRadioGroup>
+        {children && (
+          <>
+            <MenuSeparator />
+            {children}
+          </>
+        )}
       </MenuPopup>
     </MenuRoot>
   );

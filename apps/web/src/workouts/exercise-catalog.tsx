@@ -20,7 +20,14 @@ import {
   Trash2,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { type Ref, useId, useImperativeHandle, useRef, useState } from "react";
+import {
+  type ReactNode,
+  type Ref,
+  useId,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import {
   TextDraftActions,
   TextDraftGuard,
@@ -243,7 +250,7 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
     <CatalogMediaProvider householdId={householdId}>
       <section aria-label="Exercise catalog" className="grid min-w-0 gap-2">
         <div className="flex items-center justify-between gap-2 pt-3">
-          <h2 className="font-semibold">Exercise catalog</h2>
+          <h2 className="text-sm font-medium">Exercise catalog</h2>
           <IconButton
             aria-label="Add catalog exercise"
             title="Add exercise"
@@ -382,7 +389,60 @@ export function ExerciseCatalog({ householdId }: { householdId: string }) {
   );
 }
 
-export function CatalogRow({
+type CatalogEditorProps = {
+  householdId: string;
+  initial: CatalogExercise;
+  current: CatalogExercise | undefined;
+  performance?: ExercisePerformance | undefined;
+  enabled: boolean;
+  autofocus?: boolean;
+  controls?: Ref<RowControls> | undefined;
+  onDelete: () => void;
+  save: (
+    next: CatalogExercise,
+    previous: CatalogExercise | undefined,
+  ) => Promise<CatalogSaveResult>;
+  onSaved?: (id: string) => void;
+  onCancel?: () => void;
+  onFocus?: () => void;
+};
+
+function CatalogRow({
+  index,
+  canOrder,
+  ...props
+}: CatalogEditorProps & { index: number; canOrder: boolean }) {
+  const sortable = useSortable({
+    id: props.initial.id,
+    index,
+    type: "catalog-exercise",
+    accept: "catalog-exercise",
+    disabled: !canOrder || !props.current,
+  });
+  return (
+    <li
+      ref={sortable.ref}
+      className={sortable.isDragging ? "opacity-60" : undefined}
+    >
+      <CatalogExerciseEditor
+        {...props}
+        handle={
+          <IconButton
+            ref={sortable.handleRef}
+            aria-label={`Reorder ${props.current?.name || props.initial.name || "new exercise"}`}
+            title="Reorder exercise"
+            className="size-7! shrink-0 touch-pan-y cursor-grab"
+            disabled={!canOrder || !props.current}
+          >
+            <GripVertical aria-hidden="true" className="size-4" />
+          </IconButton>
+        }
+      />
+    </li>
+  );
+}
+
+export function CatalogExerciseEditor({
   householdId,
   initial,
   current,
@@ -391,33 +451,13 @@ export function CatalogRow({
   autofocus = false,
   controls,
   save,
-  onSaved,
+  onSaved = () => {},
   onCancel,
   onFocus,
-  index,
-  canOrder,
   onDelete,
-  detail = false,
-}: {
-  detail?: boolean;
-  householdId: string;
-  initial: CatalogExercise;
-  current: CatalogExercise | undefined;
-  performance?: ExercisePerformance | undefined;
-  enabled: boolean;
-  autofocus?: boolean;
-  controls?: Ref<RowControls> | undefined;
-  index: number;
-  canOrder: boolean;
-  onDelete: () => void;
-  save: (
-    next: CatalogExercise,
-    previous: CatalogExercise | undefined,
-  ) => Promise<CatalogSaveResult>;
-  onSaved: (id: string) => void;
-  onCancel: () => void;
-  onFocus: () => void;
-}) {
+  handle,
+  showDetails = true,
+}: CatalogEditorProps & { handle?: ReactNode; showDetails?: boolean }) {
   const input = useRef<HTMLInputElement>(null);
   const errorId = useId();
   const editor = useCatalogExerciseEditor({
@@ -435,33 +475,22 @@ export function CatalogRow({
   }));
 
   const value = editor.value;
-  const sortable = useSortable({
-    id: initial.id,
-    index,
-    type: "catalog-exercise",
-    accept: "catalog-exercise",
-    disabled: !canOrder || !editor.persistedId,
-  });
+  const draft = {
+    ...editor,
+    retry: () => {
+      void editor.flush();
+    },
+    discard: editor.revert,
+  };
 
   return (
-    <li
-      ref={sortable.ref}
+    <div
       data-catalog-exercise-id={editor.persistedId ?? initial.id}
-      className={`grid min-w-0 gap-1 py-2 text-sm ${sortable.isDragging ? "opacity-60" : ""}`}
+      className="grid min-w-0 gap-1 py-3 text-sm"
       onFocusCapture={onFocus}
     >
       <div className="flex min-w-0 items-center gap-2">
-        {!detail && (
-          <IconButton
-            ref={sortable.handleRef}
-            aria-label={`Reorder ${value.name || "new exercise"}`}
-            title="Reorder exercise"
-            className="size-7! shrink-0 touch-pan-y cursor-grab"
-            disabled={!canOrder || !editor.persistedId}
-          >
-            <GripVertical aria-hidden="true" className="size-4" />
-          </IconButton>
-        )}
+        {handle}
         <Input
           ref={input}
           appearance="seamless"
@@ -492,14 +521,14 @@ export function CatalogRow({
               editor.revert();
 
               if (!editor.persistedId) {
-                onCancel();
+                onCancel?.();
               } else {
                 event.currentTarget.blur();
               }
             }
           }}
         />
-        {!detail && editor.persistedId && (
+        {showDetails && editor.persistedId && (
           <ExerciseDetailLink
             householdId={householdId}
             exerciseId={editor.persistedId}
@@ -565,17 +594,7 @@ export function CatalogRow({
           name={value.name}
         />
       )}
-      {editor.hasChanges && (
-        <TextDraftGuard
-          editor={{
-            ...editor,
-            retry: () => {
-              void editor.flush();
-            },
-            discard: editor.revert,
-          }}
-        />
-      )}
+      {editor.hasChanges && <TextDraftGuard editor={draft} />}
       <ErrorPopover
         anchor={input}
         id={errorId}
@@ -583,18 +602,8 @@ export function CatalogRow({
         onDismiss={editor.dismissError}
       >
         {editor.error}
-        {
-          <TextDraftActions
-            editor={{
-              ...editor,
-              retry: () => {
-                void editor.flush();
-              },
-              discard: editor.revert,
-            }}
-          />
-        }
+        <TextDraftActions editor={draft} />
       </ErrorPopover>
-    </li>
+    </div>
   );
 }

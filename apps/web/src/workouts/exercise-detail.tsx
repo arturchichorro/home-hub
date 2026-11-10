@@ -1,4 +1,3 @@
-import { DragDropProvider } from "@dnd-kit/react";
 import { exerciseCatalogSchema } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
@@ -7,7 +6,7 @@ import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useCallback, useState } from "react";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
-import { CatalogRow } from "./exercise-catalog";
+import { CatalogExerciseEditor } from "./exercise-catalog";
 import { ExerciseStatistics } from "./exercise-statistics";
 import { TrainingHistoryPage } from "./training-history";
 import type { CatalogSaveResult } from "./use-catalog-exercise-editor";
@@ -55,85 +54,75 @@ export function ExerciseDetailPage({
     enabled && status.type === "complete" && !retired && !deleting;
 
   return (
-    <div className="grid min-w-0 gap-5">
+    <div className="grid min-w-0 gap-4">
       {error && (
         <InlineAlert variant="danger" role="alert">
           {error}
         </InlineAlert>
       )}
       {retired ? (
-        <p className="text-xs text-muted">
-          Removed from the catalog. Your recorded history is retained.
-        </p>
+        <p className="text-xs text-muted">Removed from catalog</p>
       ) : (
-        <DragDropProvider>
-          <ul>
-            <CatalogRow
-              detail
-              householdId={householdId}
-              initial={current}
-              current={current}
-              enabled={writable}
-              index={0}
-              canOrder={false}
-              onSaved={refresh}
-              onCancel={() => {}}
-              onFocus={() => {}}
-              save={async (next, previous): Promise<CatalogSaveResult> => {
-                if (!writable || !previous) {
-                  return { error: "Unable to save exercise." };
+        <CatalogExerciseEditor
+          showDetails={false}
+          householdId={householdId}
+          initial={current}
+          current={current}
+          enabled={writable}
+          onSaved={refresh}
+          save={async (next, previous): Promise<CatalogSaveResult> => {
+            if (!writable || !previous) {
+              return { error: "Unable to save exercise." };
+            }
+            const changes = Object.fromEntries(
+              (["name", "unit", "load", "unilateral"] as const)
+                .filter((field) => next[field] !== previous[field])
+                .map((field) => [field, next[field]]),
+            );
+            const result = await acknowledgeMutation(
+              zero.mutate(
+                mutators.workouts.updateExercise({
+                  householdId,
+                  exerciseId,
+                  optimisticTimestamp: Date.now(),
+                  changes,
+                }),
+              ),
+            );
+            return result.type === "success"
+              ? { exercise: next }
+              : {
+                  error:
+                    "Unable to save exercise. Your changes are still here.",
+                };
+          }}
+          onDelete={() => {
+            if (!writable) {
+              return;
+            }
+            setDeleting(true);
+            setError("");
+            void acknowledgeMutation(
+              zero.mutate(
+                mutators.workouts.deleteExercise({
+                  householdId,
+                  exerciseId,
+                  optimisticTimestamp: Date.now(),
+                }),
+              ),
+            )
+              .then((result) => {
+                if (result.type !== "success") {
+                  setError("Unable to delete exercise.");
                 }
-                const changes = Object.fromEntries(
-                  (["name", "unit", "load", "unilateral"] as const)
-                    .filter((field) => next[field] !== previous[field])
-                    .map((field) => [field, next[field]]),
-                );
-                const result = await acknowledgeMutation(
-                  zero.mutate(
-                    mutators.workouts.updateExercise({
-                      householdId,
-                      exerciseId,
-                      optimisticTimestamp: Date.now(),
-                      changes,
-                    }),
-                  ),
-                );
-                return result.type === "success"
-                  ? { exercise: next }
-                  : {
-                      error:
-                        "Unable to save exercise. Your changes are still here.",
-                    };
-              }}
-              onDelete={() => {
-                if (!writable) {
-                  return;
-                }
-                setDeleting(true);
-                setError("");
-                void acknowledgeMutation(
-                  zero.mutate(
-                    mutators.workouts.deleteExercise({
-                      householdId,
-                      exerciseId,
-                      optimisticTimestamp: Date.now(),
-                    }),
-                  ),
-                )
-                  .then((result) => {
-                    if (result.type !== "success") {
-                      setError("Unable to delete exercise.");
-                    }
-                  })
-                  .catch(() => setError("Unable to delete exercise."))
-                  .finally(() => {
-                    setDeleting(false);
-                    refresh();
-                  });
-              }}
-            />
-          </ul>
-        </DragDropProvider>
+              })
+              .catch(() => setError("Unable to delete exercise."))
+              .finally(() => {
+                setDeleting(false);
+                refresh();
+              });
+          }}
+        />
       )}
       {stats.data ? (
         <ExerciseStatistics stats={stats.data} />

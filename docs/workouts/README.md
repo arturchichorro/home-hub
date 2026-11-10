@@ -9,8 +9,9 @@ workouts; training logs and set values remain private to their author.
 - Exercise edits autosave after typing pauses or on blur; settings, additions,
   and removals save immediately. There is no save-confirmation button. Shared
   workout notes sit below the exercises in a collapsed Base UI accordion from
-  `ui-web`. A settings-icon menu configures each exercise's
-  load convention and sides; the measure uses the shared Base UI select.
+  `ui-web`. The settings-icon menu groups measure, load, sides and placement role;
+  removing an exercise from a workout lives there too. Sets/targets remain seamless inline fields.
+  Logging shows frozen prescriptions as text, keeping focus on actual set inputs.
 - Workout rows show your latest day with saved sets on the right, including weekday
   (and year for older logs). Never-logged rows stay blank; other members' logs
   remain private. The stored local day is shown without timezone conversion.
@@ -58,7 +59,7 @@ workouts; training logs and set values remain private to their author.
   catalog or creates a new movement. The searchable catalog is listed below the
   workouts. Name, measure, load convention and sides are shared across workouts;
   sets, target ranges and exercise roles belong to each workout. Each placement
-  has a simple role selector: **Warm-up**, **Workout** (default), or **Stretching**.
+  has a role setting: **Warm-up**, **Workout** (default), or **Stretching**.
   The same catalog movement can have different roles in different workouts (or
   slots); classification does not group, reorder, or split performance history.
   Roles freeze directly on session exercise rows. Reopening/correcting a log keeps
@@ -149,8 +150,12 @@ weights produce an explicitly partial/not-recorded result rather than invented
 volume. Heaviest kilograms stay separate by recorded measure/load/side convention,
 not one estimated strength score.
 
-The summary is compact, with side/load records under Stats details; no charts or
-date filters. Statistics refresh on entry/resume, visible performance changes and
+The summary is compact, with aligned mobile totals and side/load records under
+the shared Base UI Stats details accordion; no charts or date filters. Routine UI
+explanations and repeated visible Saved labels are omitted, while errors, pending
+states, accessible save feedback and partial-statistics caveats remain. Stored
+names, targets, instructions and notes are retained in full. Exercise detail reuses
+the catalog editor without creating an unnecessary sortable catalog context. Statistics refresh on entry/resume, visible performance changes and
 acknowledged catalog changes, with retry and stale-response protection. This is
 not a second-by-second dashboard.
 
