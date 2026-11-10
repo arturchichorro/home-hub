@@ -24,6 +24,7 @@ type BreadcrumbLocation = {
   listId?: string;
   workoutId?: string;
   exerciseId?: string;
+  habitId?: string;
   training?: "history" | "session";
   logId?: string;
 };
@@ -54,6 +55,10 @@ export function getBreadcrumbLocation(pathname: string): BreadcrumbLocation {
 
   if (module === "recipes" && segments[3]) {
     location.recipeId = segments[3];
+  }
+
+  if (module === "habits" && segments[3]) {
+    location.habitId = segments[3];
   }
 
   if (module === "lists" && segments[3]) {
@@ -184,6 +189,26 @@ function WorkoutBreadcrumb({
   );
 }
 
+function HabitBreadcrumb({
+  householdId,
+  habitId,
+}: {
+  householdId: string;
+  habitId: string;
+}) {
+  const [habit] = useQuery(queries.habits.detail({ householdId, habitId }));
+  return (
+    <>
+      <BreadcrumbSeparator />
+      <BreadcrumbItem>
+        <span aria-current="page" className="block max-w-64 truncate">
+          {habit?.name ?? "Habit"}
+        </span>
+      </BreadcrumbItem>
+    </>
+  );
+}
+
 function LogBreadcrumb({
   householdId,
   logId,
@@ -298,6 +323,18 @@ export function AppBreadcrumbHeader({
                   >
                     Logs
                   </Link>
+                ) : location.habitId ? (
+                  <Link
+                    to="/households/$householdId/habits"
+                    params={{ householdId: location.householdId }}
+                    search={(previous) => ({
+                      person: previous.person,
+                      archived: previous.archived,
+                    })}
+                    className="rounded-sm text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus-ring"
+                  >
+                    Habits
+                  </Link>
                 ) : location.workoutId ||
                   location.training ||
                   location.exerciseId ? (
@@ -327,6 +364,12 @@ export function AppBreadcrumbHeader({
               listId={location.listId}
             />
           ) : null}
+          {location.householdId && location.habitId && (
+            <HabitBreadcrumb
+              householdId={location.householdId}
+              habitId={location.habitId}
+            />
+          )}
           {location.householdId && location.exerciseId && (
             <ExerciseBreadcrumb
               householdId={location.householdId}

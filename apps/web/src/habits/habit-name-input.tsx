@@ -3,7 +3,10 @@ import { mutators } from "@home-hub/shared/zero/mutators";
 import { ErrorPopover, Input } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { useRef } from "react";
-import { TextDraftActions } from "../editing/text-draft-actions";
+import {
+  TextDraftActions,
+  TextDraftGuard,
+} from "../editing/text-draft-actions";
 import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
@@ -58,6 +61,9 @@ export function HabitNameInput({
 
   return (
     <>
+      {(editor.hasChanges || editor.isSaving) && (
+        <TextDraftGuard editor={{ ...editor, hasChanges: true }} />
+      )}
       <Input
         ref={inputRef}
         appearance="seamless"

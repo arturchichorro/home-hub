@@ -11,6 +11,7 @@ import { createSignupService } from "./auth/signup";
 import { config } from "./config";
 import { createDocumentServices } from "./documents/service";
 import { createDocumentStorage } from "./documents/storage";
+import { createHabitStatsService } from "./habits/stats";
 import { createAcceptHouseholdInviteService } from "./households/accept-invite";
 import { createHouseholdService } from "./households/create";
 import { createHouseholdInviteService } from "./households/create-invite";
@@ -231,6 +232,7 @@ const app = createApp({
   recipeImages,
   exerciseMedia,
   exerciseStats: createExerciseStatsService({ db }),
+  habitStats: createHabitStatsService({ db }),
   documents: createDocumentServices({
     db,
     storage: createDocumentStorage({

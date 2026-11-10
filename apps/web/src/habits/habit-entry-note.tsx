@@ -8,7 +8,10 @@ import {
 } from "@home-hub/ui-web";
 import { useZero } from "@rocicorp/zero/react";
 import { useRef, useState } from "react";
-import { TextDraftActions } from "../editing/text-draft-actions";
+import {
+  TextDraftActions,
+  TextDraftGuard,
+} from "../editing/text-draft-actions";
 import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { useHabitDraftStatus } from "./use-habit-draft-status";
@@ -23,6 +26,7 @@ export function HabitEntryNote({
   initiallyOpen = false,
   hideTrigger = false,
   onDirtyChange,
+  disabled = false,
 }: {
   householdId: string;
   habitId: string;
@@ -30,12 +34,13 @@ export function HabitEntryNote({
   date: string;
   note: string | null;
   readOnly: boolean;
+  disabled?: boolean;
   initiallyOpen?: boolean;
   hideTrigger?: boolean;
   onDirtyChange: (dirty: boolean) => void;
 }) {
   const zero = useZero();
-  const enabled = useZeroMutationEnabled() && !readOnly;
+  const enabled = useZeroMutationEnabled() && !readOnly && !disabled;
   const [open, setOpen] = useState(initiallyOpen);
   const ref = useRef<HTMLTextAreaElement>(null);
   const editor = useDebouncedTextEditor({
@@ -74,6 +79,7 @@ export function HabitEntryNote({
 
   return (
     <div className="grid min-w-0 gap-1" data-habit-note>
+      {dirty && <TextDraftGuard editor={{ ...editor, hasChanges: dirty }} />}
       {!hideTrigger ? (
         <IconButton
           aria-label={`${open ? "Hide" : "Show"} note for ${name} on ${date}`}
@@ -93,15 +99,18 @@ export function HabitEntryNote({
       ) : null}
       {open ? (
         readOnly ? (
-          <p className="max-w-full break-words whitespace-pre-wrap text-sm text-muted">
-            {note || "No note."}
-          </p>
+          note ? (
+            <p className="max-w-full break-words whitespace-pre-wrap text-sm text-muted">
+              {note}
+            </p>
+          ) : null
         ) : (
           <>
             <Textarea
               ref={ref}
               appearance="seamless"
-              rows={2}
+              rows={1}
+              placeholder="Note…"
               maxLength={500}
               aria-label={`Note for ${name} on ${date}`}
               aria-busy={editor.isSaving || undefined}

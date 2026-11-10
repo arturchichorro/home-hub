@@ -13,6 +13,7 @@ import {
   InlineAlert,
 } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
+import { useEffect, useRef } from "react";
 import {
   formatHabitDate,
   HabitDayPreview,
@@ -40,6 +41,7 @@ export function HabitHistory({
   onDate,
   onCompleted,
   onDirtyChange,
+  onEntriesChanged,
 }: {
   householdId: string;
   habitId: string;
@@ -57,6 +59,7 @@ export function HabitHistory({
   onDate: (date: string) => void;
   onCompleted: (date: string, completed: boolean) => void;
   onDirtyChange: (dirty: boolean) => void;
+  onEntriesChanged?: () => void;
 }) {
   const period = habitMonth(clampHabitMonth(anchor, today));
   const [rows, result] = useQuery(
@@ -76,6 +79,16 @@ export function HabitHistory({
   );
   const entry = selectedDate ? entries.get(selectedDate) : undefined;
   const loading = result.type !== "complete";
+  const fingerprint = JSON.stringify(
+    rows[0]?.entries.map((e) => [e.entryOn, e.completed, e.workoutCompleted]),
+  );
+  const notified = useRef<string>(undefined);
+  useEffect(() => {
+    if (result.type === "complete" && notified.current !== fingerprint) {
+      notified.current = fingerprint;
+      onEntriesChanged?.();
+    }
+  }, [fingerprint, result.type, onEntriesChanged]);
 
   return (
     <section
@@ -83,6 +96,61 @@ export function HabitHistory({
       aria-label={`History for ${name}`}
       aria-busy={loading}
     >
+      {result.type !== "error" && (
+        <>
+          {" "}
+          {selectedDate && !loading && rows[0] ? (
+            <section
+              className="grid gap-2 border-t border-border pt-2"
+              aria-label={`Details for ${name} on ${selectedDate}`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm">{formatHabitDate(selectedDate)}</span>
+                {!own || archived || entry?.workoutCompleted ? (
+                  <span className="text-xs text-muted">
+                    {entry?.workoutCompleted
+                      ? "From training"
+                      : habitCompleted(entry)
+                        ? "Completed"
+                        : "Not recorded"}
+                  </span>
+                ) : (
+                  <HabitTodayToggle
+                    name={name}
+                    date={selectedDate}
+                    completed={habitCompleted(entry)}
+                    pending={pending.has(`${habitId}:${selectedDate}`)}
+                    disabled={
+                      !own ||
+                      !!entry?.workoutCompleted ||
+                      archived ||
+                      !enabled ||
+                      selectedDate > today ||
+                      pending.has(`${habitId}:${selectedDate}`)
+                    }
+                    onToggle={() =>
+                      onCompleted(selectedDate, !habitCompleted(entry))
+                    }
+                  />
+                )}
+              </div>
+              <HabitEntryNote
+                key={`${personId}:${selectedDate}`}
+                householdId={householdId}
+                habitId={habitId}
+                name={name}
+                date={selectedDate}
+                note={entry?.note ?? null}
+                disabled={!enabled}
+                readOnly={!own || archived || selectedDate > today}
+                initiallyOpen
+                hideTrigger
+                onDirtyChange={onDirtyChange}
+              />
+            </section>
+          ) : null}
+        </>
+      )}
       <div className="flex items-center gap-1">
         <IconButton
           aria-label="Previous month"
@@ -102,7 +170,8 @@ export function HabitHistory({
           <ChevronRight className="size-4" />
         </IconButton>
         <IconButton
-          aria-label="Current month"
+          aria-label="Today"
+          title="Today"
           disabled={locked}
           onClick={() => onMonth(today)}
         >
@@ -114,91 +183,42 @@ export function HabitHistory({
           Unable to load history.
         </InlineAlert>
       ) : (
-        <>
-          <table
-            className="w-full table-fixed text-center"
-            aria-label={`${name} history`}
-          >
-            <thead>
-              <tr>
-                {weekdayLabels.map((label) => (
-                  <th
-                    key={label}
-                    className="py-1 text-xs font-normal text-muted"
-                  >
-                    {label}
-                  </th>
+        <table
+          className="w-full table-fixed text-center"
+          aria-label={`${name} history`}
+        >
+          <thead>
+            <tr>
+              {weekdayLabels.map((label) => (
+                <th key={label} className="py-1 text-xs font-normal text-muted">
+                  {label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {monthCalendarWeeks(period.dates).map((week) => (
+              <tr key={week.join(",")}>
+                {week.map((date, j) => (
+                  <td key={date ?? j} className="p-0">
+                    {date ? (
+                      <HabitDayPreview
+                        calendar
+                        name={name}
+                        date={date}
+                        today={today}
+                        entry={entries.get(date)}
+                        selected={date === selectedDate}
+                        disabled={locked || loading || date > today}
+                        onInspect={() => onDate(date)}
+                      />
+                    ) : null}
+                  </td>
                 ))}
               </tr>
-            </thead>
-            <tbody>
-              {monthCalendarWeeks(period.dates).map((week) => (
-                <tr key={week.join(",")}>
-                  {week.map((date, j) => (
-                    <td key={date ?? j} className="p-0">
-                      {date ? (
-                        <HabitDayPreview
-                          calendar
-                          name={name}
-                          date={date}
-                          today={today}
-                          entry={entries.get(date)}
-                          selected={date === selectedDate}
-                          disabled={locked || loading || date > today}
-                          onInspect={() => onDate(date)}
-                        />
-                      ) : null}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {selectedDate && !loading ? (
-            <section
-              className="grid gap-2 border-t border-border pt-2"
-              aria-label={`Details for ${name} on ${selectedDate}`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm">{formatHabitDate(selectedDate)}</span>
-                <HabitTodayToggle
-                  name={name}
-                  date={selectedDate}
-                  completed={habitCompleted(entry)}
-                  disabled={
-                    !own ||
-                    !!entry?.workoutCompleted ||
-                    archived ||
-                    !enabled ||
-                    selectedDate > today ||
-                    pending.has(`${habitId}:${selectedDate}`)
-                  }
-                  onToggle={() =>
-                    onCompleted(selectedDate, !habitCompleted(entry))
-                  }
-                />
-              </div>
-              {entry?.workoutCompleted && (
-                <p className="text-xs text-muted">
-                  A matching workout keeps this day complete. Manual checks and
-                  notes are kept separately.
-                </p>
-              )}
-              <HabitEntryNote
-                key={`${personId}:${selectedDate}`}
-                householdId={householdId}
-                habitId={habitId}
-                name={name}
-                date={selectedDate}
-                note={entry?.note ?? null}
-                readOnly={!own || archived || selectedDate > today}
-                initiallyOpen
-                hideTrigger
-                onDirtyChange={onDirtyChange}
-              />
-            </section>
-          ) : null}
-        </>
+            ))}
+          </tbody>
+        </table>
       )}
     </section>
   );

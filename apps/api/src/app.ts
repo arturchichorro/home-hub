@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { type CreateAuthRoutesInput, createAuthRoutes } from "./auth/routes";
 import { createDocumentRoutes } from "./documents/routes";
 import type { DocumentServices } from "./documents/service";
+import { createHabitStatsRoutes } from "./habits/routes";
+import type { HabitStatsService } from "./habits/stats";
 import {
   type CreateHouseholdRoutesInput,
   createHouseholdRoutes,
@@ -38,6 +40,7 @@ export type CreateAppInput = {
   recipeImages: RecipeImageServices;
   exerciseMedia: ExerciseMediaServices;
   exerciseStats?: ExerciseStatsService;
+  habitStats?: HabitStatsService;
   documents?: DocumentServices;
   listMedia?: ListMediaServices;
   logs?: LogEntryServices;
@@ -84,6 +87,12 @@ export function createApp(input: CreateAppInput) {
     createExerciseMediaRoutes({ jwtSecret, services: input.exerciseMedia }),
   );
 
+  if (input.habitStats) {
+    app.route(
+      "/api/households/:householdId/habits",
+      createHabitStatsRoutes({ jwtSecret, stats: input.habitStats }),
+    );
+  }
   if (input.exerciseStats) {
     app.route(
       "/api/households/:householdId/workouts/exercises",
