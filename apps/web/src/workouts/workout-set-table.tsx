@@ -1,10 +1,8 @@
-import {
-  type WorkoutExercise,
-  workoutSetValuesFromRow,
-} from "@home-hub/shared/workouts";
+import type { WorkoutExercise } from "@home-hub/shared/workouts";
 import {
   Button,
   ConfirmationPopover,
+  History,
   IconButton,
   Input,
   Trash2,
@@ -18,6 +16,7 @@ import {
   setInputKey,
   type WorkoutSetInput,
 } from "./workout-log-form";
+import { summarizeExercisePerformance } from "./workout-log-summary";
 
 export function WorkoutSetTable({
   exercise,
@@ -31,6 +30,12 @@ export function WorkoutSetTable({
   disabled: boolean;
 }) {
   const validationId = useId();
+  const previous = exercise.catalogExerciseId
+    ? logging.previous.get(exercise.catalogExerciseId)
+    : undefined;
+  const previousSummary = previous
+    ? summarizeExercisePerformance(previous)
+    : "";
   const groups: { definition: WorkoutExercise; rounds: number[] }[] = [];
 
   // Older corrections can contain different recorded conventions. Keep their
@@ -57,7 +62,7 @@ export function WorkoutSetTable({
         const weighted = definition.load !== "bodyweight";
         const sides = definition.unilateral;
         const headerClass =
-          "border-b border-border px-1 pb-2 text-right font-normal";
+          "border-b border-border px-1 pb-2 align-bottom text-center font-normal";
         const span = sides ? 2 : 1;
 
         return (
@@ -71,7 +76,7 @@ export function WorkoutSetTable({
                 <th
                   scope="col"
                   rowSpan={span}
-                  className="w-16 border-b border-border pb-2 text-left font-normal"
+                  className="w-16 border-b border-border pb-2 align-bottom text-left font-normal"
                 >
                   Set
                 </th>
@@ -84,7 +89,7 @@ export function WorkoutSetTable({
                   scope={sides ? "colgroup" : "col"}
                   colSpan={sides ? 2 : 1}
                   className={
-                    sides ? "px-1 text-center font-normal" : headerClass
+                    sides ? "px-1 pb-1 text-center font-normal" : headerClass
                   }
                 >
                   {definition.unit === "reps" ? "Reps" : "Seconds"}
@@ -92,7 +97,7 @@ export function WorkoutSetTable({
                 <th
                   scope="col"
                   rowSpan={span}
-                  className="w-11 border-b border-border pb-2"
+                  className="w-11 border-b border-border pb-2 align-bottom"
                 >
                   <span className="sr-only">Set actions</span>
                 </th>
@@ -122,6 +127,19 @@ export function WorkoutSetTable({
           </table>
         );
       })}
+      {previousSummary && (
+        <p
+          className="max-w-sm text-xs text-muted"
+          data-previous-performance={exercise.id}
+        >
+          <History
+            aria-hidden="true"
+            className="mr-1 inline size-3 align-[-1px]"
+          />
+          <span className="sr-only">Previous: </span>
+          {previousSummary}
+        </p>
+      )}
     </div>
   );
 }
@@ -150,17 +168,6 @@ function WorkoutSetRows({
   };
   const validation = setInputErrors(definition, input);
   const invalid = Object.keys(validation).length > 0;
-  const old = exercise.catalogExerciseId
-    ? logging.previous.get(exercise.catalogExerciseId)
-    : undefined;
-  const prior = old?.sets.find(
-    (set) =>
-      set.round === round &&
-      set.unit === definition.unit &&
-      set.load === definition.load &&
-      set.unilateral === definition.unilateral,
-  );
-  const last = prior ? workoutSetValuesFromRow(prior) : undefined;
   const label = `${exercise.name}, set ${round}`;
   const saving = state.saving.has(key);
   const error = state.errors[key];
@@ -187,15 +194,6 @@ function WorkoutSetRows({
     status = "Saved";
   }
 
-  const previousValue = (field: keyof WorkoutSetInput) => {
-    if (!last) {
-      return undefined;
-    }
-
-    return field === "rightAmount"
-      ? (last.rightAmount ?? last.amount)
-      : last[field];
-  };
   const remove = (
     <IconButton
       aria-label={`Remove ${label}`}
@@ -253,12 +251,7 @@ function WorkoutSetRows({
                     ? `${validationId}-${round}-${field}`
                     : undefined
                 }
-                aria-describedby={
-                  last
-                    ? `${validationId}-${round}-${field}-previous`
-                    : undefined
-                }
-                className="h-10! w-full text-right text-sm text-foreground tabular-nums"
+                className="h-10! w-full text-center text-sm text-foreground tabular-nums"
                 type="number"
                 min="0"
                 max={weight ? 1000 : 600}
@@ -291,24 +284,6 @@ function WorkoutSetRows({
             ))}
         </td>
       </tr>
-      {last && (
-        <tr>
-          <th scope="row" className="pb-2 text-left text-[10px] font-normal">
-            Previous
-          </th>
-          {fields.map((field) => (
-            <td
-              key={field}
-              id={`${validationId}-${round}-${field}-previous`}
-              className="px-1 pb-2 text-right tabular-nums"
-            >
-              <span className="sr-only">Previous: </span>
-              {previousValue(field) ?? "—"}
-            </td>
-          ))}
-          <td />
-        </tr>
-      )}
       {(showStatus || invalid || error) && (
         <tr>
           <td colSpan={columns} className="pb-2">
