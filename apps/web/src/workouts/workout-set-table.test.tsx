@@ -87,6 +87,12 @@ it.each([
     expect(html.match(new RegExp(`>${measure}<`, "g"))).toHaveLength(1);
     expect(html.match(/<input /g)).toHaveLength(inputs);
     expect(html.match(/<tbody /g)).toHaveLength(2);
+    expect(
+      [...html.matchAll(/<input [^>]+>/g)].every((match) =>
+        match[0].includes("text-center"),
+      ),
+    ).toBe(true);
+    expect(html).toContain("align-bottom text-center");
     expect(html).not.toContain("Previous</th>");
 
     if (weight) {
@@ -103,7 +109,7 @@ it.each([
   },
 );
 
-it("aligns previous measurements beneath current inputs without filling empty current sets or repeating units", () => {
+it("shows the full previous performance once below the table without filling current inputs", () => {
   const { previous, old, render } = fixture();
   old.sets = [1, 2].map((round) => ({
     sessionExerciseId: old.id,
@@ -117,15 +123,19 @@ it("aligns previous measurements beneath current inputs without filling empty cu
   }));
   previous.set(exercise.catalogExerciseId ?? "", old);
   const html = render();
-  expect(html.match(/>Previous<\/th>/g)).toHaveLength(2);
-  expect(html).toContain("Previous: </span>10</td>");
-  expect(html).toContain("Previous: </span>12.5</td>");
-  expect(html).toContain("Previous: </span>12</td>");
+  expect(html).not.toContain(">Previous</th>");
+  expect(html).toContain(
+    "Set 1: 12 reps · 10 kg/hand; Set 2: 12 reps · 12.5 kg/hand",
+  );
+  expect(html.match(/data-previous-performance=/g)).toHaveLength(1);
+  expect(html.indexOf("data-previous-performance")).toBeGreaterThan(
+    html.indexOf("</table>"),
+  );
   expect(html.match(/>kg\/hand</g)).toHaveLength(1);
   expect(html.match(/>Reps</g)).toHaveLength(1);
   expect(html.match(/placeholder="—"/g)).toHaveLength(4);
-  expect(html).not.toContain("lucide-history");
-  expect(html).toContain("aria-describedby=");
+  expect(html).toContain("lucide-history");
+  expect(html).not.toContain("aria-describedby=");
 });
 
 it.each([null, 0])(
@@ -149,11 +159,11 @@ it.each([null, 0])(
     ];
     previous.set(exercise.catalogExerciseId ?? "", old);
     const html = render();
-    expect(html).toContain(`Previous: </span>${rightAmount ?? 8}</td>`);
+    expect(html).toContain(`Left 8 / Right ${rightAmount ?? 8} reps`);
   },
 );
 
-it("does not compare previous sets recorded under different conventions", () => {
+it("describes different previous conventions explicitly instead of aligning them under current headers", () => {
   const { previous, old, render } = fixture();
   old.sets = [
     {
@@ -168,7 +178,25 @@ it("does not compare previous sets recorded under different conventions", () => 
     },
   ];
   previous.set(exercise.catalogExerciseId ?? "", old);
-  expect(render()).not.toContain(">Previous</th>");
+  const html = render();
+  expect(html).not.toContain(">Previous</th>");
+  expect(html).toContain("30 seconds · 10 kg");
+});
+
+it("condenses identical previous sets without dropping extra recorded rounds", () => {
+  const { previous, old, render } = fixture();
+  old.sets = [1, 2, 3].map((round) => ({
+    sessionExerciseId: old.id,
+    round,
+    amount: 10,
+    weightKg: 15,
+    rightAmount: null,
+    unit: "reps",
+    load: "per-hand",
+    unilateral: false,
+  }));
+  previous.set(exercise.catalogExerciseId ?? "", old);
+  expect(render()).toContain("3 × 10 reps · 15 kg/hand");
 });
 
 it("splits mixed frozen conventions into consecutive tables without reordering or relabeling history", () => {

@@ -37,8 +37,9 @@ workouts; training logs and set values remain private to their author.
   not change the workout prescription. Remove recorded sets explicitly with
   confirmation; clearing one input never deletes the stored set.
 - Logging uses compact native tables beneath each exercise, with weight/reps/seconds
-  units once in the headers and grouped Left/Right columns when needed. Muted previous
-  values align below current inputs; blank current cells stay “—”, never recorded defaults.
+  units once in the headers and centered Left/Right numeric columns when needed.
+  Previous performance appears once below the tables, with a history icon and the full
+  set summary (condensed when identical). Blank current cells stay “—”, never recorded defaults.
   Mixed historical conventions get consecutive separate tables without reordering sets
   or relabeling measurements. Existing seamless inputs, validation, autosave and set
   controls remain in place. Unsaved exercise edits are saved before logging opens.

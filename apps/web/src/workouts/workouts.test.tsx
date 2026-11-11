@@ -488,6 +488,36 @@ describe("simple workouts", () => {
     expect(html).not.toContain("reps left");
     expect(mutate).not.toHaveBeenCalled();
   });
+  it("keeps the frozen prescription and measure in one text span while logging", () => {
+    const base = starter.exercises[0];
+
+    if (!base) {
+      throw new Error("Missing fixture exercise");
+    }
+
+    const movement = {
+      ...base,
+      sets: 2,
+      target: "8–12",
+      unit: "reps" as const,
+    };
+    const html = renderToStaticMarkup(
+      <WorkoutExercises
+        householdId={householdId}
+        current={[movement]}
+        disabled={false}
+        onSave={async () => true}
+        onStartLogging={async () => {}}
+        onCloseLogging={() => {}}
+        logging={loggingFixture(
+          openWorkoutLog({ title: "Workout", exercises: [movement] }),
+        )}
+      />,
+    );
+    expect(html).toContain("2 sets × 8–12 reps</span>");
+    expect(html).not.toContain("<span>reps</span>");
+  });
+
   it("opens historical row corrections in the same log without a Done action", () => {
     const log: WorkoutLog = {
       id: crypto.randomUUID(),
