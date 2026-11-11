@@ -24,9 +24,9 @@ export function useWorkoutExercisesEditor({
   const [isSaving, setIsSaving] = useState(false);
   const draft = useRef<readonly WorkoutExercise[]>(current);
   const confirmed = useRef(JSON.stringify(current));
-  useBlockAppUpdate(
-    isSaving || JSON.stringify(exercises) !== confirmed.current,
-  );
+  const hasChanges =
+    isSaving || JSON.stringify(exercises) !== confirmed.current;
+  useBlockAppUpdate(hasChanges);
 
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pending = useRef<Promise<boolean> | undefined>(undefined);
@@ -111,7 +111,7 @@ export function useWorkoutExercisesEditor({
 
   useEffect(() => {
     if (
-      isSaving ||
+      hasChanges ||
       pending.current ||
       JSON.stringify(draft.current) !== confirmed.current
     ) {
@@ -122,7 +122,7 @@ export function useWorkoutExercisesEditor({
     draft.current = next;
     confirmed.current = currentJson;
     setExercises(next);
-  }, [currentJson, isSaving]);
+  }, [currentJson, hasChanges]);
 
   useEffect(() => {
     mounted.current = true;
@@ -160,5 +160,19 @@ export function useWorkoutExercisesEditor({
     );
   }
 
-  return { exercises, change, flush, error, isSaving };
+  function revert() {
+    if (pending.current) {
+      return;
+    }
+
+    clearTimer();
+    const previous = workoutExercisesSchema.parse(
+      JSON.parse(confirmed.current),
+    );
+    draft.current = previous;
+    setExercises(previous);
+    setError("");
+  }
+
+  return { exercises, change, flush, error, isSaving, hasChanges, revert };
 }

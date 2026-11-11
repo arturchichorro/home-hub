@@ -105,6 +105,46 @@ describe("exercise autosave", () => {
     expect(await editor.flush()).toBe(true);
     expect(save.mock.calls[0]?.[0][0]?.sets).toBe(3);
   });
+  it("discards an unsent draft and cancels its autosave", async () => {
+    const { editor, save } = setup();
+    editor.change((rows) => rows.slice(1));
+    editor.revert();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(await editor.flush()).toBe(true);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("discards to the latest confirmed save rather than the original props", async () => {
+    const { editor, save } = setup();
+    editor.change((rows) => rows.slice(1));
+    expect(await editor.flush()).toBe(true);
+    editor.change((rows) => rows.slice(1));
+    editor.revert();
+    expect(await editor.flush()).toBe(true);
+    expect(save).toHaveBeenCalledTimes(1);
+    editor.change((rows) => rows.map((e) => ({ ...e, target: "5" })));
+    expect(await editor.flush()).toBe(true);
+    expect(save.mock.calls[1]?.[0]).toHaveLength(current.length - 1);
+  });
+
+  it("does not discard a submitted save while it is still in flight", async () => {
+    let finish: (saved: boolean) => void = () => {};
+    const save = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const { editor } = setup(save);
+    editor.change((rows) => rows.slice(1));
+    const pending = editor.flush();
+    editor.revert();
+    finish(true);
+    expect(await pending).toBe(true);
+    expect(await editor.flush()).toBe(true);
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
   it("does not write while disconnected", async () => {
     const { editor, save } = setup(undefined, false);
     editor.change((rows) => rows.slice(1), true);

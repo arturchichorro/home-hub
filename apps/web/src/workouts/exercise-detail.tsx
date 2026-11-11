@@ -98,11 +98,11 @@ export function ExerciseDetailPage({
           }}
           onDelete={() => {
             if (!writable) {
-              return;
+              return false;
             }
             setDeleting(true);
             setError("");
-            void acknowledgeMutation(
+            return acknowledgeMutation(
               zero.mutate(
                 mutators.workouts.deleteExercise({
                   householdId,
@@ -115,8 +115,12 @@ export function ExerciseDetailPage({
                 if (result.type !== "success") {
                   setError("Unable to delete exercise.");
                 }
+                return result.type === "success";
               })
-              .catch(() => setError("Unable to delete exercise."))
+              .catch(() => {
+                setError("Unable to delete exercise.");
+                return false;
+              })
               .finally(() => {
                 setDeleting(false);
                 refresh();
