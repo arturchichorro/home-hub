@@ -346,7 +346,9 @@ export function WorkoutExercises({
                 {logging ? (
                   <span className="min-w-0 break-words whitespace-pre-wrap">
                     {exercise.sets} sets
-                    {exercise.target ? ` × ${exercise.target}` : ""}
+                    {exercise.target
+                      ? ` × ${exercise.target} ${exercise.unit}`
+                      : ""}
                   </span>
                 ) : (
                   <>
@@ -376,7 +378,7 @@ export function WorkoutExercises({
                     />
                   </>
                 )}
-                <span>{exercise.unit}</span>
+                {!logging && <span>{exercise.unit}</span>}
                 {exercise.role && exercise.role !== "workout" && (
                   <span>· {workoutExerciseRoleLabel(exercise.role)}</span>
                 )}
