@@ -143,6 +143,7 @@ export const householdInvites = pgTable(
 );
 
 export const householdsRelations = relations(households, ({ many }) => ({
+  calendarItems: many(calendarItems),
   workouts: many(workouts),
   trainingSessions: many(trainingSessions),
   habits: many(habits),
@@ -162,6 +163,7 @@ export const householdMembersRelations = relations(
       fields: [householdMembers.householdId],
       references: [households.id],
     }),
+    calendarPeople: many(calendarPeople),
     entries: many(habitEntries),
     user: one(users, {
       fields: [householdMembers.userId],
@@ -169,6 +171,85 @@ export const householdMembersRelations = relations(
     }),
   }),
 );
+
+export const calendarItems = pgTable(
+  "calendar_items",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    day: text("day").notNull(),
+    title: text("title").notNull(),
+    note: text("note").notNull().default(""),
+    sortKey: integer("sort_key").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("calendar_items_context").on(t.householdId, t.id),
+    index("calendar_items_day_order")
+      .on(t.householdId, t.day, t.sortKey, t.id)
+      .where(sql`${t.deletedAt} IS NULL`),
+    check(
+      "calendar_items_day",
+      sql`${t.day} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND ${t.day}::date::text = ${t.day}`,
+    ),
+    check(
+      "calendar_items_title",
+      sql`length(trim(${t.title})) BETWEEN 1 AND 150`,
+    ),
+    check("calendar_items_note", sql`length(${t.note}) <= 10000`),
+  ],
+);
+
+// Account identity survives leaving/rejoining. Deliberately no membership FK.
+export const calendarPeople = pgTable(
+  "calendar_people",
+  {
+    householdId: uuid("household_id").notNull(),
+    itemId: uuid("item_id").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+  },
+  (t) => [
+    primaryKey({ columns: [t.itemId, t.userId] }),
+    foreignKey({
+      columns: [t.householdId, t.itemId],
+      foreignColumns: [calendarItems.householdId, calendarItems.id],
+      name: "calendar_people_item_fk",
+    }),
+    index("calendar_people_household_user").on(t.householdId, t.userId),
+  ],
+);
+
+export const calendarItemsRelations = relations(
+  calendarItems,
+  ({ one, many }) => ({
+    household: one(households, {
+      fields: [calendarItems.householdId],
+      references: [households.id],
+    }),
+    people: many(calendarPeople),
+  }),
+);
+
+export const calendarPeopleRelations = relations(calendarPeople, ({ one }) => ({
+  item: one(calendarItems, {
+    fields: [calendarPeople.householdId, calendarPeople.itemId],
+    references: [calendarItems.householdId, calendarItems.id],
+  }),
+  member: one(householdMembers, {
+    fields: [calendarPeople.householdId, calendarPeople.userId],
+    references: [householdMembers.householdId, householdMembers.userId],
+  }),
+}));
 
 export const usersRelations = relations(users, ({ many }) => ({
   householdMemberships: many(householdMembers),

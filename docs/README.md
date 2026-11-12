@@ -7,7 +7,8 @@ household enables the built-in modules it wants to use. Implemented modules incl
 - recipes and ordered recipe ingredients;
 - recipe images stored outside the application server;
 - opt-in [Habits](./habits/) with a today-first list, personal daily completions and on-demand monthly history;
-- opt-in [Workouts](./workouts/) with a shared exercise catalog, reference pictures and author-private autosaved sets/history.
+- opt-in [Workouts](./workouts/) with a shared exercise catalog, reference pictures and author-private autosaved sets/history;
+- opt-in [Calendar](./calendar/) with shared day/title/note items, optional people labels and day ordering.
 
 Connected changes should appear immediately and converge across clients. Previously synchronized data should remain readable without connectivity. Long-term offline writes are deliberately out of scope: editing becomes unavailable when the synchronization client determines that it is disconnected.
 
@@ -34,6 +35,7 @@ Connected changes should appear immediately and converge across clients. Previou
 - [Documents](./documents/) owns opt-in household file rows, reusable colored tags,
   private upload/download, replacement and retention.
 
+- [Calendar](./calendar/) owns shared date-only items, autosaving dialogs, people labels and day ordering.
 - [Workouts](./workouts/) owns shared definitions/catalog/media and private logging/history.
 - [Shared media](./media/) owns reusable asset storage, delivery and attachment security.
 - [Maintenance](./maintenance.md) records editing boundaries, bounded views and measured audit follow-ups.

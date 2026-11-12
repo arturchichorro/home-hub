@@ -16,7 +16,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { describe, expect, it } from "vitest";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const migrations = fileURLToPath(
+const sourceMigrations = fileURLToPath(
   new URL("../../../../packages/database/drizzle/", import.meta.url),
 );
 
@@ -45,7 +45,7 @@ describe.runIf(Boolean(databaseUrl))(
         client = createDbClient(url.href);
         const db = client.db;
         const journal = JSON.parse(
-          await readFile(join(migrations, "meta/_journal.json"), "utf8"),
+          await readFile(join(sourceMigrations, "meta/_journal.json"), "utf8"),
         ) as { entries: { idx: number; tag: string }[] };
         const entries = journal.entries.filter((entry) => entry.idx < 53);
         await mkdir(join(directory, "meta"));
@@ -56,12 +56,26 @@ describe.runIf(Boolean(databaseUrl))(
 
         for (const entry of entries) {
           await copyFile(
-            join(migrations, `${entry.tag}.sql`),
+            join(sourceMigrations, `${entry.tag}.sql`),
             join(directory, `${entry.tag}.sql`),
           );
         }
 
         await migrate(db, { migrationsFolder: directory });
+        // This historical rehearsal targets only 0053, not later module backfills.
+        const cutover = journal.entries.find((entry) => entry.idx === 53);
+        if (!cutover) {
+          throw Error("Canonical training migration missing");
+        }
+        await copyFile(
+          join(sourceMigrations, `${cutover.tag}.sql`),
+          join(directory, `${cutover.tag}.sql`),
+        );
+        await writeFile(
+          join(directory, "meta/_journal.json"),
+          JSON.stringify({ ...journal, entries: [...entries, cutover] }),
+        );
+        const migrations = directory;
         const [
           household,
           author,

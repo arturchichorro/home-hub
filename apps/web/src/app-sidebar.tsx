@@ -71,7 +71,8 @@ type ModuleDefinition = {
     | "habits"
     | "workouts"
     | "documents"
-    | "logs";
+    | "logs"
+    | "calendar";
   label: string;
   Icon: typeof BookOpen;
   to:
@@ -81,10 +82,17 @@ type ModuleDefinition = {
     | "/households/$householdId/habits"
     | "/households/$householdId/workouts"
     | "/households/$householdId/documents"
-    | "/households/$householdId/logs";
+    | "/households/$householdId/logs"
+    | "/households/$householdId/calendar";
 };
 
 const moduleDefinitions: readonly ModuleDefinition[] = [
+  {
+    key: "calendar",
+    label: "Calendar",
+    Icon: Calendar,
+    to: "/households/$householdId/calendar",
+  },
   {
     key: "lists",
     label: "Lists",
