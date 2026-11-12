@@ -4,6 +4,8 @@ import * as drizzleSchema from "./src/schema";
 
 export default drizzleZeroConfig(drizzleSchema, {
   tables: {
+    calendarItems: true,
+    calendarPeople: true,
     documents: true,
     documentTags: true,
     documentTagAssignments: true,

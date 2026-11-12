@@ -144,6 +144,11 @@ describe("create household service", () => {
           enabled: false,
         },
         { householdId: result.household.id, moduleKey: "logs", enabled: false },
+        {
+          householdId: result.household.id,
+          moduleKey: "calendar",
+          enabled: false,
+        },
       ],
     });
     expect(result.household).toEqual({

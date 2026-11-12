@@ -15,6 +15,7 @@ import {
   updateRecipeIngredientMutationSchema,
   updateRecipeMutationSchema,
 } from "../recipes";
+import { calendarMutators } from "./calendar-mutators";
 import type { ZeroAuthContext } from "./context";
 import { documentMutators } from "./document-mutators";
 import { habitMutatorDefinitions } from "./habit-mutators";
@@ -518,6 +519,7 @@ export const mutators = defineHomeHubMutators({
   },
   documents: documentMutators,
   logs: logMutators,
+  calendar: calendarMutators,
   lists: listMutatorDefinitions,
   habits: habitMutatorDefinitions,
   workouts: workoutMutatorDefinitions,

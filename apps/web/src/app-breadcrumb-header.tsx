@@ -19,7 +19,8 @@ type BreadcrumbLocation = {
     | "habits"
     | "workouts"
     | "documents"
-    | "logs";
+    | "logs"
+    | "calendar";
   recipeId?: string;
   listId?: string;
   workoutId?: string;
@@ -43,7 +44,8 @@ export function getBreadcrumbLocation(pathname: string): BreadcrumbLocation {
     segments[2] === "habits" ||
     segments[2] === "workouts" ||
     segments[2] === "documents" ||
-    segments[2] === "logs"
+    segments[2] === "logs" ||
+    segments[2] === "calendar"
       ? segments[2]
       : undefined;
 
@@ -259,7 +261,9 @@ export function AppBreadcrumbHeader({
                 ? "Documents"
                 : location.module === "logs"
                   ? "Logs"
-                  : undefined;
+                  : location.module === "calendar"
+                    ? "Calendar"
+                    : undefined;
 
   return (
     <header className="sticky top-0 z-40 flex h-14 min-w-0 items-center gap-2 border-b border-border bg-canvas px-4 sm:px-6 lg:px-8">

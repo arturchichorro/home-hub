@@ -3,6 +3,7 @@ import * as z from "zod";
 import { habitsQuerySchema, shiftCalendarDate } from "../habits";
 import { listMediaPageSchema } from "../list-media";
 import { listDetailArgsSchema, listPreviewItemLimit } from "../lists";
+import { calendarQueries } from "./calendar-queries";
 import type { ZeroAuthContext } from "./context";
 import { documentQueries } from "./document-queries";
 import { logQueries } from "./log-queries";
@@ -633,6 +634,7 @@ export const queries = defineHomeHubQueries({
   },
   documents: documentQueries,
   logs: logQueries,
+  calendar: calendarQueries,
   lists: {
     library: listsLibrary,
     libraryPreview: listsLibraryPreview,
