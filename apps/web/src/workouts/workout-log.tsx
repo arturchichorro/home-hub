@@ -3,16 +3,10 @@ import type {
   WorkoutExercise,
 } from "@home-hub/shared/workouts";
 import type { TrainingSessionSet } from "@home-hub/shared/zero/schema";
-import {
-  Button,
-  ConfirmationPopover,
-  IconButton,
-  Plus,
-  Trash2,
-  X,
-} from "@home-hub/ui-web";
+import { Button, IconButton, Plus, X } from "@home-hub/ui-web";
 import type { ReadonlyJSONValue } from "@rocicorp/zero";
 import { useRef } from "react";
+import { ExerciseRowActions } from "./exercise-row";
 import type { ExercisePerformance } from "./training-log-projection";
 import type { WorkoutEditorState } from "./workout-log-editor";
 import {
@@ -24,7 +18,6 @@ import {
   type WorkoutLogForm,
   type WorkoutSetInput,
 } from "./workout-log-form";
-
 import { WorkoutSetTable } from "./workout-set-table";
 
 type WorkoutLogSet = Omit<TrainingSessionSet, "sessionExerciseId"> & {
@@ -92,34 +85,26 @@ export function LoggedExerciseRemove({
   if (!logging.onRemoveExercise) {
     return null;
   }
-  const remove = () => logging.onRemoveExercise?.(exercise.id);
+
   const recorded = [...logging.state.recorded, ...logging.state.dirty].some(
     (key) => key.startsWith(`${exercise.id}:`),
   );
-  const trigger = (
-    <IconButton
-      aria-label={`Remove ${exercise.name} from this session`}
-      title="Remove exercise"
-      className="size-7!"
+  return (
+    <ExerciseRowActions
+      name={exercise.name}
       disabled={
         disabled ||
         logging.state.saving.size > 0 ||
         logging.state.deleting.size > 0
       }
-      onClick={recorded ? undefined : remove}
-    >
-      <Trash2 aria-hidden="true" className="size-4" />
-    </IconButton>
-  );
-  return recorded ? (
-    <ConfirmationPopover
-      trigger={trigger}
+      onRemove={() => {
+        logging.onRemoveExercise?.(exercise.id);
+        return true;
+      }}
+      removeLabel="Remove"
+      confirmRemoval={recorded}
       message={`Remove ${exercise.name} and its sets from this log?`}
-      confirmLabel="Remove exercise"
-      onConfirm={remove}
     />
-  ) : (
-    trigger
   );
 }
 

@@ -15,7 +15,12 @@ import type {
   Media,
   ExerciseMedia as MediaLink,
 } from "@home-hub/shared/zero/schema";
-import { ErrorPopover, IconButton, ImagePlus } from "@home-hub/ui-web";
+import {
+  Dumbbell,
+  ErrorPopover,
+  IconButton,
+  ImagePlus,
+} from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import {
   type ChangeEvent,
@@ -91,13 +96,32 @@ type Props = {
   name: string;
   readOnly?: boolean;
   disabled?: boolean;
+  leading?: boolean;
+  onBusyChange?: ((busy: boolean) => void) | undefined;
 };
 
 export const ExerciseMedia = memo(function ExerciseMedia(props: Props) {
   const session = useMediaSession();
 
-  return session ? <ExerciseMediaGallery {...props} session={session} /> : null;
+  return session ? (
+    <ExerciseMediaGallery {...props} session={session} />
+  ) : props.leading ? (
+    <ExerciseMediaPlaceholder />
+  ) : null;
 });
+
+function ExerciseMediaPlaceholder() {
+  return (
+    <div className="w-12 sm:w-26">
+      <div
+        aria-hidden="true"
+        className="flex size-12 items-center justify-center rounded-lg bg-raised/50 text-subtle"
+      >
+        <Dumbbell className="size-5" />
+      </div>
+    </div>
+  );
+}
 
 function ExerciseThumbnail({
   image,
@@ -107,10 +131,12 @@ function ExerciseThumbnail({
   index,
   sortGroup,
   sortingDisabled,
+  dragEnabled,
 }: {
   index: number;
   sortGroup: string;
   sortingDisabled: boolean;
+  dragEnabled: boolean;
   image: ExerciseMediaImage;
   session: MediaSession;
   name: string;
@@ -123,6 +149,12 @@ function ExerciseThumbnail({
     accept: sortGroup,
     disabled: sortingDisabled,
   });
+  const dragged = useRef(false);
+  useEffect(() => {
+    if (sortable.isDragging) {
+      dragged.current = true;
+    }
+  }, [sortable.isDragging]);
   const state = useExerciseImageUrl({
     ...session,
     householdId: image.householdId,
@@ -133,12 +165,12 @@ function ExerciseThumbnail({
 
   return (
     <li
-      ref={sortable.ref}
+      ref={dragEnabled ? sortable.ref : undefined}
       data-exercise-media-attachment-id={image.id}
       className={`size-12 shrink-0 overflow-hidden rounded-lg bg-raised ${sortable.isDragging ? "opacity-60" : ""}`}
     >
       <button
-        ref={sortable.handleRef}
+        ref={dragEnabled ? sortable.handleRef : undefined}
         type="button"
         draggable={false}
         aria-label={`Open picture for ${name}`}
@@ -148,10 +180,28 @@ function ExerciseThumbnail({
             : "Drag to reorder, or press Space and arrow keys"
         }
         className={`size-full touch-pan-y select-none focus-visible:outline-2 focus-visible:outline-focus-ring ${sortingDisabled ? "cursor-zoom-in" : "cursor-grab active:cursor-grabbing"}`}
-        onClick={() => {
+        onPointerDown={() => {
           if (!sortable.isDragging) {
-            onOpen();
+            dragged.current = false;
           }
+        }}
+        onKeyDown={() => {
+          if (!sortable.isDragging) {
+            dragged.current = false;
+          }
+        }}
+        onClick={() => {
+          // A keyboard/pointer drop can also generate a native button click.
+          // Consume it rather than opening the viewer immediately after sorting.
+          if (sortable.isDragging) {
+            dragged.current = true;
+            return;
+          }
+          if (dragged.current) {
+            dragged.current = false;
+            return;
+          }
+          onOpen();
         }}
       >
         {state.url ? (
@@ -182,6 +232,8 @@ function ExerciseMediaGallery({
   readOnly = false,
   disabled = false,
   session,
+  leading = false,
+  onBusyChange,
 }: Props & { session: MediaSession }) {
   const enabled = useZeroMutationEnabled();
   const zero = useZero();
@@ -205,6 +257,12 @@ function ExerciseMediaGallery({
   const [reordering, setReordering] = useState(false);
   const [error, setError] = useState<string>();
   const [deleteError, setDeleteError] = useState<string>();
+  const notify = useRef(onBusyChange);
+  notify.current = onBusyChange;
+  useEffect(() => {
+    notify.current?.(busy || deleting || reordering);
+  }, [busy, deleting, reordering]);
+  useEffect(() => () => notify.current?.(false), []);
   const button = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const images = exerciseImagesFromRows(rows).filter(
@@ -414,9 +472,19 @@ function ExerciseMediaGallery({
   }
 
   return (
-    <div data-exercise-media-id={exerciseId} className="min-w-0">
+    <div
+      data-exercise-media-id={exerciseId}
+      className={leading ? "w-12 min-w-0 sm:w-26" : "min-w-0"}
+    >
+      {leading && images.length === 0 && <ExerciseMediaPlaceholder />}
       {(images.length > 0 || !readOnly) && (
-        <div className="my-1 flex max-w-full min-w-0 items-center gap-2">
+        <div
+          className={
+            leading
+              ? "flex max-w-full min-w-0 flex-wrap items-center gap-2"
+              : "my-1 flex max-w-full min-w-0 items-center gap-2"
+          }
+        >
           {images.length > 0 && (
             <DragDropProvider
               sensors={workoutOrderingSensors}
@@ -448,7 +516,11 @@ function ExerciseMediaGallery({
             >
               <ul
                 aria-label={`Pictures for ${name}`}
-                className="flex max-w-full min-w-0 gap-2 overflow-x-auto overscroll-x-contain"
+                className={
+                  leading
+                    ? "flex max-w-full min-w-0 flex-wrap gap-2"
+                    : "flex max-w-full min-w-0 gap-2 overflow-x-auto overscroll-x-contain"
+                }
               >
                 {images.map((image, index) => (
                   <ExerciseThumbnail
@@ -456,6 +528,7 @@ function ExerciseMediaGallery({
                     index={index}
                     sortGroup={`exercise-media:${householdId}:${exerciseId}`}
                     sortingDisabled={sortingDisabled}
+                    dragEnabled={writable}
                     image={image}
                     session={session}
                     name={name}
@@ -496,14 +569,16 @@ function ExerciseMediaGallery({
           )}
         </div>
       )}
-      <input
-        ref={input}
-        type="file"
-        className="sr-only"
-        accept="image/jpeg,image/png,image/webp"
-        tabIndex={-1}
-        onChange={(event) => void upload(event)}
-      />
+      {!readOnly && (
+        <input
+          ref={input}
+          type="file"
+          className="sr-only"
+          accept="image/jpeg,image/png,image/webp"
+          tabIndex={-1}
+          onChange={(event) => void upload(event)}
+        />
+      )}
       <ErrorPopover
         anchor={button}
         open={Boolean(error)}
