@@ -15,6 +15,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
 import { Route as AuthenticatedHouseholdsHouseholdIdRouteImport } from './routes/_authenticated.households.$householdId'
 import { Route as AuthenticatedHouseholdsHouseholdIdIndexRouteImport } from './routes/_authenticated.households.$householdId.index'
+import { Route as AuthenticatedHouseholdsHouseholdIdCalendarRouteImport } from './routes/_authenticated.households.$householdId.calendar'
 import { Route as AuthenticatedHouseholdsHouseholdIdDocumentsRouteImport } from './routes/_authenticated.households.$householdId.documents'
 import { Route as AuthenticatedHouseholdsHouseholdIdHabitsRouteImport } from './routes/_authenticated.households.$householdId.habits'
 import { Route as AuthenticatedHouseholdsHouseholdIdListsRouteImport } from './routes/_authenticated.households.$householdId.lists'
@@ -66,6 +67,12 @@ const AuthenticatedHouseholdsHouseholdIdIndexRoute =
   AuthenticatedHouseholdsHouseholdIdIndexRouteImport.update({
     id: '/',
     path: '/',
+    getParentRoute: () => AuthenticatedHouseholdsHouseholdIdRoute,
+  } as any)
+const AuthenticatedHouseholdsHouseholdIdCalendarRoute =
+  AuthenticatedHouseholdsHouseholdIdCalendarRouteImport.update({
+    id: '/calendar',
+    path: '/calendar',
     getParentRoute: () => AuthenticatedHouseholdsHouseholdIdRoute,
   } as any)
 const AuthenticatedHouseholdsHouseholdIdDocumentsRoute =
@@ -202,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/households/$householdId': typeof AuthenticatedHouseholdsHouseholdIdRouteWithChildren
+  '/households/$householdId/calendar': typeof AuthenticatedHouseholdsHouseholdIdCalendarRoute
   '/households/$householdId/documents': typeof AuthenticatedHouseholdsHouseholdIdDocumentsRoute
   '/households/$householdId/habits': typeof AuthenticatedHouseholdsHouseholdIdHabitsRouteWithChildren
   '/households/$householdId/lists': typeof AuthenticatedHouseholdsHouseholdIdListsRouteWithChildren
@@ -229,6 +237,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/': typeof AuthenticatedIndexRoute
+  '/households/$householdId/calendar': typeof AuthenticatedHouseholdsHouseholdIdCalendarRoute
   '/households/$householdId/documents': typeof AuthenticatedHouseholdsHouseholdIdDocumentsRoute
   '/households/$householdId/settings': typeof AuthenticatedHouseholdsHouseholdIdSettingsRoute
   '/households/$householdId': typeof AuthenticatedHouseholdsHouseholdIdIndexRoute
@@ -254,6 +263,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/households/$householdId': typeof AuthenticatedHouseholdsHouseholdIdRouteWithChildren
+  '/_authenticated/households/$householdId/calendar': typeof AuthenticatedHouseholdsHouseholdIdCalendarRoute
   '/_authenticated/households/$householdId/documents': typeof AuthenticatedHouseholdsHouseholdIdDocumentsRoute
   '/_authenticated/households/$householdId/habits': typeof AuthenticatedHouseholdsHouseholdIdHabitsRouteWithChildren
   '/_authenticated/households/$householdId/lists': typeof AuthenticatedHouseholdsHouseholdIdListsRouteWithChildren
@@ -284,6 +294,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/households/$householdId'
+    | '/households/$householdId/calendar'
     | '/households/$householdId/documents'
     | '/households/$householdId/habits'
     | '/households/$householdId/lists'
@@ -311,6 +322,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/'
+    | '/households/$householdId/calendar'
     | '/households/$householdId/documents'
     | '/households/$householdId/settings'
     | '/households/$householdId'
@@ -335,6 +347,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_authenticated/'
     | '/_authenticated/households/$householdId'
+    | '/_authenticated/households/$householdId/calendar'
     | '/_authenticated/households/$householdId/documents'
     | '/_authenticated/households/$householdId/habits'
     | '/_authenticated/households/$householdId/lists'
@@ -407,6 +420,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/households/$householdId/'
       preLoaderRoute: typeof AuthenticatedHouseholdsHouseholdIdIndexRouteImport
+      parentRoute: typeof AuthenticatedHouseholdsHouseholdIdRoute
+    }
+    '/_authenticated/households/$householdId/calendar': {
+      id: '/_authenticated/households/$householdId/calendar'
+      path: '/calendar'
+      fullPath: '/households/$householdId/calendar'
+      preLoaderRoute: typeof AuthenticatedHouseholdsHouseholdIdCalendarRouteImport
       parentRoute: typeof AuthenticatedHouseholdsHouseholdIdRoute
     }
     '/_authenticated/households/$householdId/documents': {
@@ -662,6 +682,7 @@ const AuthenticatedHouseholdsHouseholdIdWorkoutsRouteWithChildren =
   )
 
 interface AuthenticatedHouseholdsHouseholdIdRouteChildren {
+  AuthenticatedHouseholdsHouseholdIdCalendarRoute: typeof AuthenticatedHouseholdsHouseholdIdCalendarRoute
   AuthenticatedHouseholdsHouseholdIdDocumentsRoute: typeof AuthenticatedHouseholdsHouseholdIdDocumentsRoute
   AuthenticatedHouseholdsHouseholdIdHabitsRoute: typeof AuthenticatedHouseholdsHouseholdIdHabitsRouteWithChildren
   AuthenticatedHouseholdsHouseholdIdListsRoute: typeof AuthenticatedHouseholdsHouseholdIdListsRouteWithChildren
@@ -674,6 +695,8 @@ interface AuthenticatedHouseholdsHouseholdIdRouteChildren {
 
 const AuthenticatedHouseholdsHouseholdIdRouteChildren: AuthenticatedHouseholdsHouseholdIdRouteChildren =
   {
+    AuthenticatedHouseholdsHouseholdIdCalendarRoute:
+      AuthenticatedHouseholdsHouseholdIdCalendarRoute,
     AuthenticatedHouseholdsHouseholdIdDocumentsRoute:
       AuthenticatedHouseholdsHouseholdIdDocumentsRoute,
     AuthenticatedHouseholdsHouseholdIdHabitsRoute:

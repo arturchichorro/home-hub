@@ -7,6 +7,7 @@
     "./documents": "./src/documents.ts",
     "./document-delivery": "./src/document-delivery.ts",
     "./logs": "./src/logs.ts",
+    "./calendar": "./src/calendar.ts",
     "./auth": "./src/auth.ts",
     "./habit-stats": "./src/habit-stats.ts",
     "./habits": "./src/habits.ts",

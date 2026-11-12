@@ -1,3 +1,4 @@
+import { calendarScopeSchema } from "@home-hub/shared/calendar";
 import {
   archiveHabitMutationSchema,
   linkHabitWorkoutsMutationSchema,
@@ -46,6 +47,22 @@ export async function mutateWithHabitWorkouts(
 
   if (householdId) {
     await lockHabitWorkoutCompletion(db, householdId);
+  }
+
+  if (
+    name.startsWith("calendar.") &&
+    args &&
+    typeof args === "object" &&
+    "householdId" in args
+  ) {
+    const calendarId = calendarScopeSchema.shape.householdId.parse(
+      args.householdId,
+    );
+    // Serialize append/move/rebalance operations, including stale-client reorders.
+    const key = `calendar:${calendarId}`;
+    await db.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${key}, 0))`,
+    );
   }
 
   if (training) {
