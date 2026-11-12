@@ -5,10 +5,12 @@ export function ExerciseDetailLink({
   householdId,
   exerciseId,
   name,
+  text = false,
 }: {
   householdId: string;
   exerciseId: string;
   name: string;
+  text?: boolean;
 }) {
   return (
     <Link
@@ -16,9 +18,13 @@ export function ExerciseDetailLink({
       params={{ householdId, exerciseId }}
       aria-label={`Open ${name} details`}
       title="Exercise details"
-      className="inline-flex size-7 shrink-0 items-center justify-center rounded-sm text-muted outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-focus-ring"
+      className={
+        text
+          ? "block min-w-0 break-words rounded-sm outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-focus-ring"
+          : "inline-flex size-7 shrink-0 items-center justify-center rounded-sm text-muted outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-focus-ring"
+      }
     >
-      <BookOpen aria-hidden="true" className="size-4" />
+      {text ? name : <BookOpen aria-hidden="true" className="size-4" />}
     </Link>
   );
 }

@@ -25,37 +25,37 @@ const session = {
   onSessionExpired: vi.fn(),
 };
 
+function imageRow(sortKey = 0) {
+  const mediaId = crypto.randomUUID();
+  return {
+    id: crypto.randomUUID(),
+    householdId,
+    exerciseId,
+    mediaId,
+    sortKey,
+    deletedAt: null,
+    createdAt: 0,
+    updatedAt: 0,
+    asset: {
+      id: mediaId,
+      householdId,
+      kind: "image",
+      contentType: "image/png",
+      byteSize: 42,
+      width: 640,
+      height: 480,
+      animated: null,
+      durationMs: null,
+      confirmedAt: 1,
+      deletedAt: null,
+      createdAt: 0,
+      updatedAt: 1,
+    },
+  };
+}
+
 beforeEach(() => {
-  useQuery.mockReturnValue([
-    [
-      {
-        id: crypto.randomUUID(),
-        householdId,
-        exerciseId,
-        mediaId: crypto.randomUUID(),
-        sortKey: 0,
-        deletedAt: null,
-        createdAt: 0,
-        updatedAt: 0,
-        asset: {
-          id: crypto.randomUUID(),
-          householdId,
-          kind: "image",
-          contentType: "image/png",
-          byteSize: 42,
-          width: 640,
-          height: 480,
-          animated: null,
-          durationMs: null,
-          confirmedAt: 1,
-          deletedAt: null,
-          createdAt: 0,
-          updatedAt: 1,
-        },
-      },
-    ],
-    { type: "complete" },
-  ]);
+  useQuery.mockReturnValue([[imageRow()], { type: "complete" }]);
 });
 
 describe("inline exercise media", () => {
@@ -91,6 +91,30 @@ describe("inline exercise media", () => {
     expect(html).not.toContain('aria-label="Add picture for Push-up"');
     expect(html).not.toContain("Drag to reorder");
   });
+  it("shows every leading thumbnail without scroll-only overflow or disabled drag semantics in read mode", () => {
+    useQuery.mockReturnValue([
+      Array.from({ length: 4 }, (_, index) => imageRow(index)),
+      { type: "complete" },
+    ]);
+    const html = renderToStaticMarkup(
+      <MediaSessionProvider value={session}>
+        <ExerciseMedia
+          householdId={householdId}
+          exerciseId={exerciseId}
+          name="Photos"
+          leading
+          readOnly
+        />
+      </MediaSessionProvider>,
+    );
+    expect(html.match(/data-exercise-media-attachment-id=/g)).toHaveLength(4);
+    expect(html).toContain("flex-wrap");
+    expect(html).not.toContain("overflow-x-auto");
+    expect(html).not.toContain('aria-disabled="true"');
+    expect(html).not.toContain('aria-roledescription="draggable"');
+    expect(html).not.toContain('type="file"');
+  });
+
   it("does not attempt media requests outside an authenticated session", () => {
     useQuery.mockClear();
     expect(

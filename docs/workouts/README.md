@@ -6,8 +6,15 @@ workouts; training logs and set values remain private to their author.
 - Open a workout from the list; its name appears in the breadcrumb and URL.
   **Log workout** and **+ Add exercise** sit to the right of the title; there is
   no separate Exercises heading.
+- Exercise rows are thumbnail-led, read-first summaries. Names wrap and open exercise
+  details; all reference pictures remain visible in a wrapping cluster. One actions
+  menu opens **Edit** or confirmed removal. Edit reveals the existing seamless name,
+  prescription/settings and photo controls in place; **Done** drains autosave before
+  returning to the summary. New catalog exercises start in editing mode. Rejected
+  drafts retain retry/discard and navigation/unload/PWA guards; catalog search and
+  competing edits stay disabled while a row is being edited.
 - Exercise edits autosave after typing pauses or on blur; settings, additions,
-  and removals save immediately. There is no save-confirmation button. Shared
+  and removals save immediately. There is no manual Save workflow. Shared
   workout notes sit below the exercises in a collapsed Base UI accordion from
   `ui-web`. The settings-icon menu groups measure, load, sides and placement role;
   removing an exercise from a workout lives there too. Sets/targets remain seamless inline fields.
@@ -77,17 +84,19 @@ workouts; training logs and set values remain private to their author.
   or Enter. Its settings menu edits measure, load and sides, including before
   naming a new movement. Escape discards unsaved text; blank entries are not
   stored. Duplicate names are rejected without merging or losing the draft.
-  Standalone creation does not add a workout slot. Drag catalog handles with a
-  mouse, hold on touch, or use Space and arrow keys to set a shared order;
-  ordering within each workout remains independent.
+  Standalone creation does not add a workout slot. **Reorder** in the catalog header
+  reveals shared-order handles: mouse drag, touch hold, or Space/arrow keys. Pending
+  order saves and active drags block leaving reorder mode and PWA updates. Normal
+  browsing has no drag handles/disabled-drag semantics; workout ordering is independent.
 - Delete a catalog exercise with its trash button and small confirmation popover.
   It disappears from the catalog/picker and all current workout slots. Completed
   logs, measurements, private notes and stored media remain intact. There is no
   archive or restore flow; reusing its name creates a fresh ID without old photos.
 
-- Exercise pictures appear as compact inline strips like cooking-log photos, in
-  the catalog and every workout using that movement. Uploads, deletion and picture
-  ordering are shared, not per-slot or private log attachments. Reorder by mouse
+- Exercise pictures lead the shared rows in the catalog, exercise detail and every
+  workout using that movement. Uploads, deletion and picture ordering appear only in
+  explicit editing mode and remain shared, not per-slot or private log attachments.
+  Done cannot hide an in-flight upload/reorder/removal. Reorder by mouse
   drag, touch hold, or Space and arrow keys; failed saves roll back with an error. The viewer supports navigation;
   while logging, reference pictures remain viewable but shared media editing is
   hidden. Opening the viewer never saves or replaces the in-memory log form.

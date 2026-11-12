@@ -1,23 +1,25 @@
-import {
-  type WorkoutExercise,
-  workoutExerciseRoleLabel,
-} from "@home-hub/shared/workouts";
+import type { WorkoutExercise } from "@home-hub/shared/workouts";
 import {
   Button,
   ErrorPopover,
   InlineAlert,
   Input,
-  MenuItem,
   Play,
   Textarea,
 } from "@home-hub/ui-web";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   TextDraftActions,
   TextDraftGuard,
 } from "../editing/text-draft-actions";
 import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
-import { ExerciseDetailLink } from "./exercise-detail-link";
+import { WorkoutExerciseRow } from "./workout-exercise-row";
 
 export function WorkoutText({
   label,
@@ -113,15 +115,8 @@ export function WorkoutText({
 }
 
 import { AddExercisePicker } from "./add-exercise-picker";
-import { ExerciseMedia } from "./exercise-media";
-import { ExerciseSettings } from "./exercise-settings";
 import { useWorkoutExercisesEditor } from "./use-workout-exercises-editor";
-import {
-  LoggedExerciseRemove,
-  WorkoutExerciseSets,
-  WorkoutLogActions,
-  type WorkoutLogging,
-} from "./workout-log";
+import { WorkoutLogActions, type WorkoutLogging } from "./workout-log";
 
 export function WorkoutExercises({
   householdId,
@@ -146,12 +141,60 @@ export function WorkoutExercises({
   onCloseLogging: () => void;
 }) {
   const [starting, setStarting] = useState(false);
+  const [editingId, setEditingId] = useState<string>();
+  const [mediaBusy, setMediaBusy] = useState<ReadonlySet<string>>(new Set());
+  const root = useRef<HTMLElement>(null);
+  const mediaWorkChanged = useCallback(
+    (id: string, busy: boolean) =>
+      setMediaBusy((previous) => {
+        if (previous.has(id) === busy) {
+          return previous;
+        }
+        const next = new Set(previous);
+        if (busy) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+        return next;
+      }),
+    [],
+  );
   const editor = useWorkoutExercisesEditor({
     current,
     enabled: !disabled && !logging,
     save: onSave,
   });
   const exercises = editor.exercises;
+  useEffect(() => {
+    if (logging) {
+      setEditingId(undefined);
+    }
+  }, [logging]);
+  const definitionDraft = {
+    hasChanges: editor.hasChanges,
+    isSaving: editor.isSaving,
+    error: editor.error || undefined,
+    retry: () => {
+      void editor.flush();
+    },
+    discard: editor.revert,
+  };
+
+  async function beginEditing(id: string) {
+    if (mediaBusy.size > 0) {
+      return;
+    }
+    if (!(await editor.flush())) {
+      root.current
+        ?.querySelector<HTMLInputElement>(
+          `[data-exercise-id="${editingId}"] input`,
+        )
+        ?.focus();
+      return;
+    }
+    setEditingId(id);
+  }
 
   function change(
     id: string,
@@ -181,6 +224,7 @@ export function WorkoutExercises({
 
   return (
     <section
+      ref={root}
       aria-label="Workout exercises"
       className="grid min-w-0 gap-0"
       aria-busy={editor.isSaving || starting || undefined}
@@ -203,6 +247,7 @@ export function WorkoutExercises({
         }
       }}
     >
+      {editor.hasChanges && <TextDraftGuard editor={definitionDraft} />}
       <div
         className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 py-2"
         data-workout-heading
@@ -236,7 +281,7 @@ export function WorkoutExercises({
               <Button
                 variant="ghost"
                 className="h-7! px-1! text-xs! font-normal text-muted sm:text-sm!"
-                disabled={disabled || starting}
+                disabled={disabled || starting || mediaBusy.size > 0}
                 onClick={async () => {
                   setStarting(true);
 
@@ -254,13 +299,20 @@ export function WorkoutExercises({
               </Button>
               <AddExercisePicker
                 householdId={householdId}
-                disabled={disabled || starting || exercises.length >= 40}
-                onSelect={(exercise) =>
+                disabled={
+                  disabled ||
+                  starting ||
+                  editor.hasChanges ||
+                  mediaBusy.size > 0 ||
+                  exercises.length >= 40
+                }
+                onSelect={(exercise) => {
+                  const id = crypto.randomUUID();
                   editor.change(
                     (rows) => [
                       ...rows,
                       {
-                        id: crypto.randomUUID(),
+                        id,
                         catalogExerciseId: exercise.id,
                         name: exercise.name,
                         unit: exercise.unit,
@@ -272,8 +324,9 @@ export function WorkoutExercises({
                       },
                     ],
                     true,
-                  )
-                }
+                  );
+                  setEditingId(id);
+                }}
               />
             </>
           )}
@@ -284,136 +337,48 @@ export function WorkoutExercises({
         className="min-w-0 divide-y divide-border"
       >
         {(logging ? current : exercises).map((exercise) => (
-          <div
+          <WorkoutExerciseRow
             key={exercise.id}
-            data-exercise-id={exercise.id}
-            className="grid min-w-0 gap-1 py-3"
-          >
-            <div className="flex min-w-0 items-center gap-2">
-              <Input
-                appearance="seamless"
-                aria-label={`Name for ${exercise.name}`}
-                className="h-7! font-medium"
-                readOnly={!!logging}
-                value={exercise.name}
-                maxLength={150}
-                required
-                onValueChange={(name) => change(exercise.id, { name })}
-              />
-              {exercise.catalogExerciseId && (
-                <ExerciseDetailLink
-                  householdId={householdId}
-                  exerciseId={exercise.catalogExerciseId}
-                  name={exercise.name}
-                />
-              )}
-              {logging && (
-                <LoggedExerciseRemove
-                  exercise={exercise}
-                  logging={logging}
-                  disabled={disabled}
-                />
-              )}
-              {!logging && (
-                <>
-                  <ExerciseSettings
-                    exercise={exercise}
-                    disabled={disabled || starting}
-                    includeMeasure
-                    role={exercise.role ?? "workout"}
-                    onRoleChange={(role) => change(exercise.id, { role }, true)}
-                    onChange={(patch) => change(exercise.id, patch, true)}
-                  >
-                    <MenuItem
-                      variant="danger"
-                      aria-label={`Remove ${exercise.name}`}
-                      onClick={() =>
-                        editor.change(
-                          (rows) =>
-                            rows.filter((row) => row.id !== exercise.id),
-                          true,
-                        )
-                      }
-                    >
-                      Remove from workout
-                    </MenuItem>
-                  </ExerciseSettings>
-                </>
-              )}
-            </div>
-            {!logging?.freeForm && (
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-                {logging ? (
-                  <span className="min-w-0 break-words whitespace-pre-wrap">
-                    {exercise.sets} sets
-                    {exercise.target
-                      ? ` × ${exercise.target} ${exercise.unit}`
-                      : ""}
-                  </span>
-                ) : (
-                  <>
-                    <Input
-                      appearance="seamless"
-                      aria-label={`Sets for ${exercise.name}`}
-                      className="h-8! w-8 flex-none! text-sm"
-                      type="number"
-                      min="1"
-                      max="10"
-                      required
-                      value={exercise.sets || ""}
-                      onValueChange={(value) =>
-                        change(exercise.id, { sets: Number(value) })
-                      }
-                    />
-                    <span>sets ×</span>
-                    <Input
-                      appearance="seamless"
-                      aria-label={`Target for ${exercise.name}`}
-                      className="h-8! w-20 flex-none! text-sm"
-                      maxLength={100}
-                      value={exercise.target}
-                      onValueChange={(target) =>
-                        change(exercise.id, { target })
-                      }
-                    />
-                  </>
-                )}
-                {!logging && <span>{exercise.unit}</span>}
-                {exercise.role && exercise.role !== "workout" && (
-                  <span>· {workoutExerciseRoleLabel(exercise.role)}</span>
-                )}
-              </div>
-            )}
-            {exercise.catalogExerciseId && (
-              <ExerciseMedia
-                householdId={householdId}
-                exerciseId={exercise.catalogExerciseId}
-                name={exercise.name}
-                readOnly={Boolean(logging)}
-                disabled={disabled || starting}
-              />
-            )}
-            {logging && (
-              <WorkoutExerciseSets
-                exercise={exercise}
-                logging={logging}
-                disabled={disabled || starting}
-              />
-            )}
-          </div>
+            householdId={householdId}
+            exercise={exercise}
+            disabled={
+              disabled ||
+              starting ||
+              (mediaBusy.size > 0 && editingId !== exercise.id)
+            }
+            editing={!logging && editingId === exercise.id}
+            logging={logging}
+            mediaBusy={mediaBusy.has(exercise.id)}
+            onMediaBusyChange={mediaWorkChanged}
+            onEdit={() => {
+              void beginEditing(exercise.id);
+            }}
+            onDone={async () => {
+              if (mediaBusy.size > 0 || !(await editor.flush())) {
+                return false;
+              }
+              setEditingId(undefined);
+              return true;
+            }}
+            onDiscard={editor.revert}
+            canDiscard={editor.hasChanges && !editor.isSaving && !editor.error}
+            onChange={(patch, immediate) =>
+              change(exercise.id, patch, immediate)
+            }
+            onRemove={async () => {
+              editor.change(
+                (rows) => rows.filter((row) => row.id !== exercise.id),
+                true,
+              );
+              return editor.flush();
+            }}
+          />
         ))}
       </fieldset>
       {editor.error && (
         <InlineAlert role="alert" variant="danger">
           {editor.error}
-          <Button
-            variant="ghost"
-            size="compact"
-            onClick={() => void editor.flush()}
-            disabled={disabled || starting}
-          >
-            Retry
-          </Button>
+          <TextDraftActions editor={definitionDraft} />
         </InlineAlert>
       )}
     </section>

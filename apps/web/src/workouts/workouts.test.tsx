@@ -125,7 +125,7 @@ it("keeps free-form set inputs and removal while hiding non-existent workout pre
     />,
   );
   expect(html).toContain("reps for Free squat, set 1");
-  expect(html).toContain("Remove Free squat from this session");
+  expect(html).toContain('aria-label="Actions for Free squat"');
   expect(html).not.toContain("Sets for Free squat");
   expect(html).not.toContain("Role for Free squat");
   expect(html).not.toContain("Target for Free squat");
@@ -221,10 +221,11 @@ describe("simple workouts", () => {
         onDelete={() => {}}
       />,
     );
-    expect(html).toContain('value="My stored exercise"');
-    expect(html).toContain('aria-label="Settings for My stored exercise"');
+    expect(html).toContain(">My stored exercise</span>");
+    expect(html).toContain('aria-label="Actions for My stored exercise"');
     expect(html).not.toContain("Reorder");
-    expect(html).toContain('aria-label="Delete My stored exercise"');
+    expect(html).not.toContain('aria-label="Settings for My stored exercise"');
+    expect(html).not.toContain('aria-label="Catalog name');
     expect(mutate).not.toHaveBeenCalled();
   });
 
@@ -412,7 +413,7 @@ describe("simple workouts", () => {
     expect(heading).toMatch(/lucide-plus[\s\S]*Add exercise/);
     expect(mutate).not.toHaveBeenCalled();
   });
-  it("keeps prescription inputs seamless and groups secondary controls in the shared settings menu", () => {
+  it("shows readable prescriptions and one actions menu until editing is requested", () => {
     useQuery
       .mockReturnValueOnce([workout, { type: "complete" }])
       .mockReturnValueOnce([[], { type: "complete" }]);
@@ -423,9 +424,11 @@ describe("simple workouts", () => {
     expect(html).toContain('role="combobox"');
     expect(html).not.toContain('aria-label="Measure for Goblet squat"');
     expect(html).not.toContain('aria-label="Role for Goblet squat"');
-    expect(html).toContain('aria-label="Sets for Goblet squat"');
-    expect(html).toContain('aria-label="Target for Goblet squat"');
-    expect(html).toContain('aria-label="Settings for Goblet squat"');
+    expect(html).not.toContain('aria-label="Sets for Goblet squat"');
+    expect(html).not.toContain('aria-label="Target for Goblet squat"');
+    expect(html).not.toContain('aria-label="Settings for Goblet squat"');
+    expect(html).toContain('aria-label="Actions for Goblet squat"');
+    expect(html).toContain(">Goblet squat</a>");
     expect(html).toContain('aria-haspopup="menu"');
     expect(html).not.toContain("<select");
   });
@@ -514,7 +517,7 @@ describe("simple workouts", () => {
         )}
       />,
     );
-    expect(html).toContain("2 sets × 8–12 reps</span>");
+    expect(html).toContain("2 sets × 8–12 reps</p>");
     expect(html).not.toContain("<span>reps</span>");
   });
 
