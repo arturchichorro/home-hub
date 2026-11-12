@@ -12,7 +12,7 @@ export function CalendarMonth({
   selected: string;
   today: string;
   items: readonly { id: string; day: string; title: string }[];
-  onSelect: (day: string) => void;
+  onSelect: (day: string) => void | Promise<void>;
   disabled?: boolean;
 }) {
   const { dates } = habitMonth(month);
@@ -72,7 +72,7 @@ export function CalendarMonth({
                     aria-label={`${day}, ${items.filter((item) => item.day === day).length} items`}
                     className={`grid h-20 w-full min-w-0 content-start gap-1 p-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring sm:h-24 sm:p-2 ${selected === day ? "bg-raised" : "hover:bg-raised/50"}`}
                     onClick={() => onSelect(day)}
-                    onKeyDown={(event) => {
+                    onKeyDown={async (event) => {
                       const deltas: Record<string, number> = {
                         ArrowLeft: -1,
                         ArrowRight: 1,
@@ -90,11 +90,12 @@ export function CalendarMonth({
                       if (next < "0001-01-01" || next > "9999-12-31") {
                         return;
                       }
-                      onSelect(next);
+                      // Inline drafts may need an acknowledged save before changing scope.
+                      await onSelect(next);
                       requestAnimationFrame(() =>
                         document
                           .querySelector<HTMLButtonElement>(
-                            `[data-calendar-day="${next}"]`,
+                            '[data-calendar-day][aria-pressed="true"]',
                           )
                           ?.focus(),
                       );

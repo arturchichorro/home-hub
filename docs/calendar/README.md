@@ -7,23 +7,28 @@ not restrict access or send notifications.
 ## Interface
 
 Monday-first month grid with two title previews and an overflow count per day.
-Select a day for its full ordered list; open an item in a small autosaving dialog.
+Select a day for its full ordered list. Names edit seamlessly in the row; a note
+icon reveals/focuses an inline note. There is no item form or editing dialog.
+The row actions menu reveals a compact date control or inline people toggles;
+Done flushes the row and restores its read-first presentation.
 Items contain one literal day, a required title (150 characters), an optional
 multiline plain-text note (10,000 characters), and optional current-member labels.
 Duplicate titles and past/future dates are allowed. No time conversion is applied
 to stored dates, including when the device changes timezone.
 
-Opening a blank dialog creates nothing. The first valid title creates the item;
+Adding a blank inline row creates nothing. The first valid title creates the item;
 note/people edits before that remain local. Subsequent edits autosave. Text uses
 the existing 600 ms debounce convention, without trimming a focused title/caret.
-Closing flushes edits; failures/invalid input retain the draft with retry/discard.
+Done and switching items/days/months flush edits; failures/invalid input keep
+the same row/draft available with retry/discard.
 Discard removes only unsaved edits, never previously autosaved changes. Drafts
 protect navigation, unloading and PWA updates; no persistent draft-storage layer
 is added. Cached inspection remains available offline; writes require connectivity.
 
 New/moved items append to their destination day. The day list supports the app's
 mouse, touch-hold and keyboard ordering gestures. Moving across months follows the
-accepted date without remounting the open editor. Delete requires confirmation;
+accepted date without remounting the pinned inline editor, including while the
+new month loads. Ordering is unavailable while a row is being edited. Delete requires confirmation;
 there is no archive/trash/restore UI.
 
 ## Data and authorization
