@@ -96,14 +96,16 @@ export function CalendarPage({ householdId }: { householdId: string }) {
   }
   async function switchScope(action: () => void) {
     if (busy || switchingRef.current) {
-      return;
+      return false;
     }
     switchingRef.current = true;
     setSwitching(true);
     try {
-      if (!controls.current || (await controls.current.flush())) {
-        action();
+      if (controls.current && !(await controls.current.flush())) {
+        return false;
       }
+      action();
+      return true;
     } finally {
       switchingRef.current = false;
       setSwitching(false);

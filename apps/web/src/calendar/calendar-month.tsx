@@ -1,4 +1,5 @@
 import { habitMonth, shiftCalendarDate } from "@home-hub/shared/habits";
+import { useEffect, useRef, useState } from "react";
 
 export function CalendarMonth({
   month,
@@ -12,9 +13,20 @@ export function CalendarMonth({
   selected: string;
   today: string;
   items: readonly { id: string; day: string; title: string }[];
-  onSelect: (day: string) => void | Promise<void>;
+  onSelect: (day: string) => boolean | void | Promise<boolean | void>;
   disabled?: boolean;
 }) {
+  const table = useRef<HTMLTableElement>(null);
+  const [focusDay, setFocusDay] = useState<string>();
+  // Restore only after both the async save and the selected month DOM commit.
+  useEffect(() => {
+    if (focusDay === selected && !disabled) {
+      table.current
+        ?.querySelector<HTMLButtonElement>(`[data-calendar-day="${focusDay}"]`)
+        ?.focus();
+      setFocusDay(undefined);
+    }
+  }, [focusDay, selected, disabled]);
   const { dates } = habitMonth(month);
   const first = dates[0] ?? month;
   const offset = (new Date(`${first}T12:00:00Z`).getUTCDay() + 6) % 7;
@@ -32,6 +44,7 @@ export function CalendarMonth({
   }).format(new Date(`${month}T12:00:00Z`));
   return (
     <table
+      ref={table}
       className="w-full table-fixed border-collapse text-sm"
       aria-label={label}
     >
@@ -91,14 +104,8 @@ export function CalendarMonth({
                         return;
                       }
                       // Inline drafts may need an acknowledged save before changing scope.
-                      await onSelect(next);
-                      requestAnimationFrame(() =>
-                        document
-                          .querySelector<HTMLButtonElement>(
-                            '[data-calendar-day][aria-pressed="true"]',
-                          )
-                          ?.focus(),
-                      );
+                      const accepted = await onSelect(next);
+                      setFocusDay(accepted === false ? day : next);
                     }}
                   >
                     <span
