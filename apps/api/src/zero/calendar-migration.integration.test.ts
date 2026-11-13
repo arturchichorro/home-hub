@@ -108,9 +108,9 @@ describe.runIf(Boolean(url))("calendar migration", () => {
       ).toHaveLength(2);
     } finally {
       await client?.close();
-      await admin.db.execute(
-        sql.raw(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`),
-      );
+      // Let the pool's closing sockets finish instead of SIGTERM-ing them while
+      // node-postgres is still processing shutdown, which can emit an idle error.
+      await admin.db.execute(sql.raw(`DROP DATABASE IF EXISTS "${name}"`));
       await admin.close();
       await rm(directory, { recursive: true, force: true });
     }

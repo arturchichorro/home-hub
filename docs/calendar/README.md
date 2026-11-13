@@ -7,10 +7,17 @@ not restrict access or send notifications.
 ## Interface
 
 Monday-first month grid with two title previews and an overflow count per day.
-Select a day for its full ordered list. Names edit seamlessly in the row; a note
-icon reveals/focuses an inline note. There is no item form or editing dialog.
-The row actions menu reveals a compact date control or inline people toggles;
-Done flushes the row and restores its read-first presentation.
+Select a day for its full ordered list. Every name and existing note is always a
+seamless input: there is no click-to-edit mode or Done button. A note icon adds an
+empty note beside the name, like recipe ingredients. Actions stay visible without
+focusing the row. Text, drag handles and actions share a genuine 28px height. Multiline note content remains intact; the compact editor scrolls
+rather than rewriting it. There is no item form or editing dialog.
+People use a dropdown checklist that stays open for multiple selections.
+The calendar icon opens a compact, dismissible date picker. It closes after a
+successful move, on Escape/outside click, or with its close button. Choose a day
+then press Move (or Enter), so partially typed dates never move an item mid-entry.
+Closing cancels an unapplied/failed date choice without dropping other drafts. The actions
+menu retains confirmed deletion.
 Items contain one literal day, a required title (150 characters), an optional
 multiline plain-text note (10,000 characters), and optional current-member labels.
 Duplicate titles and past/future dates are allowed. No time conversion is applied
@@ -19,8 +26,9 @@ to stored dates, including when the device changes timezone.
 Adding a blank inline row creates nothing. The first valid title creates the item;
 note/people edits before that remain local. Subsequent edits autosave. Text uses
 the existing 600 ms debounce convention, without trimming a focused title/caret.
-Done and switching items/days/months flush edits; failures/invalid input keep
-the same row/draft available with retry/discard.
+Text autosaves on debounce/blur; switching days/months flushes every row.
+Failures/invalid input keep the same row/draft available with retry/discard.
+A single page-level navigation/unload guard protects all unsaved rows together.
 Discard removes only unsaved edits, never previously autosaved changes. Drafts
 protect navigation, unloading and PWA updates; no persistent draft-storage layer
 is added. Cached inspection remains available offline; writes require connectivity.
@@ -28,7 +36,9 @@ is added. Cached inspection remains available offline; writes require connectivi
 New/moved items append to their destination day. The day list supports the app's
 mouse, touch-hold and keyboard ordering gestures. Moving across months follows the
 accepted date without remounting the pinned inline editor, including while the
-new month loads. Ordering is unavailable while a row is being edited. Delete requires confirmation;
+new month loads. Other row drafts flush before a date move, and remote changes
+cannot unmount unsaved rows. Ordering pauses only while drafts or operations are
+pending, not simply because an input is focused. Delete requires confirmation;
 there is no archive/trash/restore UI.
 
 ## Data and authorization
