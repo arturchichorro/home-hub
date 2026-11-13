@@ -1,5 +1,5 @@
 import { DragDropProvider } from "@dnd-kit/react";
-import { isSortable, useSortable } from "@dnd-kit/react/sortable";
+import { isSortable } from "@dnd-kit/react/sortable";
 import { adjacentHabitMonth, calendarDate } from "@home-hub/shared/habits";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
@@ -7,13 +7,11 @@ import {
   Button,
   ChevronLeft,
   ChevronRight,
-  GripVertical,
   IconButton,
   Plus,
-  StickyNote,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { TextDraftGuard } from "../editing/text-draft-actions";
 import { HouseholdModuleGate } from "../households/household-module-gate";
 import { useBlockAppUpdate } from "../updates/activity";
@@ -24,7 +22,6 @@ import {
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import {
-  type CalendarFocus,
   CalendarItemEditor,
   type CalendarRowControl,
 } from "./calendar-item-editor";
@@ -33,23 +30,7 @@ import type { CalendarDraft } from "./use-calendar-editor";
 
 const localToday = () =>
   calendarDate(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone);
-type Item = {
-  id: string;
-  title: string;
-  note: string | null;
-  day: string;
-  people: readonly {
-    userId: string;
-    member?: { user?: { username: string } | undefined } | undefined;
-  }[];
-};
-type OpenItem = {
-  id: string;
-  initial: CalendarDraft;
-  existing: boolean;
-  focus: CalendarFocus;
-};
-
+type Item = { id: string; initial: CalendarDraft; existing: boolean };
 export function CalendarPage({ householdId }: { householdId: string }) {
   const [today, setToday] = useState(localToday);
   const [selected, setSelected] = useState(today);
@@ -62,46 +43,88 @@ export function CalendarPage({ householdId }: { householdId: string }) {
   );
   const [settings] = useQuery(queries.modules.byHousehold({ householdId }));
   const connected = useZeroMutationEnabled();
+  const moduleEnabled = settings.some(
+    (s) => s.moduleKey === "calendar" && s.enabled,
+  );
   const allowed =
-    connected &&
-    memberResult.type === "complete" &&
-    settings.some((s) => s.moduleKey === "calendar" && s.enabled);
+    connected && memberResult.type === "complete" && moduleEnabled;
   const enabled = allowed && result.type === "complete";
   const zero = useZero();
-  const [open, setOpen] = useState<OpenItem>();
-  const controls = useRef<CalendarRowControl>(null);
+  const controls = useRef(new Map<string, CalendarRowControl>());
+  const [draft, setDraft] = useState<Item>();
+  const [pinned, setPinned] = useState<Item>();
   const [ordering, setOrdering] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [switching, setSwitching] = useState(false);
   const switchingRef = useRef(false);
+  const movingRef = useRef<string | undefined>(undefined);
+  const [movingId, setMovingId] = useState<string>();
+  const [, refresh] = useState(0);
+  const onActivityChange = useCallback(() => refresh((n) => n + 1), []);
   const [orderError, setOrderError] = useState(false);
-  useBlockAppUpdate(ordering || dragging || switching);
+  const busy = ordering || dragging || switching || Boolean(movingId);
+  useBlockAppUpdate(busy);
   useEffect(() => {
     const timer = setInterval(() => setToday(localToday()), 60000);
     return () => clearInterval(timer);
   }, []);
-  const dayItems = settings.some((s) => s.moduleKey === "calendar" && s.enabled)
-    ? rows.filter((row) => row.day === selected)
-    : [];
-  // Keep the same editor mounted while a move changes the month subscription.
-  const items: readonly Item[] =
-    open && !dayItems.some((row) => row.id === open.id)
-      ? [...dayItems, { id: open.id, ...open.initial, people: [] }]
-      : dayItems;
-  const busy = ordering || dragging || switching;
+  const snapshots = [...controls.current.values()].map((c) => c.snapshot());
+  const anyDirty = snapshots.some((s) => s.hasChanges);
+  const items: Item[] = (
+    moduleEnabled ? rows.filter((r) => r.day === selected) : []
+  ).map((row) => ({
+    id: row.id,
+    existing: true,
+    initial: {
+      title: row.title,
+      note: row.note ?? "",
+      day: row.day,
+      people: row.people.map((p) => p.userId).sort(),
+    },
+  }));
+  useEffect(() => {
+    if (
+      pinned &&
+      rows.some((row) => row.id === pinned.id && row.day === selected)
+    ) {
+      setPinned(undefined);
+    }
+  }, [pinned, rows, selected]);
+  function retain(item: Item | undefined) {
+    if (item && !items.some((r) => r.id === item.id)) {
+      items.push(item);
+    }
+  }
+  retain(draft);
+  retain(pinned);
+  // Remote moves/deletes cannot unmount unsaved text in another row.
+  for (const [id, control] of controls.current) {
+    const snapshot = control.snapshot();
+    if (snapshot.hasChanges || movingRef.current === id) {
+      retain({ id, initial: snapshot.value, existing: snapshot.saved });
+    }
+  }
   function follow(day: string) {
     setSelected(day);
     setMonth(`${day.slice(0, 7)}-01`);
     setOrderError(false);
   }
+  async function flushRows(except?: string) {
+    for (const [id, control] of [...controls.current]) {
+      if (id !== except && !(await control.flush())) {
+        return false;
+      }
+    }
+    return true;
+  }
   async function switchScope(action: () => void) {
-    if (busy || switchingRef.current) {
+    if (busy || switchingRef.current || movingRef.current) {
       return false;
     }
     switchingRef.current = true;
     setSwitching(true);
     try {
-      if (controls.current && !(await controls.current.flush())) {
+      if (!(await flushRows())) {
         return false;
       }
       action();
@@ -113,36 +136,41 @@ export function CalendarPage({ householdId }: { householdId: string }) {
   }
   function select(day: string) {
     return switchScope(() => {
-      setOpen(undefined);
+      setDraft(undefined);
+      setPinned(undefined);
       follow(day);
     });
   }
-  function show(row?: Item, focus: CalendarFocus = "title") {
-    return switchScope(() =>
-      setOpen(
-        row
-          ? {
-              id: row.id,
-              initial: {
-                title: row.title,
-                note: row.note ?? "",
-                day: row.day,
-                people: row.people.map((p) => p.userId).sort(),
-              },
-              existing: true,
-              focus,
-            }
-          : {
-              id: crypto.randomUUID(),
-              initial: { title: "", note: "", day: selected, people: [] },
-              existing: false,
-              focus,
-            },
-      ),
-    );
+  function add() {
+    return switchScope(() => {
+      setPinned(undefined);
+      setDraft({
+        id: crypto.randomUUID(),
+        existing: false,
+        initial: { title: "", note: "", day: selected, people: [] },
+      });
+    });
+  }
+  async function beforeMove(id: string) {
+    if (movingRef.current || switchingRef.current || ordering || dragging) {
+      return false;
+    }
+    movingRef.current = id;
+    setMovingId(id);
+    if (!(await flushRows(id))) {
+      endMove(id);
+      return false;
+    }
+    return true;
+  }
+  function endMove(id: string) {
+    if (movingRef.current === id) {
+      movingRef.current = undefined;
+      setMovingId(undefined);
+    }
   }
   async function reorder(itemId: string, orderedIds: string[]) {
-    if (!enabled || ordering) {
+    if (!enabled || ordering || switching || movingRef.current || anyDirty) {
       return;
     }
     setOrdering(true);
@@ -182,7 +210,7 @@ export function CalendarPage({ householdId }: { householdId: string }) {
   }).format(new Date(`${selected}T12:00:00Z`));
   return (
     <>
-      <section className="mx-auto grid w-full max-w-3xl gap-6">
+      <section className="mx-auto grid w-full min-w-0 max-w-3xl grid-cols-1 gap-6">
         <HouseholdModuleGate householdId={householdId} moduleKey="calendar">
           <div className="grid gap-6">
             <div className="flex items-center justify-between gap-2">
@@ -233,12 +261,12 @@ export function CalendarPage({ householdId }: { householdId: string }) {
               data-calendar-add
               aria-label="Add calendar item"
               disabled={!enabled || busy}
-              onClick={() => show()}
+              onClick={() => add()}
             >
               <Plus className="size-4" />
             </IconButton>
           </div>
-          {result.type === "unknown" && rows.length === 0 && !open && (
+          {result.type === "unknown" && rows.length === 0 && !draft && (
             <p role="status" className="py-3 text-sm text-muted">
               Loading calendar…
             </p>
@@ -252,7 +280,12 @@ export function CalendarPage({ householdId }: { householdId: string }) {
             onDragEnd={(event) => {
               setDragging(false);
               const source = event.operation.source;
-              if (!enabled || open || event.canceled || !isSortable(source)) {
+              if (
+                !enabled ||
+                anyDirty ||
+                event.canceled ||
+                !isSortable(source)
+              ) {
                 return;
               }
               const move = reorderedWorkoutIds(
@@ -266,32 +299,53 @@ export function CalendarPage({ householdId }: { householdId: string }) {
             }}
           >
             <ul className="divide-y divide-border">
-              {items.map((item, index) =>
-                open?.id === item.id ? (
-                  <CalendarItemEditor
-                    key={item.id}
-                    householdId={householdId}
-                    itemId={open.id}
-                    initialValue={open.initial}
-                    existing={open.existing}
-                    enabled={allowed}
-                    members={members}
-                    focus={open.focus}
-                    controls={controls}
-                    onFollow={follow}
-                    onClose={() => setOpen(undefined)}
-                  />
-                ) : (
-                  <DayItem
-                    key={item.id}
-                    item={item}
-                    index={index}
-                    disabled={!enabled || ordering || Boolean(open)}
-                    busy={busy}
-                    open={(focus) => void show(item, focus)}
-                  />
-                ),
-              )}
+              {items.map((item, index) => (
+                <CalendarItemEditor
+                  key={item.id}
+                  householdId={householdId}
+                  itemId={item.id}
+                  initialValue={item.initial}
+                  existing={item.existing}
+                  enabled={allowed}
+                  members={members}
+                  index={index}
+                  autoFocus={draft?.id === item.id}
+                  orderDisabled={
+                    !enabled ||
+                    ordering ||
+                    switching ||
+                    Boolean(movingId) ||
+                    anyDirty
+                  }
+                  blocked={
+                    ordering ||
+                    dragging ||
+                    switching ||
+                    Boolean(movingId && movingId !== item.id)
+                  }
+                  controls={(control) => {
+                    if (control) {
+                      controls.current.set(item.id, control);
+                    } else {
+                      controls.current.delete(item.id);
+                    }
+                  }}
+                  onActivityChange={onActivityChange}
+                  beforeMove={() => beforeMove(item.id)}
+                  endMove={() => endMove(item.id)}
+                  onFollow={(value) => {
+                    setPinned({ id: item.id, initial: value, existing: true });
+                    setDraft(undefined);
+                    follow(value.day);
+                  }}
+                  onRemoved={() => {
+                    controls.current.delete(item.id);
+                    setDraft((d) => (d?.id === item.id ? undefined : d));
+                    setPinned((d) => (d?.id === item.id ? undefined : d));
+                    onActivityChange();
+                  }}
+                />
+              ))}
             </ul>
           </DragDropProvider>
           {orderError && (
@@ -303,86 +357,17 @@ export function CalendarPage({ householdId }: { householdId: string }) {
       </section>
       <TextDraftGuard
         editor={{
-          hasChanges: busy,
-          isSaving: busy,
+          hasChanges: busy || anyDirty,
+          isSaving: busy || snapshots.some((s) => s.isSaving),
           error: undefined,
           retry() {},
-          discard() {},
+          discard() {
+            for (const control of controls.current.values()) {
+              control.discard();
+            }
+          },
         }}
       />
     </>
-  );
-}
-
-function DayItem({
-  item,
-  index,
-  disabled,
-  busy,
-  open,
-}: {
-  item: Item;
-  index: number;
-  disabled: boolean;
-  busy: boolean;
-  open: (focus: CalendarFocus) => void;
-}) {
-  const sortable = useSortable({
-    id: item.id,
-    index,
-    type: "calendar-item",
-    accept: "calendar-item",
-    disabled,
-  });
-  const names = item.people
-    .map((p) => p.member?.user?.username)
-    .filter(Boolean)
-    .join(", ");
-  return (
-    <li ref={sortable.ref} className="flex min-w-0 items-start gap-2 py-3">
-      <IconButton
-        ref={sortable.handleRef}
-        disabled={disabled}
-        aria-label={`Reorder ${item.title}`}
-        className="shrink-0 touch-none"
-      >
-        <GripVertical className="size-4 text-muted" />
-      </IconButton>
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-start gap-1">
-          <button
-            type="button"
-            data-calendar-open={item.id}
-            disabled={busy}
-            className="min-w-0 flex-1 rounded-sm py-1.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-            onClick={() => open("title")}
-          >
-            <span className="block break-words font-medium">{item.title}</span>
-            {names && (
-              <span className="mt-1 block text-xs text-muted">{names}</span>
-            )}
-          </button>
-          <IconButton
-            aria-label={`Edit note for ${item.title}`}
-            title="Note"
-            disabled={busy}
-            onClick={() => open("note")}
-          >
-            <StickyNote className="size-4" />
-          </IconButton>
-        </div>
-        {item.note && (
-          <button
-            type="button"
-            aria-label={`Edit note text for ${item.title}`}
-            className="block w-full whitespace-pre-wrap break-words text-left text-xs text-muted"
-            disabled={busy}
-            onClick={() => open("note")}
-          >
-            {item.note}
-          </button>
-        )}
-      </div>
-    </li>
   );
 }
