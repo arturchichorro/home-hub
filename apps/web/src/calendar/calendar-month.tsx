@@ -1,4 +1,5 @@
 import { habitMonth, shiftCalendarDate } from "@home-hub/shared/habits";
+import { useEffect, useRef, useState } from "react";
 
 export function CalendarMonth({
   month,
@@ -12,9 +13,20 @@ export function CalendarMonth({
   selected: string;
   today: string;
   items: readonly { id: string; day: string; title: string }[];
-  onSelect: (day: string) => void;
+  onSelect: (day: string) => boolean | void | Promise<boolean | void>;
   disabled?: boolean;
 }) {
+  const table = useRef<HTMLTableElement>(null);
+  const [focusDay, setFocusDay] = useState<string>();
+  // Restore only after both the async save and the selected month DOM commit.
+  useEffect(() => {
+    if (focusDay === selected && !disabled) {
+      table.current
+        ?.querySelector<HTMLButtonElement>(`[data-calendar-day="${focusDay}"]`)
+        ?.focus();
+      setFocusDay(undefined);
+    }
+  }, [focusDay, selected, disabled]);
   const { dates } = habitMonth(month);
   const first = dates[0] ?? month;
   const offset = (new Date(`${first}T12:00:00Z`).getUTCDay() + 6) % 7;
@@ -32,6 +44,7 @@ export function CalendarMonth({
   }).format(new Date(`${month}T12:00:00Z`));
   return (
     <table
+      ref={table}
       className="w-full table-fixed border-collapse text-sm"
       aria-label={label}
     >
@@ -72,7 +85,7 @@ export function CalendarMonth({
                     aria-label={`${day}, ${items.filter((item) => item.day === day).length} items`}
                     className={`grid h-20 w-full min-w-0 content-start gap-1 p-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring sm:h-24 sm:p-2 ${selected === day ? "bg-raised" : "hover:bg-raised/50"}`}
                     onClick={() => onSelect(day)}
-                    onKeyDown={(event) => {
+                    onKeyDown={async (event) => {
                       const deltas: Record<string, number> = {
                         ArrowLeft: -1,
                         ArrowRight: 1,
@@ -90,14 +103,9 @@ export function CalendarMonth({
                       if (next < "0001-01-01" || next > "9999-12-31") {
                         return;
                       }
-                      onSelect(next);
-                      requestAnimationFrame(() =>
-                        document
-                          .querySelector<HTMLButtonElement>(
-                            `[data-calendar-day="${next}"]`,
-                          )
-                          ?.focus(),
-                      );
+                      // Inline drafts may need an acknowledged save before changing scope.
+                      const accepted = await onSelect(next);
+                      setFocusDay(accepted === false ? day : next);
                     }}
                   >
                     <span

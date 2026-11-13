@@ -35,7 +35,7 @@ Connected changes should appear immediately and converge across clients. Previou
 - [Documents](./documents/) owns opt-in household file rows, reusable colored tags,
   private upload/download, replacement and retention.
 
-- [Calendar](./calendar/) owns shared date-only items, autosaving dialogs, people labels and day ordering.
+- [Calendar](./calendar/) owns shared date-only items, seamless inline editing, people labels and day ordering.
 - [Workouts](./workouts/) owns shared definitions/catalog/media and private logging/history.
 - [Shared media](./media/) owns reusable asset storage, delivery and attachment security.
 - [Maintenance](./maintenance.md) records editing boundaries, bounded views and measured audit follow-ups.
