@@ -56,7 +56,6 @@ function HabitsContent({
   const view = useHabitView(householdId, currentUserId, person);
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
-  const [ordering, setOrdering] = useState(false);
   const [habits, result] = useQuery(
     queries.habits.recentForPerson({
       householdId,
@@ -74,11 +73,8 @@ function HabitsContent({
         archived={archived}
         disabled={!view.enabled || view.locked}
         navigationDisabled={view.locked}
-        ordering={ordering}
-        onToggleOrdering={() => setOrdering((value) => !value)}
         onCreate={() => setCreating(true)}
         onToggleArchive={() => {
-          setOrdering(false);
           void navigate({
             to: "/households/$householdId/habits",
             params: { householdId },
@@ -87,15 +83,7 @@ function HabitsContent({
         }}
       />
     ),
-    [
-      archived,
-      ordering,
-      view.enabled,
-      view.locked,
-      view.personId,
-      navigate,
-      householdId,
-    ],
+    [archived, view.enabled, view.locked, view.personId, navigate, householdId],
   );
   useAppHeaderRightComponent(header);
 
@@ -129,12 +117,12 @@ function HabitsContent({
         habits={habits}
         disabled={
           !view.enabled ||
+          view.locked ||
           loading ||
           archived ||
           view.pending.has("habit-order")
         }
         archived={archived}
-        ordering={ordering}
         loading={loading}
         onMove={(habitId, orderedHabitIds) => {
           void view.change(

@@ -83,7 +83,6 @@ export function HabitGrid({
   disabled,
   archived,
   loading,
-  ordering = true,
   onMove,
   children,
 }: {
@@ -91,24 +90,11 @@ export function HabitGrid({
   disabled: boolean;
   archived: boolean;
   loading: boolean;
-  ordering?: boolean;
   onMove: (habitId: string, orderedHabitIds: string[]) => void;
   children: (habit: Habit, handle: ReactNode) => ReactNode;
 }) {
   const [dragging, setDragging] = useState(false);
   useBlockAppUpdate(dragging);
-
-  if (!ordering) {
-    return (
-      <div className="grid min-w-0 divide-y divide-border" aria-busy={loading}>
-        {habits.map((habit) => (
-          <section key={habit.id} aria-label={habit.name} className="min-w-0">
-            {children(habit, null)}
-          </section>
-        ))}
-      </div>
-    );
-  }
 
   return (
     <DragDropProvider
@@ -119,7 +105,7 @@ export function HabitGrid({
 
         const source = event.operation.source;
 
-        if (disabled || event.canceled || !isSortable(source)) {
+        if (disabled || archived || event.canceled || !isSortable(source)) {
           return;
         }
 
@@ -140,7 +126,7 @@ export function HabitGrid({
             key={habit.id}
             habit={habit}
             index={index}
-            disabled={disabled}
+            disabled={disabled || archived}
             showHandle={!archived}
           >
             {(handle) => children(habit, handle)}
