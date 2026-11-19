@@ -6,6 +6,7 @@ import {
   clearSessionBootstrap,
   saveSessionBootstrap,
 } from "./auth/session-bootstrap";
+import { clearCalendarImageUrlCache } from "./calendar/calendar-image-url";
 import { clearListImageUrlCache } from "./lists/list-media-url";
 import { clearRecipeImageUrlCache } from "./recipes/recipe-image-url-cache";
 import { createAppRouter } from "./router";
@@ -37,6 +38,7 @@ export function Root({ initialSession }: RootProps) {
     clearSessionBootstrap();
     clearRecipeImageUrlCache();
     clearExerciseImageUrlCache();
+    clearCalendarImageUrlCache();
     clearListImageUrlCache();
     setZero(undefined);
     setSession(null);
@@ -58,6 +60,7 @@ export function Root({ initialSession }: RootProps) {
           clearSessionBootstrap();
           clearRecipeImageUrlCache(expiredSession.user.id);
           clearExerciseImageUrlCache(expiredSession.user.id);
+          clearCalendarImageUrlCache(expiredSession.user.id);
           clearListImageUrlCache(expiredSession.user.id);
           setZero(undefined);
         }

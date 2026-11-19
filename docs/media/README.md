@@ -23,12 +23,19 @@ its count, masonry, ordering and codec/size rules are documented in
 [Moodboards](../lists/moodboards.md). No changes enable video uploads in Recipes
 or exercise galleries.
 
+`calendar_media` attaches still pictures to Calendar items using the same compact
+upload/thumbnail/viewer interface as cooking logs. Moving an item preserves its
+pictures; deleting it hides them without deleting shared bytes. Access requires
+Calendar (not Recipes or Workouts) and a current household membership. Migration
+`0055_unusual_molecule_man.sql` adds the typed links and publication entry; existing
+assets, applied migrations, Worker configuration and object layouts are unchanged.
+
 Future features add typed `*_media` attachment tables; there is no polymorphic
 owner-ID field or generic household-wide media library. Multiple attachments can
 reference one asset, but no reuse/linking API or picker is exposed yet. A future
 reuse API must authorize both the source asset's existing attachment and the target.
 
-Recipe/exercise uploads support still JPEG/PNG/WebP, at most 10 MiB, with browser-supplied
+Recipe/exercise/calendar uploads support still JPEG/PNG/WebP, at most 10 MiB, with browser-supplied
 layout dimensions of 1–16,384 pixels. These dimensions are not trusted security
 metadata. Moodboards additionally accept bounded MP4/WebM clips through their
 own validated processing/delivery path; other attachments still reject videos.

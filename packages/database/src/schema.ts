@@ -237,6 +237,7 @@ export const calendarItemsRelations = relations(
       references: [households.id],
     }),
     people: many(calendarPeople),
+    images: many(calendarMedia),
   }),
 );
 
@@ -709,6 +710,7 @@ export const mediaRelations = relations(media, ({ one, many }) => ({
   recipeAttachments: many(recipeMedia),
   listAttachments: many(listMedia),
   exerciseAttachments: many(exerciseMedia),
+  calendarAttachments: many(calendarMedia),
 }));
 
 export const listMedia = pgTable(
@@ -871,6 +873,51 @@ export const exercises = pgTable(
     ),
   ],
 );
+
+export const calendarMedia = pgTable(
+  "calendar_media",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id").notNull(),
+    itemId: uuid("item_id").notNull(),
+    mediaId: uuid("media_id").notNull(),
+    sortKey: integer("sort_key").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.householdId, table.itemId],
+      foreignColumns: [calendarItems.householdId, calendarItems.id],
+      name: "calendar_media_household_item_fk",
+    }),
+    foreignKey({
+      columns: [table.householdId, table.mediaId],
+      foreignColumns: [media.householdId, media.id],
+      name: "calendar_media_household_media_fk",
+    }),
+    index("calendar_media_item_sort_id")
+      .on(table.householdId, table.itemId, table.sortKey, table.id)
+      .where(sql`${table.deletedAt} IS NULL`),
+    index("calendar_media_media_id").on(table.mediaId),
+  ],
+);
+
+export const calendarMediaRelations = relations(calendarMedia, ({ one }) => ({
+  item: one(calendarItems, {
+    fields: [calendarMedia.householdId, calendarMedia.itemId],
+    references: [calendarItems.householdId, calendarItems.id],
+  }),
+  asset: one(media, {
+    fields: [calendarMedia.householdId, calendarMedia.mediaId],
+    references: [media.householdId, media.id],
+  }),
+}));
 
 export const exerciseMedia = pgTable(
   "exercise_media",

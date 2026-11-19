@@ -8,6 +8,7 @@ import { createLogoutService } from "./auth/logout";
 import { createMeService } from "./auth/me";
 import { createRefreshService } from "./auth/refresh";
 import { createSignupService } from "./auth/signup";
+import { createCalendarMediaServices } from "./calendar/media";
 import { config } from "./config";
 import { createDocumentServices } from "./documents/service";
 import { createDocumentStorage } from "./documents/storage";
@@ -191,6 +192,30 @@ const exerciseMedia = createExerciseMediaServices({
     }),
 });
 
+const calendarMedia = createCalendarMediaServices({
+  db,
+
+  signUpload: (input) =>
+    signMediaUpload({ ...input, client: r2Client, bucket: config.R2_BUCKET }),
+
+  inspectObject: (input) =>
+    inspectR2Object({ ...input, client: r2Client, bucket: config.R2_BUCKET }),
+
+  processImage: (input) =>
+    processMediaImage({
+      ...input,
+      baseUrl: config.IMAGE_DELIVERY_BASE_URL,
+      secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
+    }),
+
+  signRead: (input) =>
+    signMediaRead({
+      ...input,
+      baseUrl: config.IMAGE_DELIVERY_BASE_URL,
+      secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
+    }),
+});
+
 const listMedia = createListMediaServices({
   db,
 
@@ -231,6 +256,7 @@ const app = createApp({
   households,
   recipeImages,
   exerciseMedia,
+  calendarMedia,
   exerciseStats: createExerciseStatsService({ db }),
   habitStats: createHabitStatsService({ db }),
   documents: createDocumentServices({
