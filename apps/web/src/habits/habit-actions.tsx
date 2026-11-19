@@ -1,15 +1,4 @@
-import {
-  Archive,
-  ArrowLeft,
-  Button,
-  IconButton,
-  MenuItem,
-  MenuPopup,
-  MenuRoot,
-  MenuTrigger,
-  MoreHorizontal,
-  Plus,
-} from "@home-hub/ui-web";
+import { Archive, ArrowLeft, Button, IconButton, Plus } from "@home-hub/ui-web";
 
 export function HabitActions({
   archived,
@@ -17,20 +6,18 @@ export function HabitActions({
   navigationDisabled = false,
   onToggleArchive,
   onCreate,
-  ordering = false,
-  onToggleOrdering,
 }: {
   archived: boolean;
   disabled: boolean;
   navigationDisabled?: boolean;
   onToggleArchive: () => void;
   onCreate: () => void;
-  ordering?: boolean;
-  onToggleOrdering?: () => void;
 }) {
+  const archiveLabel = archived ? "Active habits" : "Archived habits";
+
   return (
     <div className="flex items-center gap-2">
-      {!archived ? (
+      {!archived && (
         <Button
           variant="ghost"
           className="h-7! px-1.5! font-normal text-muted"
@@ -40,35 +27,19 @@ export function HabitActions({
           <Plus aria-hidden="true" className="size-4" />
           Add habit
         </Button>
-      ) : null}
-      <MenuRoot>
-        <MenuTrigger
-          aria-label="Habit options"
-          render={
-            <IconButton aria-label="Habit options">
-              <MoreHorizontal aria-hidden="true" className="size-4" />
-            </IconButton>
-          }
-        />
-        <MenuPopup align="end">
-          {!archived && onToggleOrdering && (
-            <MenuItem
-              disabled={disabled || navigationDisabled}
-              onClick={onToggleOrdering}
-            >
-              {ordering ? "Finish reordering" : "Reorder habits"}
-            </MenuItem>
-          )}
-          <MenuItem disabled={navigationDisabled} onClick={onToggleArchive}>
-            {archived ? (
-              <ArrowLeft aria-hidden="true" className="mr-2 size-4" />
-            ) : (
-              <Archive aria-hidden="true" className="mr-2 size-4" />
-            )}
-            {archived ? "Active habits" : "Archived habits"}
-          </MenuItem>
-        </MenuPopup>
-      </MenuRoot>
+      )}
+      <IconButton
+        aria-label={archiveLabel}
+        title={archiveLabel}
+        disabled={navigationDisabled}
+        onClick={onToggleArchive}
+      >
+        {archived ? (
+          <ArrowLeft aria-hidden="true" className="size-4" />
+        ) : (
+          <Archive aria-hidden="true" className="size-4" />
+        )}
+      </IconButton>
     </div>
   );
 }

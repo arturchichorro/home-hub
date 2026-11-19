@@ -12,9 +12,11 @@ The overview defaults to **Me**, with the existing person selector and shared or
   inline today note, and a **non-interactive last-seven-days preview**, ending today.
   Pending saves show a spinner; manual checks stay one tap/keypress. Training-derived
   checks open detail instead of allowing undo. Existing notes remain visible.
-- Quick creation stays name-only. Header options hold archived viewing and explicit
-  reorder mode (mouse drag, touch hold, Space/arrows; Escape cancels). Completions
-  never reorder rows; archived ordering is fixed.
+- Quick creation stays name-only. Active rows always show reorder handles (mouse
+  drag, touch hold, Space/arrows; Escape cancels), without a reorder/finish mode.
+  A direct Archive header icon opens archived habits; a back arrow returns to active
+  habits. Draft/pending-operation, loading and offline write locks still apply.
+  Completions never reorder rows; archived ordering is fixed.
 - Detail opens today's direct day editor and one monthly calendar. Selecting a date
   directly opens its editor; previous/next/current-month controls do not mount extra
   calendars. Authors can correct any past date, even before habit creation.
