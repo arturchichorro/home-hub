@@ -14,6 +14,7 @@ import {
 } from "../lists";
 import { normalizeListItemName, normalizeListName } from "../normalization";
 import type { ZeroAuthContext } from "./context";
+import { flashcardMutators } from "./flashcard-mutators";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
 import { nextSortKey, planReorder } from "./ordering";
 import { type Schema, zql } from "./schema.gen";
@@ -69,7 +70,7 @@ async function requireItem(
 ) {
   const parent = await requireList(tx, ctx, scope);
 
-  if (parent.kind === "moodboard") {
+  if (parent.kind !== "checklist") {
     throw new Error("Checklist mutation not allowed");
   }
 
@@ -83,6 +84,7 @@ async function requireItem(
 }
 
 export const listMutatorDefinitions = {
+  ...flashcardMutators,
   reorderMedia: defineMutator(
     reorderListMediaSchema,
     async ({ tx, ctx, args }) => {
@@ -214,7 +216,7 @@ export const listMutatorDefinitions = {
     async ({ tx, ctx, args }) => {
       const parent = await requireList(tx, ctx, args);
 
-      if (parent.kind === "moodboard") {
+      if (parent.kind !== "checklist") {
         throw new Error("Checklist mutation not allowed");
       }
 
@@ -298,7 +300,7 @@ export const listMutatorDefinitions = {
     async ({ tx, ctx, args }) => {
       const parent = await requireList(tx, ctx, args);
 
-      if (parent.kind === "moodboard") {
+      if (parent.kind !== "checklist") {
         throw new Error("Checklist mutation not allowed");
       }
 

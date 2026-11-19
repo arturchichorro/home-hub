@@ -8,9 +8,10 @@ import {
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import { FlashcardDeck } from "./flashcard-deck";
 import { ListItems } from "./list-items";
 import { ListNameInput } from "./list-name-input";
 import { Moodboard } from "./moodboard";
@@ -31,6 +32,12 @@ export function ListDetail({
   const [deleting, setDeleting] = useState(false);
   const [mediaBusy, setMediaBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [openedFlashcards, setOpenedFlashcards] = useState(false);
+  useEffect(() => {
+    if (list?.kind === "flashcards") {
+      setOpenedFlashcards(true);
+    }
+  }, [list?.kind]);
 
   async function remove() {
     if (deleting || mediaBusy || !enabled) {
@@ -66,6 +73,17 @@ export function ListDetail({
     } finally {
       setDeleting(false);
     }
+  }
+
+  if (openedFlashcards || list?.kind === "flashcards") {
+    return (
+      <FlashcardDeck
+        householdId={householdId}
+        listId={listId}
+        list={list}
+        parentState={result.type}
+      />
+    );
   }
 
   if (result.type === "error") {

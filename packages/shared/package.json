@@ -24,6 +24,7 @@
     "./exercise-media": "./src/exercise-media.ts",
     "./media-delivery": "./src/media-delivery.ts",
     "./lists": "./src/lists.ts",
+    "./flashcards": "./src/flashcards.ts",
     "./normalization": "./src/normalization.ts",
     "./ordering": "./src/zero/ordering.ts",
     "./recipe-image-delivery": "./src/recipe-image-delivery.ts",

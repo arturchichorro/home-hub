@@ -9,7 +9,11 @@ function ListsLayout() {
   const { householdId } = Route.useParams();
 
   return (
-    <HouseholdModuleGate householdId={householdId} moduleKey="lists">
+    <HouseholdModuleGate
+      householdId={householdId}
+      moduleKey="lists"
+      preserveChildrenWhileRedirecting
+    >
       <Outlet />
     </HouseholdModuleGate>
   );

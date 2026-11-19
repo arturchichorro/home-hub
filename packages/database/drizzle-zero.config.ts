@@ -21,6 +21,7 @@ export default drizzleZeroConfig(drizzleSchema, {
       createdAt: true,
     },
     listMedia: true,
+    listFlashcards: true,
     logs: true,
     logCategories: true,
     logEntries: {
