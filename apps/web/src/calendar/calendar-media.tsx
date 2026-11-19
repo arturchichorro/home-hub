@@ -1,0 +1,413 @@
+import {
+  type CalendarMediaImage,
+  calendarImagesFromRows,
+} from "@home-hub/shared/calendar-media";
+import {
+  maxStillImageByteSize,
+  stillImageContentTypeSchema,
+  stillImageUploadSchema,
+} from "@home-hub/shared/media";
+import { queries } from "@home-hub/shared/zero/queries";
+import { Button, ErrorPopover, ImagePlus } from "@home-hub/ui-web";
+import { useQuery } from "@rocicorp/zero/react";
+import {
+  type ChangeEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { ImageViewer } from "../media/image-viewer";
+import { readImageDimensions } from "../media/read-image-dimensions";
+import { type MediaSession, useMediaSession } from "../media/session";
+import { blockAppUpdate } from "../updates/activity";
+import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import {
+  invalidateCalendarImageUrl,
+  prefetchCalendarImage,
+  useCalendarImageUrl,
+} from "./calendar-image-url";
+import {
+  confirmCalendarImage,
+  deleteCalendarImage,
+  requestCalendarImageUpload,
+} from "./calendar-media-api";
+
+type Slots = { upload: ReactNode; gallery: ReactNode };
+type Props = {
+  householdId: string;
+  itemId: string;
+  name: string;
+  saved: boolean;
+  disabled: boolean;
+  onBusyChange: (busy: boolean) => void;
+  children: (slots: Slots) => ReactNode;
+};
+
+export function CalendarMedia(props: Props) {
+  const session = useMediaSession();
+
+  return session ? (
+    <CalendarMediaContent {...props} session={session} />
+  ) : (
+    props.children({ upload: null, gallery: null })
+  );
+}
+
+function CalendarThumbnail({
+  image,
+  session,
+  name,
+  onOpen,
+}: {
+  image: CalendarMediaImage;
+  session: MediaSession;
+  name: string;
+  onOpen: () => void;
+}) {
+  const state = useCalendarImageUrl({
+    ...session,
+    householdId: image.householdId,
+    itemId: image.itemId,
+    attachmentId: image.id,
+    variant: "thumbnail",
+  });
+
+  return (
+    <li className="size-12 shrink-0 overflow-hidden rounded-lg bg-raised">
+      <button
+        type="button"
+        aria-label={`Open picture for ${name}`}
+        className="size-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-focus-ring"
+        onClick={onOpen}
+      >
+        {state.url ? (
+          <img
+            src={state.url}
+            alt=""
+            width={image.width}
+            height={image.height}
+            loading="lazy"
+            className="size-full object-cover"
+          />
+        ) : (
+          <span
+            role="img"
+            className="block size-full"
+            aria-label={state.error ? "Picture unavailable" : "Loading picture"}
+          />
+        )}
+      </button>
+    </li>
+  );
+}
+
+function CalendarMediaContent({
+  householdId,
+  itemId,
+  name,
+  saved,
+  disabled,
+  onBusyChange,
+  children,
+  session,
+}: Props & { session: MediaSession }) {
+  const enabled = useZeroMutationEnabled();
+  const [rows, result] = useQuery(
+    saved ? queries.calendar.media({ householdId, itemId }) : undefined,
+  );
+  const [selectedId, setSelectedId] = useState<string>();
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
+  const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string>();
+  const [deleteError, setDeleteError] = useState<string>();
+  const button = useRef<HTMLButtonElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const work = useRef(false);
+  const callback = useRef(onBusyChange);
+  callback.current = onBusyChange;
+
+  function notify(active: boolean) {
+    work.current = active;
+    callback.current(active);
+  }
+
+  useEffect(() => () => callback.current(false), []);
+  const images = calendarImagesFromRows(rows ?? []).filter(
+    (image) => !hiddenIds.has(image.id),
+  );
+  const selected = images.find((image) => image.id === selectedId);
+  const writable =
+    enabled &&
+    saved &&
+    !disabled &&
+    !work.current &&
+    result.type === "complete";
+  const thumbnail = useCalendarImageUrl({
+    ...session,
+    householdId,
+    itemId,
+    attachmentId: selected?.id,
+    variant: "thumbnail",
+  });
+  const viewer = useCalendarImageUrl({
+    ...session,
+    householdId,
+    itemId,
+    attachmentId: selected?.id,
+    variant: "viewer",
+  });
+
+  useEffect(() => {
+    if (!selectedId || !viewer.url || images.length < 2) {
+      return;
+    }
+
+    const index = images.findIndex((image) => image.id === selectedId);
+
+    for (const direction of [-1, 1]) {
+      const next = images[(index + direction + images.length) % images.length];
+
+      if (next) {
+        void prefetchCalendarImage({
+          ...session,
+          householdId,
+          itemId,
+          attachmentId: next.id,
+          variant: "viewer",
+        }).catch(() => undefined);
+      }
+    }
+  }, [selectedId, viewer.url, images, session, householdId, itemId]);
+
+  async function upload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || busy || !writable) {
+      return;
+    }
+
+    const allowUpdate = blockAppUpdate();
+    setBusy(true);
+    notify(true);
+    setError(undefined);
+
+    try {
+      const type = stillImageContentTypeSchema.safeParse(file.type);
+
+      if (!type.success) {
+        setError("Choose a still JPEG, PNG or WebP image.");
+
+        return;
+      }
+
+      if (file.size > maxStillImageByteSize) {
+        setError("Choose an image up to 10 MiB.");
+
+        return;
+      }
+
+      const dimensions = await readImageDimensions(file);
+      const metadata = stillImageUploadSchema.safeParse({
+        contentType: type.data,
+        byteSize: file.size,
+        ...dimensions,
+      });
+
+      if (!metadata.success) {
+        setError("Choose an image up to 16,384 pixels per side.");
+
+        return;
+      }
+
+      const pending = await requestCalendarImageUpload({
+        accessToken: session.accessToken,
+        householdId,
+        itemId,
+        ...metadata.data,
+      });
+
+      if (pending.kind === "unauthorized") {
+        session.onSessionExpired();
+
+        return;
+      }
+
+      if (pending.kind !== "success") {
+        throw new Error("Upload denied");
+      }
+
+      const uploaded = await fetch(pending.upload.url, {
+        method: "PUT",
+        headers: pending.upload.requiredHeaders,
+        body: file,
+      });
+
+      if (!uploaded.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const confirmed = await confirmCalendarImage({
+        accessToken: session.accessToken,
+        householdId,
+        itemId,
+        attachmentId: pending.attachmentId,
+      });
+
+      if (confirmed.kind === "unauthorized") {
+        session.onSessionExpired();
+      } else if (confirmed.kind === "invalid_upload") {
+        setError(
+          "This image is invalid or animated. Choose a still JPEG, PNG or WebP image.",
+        );
+      } else if (confirmed.kind !== "success") {
+        throw new Error("Confirmation failed");
+      }
+    } catch {
+      setError("Unable to upload this picture. Try again.");
+    } finally {
+      allowUpdate();
+      setBusy(false);
+      notify(false);
+    }
+  }
+
+  async function remove(image: CalendarMediaImage) {
+    if (!writable || deleting) {
+      return;
+    }
+
+    setDeleting(true);
+    notify(true);
+    const allowUpdate = blockAppUpdate();
+    setDeleteError(undefined);
+
+    try {
+      const result = await deleteCalendarImage({
+        accessToken: session.accessToken,
+        householdId,
+        itemId,
+        attachmentId: image.id,
+      });
+
+      if (result.kind === "unauthorized") {
+        session.onSessionExpired();
+
+        return;
+      }
+
+      if (result.kind !== "success") {
+        throw new Error("Delete failed");
+      }
+
+      invalidateCalendarImageUrl({
+        ...session,
+        householdId,
+        itemId,
+        attachmentId: image.id,
+      });
+      setHiddenIds((old) => new Set([...old, image.id]));
+      setSelectedId(undefined);
+    } catch {
+      setDeleteError("Unable to remove this picture. Try again.");
+    } finally {
+      setDeleting(false);
+      allowUpdate();
+      notify(false);
+    }
+  }
+
+  return children({
+    upload: (
+      <>
+        <Button
+          ref={button}
+          variant="ghost"
+          size="compact"
+          className="size-7! shrink-0 p-0!"
+          aria-label={`Add picture for ${name || "calendar item"}`}
+          title={
+            saved ? "Add picture" : "Name the item before adding a picture"
+          }
+          busy={busy}
+          disabled={!writable || busy || deleting}
+          onClick={() => {
+            const fileInput = input.current;
+            if (!fileInput || !writable) {
+              return;
+            }
+            try {
+              fileInput.showPicker();
+            } catch {
+              fileInput.click();
+            }
+          }}
+        >
+          <ImagePlus aria-hidden="true" className="size-4" />
+        </Button>
+        <input
+          ref={input}
+          type="file"
+          className="sr-only"
+          accept="image/jpeg,image/png,image/webp"
+          tabIndex={-1}
+          onChange={(event) => void upload(event)}
+        />
+        <ErrorPopover
+          anchor={button}
+          open={Boolean(error)}
+          onDismiss={() => setError(undefined)}
+        >
+          {error}
+        </ErrorPopover>
+      </>
+    ),
+    gallery: (
+      <>
+        {images.length > 0 && (
+          <ul
+            aria-label={`Pictures for ${name}`}
+            className="mt-1 mb-2 flex w-full max-w-full min-w-0 gap-2 overflow-x-auto overscroll-x-contain"
+          >
+            {images.map((image) => (
+              <CalendarThumbnail
+                key={image.id}
+                image={image}
+                session={session}
+                name={name}
+                onOpen={() => {
+                  setDeleteError(undefined);
+                  setSelectedId(image.id);
+                }}
+              />
+            ))}
+          </ul>
+        )}
+        <ImageViewer
+          image={selected}
+          images={images}
+          thumbnailUrl={thumbnail.url}
+          viewerUrl={viewer.url}
+          error={viewer.error}
+          alt={name}
+          canDelete={writable && !busy}
+          deleting={deleting}
+          actionError={deleteError}
+          deleteDescription="This removes the picture from this calendar item for everyone in the household."
+          onSelect={(image) => {
+            setDeleteError(undefined);
+            setSelectedId(image.id);
+          }}
+          onDelete={(image) => void remove(image)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedId(undefined);
+            }
+          }}
+        />
+      </>
+    ),
+  });
+}

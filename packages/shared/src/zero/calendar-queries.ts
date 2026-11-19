@@ -22,6 +22,31 @@ const people = (q: ReturnType<typeof active>) =>
   );
 
 export const calendarQueries = {
+  media: define(calendarItemQuerySchema, ({ args, ctx }) =>
+    zql.calendarMedia
+      .where("householdId", args.householdId)
+      .where("itemId", args.itemId)
+      .where("deletedAt", "IS", null)
+      .whereExists("item", (i) =>
+        i.where("deletedAt", "IS", null).whereExists("household", (h) =>
+          h
+            .where("deletedAt", "IS", null)
+            .whereExists("members", (m) => m.where("userId", ctx.userId))
+            .whereExists("moduleSettings", (s) =>
+              s.where("moduleKey", "calendar").where("enabled", true),
+            ),
+        ),
+      )
+      .whereExists("asset", (a) =>
+        a
+          .where("kind", "image")
+          .where("deletedAt", "IS", null)
+          .where("confirmedAt", "IS NOT", null),
+      )
+      .related("asset")
+      .orderBy("sortKey", "desc")
+      .orderBy("id", "asc"),
+  ),
   month: define(calendarRangeSchema, ({ args, ctx }) =>
     people(
       active(args.householdId, ctx.userId)

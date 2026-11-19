@@ -32,6 +32,8 @@ erDiagram
   households ||--o{ household_module_settings : configures
   households ||--o{ calendar_items : owns
   calendar_items ||--o{ calendar_people : labels
+  calendar_items ||--o{ calendar_media : pictures
+  media ||--o{ calendar_media : attaches
   users ||--o{ calendar_people : identifies
   households ||--o{ lists : owns
   lists ||--o{ list_items : contains
@@ -61,7 +63,8 @@ erDiagram
 
 ### Calendar
 
-See [Calendar](./calendar/) for `calendar_items` and `calendar_people`, date/text
+See [Calendar](./calendar/) for `calendar_items`, `calendar_people` and typed
+`calendar_media` picture attachments, date/text
 constraints, household-qualified links, tombstones and stable-account labels that
 hide/restore across membership changes. These records contain no scheduled times.
 

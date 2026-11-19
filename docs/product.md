@@ -19,7 +19,7 @@ another household.
 
 Home Hub is organized into small built-in modules:
 
-- [Calendar](./calendar/) provides shared day/title/note items, optional people labels and manual ordering within a day; no times or scheduling extras.
+- [Calendar](./calendar/) provides shared day/title/note items, optional people labels, cook-log-style pictures and manual ordering within a day; no times or scheduling extras.
 - [Lists](./lists/) provides multiple named, manually ordered shared lists.
 - [Recipes](./recipes/) provides shared recipes, their ingredients, cooking
   history, and images.

@@ -18,6 +18,16 @@ successful move, on Escape/outside click, or with its close button. Choose a day
 then press Move (or Enter), so partially typed dates never move an item mid-entry.
 Closing cancels an unapplied/failed date choice without dropping other drafts. The actions
 menu retains confirmed deletion.
+
+A photo icon adds pictures to a saved item, just like cooking logs: a horizontal
+48px thumbnail strip beneath the row opens the shared full-screen viewer, with
+previous/next navigation and confirmed picture removal. The month grid is unchanged.
+Still JPEG/PNG/WebP uploads use the shared 10 MiB/16,384px limits and reject invalid
+or animated content. An untouched unnamed row cannot upload. Uploads/removals block
+scope changes, navigation/unload and PWA updates without discarding text drafts.
+Pictures stay with the item when its day changes; deleting an item hides its pictures
+from the calendar. There is no separate gallery or picture-ordering mode.
+
 Items contain one literal day, a required title (150 characters), an optional
 multiline plain-text note (10,000 characters), and optional current-member labels.
 Duplicate titles and past/future dates are allowed. No time conversion is applied
@@ -60,12 +70,23 @@ the same account rejoining restores them. Labels are updated per person, so edit
 to other fields/people cannot erase hidden associations. Items survive their
 creator leaving.
 
-Calendar writes take a household-scoped PostgreSQL advisory transaction lock in
+Calendar item/people/order writes take a household-scoped PostgreSQL advisory transaction lock in
 the existing server mutation wrapper. This serializes append/move/rebalance
 operations. Shared reorder planning preserves unseen additions and rejects stale
 foreign/day scopes. Field patches merge independent edits; the latest accepted
 write wins same-field conflicts. Month reads are date-bounded, and the open item
 has an independent subscription rather than depending on the month's row list.
 
-No recurrence, reminders, invitations, RSVP, completion states, categories,
-attachments, person filters, calendar sync or cross-module integrations.
+Migration `0055_unusual_molecule_man.sql` adds typed `calendar_media` attachments
+and their publication entry. Household-qualified item/asset foreign keys prevent
+cross-household links. Only confirmed, active image attachments for an active item
+synchronize, through an item-scoped subscription rather than the month grid. Photo
+API operations authorize current membership, enabled Calendar and active parent,
+attachment and asset; confirmation rechecks after processing. Parent-first row locks
+serialize uploads with item deletion. Signed delivery and URL caching reuse the
+[shared media](../media/) contract, with Calendar-specific identities/caches cleared
+on logout. Removing a picture soft-deletes its attachment, not shared asset bytes;
+item deletion retains stored attachment/asset records. Physical cleanup is deferred.
+
+No recurrence, reminders, invitations, RSVP, completion states, categories, generic
+file attachments, person filters, calendar sync or cross-module integrations.

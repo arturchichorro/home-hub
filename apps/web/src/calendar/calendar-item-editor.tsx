@@ -27,6 +27,7 @@ import {
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import {
   type Ref,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
@@ -36,6 +37,7 @@ import {
 import { TextDraftActions } from "../editing/text-draft-actions";
 import { useBlockAppUpdate } from "../updates/activity";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
+import { CalendarMedia } from "./calendar-media";
 import { CalendarPeoplePicker } from "./calendar-people-picker";
 import {
   type CalendarDraft,
@@ -130,6 +132,12 @@ export function CalendarItemEditor({
     people: r.people.map((p) => p.userId).sort(),
   });
   const [initial] = useState(initialValue);
+  const [mediaBusy, setMediaBusy] = useState(false);
+  const mediaBusyRef = useRef(false);
+  const onMediaBusyChange = useCallback((busy: boolean) => {
+    mediaBusyRef.current = busy;
+    setMediaBusy(busy);
+  }, []);
   const [deleting, setDeleting] = useState(false);
   const deletingRef = useRef(false);
   const [deleteError, setDeleteError] = useState(false);
@@ -222,7 +230,8 @@ export function CalendarItemEditor({
     },
   });
   const unavailable = editor.saved && result.type === "complete" && !row;
-  const disabled = !enabled || !loaded || unavailable || deleting || blocked;
+  const disabled =
+    !enabled || !loaded || unavailable || deleting || blocked || mediaBusy;
   function closeDay() {
     setDayOpen(false);
     setDayError(undefined);
@@ -281,21 +290,28 @@ export function CalendarItemEditor({
   }
 
   useImperativeHandle(controls, () => ({
-    flush: editor.flush,
+    flush: async () => !mediaBusyRef.current && editor.flush(),
     discard: editor.discard,
     snapshot: () => ({
       value: editor.value,
-      hasChanges: editor.hasChanges || deletingRef.current,
-      isSaving: editor.isSaving || deletingRef.current,
+      hasChanges:
+        editor.hasChanges || deletingRef.current || mediaBusyRef.current,
+      isSaving: editor.isSaving || deletingRef.current || mediaBusyRef.current,
       saved: editor.saved,
     }),
   }));
   useLayoutEffect(() => {
     onActivityChange(
-      editor.hasChanges || deleting,
-      editor.isSaving || deleting,
+      editor.hasChanges || deleting || mediaBusy,
+      editor.isSaving || deleting || mediaBusy,
     );
-  }, [editor.hasChanges, editor.isSaving, deleting, onActivityChange]);
+  }, [
+    editor.hasChanges,
+    editor.isSaving,
+    deleting,
+    mediaBusy,
+    onActivityChange,
+  ]);
   return (
     <>
       <li
@@ -313,237 +329,254 @@ export function CalendarItemEditor({
         >
           <GripVertical aria-hidden="true" className="size-4 text-muted" />
         </Button>
-        <div className="min-w-0 flex-1">
-          <div
-            className="flex h-7 min-w-0 items-center gap-1"
-            data-calendar-line
-          >
-            <div className="flex min-w-0 flex-1 items-center gap-1">
-              <Input
-                ref={titleInput}
-                appearance="seamless"
-                aria-label="Calendar item name"
-                placeholder="Item name"
-                className={`field-sizing-content h-7! min-w-0 flex-initial! px-1! text-sm leading-7 ${noteOpen || editor.value.note ? "max-w-[65%]" : "max-w-full"}`}
-                value={editor.value.title}
-                maxLength={150}
-                required
-                readOnly={disabled}
-                onValueChange={(title) => editor.change({ title })}
-                onBlur={() => {
-                  if (!editor.error && editor.value.title.trim()) {
-                    void editor.flush();
-                  }
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    void editor.flush();
-                  }
-                }}
-              />
-              {(noteOpen || editor.value.note) && (
-                <div
-                  className="flex h-7 min-w-0 flex-1 items-center gap-1 overflow-hidden"
-                  data-calendar-note-inline
-                >
-                  <span
-                    aria-hidden="true"
-                    className="shrink-0 text-xs leading-7 text-muted"
-                  >
-                    —
-                  </span>
-                  <Textarea
-                    ref={noteInput}
+        <CalendarMedia
+          householdId={householdId}
+          itemId={itemId}
+          name={editor.value.title}
+          saved={editor.saved}
+          disabled={disabled}
+          onBusyChange={onMediaBusyChange}
+        >
+          {({ upload, gallery }) => (
+            <div className="min-w-0 flex-1">
+              <div
+                className="flex h-7 min-w-0 items-center gap-1"
+                data-calendar-line
+              >
+                <div className="flex min-w-0 flex-1 items-center gap-1">
+                  <Input
+                    ref={titleInput}
                     appearance="seamless"
-                    aria-label="Calendar item note"
-                    placeholder="Note"
-                    title={editor.value.note}
-                    className="field-sizing-fixed! h-7! min-h-7! min-w-0 flex-1 overflow-x-auto overflow-y-hidden py-0! text-xs leading-7 text-muted whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                    rows={1}
-                    maxLength={10000}
-                    value={editor.value.note}
+                    aria-label="Calendar item name"
+                    placeholder="Item name"
+                    className={`field-sizing-content h-7! min-w-0 flex-initial! px-1! text-sm leading-7 ${noteOpen || editor.value.note ? "max-w-[65%]" : "max-w-full"}`}
+                    value={editor.value.title}
+                    maxLength={150}
+                    required
                     readOnly={disabled}
-                    onChange={(event) =>
-                      editor.change({ note: event.target.value })
-                    }
+                    onValueChange={(title) => editor.change({ title })}
                     onBlur={() => {
-                      if (!editor.error) {
+                      if (!editor.error && editor.value.title.trim()) {
                         void editor.flush();
                       }
-                      if (!editor.value.note) {
-                        setNoteOpen(false);
-                      }
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-            <div className="ml-auto flex shrink-0 items-center gap-1">
-              {!noteOpen && !editor.value.note && (
-                <Button
-                  variant="ghost"
-                  size="compact"
-                  className="size-7! p-0!"
-                  aria-label="Add calendar note"
-                  title="Note"
-                  onClick={() => {
-                    setNoteOpen(true);
-                    requestAnimationFrame(() => noteInput.current?.focus());
-                  }}
-                >
-                  <StickyNote aria-hidden="true" className="size-4" />
-                </Button>
-              )}
-              <CalendarPeoplePicker
-                members={members}
-                selected={editor.value.people}
-                disabled={disabled}
-                onChange={(people) => editor.change({ people }, true)}
-              />
-              <PopoverRoot
-                open={dayOpen}
-                onOpenChange={(open) => {
-                  if (open) {
-                    setDayDraft(editor.value.day);
-                    setDayError(undefined);
-                    setDayOpen(true);
-                  } else {
-                    closeDay();
-                  }
-                }}
-              >
-                <PopoverTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="compact"
-                      className="size-7! p-0!"
-                      aria-label="Move calendar item"
-                      title="Move to another day"
-                      disabled={disabled}
-                    >
-                      <Calendar aria-hidden="true" className="size-4" />
-                    </Button>
-                  }
-                />
-                <PopoverPopup
-                  aria-label="Move calendar item"
-                  className="w-64!"
-                  initialFocus={() => dateInput.current}
-                >
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-muted">
-                      Move to another day
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="compact"
-                      className="size-7! p-0!"
-                      aria-label="Close date picker"
-                      onClick={closeDay}
-                    >
-                      <X aria-hidden="true" className="size-4" />
-                    </Button>
-                  </div>
-                  <Input
-                    ref={dateInput}
-                    aria-label="Calendar item day"
-                    type="date"
-                    min="0001-01-01"
-                    max="9999-12-31"
-                    value={dayDraft}
-                    readOnly={disabled || editor.isSaving}
-                    onValueChange={(day) => {
-                      setDayDraft(day);
-                      setDayError(undefined);
                     }}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
                         event.preventDefault();
-                        moveDay();
+                        void editor.flush();
                       }
                     }}
                   />
-                  {(dayError || editor.error) && (
-                    <p role="alert" className="mt-2 text-sm text-danger">
-                      {dayError || editor.error}
-                    </p>
-                  )}
-                  <div className="mt-3 flex justify-end">
-                    <Button
-                      size="compact"
-                      disabled={disabled || editor.isSaving}
-                      onClick={moveDay}
+                  {(noteOpen || editor.value.note) && (
+                    <div
+                      className="flex h-7 min-w-0 flex-1 items-center gap-1 overflow-hidden"
+                      data-calendar-note-inline
                     >
-                      Move
-                    </Button>
-                  </div>
-                </PopoverPopup>
-              </PopoverRoot>
-              <MenuRoot
-                onOpenChange={(open) => {
-                  if (open) {
-                    skipFocus.current = false;
-                  }
-                }}
-              >
-                <MenuTrigger
-                  ref={menuInput}
-                  render={
+                      <span
+                        aria-hidden="true"
+                        className="shrink-0 text-xs leading-7 text-muted"
+                      >
+                        —
+                      </span>
+                      <Textarea
+                        ref={noteInput}
+                        appearance="seamless"
+                        aria-label="Calendar item note"
+                        placeholder="Note"
+                        title={editor.value.note}
+                        className="field-sizing-fixed! h-7! min-h-7! min-w-0 flex-1 overflow-x-auto overflow-y-hidden py-0! text-xs leading-7 text-muted whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                        rows={1}
+                        maxLength={10000}
+                        value={editor.value.note}
+                        readOnly={disabled}
+                        onChange={(event) =>
+                          editor.change({ note: event.target.value })
+                        }
+                        onBlur={() => {
+                          if (!editor.error) {
+                            void editor.flush();
+                          }
+                          if (!editor.value.note) {
+                            setNoteOpen(false);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="ml-auto flex shrink-0 items-center gap-1">
+                  {!noteOpen && !editor.value.note && (
                     <Button
                       variant="ghost"
                       size="compact"
                       className="size-7! p-0!"
-                      aria-label="Calendar item actions"
-                    >
-                      <MoreHorizontal aria-hidden="true" className="size-4" />
-                    </Button>
-                  }
-                />
-                <MenuPopup
-                  align="end"
-                  finalFocus={() =>
-                    skipFocus.current ? false : menuInput.current
-                  }
-                >
-                  {editor.saved && (
-                    <MenuItem
-                      variant="danger"
-                      disabled={disabled || editor.isSaving}
+                      aria-label="Add calendar note"
+                      title="Note"
                       onClick={() => {
-                        skipFocus.current = true;
-                        setConfirmDelete(true);
+                        setNoteOpen(true);
+                        requestAnimationFrame(() => noteInput.current?.focus());
                       }}
                     >
-                      Delete
-                    </MenuItem>
+                      <StickyNote aria-hidden="true" className="size-4" />
+                    </Button>
                   )}
-                </MenuPopup>
-              </MenuRoot>
+                  {upload}
+                  <CalendarPeoplePicker
+                    members={members}
+                    selected={editor.value.people}
+                    disabled={disabled}
+                    onChange={(people) => editor.change({ people }, true)}
+                  />
+                  <PopoverRoot
+                    open={dayOpen}
+                    onOpenChange={(open) => {
+                      if (open) {
+                        setDayDraft(editor.value.day);
+                        setDayError(undefined);
+                        setDayOpen(true);
+                      } else {
+                        closeDay();
+                      }
+                    }}
+                  >
+                    <PopoverTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="compact"
+                          className="size-7! p-0!"
+                          aria-label="Move calendar item"
+                          title="Move to another day"
+                          disabled={disabled}
+                        >
+                          <Calendar aria-hidden="true" className="size-4" />
+                        </Button>
+                      }
+                    />
+                    <PopoverPopup
+                      aria-label="Move calendar item"
+                      className="w-64!"
+                      initialFocus={() => dateInput.current}
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="text-xs font-medium text-muted">
+                          Move to another day
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="compact"
+                          className="size-7! p-0!"
+                          aria-label="Close date picker"
+                          onClick={closeDay}
+                        >
+                          <X aria-hidden="true" className="size-4" />
+                        </Button>
+                      </div>
+                      <Input
+                        ref={dateInput}
+                        aria-label="Calendar item day"
+                        type="date"
+                        min="0001-01-01"
+                        max="9999-12-31"
+                        value={dayDraft}
+                        readOnly={disabled || editor.isSaving}
+                        onValueChange={(day) => {
+                          setDayDraft(day);
+                          setDayError(undefined);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            moveDay();
+                          }
+                        }}
+                      />
+                      {(dayError || editor.error) && (
+                        <p role="alert" className="mt-2 text-sm text-danger">
+                          {dayError || editor.error}
+                        </p>
+                      )}
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          size="compact"
+                          disabled={disabled || editor.isSaving}
+                          onClick={moveDay}
+                        >
+                          Move
+                        </Button>
+                      </div>
+                    </PopoverPopup>
+                  </PopoverRoot>
+                  <MenuRoot
+                    onOpenChange={(open) => {
+                      if (open) {
+                        skipFocus.current = false;
+                      }
+                    }}
+                  >
+                    <MenuTrigger
+                      ref={menuInput}
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="compact"
+                          className="size-7! p-0!"
+                          aria-label="Calendar item actions"
+                        >
+                          <MoreHorizontal
+                            aria-hidden="true"
+                            className="size-4"
+                          />
+                        </Button>
+                      }
+                    />
+                    <MenuPopup
+                      align="end"
+                      finalFocus={() =>
+                        skipFocus.current ? false : menuInput.current
+                      }
+                    >
+                      {editor.saved && (
+                        <MenuItem
+                          variant="danger"
+                          disabled={disabled || editor.isSaving}
+                          onClick={() => {
+                            skipFocus.current = true;
+                            setConfirmDelete(true);
+                          }}
+                        >
+                          Delete
+                        </MenuItem>
+                      )}
+                    </MenuPopup>
+                  </MenuRoot>
+                </div>
+              </div>
+              {gallery}
+              {unavailable && (
+                <p role="alert" className="text-sm text-danger">
+                  This item is no longer available. Any unsaved draft remains
+                  here.
+                </p>
+              )}
+              {editor.error && !dayOpen && (
+                <p role="alert" className="text-sm text-danger">
+                  {editor.error}
+                </p>
+              )}
+              <TextDraftActions editor={editor} />
+              <span role="status" className="sr-only">
+                {editor.isSaving
+                  ? "Saving"
+                  : editor.hasChanges
+                    ? "Unsaved changes"
+                    : editor.saved
+                      ? "Saved"
+                      : "New item"}
+              </span>
             </div>
-          </div>
-          {unavailable && (
-            <p role="alert" className="text-sm text-danger">
-              This item is no longer available. Any unsaved draft remains here.
-            </p>
           )}
-          {editor.error && !dayOpen && (
-            <p role="alert" className="text-sm text-danger">
-              {editor.error}
-            </p>
-          )}
-          <TextDraftActions editor={editor} />
-          <span role="status" className="sr-only">
-            {editor.isSaving
-              ? "Saving"
-              : editor.hasChanges
-                ? "Unsaved changes"
-                : editor.saved
-                  ? "Saved"
-                  : "New item"}
-          </span>
-        </div>
+        </CalendarMedia>
       </li>
       <DialogRoot
         open={confirmDelete}
@@ -578,7 +611,8 @@ export function CalendarItemEditor({
             </>
           }
         >
-          This removes the item for everyone in the household.
+          This removes the item and its pictures from the calendar for everyone
+          in the household.
           {deleteError && (
             <p role="alert">Unable to delete this item. Try again.</p>
           )}
