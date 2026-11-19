@@ -1,5 +1,7 @@
 import { Hono } from "hono";
 import { type CreateAuthRoutesInput, createAuthRoutes } from "./auth/routes";
+import type { CalendarMediaServices } from "./calendar/media";
+import { createCalendarMediaRoutes } from "./calendar/routes";
 import { createDocumentRoutes } from "./documents/routes";
 import type { DocumentServices } from "./documents/service";
 import { createHabitStatsRoutes } from "./habits/routes";
@@ -41,6 +43,7 @@ export type CreateAppInput = {
   exerciseMedia: ExerciseMediaServices;
   exerciseStats?: ExerciseStatsService;
   habitStats?: HabitStatsService;
+  calendarMedia?: CalendarMediaServices;
   documents?: DocumentServices;
   listMedia?: ListMediaServices;
   logs?: LogEntryServices;
@@ -86,6 +89,13 @@ export function createApp(input: CreateAppInput) {
     "/api/households/:householdId/workouts/exercises",
     createExerciseMediaRoutes({ jwtSecret, services: input.exerciseMedia }),
   );
+
+  if (input.calendarMedia) {
+    app.route(
+      "/api/households/:householdId/calendar/items",
+      createCalendarMediaRoutes({ jwtSecret, services: input.calendarMedia }),
+    );
+  }
 
   if (input.habitStats) {
     app.route(

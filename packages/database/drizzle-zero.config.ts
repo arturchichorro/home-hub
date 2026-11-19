@@ -6,6 +6,7 @@ export default drizzleZeroConfig(drizzleSchema, {
   tables: {
     calendarItems: true,
     calendarPeople: true,
+    calendarMedia: true,
     documents: true,
     documentTags: true,
     documentTagAssignments: true,
