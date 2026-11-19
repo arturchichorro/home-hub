@@ -117,7 +117,9 @@ describe("habit reordering", () => {
       expect(onMove).not.toHaveBeenCalled();
     },
   );
-  it("does not offer reorder handles for archived habits", () => {
-    expect(render(true, true)).not.toContain('aria-label="Reorder');
+  it("does not offer reorder handles or persist drags for archived habits", () => {
+    expect(render(false, true)).not.toContain('aria-label="Reorder');
+    drag();
+    expect(onMove).not.toHaveBeenCalled();
   });
 });

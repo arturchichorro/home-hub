@@ -88,7 +88,7 @@ afterEach(() => vi.useRealTimers());
 const render = (props = {}) =>
   renderToStaticMarkup(<HabitsPage householdId={householdId} {...props} />);
 describe("quick habits overview", () => {
-  it("has one obvious today toggle, a name link and seven non-interactive preview days, not management/calendars", () => {
+  it("shows today, a name link, seven non-interactive preview days and reorder handles on first render", () => {
     setup();
     const html = render();
     expect(
@@ -97,8 +97,12 @@ describe("quick habits overview", () => {
     expect(html).toContain(`href="/households/${householdId}/habits/habit-1"`);
     expect(html.match(/role="img"/g)).toHaveLength(7);
     expect(html).not.toMatch(
-      /<table|Previous month|Habit name|Workout link|Reorder Read|History for Read/,
+      /<table|Previous month|Habit name|Workout link|History for Read/,
     );
+    expect(html).toContain('aria-label="Reorder Read"');
+    expect(
+      html.match(/<button[^>]*aria-label="Reorder Read"[^>]*>/)?.[0],
+    ).not.toContain('disabled=""');
     expect(useQuery).toHaveBeenCalledTimes(2);
   });
   it("defaults to me and never mixes another person's completion or note into previews", () => {
@@ -162,7 +166,7 @@ describe("quick habits overview", () => {
   it("keeps archived progress inspectable without write controls", () => {
     setup();
     expect(render({ archived: true })).not.toMatch(
-      /Mark done|Clear completion|<textarea/,
+      /Mark done|Clear completion|<textarea|aria-label="Reorder/,
     );
   });
   it("keeps detail navigation available offline while disabling today's write", () => {
@@ -175,6 +179,9 @@ describe("quick habits overview", () => {
       )?.[0],
     ).toContain('disabled=""');
     expect(html).toContain(`href="/households/${householdId}/habits/habit-1"`);
+    expect(
+      html.match(/<button[^>]*aria-label="Reorder Read"[^>]*>/)?.[0],
+    ).toContain('disabled=""');
   });
   it.each(["unknown", "error", "complete"])(
     "handles %s query state",
