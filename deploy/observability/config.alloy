@@ -175,7 +175,7 @@ loki.process "private_projection" {
   {{- /* END GENERATED DIAGNOSTICS */ -}}
   {{- end -}}
 {{- else if regexMatch "^(deploy|backup)$" (toString .sourceService) -}}
-  {{- if regexMatch "^(deployment_started|deployment_succeeded|deployment_failed|backup_started|backup_succeeded|backup_failed|collector_canary)$" (toString .event) -}}{{- $_ := set $o "event" .event -}}{{- $_ := set $o "severity" "info" -}}{{- end -}}
+  {{- if regexMatch "^(deployment_started|deployment_succeeded|deployment_failed|backup_started|backup_succeeded|backup_failed)$" (toString .event) -}}{{- $_ := set $o "event" .event -}}{{- $_ := set $o "severity" "info" -}}{{- end -}}
   {{- if regexMatch "failed$" (toString .event) -}}{{- $_ := set $o "severity" "error" -}}{{- end -}}
   {{- if regexMatch "^[a-f0-9]{40}$" (toString .recordRevision) -}}{{- $_ := set $o "revision" .recordRevision -}}{{- end -}}
   {{- if regexMatch "^(preflight|build|cutover|migrate|backend|web|health|configuration|dump|archive|upload|verify_upload|unknown)$" (toString .phase) -}}{{- $_ := set $o "phase" .phase -}}{{- end -}}
@@ -221,8 +221,8 @@ loki.process "private_projection" {
 		older_than          = "24h"
 		drop_counter_reason = "outside_replay_window"
 	}
-	// Three global buckets, never per service/revision. A fresh canary survives
-	// both routine traffic and error storms. Each bucket is capped at 1/sec.
+	// Two global buckets, never per service/revision: normal and critical.
+	// Each bucket is capped at 1/sec.
 	stage.json {
 		source      = "safe"
 		expressions = {safeSeverity = "severity", safeEvent = "event"}
@@ -230,7 +230,7 @@ loki.process "private_projection" {
 
 	stage.template {
 		source   = "priority"
-		template = `{{ if eq (toString .safeEvent) "collector_canary" }}canary{{ else if or (regexMatch "^(error|fatal)$" (toString .safeSeverity)) (regexMatch "^(deployment_|backup_|mutation_database_error|zero_query_error|zero_mutation_error|shutdown_failed)" (toString .safeEvent)) }}critical{{ else }}normal{{ end }}`
+		template = `{{ if or (regexMatch "^(error|fatal)$" (toString .safeSeverity)) (regexMatch "^(deployment_|backup_|mutation_database_error|zero_query_error|zero_mutation_error|shutdown_failed)" (toString .safeEvent)) }}critical{{ else }}normal{{ end }}`
 	}
 
 	stage.labels {

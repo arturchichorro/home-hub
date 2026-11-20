@@ -30,12 +30,11 @@ it("keeps syslog tags short and preserves the canonical 0053 release cutoff", as
     "1793354301869",
   );
 });
-it("assigns the canary to a separate global allowance before normal/error classification", async () => {
+it("bounds normal/error traffic without heartbeat infrastructure", async () => {
   const config = await read("deploy/observability/config.alloy");
-  expect(config).toContain(
-    'if eq (toString .safeEvent) "collector_canary" }}canary',
-  );
   expect(config).toContain("by_label_name");
   expect(config).toContain('"priority"');
+  expect(config).toContain("critical{{ else }}normal");
+  expect(config).not.toContain("collector_canary");
   expect(config).not.toContain("/docker-logs");
 });

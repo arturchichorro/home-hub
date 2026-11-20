@@ -1,13 +1,13 @@
 // Manual synthetic fixture only. No production endpoints, secrets or app writes.
 import assert from "node:assert/strict";
 import { createSocket } from "node:dgram";
-import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { sourceDiagnosticFixture } from "./diagnostics-fixture.ts";
 
 const [mode, directory, port, metricsPort] = process.argv.slice(2);
 assert(directory);
-const secret = "DO_NOT_EXPORT_PRIVATE_CANARY_9a70";
+const secret = "DO_NOT_EXPORT_PRIVATE_FIXTURE_9a70";
 const revision = "a".repeat(40);
 const requestId = "147db701-6b85-42f9-b09d-aa39784bf1ca";
 const socket = createSocket("udp4");
@@ -124,7 +124,6 @@ try {
       "postgres_error",
       "zero_replica_missing_key",
       "operational_log",
-      "collector_canary",
       "deployment_succeeded",
       "deployment_failed",
       "backup_succeeded",
@@ -188,27 +187,10 @@ try {
           body: secret,
         });
       }
-      await appendFile(
-        join(directory, "operations/events.jsonl"),
-        JSON.stringify({
-          timestamp: new Date().toISOString(),
-          service: "deploy",
-          event: "collector_canary",
-          revision: "b".repeat(40),
-        }) + "\n",
-      );
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
   } else if (mode === "verify_flood") {
-    const entries = await logs();
-    assert(
-      entries.some(
-        (entry: { labels: { revision: string }; record: { event: string } }) =>
-          entry.record.event === "collector_canary" &&
-          entry.labels.revision === "b".repeat(40),
-      ),
-      "Canary starved by normal/error flood",
-    );
+    await logs(); // Privacy must still hold under load.
     const metrics = await (
       await fetch(`http://127.0.0.1:${metricsPort}/metrics`)
     ).text();
@@ -224,7 +206,7 @@ try {
       "No observed rate limiting",
     );
     console.log(
-      "PASS: separate canary allowance survives simultaneous normal and error floods.",
+      "PASS: bounded export under simultaneous normal and error floods.",
     );
   } else {
     throw Error("Unknown fixture mode");

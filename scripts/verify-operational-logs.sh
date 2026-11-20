@@ -104,7 +104,6 @@ run_shell grafana/alloy:v1.21.0 scripts/deploy-release.sh >/dev/null
 if run_shell -e FIXTURE_MIGRATION_EXIT=37 grafana/alloy:v1.21.0 scripts/deploy-release.sh >/dev/null; then exit 1; else [[ "$?" == 37 ]]; fi
 run_shell -e HOME_HUB_BACKUP_ENV_FILE=/fixture/backup.env grafana/alloy:v1.21.0 scripts/backup-production-postgres.sh >/dev/null
 if run_shell -e HOME_HUB_BACKUP_ENV_FILE=/missing grafana/alloy:v1.21.0 scripts/backup-production-postgres.sh >/dev/null 2>&1; then exit 1; fi
-run_shell grafana/alloy:v1.21.0 scripts/record-ops-event.sh collector_canary
 (cd apps/api && node --import tsx test/observability-pipeline.ts send "$work" "$udp")
 sleep 6
 (cd apps/api && node --import tsx test/observability-pipeline.ts verify "$work" "$port")

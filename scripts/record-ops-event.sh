@@ -5,7 +5,7 @@ set -u
 umask 027
 kind="${1:-}"
 case "$kind" in
-  deployment_started|deployment_succeeded|deployment_failed|collector_canary) service=deploy ;;
+  deployment_started|deployment_succeeded|deployment_failed) service=deploy ;;
   backup_started|backup_succeeded|backup_failed) service=backup ;;
   *) exit 0 ;;
 esac

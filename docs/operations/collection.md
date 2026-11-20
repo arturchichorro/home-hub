@@ -22,10 +22,9 @@ retagged with an app revision. Deployment outcomes carry the successful app SHA.
 
 ## Bounds and loss
 
-- Three **global** priority buckets: normal, critical and canary; each 1 line/sec,
-  burst 20, max 2 KiB projected records. Error floods cannot spend the canary budget.
-  Worst-case line payload is about 16.5 GB/31 days, plus labels; this is not a
-  billing guarantee. The optional timer emits one canary/minute when enabled.
+- Two **global** priority buckets: normal and critical; each 1 line/sec,
+  burst 20, max 2 KiB projected records. Worst-case line payload is about
+  11 GB/31 days, plus labels; this is not a billing guarantee.
 - Alloy: 256 MiB, 0.25 CPU, 64 PIDs, read-only root, no capabilities; bounded batches,
   three retries, no disk WAL. Stopping it does not block the application.
 - Docker uses non-blocking delivery and an explicit 3 × 10 MB dual logging cache,
@@ -33,7 +32,7 @@ retagged with an app revision. Deployment outcomes carry the successful app SHA.
   Docker documents that remote-driver write failures can also lose cache entries.
 - UDP messages sent while Alloy is down are **not replayed** into Cloud. Normal
   app logging is lossy diagnostics, not a durable audit trail.
-- Safe host deploy/backup/canary events remain in rotated local files (daily,
+- Safe host deploy/backup events remain in rotated local files (daily,
   maxsize 1 MB on logrotate runs, seven rotations). Their positions persist;
   file replay is bounded to 24 hours. Original syslog timestamps have Docker's
   microsecond precision; host events use their original UTC timestamp.
@@ -61,8 +60,7 @@ Copy `deploy/observability/cloud.env.example` to ignored `cloud.env` with mode
 write-only token and numeric group ID. Do not paste secrets into chat or Git.
 Ensure `config.alloy` is readable by UID 10001 (0644, contains no secrets).
 
-Install the provided logrotate file for bounded host-event storage. The canary
-systemd service/timer and custom alerts are optional, not startup prerequisites. Logging
+Install the provided logrotate file for bounded host-event storage. Logging
 driver/prefix changes require one-time recreation of app containers **including
 PostgreSQL** in a separately approved, backed-up maintenance window. Preserve
 the current 0053 cutover guard, application volumes and Zero replica.
@@ -79,11 +77,9 @@ curl --fail http://127.0.0.1:12345/-/ready
 Readiness is not delivery. Essential acceptance must find a fresh safe application
 health-request UUID in Cloud through the agent tool. This tests the Docker UDP
 path; missing results do not prove app health. If host-event delivery is needed,
-verify a real deploy/backup outcome as well. Optional canary monitoring additionally
-tests the file path independently; enable its timer and absence alert only when
-wanted. Keep Cloud usage within the Free quota. Stop collection on privacy/usage/
-delivery surprises; never fall back to raw logs. Stopping this Compose project
-leaves app services/volumes alone; disable the canary timer too if enabled. Do not
+verify a real deploy/backup outcome as well. Keep Cloud usage within the Free
+quota. Stop collection on privacy/usage/delivery surprises; never fall back to
+raw logs. Stopping this Compose project leaves app services/volumes alone. Do not
 delete positions or use app `down -v`.
 
 ## Manual verification
@@ -91,7 +87,7 @@ delete positions or use app `down -v`.
 `bash scripts/verify-operational-logs.sh` uses owned disposable Alloy/Loki,
 fake credentials and synthetic data. It verifies real Docker syslog delivery,
 non-root operation, raw Loki privacy, source evidence, preserved deployment/backup
-exit codes, rate limiting and a canary surviving normal/error floods. On Docker
+exit codes and rate limiting under normal/error floods. On Docker
 Desktop, the daemon driver probe uses the receiver's isolated container IP;
 production Linux uses the configured loopback port and needs its own acceptance
 probe. This manual runner is not a feature-specific CI/deployment gate.
