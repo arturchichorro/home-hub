@@ -1,7 +1,7 @@
-import { Images, ListTodo } from "@home-hub/ui-web";
+import { BookOpen, Images, ListTodo } from "@home-hub/ui-web";
 import { useId } from "react";
 
-type ListKind = "checklist" | "moodboard";
+type ListKind = "checklist" | "moodboard" | "flashcards";
 
 export function ListKindPicker({
   value,
@@ -17,11 +17,12 @@ export function ListKindPicker({
   return (
     <fieldset disabled={disabled} className="grid gap-1.5">
       <legend className="mb-1.5 text-sm font-medium">Type</legend>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {(
           [
             ["checklist", "Checklist", ListTodo],
             ["moodboard", "Moodboard", Images],
+            ["flashcards", "Flashcards", BookOpen],
           ] as const
         ).map(([kind, label, Icon]) => (
           <label key={kind} className="min-w-0 cursor-pointer">

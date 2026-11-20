@@ -3,7 +3,7 @@
 Home Hub is a private application for people who share a household. Each
 household enables the built-in modules it wants to use. Implemented modules include:
 
-- named, orderable shared lists;
+- named, orderable shared Checklists, Moodboards and [Flashcards decks](./lists/flashcards.md);
 - recipes and ordered recipe ingredients;
 - recipe images stored outside the application server;
 - opt-in [Habits](./habits/) with a today-first list, personal daily completions and on-demand monthly history;

@@ -34,7 +34,7 @@ function createMutationTestProvider({
       ? [
           { id: "membership-id" },
           { householdId, moduleKey: "lists", enabled: true },
-          { id: listId, householdId },
+          { id: listId, householdId, kind: "checklist" },
           { id: itemId, householdId },
         ]
       : [{ id: "membership-id" }, undefined];

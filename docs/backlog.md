@@ -21,7 +21,6 @@ implemented system, not with unmerged feature branches.
 
 ## Future modules and capabilities
 
-- [ ] French Vocabulary / flashcards.
 - [ ] Goals tracking.
 - [ ] Household finance.
 - [ ] Friend list with timestamped notes.

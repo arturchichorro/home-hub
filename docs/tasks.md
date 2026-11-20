@@ -38,6 +38,18 @@ Habits day boxes and optional workout-linked completion are integrated into
 When a review item merges, remove its pending entry and update the corresponding
 subject/history. Guest Access remains excluded from this integration.
 
+## Flashcards in Lists
+
+Promoted from Backlog. The approved household-shared, text-only deck design is
+implemented on `feat/list-flashcards`, pending review/integration. See
+[Flashcards](./lists/flashcards.md) for behavior, data and verification. No spaced
+repetition or progress storage; this status is not migration/merge/deploy approval.
+
+- [x] Add the typed card schema, reviewed additive migration and authorized synchronization
+- [x] Integrate the third list type, protected inline editing and manual practice
+- [x] Verify permissions, data preservation, drafts and desktop/mobile interactions
+- [ ] Review the implementation before any separately authorized commit, migration or release
+
 ## Deploy to and migrate onto the Raspberry Pi
 
 - [ ] Verify ARM64 images and native dependencies for the complete production stack

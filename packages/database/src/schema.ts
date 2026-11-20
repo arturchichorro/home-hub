@@ -388,7 +388,7 @@ export const lists = pgTable(
 
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
-    kind: text("kind", { enum: ["checklist", "moodboard"] })
+    kind: text("kind", { enum: ["checklist", "moodboard", "flashcards"] })
       .notNull()
       .default("checklist"),
     mediaCount: integer("media_count").notNull().default(0),
@@ -403,7 +403,10 @@ export const lists = pgTable(
   },
   (table) => [
     unique("lists_household_id_id_unique").on(table.householdId, table.id),
-    check("lists_kind", sql`${table.kind} IN (\'checklist\', \'moodboard\')`),
+    check(
+      "lists_kind",
+      sql`${table.kind} IN (\'checklist\', \'moodboard\', \'flashcards\')`,
+    ),
     check("lists_media_count", sql`${table.mediaCount} >= 0`),
     uniqueIndex("lists_household_id_normalized_name_idx")
       .on(table.householdId, table.normalizedName)
@@ -413,6 +416,50 @@ export const lists = pgTable(
       .where(sql`${table.deletedAt} is null`),
   ],
 );
+
+export const listFlashcards = pgTable(
+  "list_flashcards",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id").notNull(),
+    listId: uuid("list_id").notNull(),
+    front: text("front").notNull(),
+    back: text("back").notNull(),
+    sortKey: integer("sort_key").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.householdId, table.listId],
+      foreignColumns: [lists.householdId, lists.id],
+      name: "list_flashcards_household_list_fk",
+    }),
+    check(
+      "list_flashcards_front",
+      sql`length(${table.front}) BETWEEN 1 AND 10000 AND ${table.front} ~ '[^[:space:]]'`,
+    ),
+    check(
+      "list_flashcards_back",
+      sql`length(${table.back}) BETWEEN 1 AND 10000 AND ${table.back} ~ '[^[:space:]]'`,
+    ),
+    index("list_flashcards_list_sort_id")
+      .on(table.householdId, table.listId, table.sortKey, table.id)
+      .where(sql`${table.deletedAt} IS NULL`),
+  ],
+);
+
+export const listFlashcardsRelations = relations(listFlashcards, ({ one }) => ({
+  list: one(lists, {
+    fields: [listFlashcards.householdId, listFlashcards.listId],
+    references: [lists.householdId, lists.id],
+  }),
+}));
 
 export const listItems = pgTable(
   "list_items",
@@ -463,6 +510,7 @@ export const listsRelations = relations(lists, ({ many, one }) => ({
   }),
   items: many(listItems),
   attachments: many(listMedia),
+  cards: many(listFlashcards),
 }));
 
 export const listItemsRelations = relations(listItems, ({ one }) => ({

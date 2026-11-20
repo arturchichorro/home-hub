@@ -1,8 +1,8 @@
 # Moodboards
 
-Moodboards are a second **list type**, not a separate household module. Create a
-Checklist or Moodboard in the normal New list dialog; both have the same title,
-name editor, navigation, household sharing and library ordering. Existing lists
+Moodboards are a **list type**, not a separate household module. Choose Moodboard
+alongside Checklist and Flashcards in the normal New list dialog. All share the
+same title, name editor, navigation, household sharing and library ordering. Existing lists
 remain Checklists. Type conversion, captions, external links and mixed checklist
 items/media are not part of this version.
 

@@ -1,7 +1,8 @@
 # Lists module
 
 Lists provides named, manually ordered lists per household. Its stable module
-key is `lists`. Each list is a Checklist or [Moodboard](./moodboards.md), with a
+key is `lists`. Each list is a Checklist, [Moodboard](./moodboards.md) or
+[Flashcards deck](./flashcards.md), with a
 normal editable title; existing lists remain Checklists. Lists and Recipes are enabled by default; new households start
 with no lists. Previously migrated households retain their lists, items, and
 module settings.
@@ -18,8 +19,8 @@ list (up to 20 preview rows plus lookahead); both older library query shapes sta
 unchanged. Moodboard cards show up to four thumbnails/posters without counts or
 autoplay; see [Moodboards](./moodboards.md).
 
-New list creation uses two labeled, keyboard-accessible icon radio choices for
-Checklist and Moodboard, rather than a select. Cards align by grid row; previews
+New list creation uses three labeled, keyboard-accessible icon radio choices for
+Checklist, Moodboard and Flashcards, rather than a select. Cards align by grid row; previews
 do not force every card to a square or grow to fit the complete item history.
 
 Clicking anywhere on a card opens the list; dragging the card reorders it, with
@@ -56,7 +57,7 @@ submission before transitioning to a saved row.
 ## Data model
 
 `lists` stores `id`, `household_id`, display and normalized names, `kind`
-(`checklist | moodboard`, Checklist by default), `media_count`, `sort_key`,
+(`checklist | moodboard | flashcards`, Checklist by default), `media_count`, `sort_key`,
 `deleted_at`, and timestamps. Active normalized names are unique per household.
 `list_items` adds
 `list_id` and `active | crossed | archived | deleted` status to the same fields;
@@ -92,6 +93,11 @@ and temporary mirroring bridge without changing live Lists data.
 Moodboards add typed `list_media` attachments to shared assets, plus dedicated
 media queries, upload/read/removal APIs and the `lists.reorderMedia` mutation.
 They do not accept checklist items or change list type after creation.
+
+Flashcards add typed `list_flashcards` rows and dedicated card queries/mutators;
+manual practice stays entirely in memory. See [Flashcards](./flashcards.md) for
+editing, draft protection, ordering, authorization and migration details. Neither
+Flashcards nor Moodboards accept checklist-item writes.
 
 Recipe ingredients and list items remain separate records. Any future operation
 to copy ingredients must choose a target list and authorize both modules.
