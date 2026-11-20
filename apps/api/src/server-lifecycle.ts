@@ -1,4 +1,5 @@
 import type { Server } from "node:http";
+import { diagnosticFor } from "./diagnostics";
 import {
   type StructuredLogger,
   serializeUnexpectedError,
@@ -65,6 +66,7 @@ export function createGracefulShutdown({
         logger.error({
           event: "shutdown_failed",
           signal,
+          ...diagnosticFor("server.shutdown", error, "HH_SHUTDOWN_FAILED"),
           error: serializeUnexpectedError(
             error instanceof Error ? error : new Error("Unknown error"),
           ),

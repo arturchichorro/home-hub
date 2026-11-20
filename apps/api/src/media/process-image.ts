@@ -4,6 +4,7 @@ import {
   mediaProcessingLifetimeSeconds,
   signMediaCapability,
 } from "@home-hub/shared/media-delivery";
+import { instrumentOperation } from "../diagnostics";
 
 export class InvalidMediaUploadError extends Error {
   constructor() {
@@ -11,7 +12,12 @@ export class InvalidMediaUploadError extends Error {
   }
 }
 
-export async function processMediaImage({
+export const processMediaImage = instrumentOperation(
+  "media.process_image",
+  processMediaImageImplementation,
+);
+
+async function processMediaImageImplementation({
   baseUrl,
   identity,
   contentType,

@@ -1,11 +1,17 @@
 import { HeadObjectCommand, type S3Client } from "@aws-sdk/client-s3";
+import { instrumentOperation } from "../diagnostics";
 
 export type InspectR2ObjectResult = {
   contentType: string | undefined;
   byteSize: number | undefined;
 };
 
-export async function inspectR2Object({
+export const inspectR2Object = instrumentOperation(
+  "media.inspect_object",
+  inspectR2ObjectImplementation,
+);
+
+async function inspectR2ObjectImplementation({
   client,
   bucket,
   objectKey,

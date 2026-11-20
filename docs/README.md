@@ -47,6 +47,12 @@ Connected changes should appear immediately and converge across clients. Previou
   interfaces. The prototype review stack is not part of `develop`; see [Tasks](./tasks.md#work-in-review).
 - [Shared media foundation plan](./plans/shared-media.md) is a completed historical design, not pending implementation.
 
+## Operational diagnostics
+
+[Application diagnostics](./operations/diagnostics.md) documents privacy-safe error
+codes and source evidence. Collection and agent access are separate, opt-in setup;
+merging diagnostic code alone does not activate export.
+
 ## Useful commands
 
 ### Local database

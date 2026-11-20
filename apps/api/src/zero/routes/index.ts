@@ -17,7 +17,7 @@ export function createZeroRoutes(input: CreateZeroRoutesInput) {
   zeroRoutes.post(
     "/query",
     createBearerAuth(input.jwtSecret),
-    createZeroQueryRoute(),
+    createZeroQueryRoute(input.logger),
   );
 
   zeroRoutes.post(
