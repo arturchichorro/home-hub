@@ -3,8 +3,7 @@
 This is searchable production diagnostics, not the household Logs module.
 It grants no agent SSH, SQL, Docker, deployment or administrator tool.
 
-Read the [essential setup checklist](./setup.md) first. Canary timers and custom
-alerts are optional. [Technical commands](./setup-reference.md) and [VPS load
+Read the [essential setup checklist](./setup.md) first. [Technical commands](./setup-reference.md) and [VPS load
 expectations](./capacity.md) are separate references. Merging to `develop` is not
 deployment; provisioning Cloud and production activation remain separate owner
 actions. No Cloud credentials, production services or agent configuration were
@@ -15,7 +14,7 @@ The three review layers are:
 1. [Application diagnostics](./diagnostics.md): safe error codes, operations and
    owned-source locations; no collection or Cloud dependency.
 2. [Non-root collection](./collection.md): loopback UDP, pre-export allowlists,
-   bounded local cache, separate canary rate budget and host outcome events.
+   bounded local cache, normal/error rate limits and host outcome events.
 3. [Read-only agent access](./reader.md): bounded, cited and locally audited
    searches using a separate tenant-scoped read token.
 

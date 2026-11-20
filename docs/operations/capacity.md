@@ -43,5 +43,4 @@ can miss build/backup/media peaks.
 Start with the current limits and compare before/after under representative
 use. If the VPS is tight, stop the independent collector and preserve the app;
 then decide whether to optimize other workloads, resize, or move collection.
-Canary timers/custom alerts are optional, but disabling a once-per-minute
-canary barely changes resource usage—the simplification is mainly operational.
+There are no scheduled test messages or custom alerts in this setup.

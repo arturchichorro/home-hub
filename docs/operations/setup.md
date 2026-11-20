@@ -50,15 +50,14 @@ It reads the private Mac env file; you do not need to share the token with me.
 [Collector commands](./setup-reference.md#6-start-the-independent-collector) ·
 [MCP registration](./setup-reference.md#7-connect-the-local-read-only-mcp-reader)
 
-**Skip canary timers and custom alerts initially.** Keep the existing privacy
-filters, limits, separate tokens and local log rotation. The optional monitoring
-code stays available but does not need to run.
+There are no scheduled test messages or custom alerts to configure. Keep the
+privacy filters, limits, separate tokens and local log rotation.
 
 ## 5. Confirm the agent can find a fresh request
 
 Make a safe health request with a new request UUID, then ask the agent to find
 it using `search_logs`. Confirm status 200, operation `http.health`, expected
-revision and a citation. [Exact probe](./setup-reference.md#8-verify-delivery-optionally-add-monitoring).
+revision and a citation. [Exact probe](./setup-reference.md#8-verify-delivery).
 
 That is the essential acceptance check—collector readiness alone is not enough.
 Afterwards, ask: “Check errors from the last hour and explain likely fixes,

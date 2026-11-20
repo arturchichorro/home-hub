@@ -1,7 +1,7 @@
 # Log setup — technical reference
 
 Start with the [essential checklist](./setup.md). This reference contains the
-commands for assisted setup and optional monitoring; it is not an extra checklist.
+commands for assisted setup; it is not an extra checklist.
 
 **Reviewing this guide does not authorize executing its production steps.**
 Nothing has been activated yet. No new application database migration or Zero
@@ -135,17 +135,6 @@ Install safe-event rotation (required because deployment/backup events use a loc
 sudo install -m 0644 deploy/observability/logrotate.conf /etc/logrotate.d/home-hub-operations
 ```
 
-**Optional — skip for the essential setup:** enable the canary timer only if you
-want ongoing missing-log alerts. Its separate budget remains available either way:
-
-```sh
-sudo install -m 0644 deploy/observability/home-hub-log-canary.service /etc/systemd/system/
-sudo install -m 0644 deploy/observability/home-hub-log-canary.timer /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now home-hub-log-canary.timer
-sudo systemctl start home-hub-log-canary.service
-```
-
 ## 7. Connect the local read-only MCP reader
 
 On your Mac, update the checkout to the merged code and run
@@ -182,47 +171,32 @@ session. It should expose exactly **search_logs**, not Grafana writes, shell or
 SQL. I can do this registration later without seeing the token: it stays in the
 private env file. No harness configuration has been edited during this PR work.
 
-## 8. Verify delivery; optionally add monitoring
+## 8. Verify delivery
 
-Collector readiness alone is not acceptance.
+Collector readiness alone is not acceptance. Generate a UUID on your Mac and
+make a safe public health request:
 
-1. **Optional file-path check:** if you enabled the canary, search the last few
-   minutes for service `deploy`, event `collector_canary`. Otherwise skip this
-   check. Verify a real deploy/backup outcome separately if those logs are needed.
-2. Generate a UUID and make a safe public health request:
+```sh
+probe=$(node -e 'console.log(crypto.randomUUID())')
+curl --fail --silent --show-error -H "X-Request-ID: $probe" https://home.achichorro.com/api/health
+printf '\nRequest ID: %s\n' "$probe"
+```
 
-   ```sh
-   probe=$(node -e 'console.log(crypto.randomUUID())')
-   curl --fail --silent --show-error -H "X-Request-ID: $probe" https://home.achichorro.com/api/health
-   printf '\nRequest ID: %s\n' "$probe"
-   ```
+Use the MCP tool to search service `api` for that request ID in the last few
+minutes. Verify status 200, operation `http.health`, expected full app revision
+and a citation. This tests the actual Docker UDP delivery path.
 
-   Search service `api` for that request ID. Verify status 200, operation
-   `http.health` and the expected full app revision. Save its citation.
-   This proves Docker UDP delivery independently of the canary file.
-3. Inspect projected records in Grafana Explore: no private content, SQL,
-   tokens, raw exception text or absolute paths. Synthetic tests covered
-   unfamiliar source failures; do not deliberately break production to repeat them.
-4. **Optional — skip initially:** in Grafana Alerting, use the personal Loki datasource with this instant metric
-   query, evaluate every minute and alert when the value is below 1 (no pending
-   delay). Set query errors to alerting, not healthy:
+Inspect projected records: no private content, SQL, tokens, raw exception prose
+or absolute paths. Do not deliberately break production. If deploy/backup
+diagnostics are needed, verify a real outcome separately through that file path.
 
-   ```logql
-   sum(count_over_time({app="home-hub",environment="production",service="deploy"} | json | event="collector_canary" | __error__="" [10m])) or vector(0)
-   ```
-
-   This detects ten minutes without a canary without treating the healthy case
-   as “no data”. Add ingestion-usage warnings; monitor Alloy drops separately as
-   described in [Collection](./collection.md). Canary traffic has its own allowance.
-
-If a probe is missing, do not declare success or raise export limits. Inspect
-loopback delivery, group permissions, Alloy metrics and bounded local Docker logs.
-Never switch to raw export to debug it.
+If a probe is missing, inspect loopback delivery, permissions, Alloy drop metrics
+and bounded local Docker logs. Do not declare success or switch to raw export.
+No scheduled test messages or custom alert setup is required.
 
 ## Stop or rotate safely
 
-Stop only the `home-hub-observability` Compose project and disable the canary
-timer when intentionally off. App services continue normally; UDP records sent
+Stop only the `home-hub-observability` Compose project when intentionally off. App services continue normally; UDP records sent
 during downtime will not be replayed. Do not use app `down -v`, clear its database
 or reset Zero. Preserve the collector's positions directory for host events.
 

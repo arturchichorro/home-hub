@@ -67,24 +67,8 @@ try {
   assert(
     !audit.includes("fixture-read-token") && !audit.includes("DO_NOT_EXPORT"),
   );
-  for (const [service, minimum] of [
-    ["deploy", 1],
-    ["absent-fixture-stream", 0],
-  ] as const) {
-    const expression = `sum(count_over_time({app="home-hub",environment="production",service="${service}"} | json | event="collector_canary" | __error__="" [10m])) or vector(0)`;
-    const response: Response = await fetch(
-      `http://127.0.0.1:${port}/loki/api/v1/query?${new URLSearchParams({ query: expression })}`,
-    );
-    assert(response.ok);
-    const metric = await response.json();
-    assert.equal(metric.status, "success");
-    assert.equal(metric.data.resultType, "vector");
-    const value = Number(metric.data.result[0]?.value[1]);
-    assert(Number.isFinite(value));
-    assert(minimum ? value >= minimum : value === 0);
-  }
   console.log(
-    "PASS: actual MCP protocol, sole read-only tool, cited source diagnostic, truncation, private audit and documented canary alert.",
+    "PASS: actual MCP protocol, sole read-only tool, cited source diagnostic, truncation and private audit.",
   );
 } finally {
   await client.close();

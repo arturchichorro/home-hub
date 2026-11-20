@@ -35,7 +35,6 @@ const events = [
   "backup_started",
   "backup_succeeded",
   "backup_failed",
-  "collector_canary",
 ] as const;
 
 const severitySchema = z.enum([
