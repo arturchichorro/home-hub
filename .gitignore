@@ -4,6 +4,8 @@ apps/web/.tanstack/
 .pnpm-store/
 dist/
 .env
+deploy/observability/cloud.env
+deploy/observability/reader.env
 .env.*
 !.env.example
 !.env.production.example

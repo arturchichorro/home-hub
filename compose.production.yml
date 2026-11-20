@@ -1,7 +1,28 @@
 name: home-hub-production
 
+# Non-blocking loopback delivery; Docker's bounded dual cache supports docker logs.
+# No collector, Cloud token or Docker-directory mount is part of this project.
+x-operational-logging: &operational-logging
+  driver: syslog
+  options: &operational-log-options
+    syslog-address: udp://127.0.0.1:1514
+    syslog-format: rfc5424micro
+    tag: hh-migrate
+    mode: non-blocking
+    max-buffer-size: 1m
+    cache-disabled: "false"
+    cache-max-size: 10m
+    cache-max-file: "3"
+x-release-labels: &release-labels
+  org.opencontainers.image.revision: ${HOME_HUB_REVISION:-unknown}
+
 services:
   postgres:
+    logging:
+      <<: *operational-logging
+      options:
+        <<: *operational-log-options
+        tag: hh-postgres
     image: postgres:17
     restart: unless-stopped
     environment:
@@ -18,6 +39,8 @@ services:
       - max_wal_senders=10
       - -c
       - max_replication_slots=10
+      - -c
+      - "log_line_prefix=%m [%p] %e "
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -27,6 +50,8 @@ services:
       retries: 10
 
   migrate:
+    logging: *operational-logging
+    labels: *release-labels
     profiles: ["tools"]
     build:
       context: .
@@ -39,6 +64,12 @@ services:
         condition: service_healthy
 
   api:
+    logging:
+      <<: *operational-logging
+      options:
+        <<: *operational-log-options
+        tag: hh-api
+    labels: *release-labels
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -47,6 +78,7 @@ services:
     environment:
       NODE_ENV: production
       API_PORT: 3000
+      HOME_HUB_REVISION: ${HOME_HUB_REVISION:-unknown}
       DATABASE_URL: postgres://home_hub:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/home_hub
       API_JWT_SECRET: ${API_JWT_SECRET:?API_JWT_SECRET is required}
       SIGNUP_ACCESS_CODE: ${SIGNUP_ACCESS_CODE-}
@@ -72,6 +104,11 @@ services:
       retries: 10
 
   zero-cache:
+    logging:
+      <<: *operational-logging
+      options:
+        <<: *operational-log-options
+        tag: hh-zero-cache
     image: rocicorp/zero:1.11.3
     restart: unless-stopped
     stop_grace_period: 10m
@@ -88,6 +125,7 @@ services:
       ZERO_MUTATE_URL: http://api:3000/api/zero/mutate
       ZERO_ENABLE_CRUD_MUTATIONS: "false"
       ZERO_NUM_SYNC_WORKERS: "1"
+      ZERO_LOG_FORMAT: json
     depends_on:
       postgres:
         condition: service_healthy
@@ -103,6 +141,12 @@ services:
       retries: 10
 
   web:
+    logging:
+      <<: *operational-logging
+      options:
+        <<: *operational-log-options
+        tag: hh-web
+    labels: *release-labels
     build:
       context: .
       dockerfile: apps/web/Dockerfile

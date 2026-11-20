@@ -2,6 +2,10 @@
   "$schema": "./node_modules/knip/schema.json",
   "includeEntryExports": true,
   "workspaces": {
+    "apps/api": {
+      // Manual synthetic collector fixture; no production endpoints or secrets.
+      "entry": ["src/index.ts", "test/observability-pipeline.ts"]
+    },
     "apps/web": {
       // The second Vite app is an intentional, manual browser diagnostic.
       "entry": ["src/main.tsx", "test/moodboard-reorder/main.tsx"]

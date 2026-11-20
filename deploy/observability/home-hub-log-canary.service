@@ -1,0 +1,13 @@
+[Unit]
+Description=Emit Home Hub end-to-end log collection canary
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+UMask=0027
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/home-hub
+ExecStart=/bin/bash /opt/home-hub/scripts/record-ops-event.sh collector_canary

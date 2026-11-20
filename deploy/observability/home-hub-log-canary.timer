@@ -1,0 +1,10 @@
+[Unit]
+Description=Check Home Hub log ingestion every five minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Unit=home-hub-log-canary.service
+
+[Install]
+WantedBy=timers.target
