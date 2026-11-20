@@ -3,7 +3,9 @@
 This is searchable production diagnostics, not the household Logs module.
 It grants no agent SSH, SQL, Docker, deployment or administrator tool.
 
-Read the [ordered setup guide](./setup.md) first. Merging to `develop` is not
+Read the [essential setup checklist](./setup.md) first. Canary timers and custom
+alerts are optional. [Technical commands](./setup-reference.md) and [VPS load
+expectations](./capacity.md) are separate references. Merging to `develop` is not
 deployment; provisioning Cloud and production activation remain separate owner
 actions. No Cloud credentials, production services or agent configuration were
 changed while implementing this stack.
