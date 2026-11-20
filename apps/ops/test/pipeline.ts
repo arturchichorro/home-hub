@@ -72,7 +72,7 @@ try {
     ["absent-fixture-stream", 0],
   ] as const) {
     const expression = `sum(count_over_time({app="home-hub",environment="production",service="${service}"} | json | event="collector_canary" | __error__="" [10m])) or vector(0)`;
-    const response = await fetch(
+    const response: Response = await fetch(
       `http://127.0.0.1:${port}/loki/api/v1/query?${new URLSearchParams({ query: expression })}`,
     );
     assert(response.ok);
