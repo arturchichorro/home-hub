@@ -6,6 +6,7 @@ node_modules
 coverage
 .pnpm-store
 .env
+deploy/observability/*.env
 .env.*
 !.env.example
 .DS_Store

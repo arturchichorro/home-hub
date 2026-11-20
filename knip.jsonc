@@ -2,6 +2,9 @@
   "$schema": "./node_modules/knip/schema.json",
   "includeEntryExports": true,
   "workspaces": {
+    "apps/ops": {
+      "entry": ["src/server.ts", "test/pipeline.ts"]
+    },
     "apps/api": {
       // Manual synthetic collector fixture; no production endpoints or secrets.
       "entry": ["src/index.ts", "test/observability-pipeline.ts"]

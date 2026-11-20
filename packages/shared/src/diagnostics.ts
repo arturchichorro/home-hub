@@ -79,11 +79,11 @@ export type DiagnosticOperation = (typeof diagnosticOperations)[number];
 
 export type DiagnosticCode = keyof typeof diagnosticMessages;
 
-const diagnosticCodeSchema = z.enum(
+export const diagnosticCodeSchema = z.enum(
   Object.keys(diagnosticMessages) as [DiagnosticCode, ...DiagnosticCode[]],
 );
 
-const diagnosticOperationSchema = z.enum(diagnosticOperations);
+export const diagnosticOperationSchema = z.enum(diagnosticOperations);
 
 export function isDiagnosticLocation(value: string): boolean {
   const m = /^([^:\r\n]+):([1-9][0-9]{0,6}):([1-9][0-9]{0,3})$/.exec(value);
@@ -103,7 +103,7 @@ export function isDiagnosticLocation(value: string): boolean {
   );
 }
 
-const diagnosticLocationsSchema = z
+export const diagnosticLocationsSchema = z
   .array(z.string().max(160).refine(isDiagnosticLocation))
   .max(3);
 
