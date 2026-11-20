@@ -25,7 +25,7 @@ retagged with an app revision. Deployment outcomes carry the successful app SHA.
 - Three **global** priority buckets: normal, critical and canary; each 1 line/sec,
   burst 20, max 2 KiB projected records. Error floods cannot spend the canary budget.
   Worst-case line payload is about 16.5 GB/31 days, plus labels; this is not a
-  billing guarantee. The timer normally emits one canary/minute.
+  billing guarantee. The optional timer emits one canary/minute when enabled.
 - Alloy: 256 MiB, 0.25 CPU, 64 PIDs, read-only root, no capabilities; bounded batches,
   three retries, no disk WAL. Stopping it does not block the application.
 - Docker uses non-blocking delivery and an explicit 3 × 10 MB dual logging cache,
@@ -61,7 +61,8 @@ Copy `deploy/observability/cloud.env.example` to ignored `cloud.env` with mode
 write-only token and numeric group ID. Do not paste secrets into chat or Git.
 Ensure `config.alloy` is readable by UID 10001 (0644, contains no secrets).
 
-Install the provided logrotate file and canary systemd service/timer. Logging
+Install the provided logrotate file for bounded host-event storage. The canary
+systemd service/timer and custom alerts are optional, not startup prerequisites. Logging
 driver/prefix changes require one-time recreation of app containers **including
 PostgreSQL** in a separately approved, backed-up maintenance window. Preserve
 the current 0053 cutover guard, application volumes and Zero replica.
@@ -75,12 +76,15 @@ docker compose --env-file deploy/observability/cloud.env -f deploy/observability
 curl --fail http://127.0.0.1:12345/-/ready
 ```
 
-Readiness is not delivery. Acceptance must find both a fresh canary **and** a
-safe application health-request UUID in Cloud: they test independent file and UDP
-inputs. Alert on no canary for ten minutes, export drops and usage below the Free
-quota. Stop collection on privacy/usage/delivery surprises; never fall back to
-raw logs. Stopping this Compose project leaves app services/volumes alone;
-disable its canary timer separately. Do not delete positions or use app `down -v`.
+Readiness is not delivery. Essential acceptance must find a fresh safe application
+health-request UUID in Cloud through the agent tool. This tests the Docker UDP
+path; missing results do not prove app health. If host-event delivery is needed,
+verify a real deploy/backup outcome as well. Optional canary monitoring additionally
+tests the file path independently; enable its timer and absence alert only when
+wanted. Keep Cloud usage within the Free quota. Stop collection on privacy/usage/
+delivery surprises; never fall back to raw logs. Stopping this Compose project
+leaves app services/volumes alone; disable the canary timer too if enabled. Do not
+delete positions or use app `down -v`.
 
 ## Manual verification
 
