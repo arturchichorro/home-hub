@@ -6,7 +6,7 @@ export const listPreviewMaxRows = 20;
 
 export const listPreviewItemLimit = listPreviewMaxRows + 2;
 
-const listKindSchema = z.enum(["checklist", "moodboard"]);
+const listKindSchema = z.enum(["checklist", "moodboard", "flashcards"]);
 
 export const listNameSchema = z
   .string()

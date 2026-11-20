@@ -16,6 +16,7 @@ export type ListCardData = Pick<List, "id" | "householdId" | "name"> & {
   kind?: List["kind"];
   mediaCount?: number | null;
   attachments?: readonly MoodboardPin[];
+  cards?: readonly { id: string; front: string }[];
 };
 
 // Match image-gallery gestures: movement with a mouse, hold before touch drag.
@@ -135,6 +136,22 @@ export function ListCard({
         </h2>
         {list.kind === "moodboard" ? (
           <MoodboardPreview pins={list.attachments ?? []} />
+        ) : list.kind === "flashcards" ? (
+          <section className="min-h-33 min-w-0" aria-label="Flashcards preview">
+            <span className="text-xs text-muted">Flashcards</span>
+            <ul className="mt-3 grid min-w-0 gap-3">
+              {(list.cards ?? []).slice(0, 3).map((card) => (
+                <li key={card.id} className="truncate text-sm">
+                  {card.front}
+                </li>
+              ))}
+              {(list.cards?.length ?? 0) > 3 && (
+                <li aria-label="More cards" className="text-muted">
+                  …
+                </li>
+              )}
+            </ul>
+          </section>
         ) : (
           <ChecklistPreview items={list.items} />
         )}

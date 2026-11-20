@@ -20,13 +20,12 @@ another household.
 Home Hub is organized into small built-in modules:
 
 - [Calendar](./calendar/) provides shared day/title/note items, optional people labels, cook-log-style pictures and manual ordering within a day; no times or scheduling extras.
-- [Lists](./lists/) provides multiple named, manually ordered shared lists.
+- [Lists](./lists/) provides named shared Checklists, Moodboards and [Flashcards decks](./lists/flashcards.md), with manual ordering and simple in-memory card practice.
 - [Recipes](./recipes/) provides shared recipes, their ingredients, cooking
   history, and images.
 - [Habits](./habits/) provides shared habits with personal daily checkmarks and
   monthly calendar views; goals and streaks are deferred.
 - [Workouts](./workouts/) provides shared workouts, private set logs, and completion history.
-- French Vocabulary is a deferred module for learning words and expressions.
 - Further built-in modules, such as household finance, may be added when their
   product boundaries are understood.
 

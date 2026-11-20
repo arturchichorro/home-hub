@@ -24,6 +24,7 @@ type HouseholdModuleGateProps = {
   children: ReactNode;
   householdId: string;
   moduleKey: HouseholdModuleKey;
+  preserveChildrenWhileRedirecting?: boolean;
 };
 
 export function getDefaultHouseholdModuleRoute(
@@ -74,10 +75,36 @@ export function HouseholdModuleGate({
   children,
   householdId,
   moduleKey,
+  preserveChildrenWhileRedirecting = false,
 }: HouseholdModuleGateProps) {
   const [settings, result] = useQuery(
     queries.modules.byHousehold({ householdId }),
   );
+
+  const moduleEnabled = settings.some(
+    (setting) => setting.moduleKey === moduleKey && setting.enabled,
+  );
+
+  // Draft owners must remain mounted while a redirect waits on their blocker.
+  // Keep a stable fragment/child position in both enabled and disabled states.
+  if (preserveChildrenWhileRedirecting) {
+    return (
+      <>
+        {result.type === "error" ? (
+          <InlineAlert role="alert" variant="danger">
+            Unable to determine whether this module is enabled.
+          </InlineAlert>
+        ) : result.type === "complete" && !moduleEnabled ? (
+          <Navigate
+            to={getDefaultHouseholdModuleRoute(settings)}
+            params={{ householdId }}
+            replace
+          />
+        ) : null}
+        {children}
+      </>
+    );
+  }
 
   if (result.type === "error") {
     return (
@@ -86,10 +113,6 @@ export function HouseholdModuleGate({
       </InlineAlert>
     );
   }
-
-  const moduleEnabled = settings.some(
-    (setting) => setting.moduleKey === moduleKey && setting.enabled,
-  );
 
   if (result.type === "complete" && !moduleEnabled) {
     return (

@@ -75,6 +75,29 @@ describe("ListCard", () => {
     expect(markup).not.toContain("media item");
   });
 
+  it("shows bounded flashcard fronts without checklist controls or answers", () => {
+    const markup = renderToStaticMarkup(
+      <ListCard
+        list={{
+          ...list,
+          kind: "flashcards",
+          cards: Array.from({ length: 4 }, (_, index) => ({
+            id: String(index),
+            front: `Question ${index}`,
+          })),
+        }}
+        index={0}
+        disabled={false}
+      />,
+    );
+    expect(markup).toContain("Flashcards preview");
+    expect(markup).toContain("Question 0");
+    expect(markup).not.toContain("Question 3");
+    expect(markup).toContain("More cards");
+    expect(markup).not.toContain("Completed:");
+    expect(markup).not.toContain("<input");
+  });
+
   it("keeps empty and disconnected lists openable without extra card content", () => {
     const markup = renderToStaticMarkup(
       <ListCard list={{ ...list, items: [] }} index={0} disabled />,

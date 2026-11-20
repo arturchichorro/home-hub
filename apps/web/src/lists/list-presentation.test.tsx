@@ -7,13 +7,14 @@ import {
 import { ListKindPicker } from "./list-kind-picker";
 import { moodboardColumnCount, moodboardColumns } from "./moodboard-layout";
 
-it("offers two named native radio choices with a selected icon, not a select", () => {
+it("offers three named native radio choices with a selected icon, not a select", () => {
   const markup = renderToStaticMarkup(
     <ListKindPicker value="moodboard" onChange={() => {}} />,
   );
-  expect(markup.match(/type="radio"/g)).toHaveLength(2);
+  expect(markup.match(/type="radio"/g)).toHaveLength(3);
   expect(markup).toContain("Checklist");
   expect(markup).toContain("Moodboard");
+  expect(markup).toContain("Flashcards");
   expect(markup).toMatch(/checked="" value="moodboard"/);
   expect(markup).not.toContain("<select");
 });

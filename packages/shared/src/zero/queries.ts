@@ -1,5 +1,6 @@
 import { defineQueriesWithType, defineQueryWithType } from "@rocicorp/zero";
 import * as z from "zod";
+import { flashcardDeckSchema, flashcardPreviewLimit } from "../flashcards";
 import { habitsQuerySchema, shiftCalendarDate } from "../habits";
 import { listMediaPageSchema } from "../list-media";
 import { listDetailArgsSchema, listPreviewItemLimit } from "../lists";
@@ -148,6 +149,48 @@ const listsLibraryPreview = defineHomeHubQuery(
   householdIdArgsSchema,
   ({ args, ctx }) =>
     listLibraryQuery(args.householdId, ctx.userId, listPreviewItemLimit),
+);
+
+// New library contract keeps existing client query shapes unchanged.
+const listsLibraryCards = defineHomeHubQuery(
+  householdIdArgsSchema,
+  ({ args, ctx }) =>
+    listLibraryQuery(
+      args.householdId,
+      ctx.userId,
+      listPreviewItemLimit,
+    ).related("cards", (c) =>
+      c
+        .where("deletedAt", "IS", null)
+        .whereExists("list", (l) => l.where("kind", "flashcards"))
+        .orderBy("sortKey", "desc")
+        .orderBy("id", "asc")
+        .limit(flashcardPreviewLimit),
+    ),
+);
+
+const listFlashcards = defineHomeHubQuery(
+  flashcardDeckSchema,
+  ({ args, ctx }) =>
+    zql.listFlashcards
+      .where("householdId", args.householdId)
+      .where("listId", args.listId)
+      .where("deletedAt", "IS", null)
+      .whereExists("list", (l) =>
+        l
+          .where("deletedAt", "IS", null)
+          .where("kind", "flashcards")
+          .whereExists("household", (h) =>
+            h
+              .where("deletedAt", "IS", null)
+              .whereExists("members", (m) => m.where("userId", ctx.userId))
+              .whereExists("moduleSettings", (s) =>
+                s.where("moduleKey", "lists").where("enabled", true),
+              ),
+          ),
+      )
+      .orderBy("sortKey", "desc")
+      .orderBy("id", "asc"),
 );
 
 const listDetail = defineHomeHubQuery(listDetailArgsSchema, ({ args, ctx }) =>
@@ -638,6 +681,8 @@ export const queries = defineHomeHubQueries({
   lists: {
     library: listsLibrary,
     libraryPreview: listsLibraryPreview,
+    libraryCards: listsLibraryCards,
+    flashcards: listFlashcards,
     mediaPage: listMediaPage,
     mediaById: listMediaById,
     byHousehold: listsByHousehold,

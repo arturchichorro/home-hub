@@ -111,6 +111,7 @@ function setup(location: "server" | "client" = "server") {
       {
         id: listId,
         householdId,
+        kind: "checklist",
         name: "Shopping",
         normalizedName: "shopping",
         sortKey: 1024,

@@ -27,7 +27,9 @@ export function ListNameDialog({ householdId, onClose, onSaved }: Props) {
   const enabled = useZeroMutationEnabled();
   const formId = useId();
   const [name, setName] = useState("");
-  const [kind, setKind] = useState<"checklist" | "moodboard">("checklist");
+  const [kind, setKind] = useState<"checklist" | "moodboard" | "flashcards">(
+    "checklist",
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
 

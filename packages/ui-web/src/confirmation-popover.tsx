@@ -17,6 +17,7 @@ type ConfirmationPopoverContentProps =
 export type ConfirmationPopoverProps = ConfirmationPopoverContentProps & {
   confirmLabel?: string;
   onConfirm: () => void;
+  onOpenChange?: (open: boolean) => void;
   trigger: ReactElement;
 };
 
@@ -25,13 +26,19 @@ export function ConfirmationPopover({
   description,
   message,
   onConfirm,
+  onOpenChange,
   title,
   trigger,
 }: ConfirmationPopoverProps) {
   const [open, setOpen] = useState(false);
 
+  function changeOpen(next: boolean) {
+    setOpen(next);
+    onOpenChange?.(next);
+  }
+
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    <Popover.Root open={open} onOpenChange={changeOpen}>
       <Popover.Trigger render={trigger} />
       <Popover.Portal>
         <Popover.Positioner
@@ -63,7 +70,7 @@ export function ConfirmationPopover({
               <Button
                 size="compact"
                 variant="ghost"
-                onClick={() => setOpen(false)}
+                onClick={() => changeOpen(false)}
               >
                 Cancel
               </Button>
@@ -71,7 +78,7 @@ export function ConfirmationPopover({
                 size="compact"
                 variant="danger"
                 onClick={() => {
-                  setOpen(false);
+                  changeOpen(false);
                   onConfirm();
                 }}
               >

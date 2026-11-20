@@ -37,6 +37,7 @@ erDiagram
   users ||--o{ calendar_people : identifies
   households ||--o{ lists : owns
   lists ||--o{ list_items : contains
+  lists ||--o{ list_flashcards : contains
   households ||--o{ habits : owns
   habits ||--o{ habit_entries : records
   users ||--o{ habit_entries : authors
@@ -158,15 +159,17 @@ a setting for every implemented module. A new module migration backfills every
 existing household with its chosen default; missing settings fail closed.
 
 Lists and Recipes are enabled by default; Habits and Workouts default to disabled.
-Deferred modules such as French Vocabulary have no implemented setting yet.
+Flashcards uses the Lists setting, not a separate module setting.
 Disabling a module retains all of its rows.
 Core household and membership behavior has no module setting and cannot be
 disabled.
 
 ### Lists module tables
 
-Lists owns `lists` and `list_items`. Their columns, normalization, uniqueness,
-ordering, and status-transition rules are documented in the
+Lists owns `lists`, `list_items` and typed `list_flashcards` rows.
+[Flashcards](./lists/flashcards.md) documents the card fields, tombstones and
+household-qualified parent FK; practice adds no session/progress tables.
+Checklist/list normalization, uniqueness, ordering and status transitions live in the
 [Lists module data model](./lists/#data-model). Migration `0017` removed
 `shopping_items` and the temporary bridge; neither remains in the current schema.
 
