@@ -148,7 +148,7 @@ export function RecipeIngredientDraftNameForm({
         aria-invalid={error ? true : undefined}
         aria-errormessage={error ? errorId : undefined}
         autoComplete="off"
-        className="field-sizing-content h-7! min-w-0 flex-initial! px-1 leading-7"
+        className="field-sizing-content h-7! min-w-0 max-w-full flex-initial! px-1 leading-7"
         disabled={!mutationEnabled}
         enterKeyHint="done"
         maxLength={150}
