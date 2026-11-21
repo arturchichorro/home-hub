@@ -32,6 +32,14 @@ The VPS includes OVHcloud's standard daily backup retained for 24 hours. The
 optional manual snapshot service is useful before risky maintenance, but
 neither replaces the off-provider PostgreSQL backups required below.
 
+## Optional operational log setup
+
+[The ordered log setup guide](./operations/setup.md) separates feature merges to
+`develop`, private personal Cloud tokens, the approved `main` release/maintenance
+window, and independent collector/MCP activation. The first driver change needs
+container recreation including PostgreSQL; later normal releases do not start
+or configure Alloy. No new observability database migration or replica reset.
+
 ## Public routing
 
 The separate vps-infra Caddy is the only public entry point on ports 80/443

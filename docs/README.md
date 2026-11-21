@@ -49,9 +49,10 @@ Connected changes should appear immediately and converge across clients. Previou
 
 ## Operational diagnostics
 
-[Application diagnostics](./operations/diagnostics.md) documents privacy-safe error
-codes and source evidence. Collection and agent access are separate, opt-in setup;
-merging diagnostic code alone does not activate export.
+[Operational diagnostics](./operations/) provides privacy-safe source evidence,
+non-root collection and bounded read-only agent searches. Follow its [ordered
+setup guide](./operations/setup.md); feature merges to `develop` do not deploy or
+activate Cloud collection.
 
 ## Useful commands
 

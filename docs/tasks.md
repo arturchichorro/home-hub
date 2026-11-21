@@ -28,9 +28,10 @@ deployment applies tested forward migrations after an off-host backup.
 
 ## Work in review
 
-As of 3 November 2026, these branches are open PRs, not part of `develop` or
-completed backlog items. Review status is not authorization to merge or deploy:
+The following work is in review, not completed delivery. Review status is not
+authorization to merge, deploy or activate production services:
 
+- Operational diagnostics stack: #91 (application diagnostics), #140 (non-root loopback collection) and #141 (bounded read-only MCP). Refreshed against current `develop`; see the [ordered setup guide](./operations/setup.md). No Cloud credentials or production activation performed.
 - Guest access prototype stack [#35](https://github.com/arturchichorro/home-hub/pull/35), [#36](https://github.com/arturchichorro/home-hub/pull/36), [#38](https://github.com/arturchichorro/home-hub/pull/38), [#39](https://github.com/arturchichorro/home-hub/pull/39): requires reconciliation with current `develop` and current module/privacy rules before integration. The earlier foundation was reverted; the prototype does not establish current Guest support.
 
 Habits day boxes and optional workout-linked completion are integrated into
