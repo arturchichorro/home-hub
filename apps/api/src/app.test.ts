@@ -158,17 +158,20 @@ describe("app", () => {
     const app = createTestApp({ infrastructure: { logger } });
 
     const response = await app.request("/api/health", {
-      headers: { "X-Request-Id": "browser-request-123" },
+      headers: { "X-Request-Id": "147db701-6b85-42f9-b09d-aa39784bf1ca" },
     });
 
-    expect(response.headers.get("x-request-id")).toBe("browser-request-123");
+    expect(response.headers.get("x-request-id")).toBe(
+      "147db701-6b85-42f9-b09d-aa39784bf1ca",
+    );
     expect(errorRecords).toEqual([]);
     expect(infoRecords).toHaveLength(1);
     expect(infoRecords[0]).toEqual({
       event: "http_request",
-      requestId: "browser-request-123",
+      requestId: "147db701-6b85-42f9-b09d-aa39784bf1ca",
       method: "GET",
       route: "/api/health",
+      operation: "http.health",
       status: 200,
       durationMs: expect.any(Number),
     });
@@ -179,7 +182,7 @@ describe("app", () => {
     const app = createTestApp({ infrastructure: { logger } });
 
     const response = await app.request("/api/households", {
-      headers: { "X-Request-Id": "unauthorized-request-123" },
+      headers: { "X-Request-Id": "247db701-6b85-42f9-b09d-aa39784bf1ca" },
     });
 
     expect(response.status).toBe(401);
@@ -188,7 +191,7 @@ describe("app", () => {
     expect(infoRecords[0]).toEqual(
       expect.objectContaining({
         event: "http_request",
-        requestId: "unauthorized-request-123",
+        requestId: "247db701-6b85-42f9-b09d-aa39784bf1ca",
         method: "GET",
         status: 401,
       }),
@@ -221,7 +224,7 @@ describe("app", () => {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
-        "X-Request-Id": "failed-request-123",
+        "X-Request-Id": "347db701-6b85-42f9-b09d-aa39784bf1ca",
       },
       body: JSON.stringify({ name: "Home" }),
     });
@@ -230,14 +233,14 @@ describe("app", () => {
     expect(response.status).toBe(500);
     expect(responseBody).toEqual({
       error: "Internal server error",
-      requestId: "failed-request-123",
+      requestId: "347db701-6b85-42f9-b09d-aa39784bf1ca",
     });
     expect(infoRecords).toEqual([]);
     expect(errorRecords).toHaveLength(1);
     expect(errorRecords[0]).toEqual(
       expect.objectContaining({
         event: "http_request",
-        requestId: "failed-request-123",
+        requestId: "347db701-6b85-42f9-b09d-aa39784bf1ca",
         method: "POST",
         status: 500,
         durationMs: expect.any(Number),

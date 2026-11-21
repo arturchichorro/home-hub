@@ -34,7 +34,16 @@ it("redacts query parameters, nested causes and commit errors before SDK logging
     "Unable to save changes. Please retry.",
   );
   expect((result as Error).cause).toBeUndefined();
-  expect(JSON.stringify(report.mock.calls)).toBe('[[{"code":"23514"}]]');
+  expect(report).toHaveBeenCalledWith(
+    expect.objectContaining({
+      code: "23514",
+      diagnostic: expect.objectContaining({
+        errorCode: "HH_DATABASE_CONSTRAINT",
+        operation: "zero.transaction",
+      }),
+    }),
+  );
+  expect(JSON.stringify(report.mock.calls)).not.toContain(secret);
   expect(JSON.stringify(result)).not.toContain(secret);
 });
 
