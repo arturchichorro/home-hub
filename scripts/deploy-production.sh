@@ -6,6 +6,18 @@ readonly repository_directory="/opt/home-hub"
 readonly lock_file="/tmp/home-hub-production-deploy.lock"
 cd "$repository_directory"
 
+# exec below hands success/failure reporting to the fresh release runner. This
+# trap covers host preflight/backup failures before that handoff, without raw output.
+report_preflight() {
+  local status=$?
+  trap - EXIT
+  if [[ "$status" != 0 ]]; then
+    bash ./scripts/record-ops-event.sh deployment_failed "$status" unknown preflight 2>/dev/null || true
+  fi
+  exit "$status"
+}
+trap report_preflight EXIT
+
 exec 9>"$lock_file"
 if ! flock -n 9; then
   echo "Another Home Hub deployment is already running." >&2
