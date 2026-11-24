@@ -234,7 +234,7 @@ export function RecipeDetail({
 
   return (
     <article
-      className="grid gap-2"
+      className="grid min-w-0 grid-cols-1 gap-2"
       aria-busy={result.type !== "complete" || deleting}
     >
       <div className="flex min-w-0 items-center justify-between gap-3">
@@ -302,7 +302,7 @@ export function RecipeDetail({
       </section>
       <ErrorPopover {...editor.errorPopoverProps}>{editor.error}</ErrorPopover>
 
-      <section>
+      <section className="min-w-0">
         <h2 className="flex items-center gap-2 py-3 font-semibold">
           <CookingPot aria-hidden="true" className="size-5" />
           Ingredients

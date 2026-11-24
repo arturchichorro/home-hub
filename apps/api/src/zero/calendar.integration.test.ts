@@ -189,13 +189,24 @@ describe.runIf(Boolean(url))("shared calendar on PostgreSQL", () => {
     ).rejects.toThrow();
     expect((await get(id))?.people).toEqual([]);
   });
-  it("bounds month reads while allowing historical and future detail reads", async () => {
+  it("includes adjacent visible days but excludes rows outside the month grid", async () => {
     const past = await create("2020-02-29");
     const future = await create("2030-12-31");
-    await create("2026-10-31");
+    await create("2026-10-25");
+    const first = await create("2026-10-26");
+    const previous = await create("2026-10-31");
     const november = await create("2026-11-30");
-    await create("2026-12-01");
-    expect((await month()).map((r) => r.id)).toEqual([november]);
+    const next = await create("2026-12-01");
+    const last = await create("2026-12-06");
+    await create("2026-12-07");
+    expect((await month()).map((r) => r.id)).toEqual([
+      first,
+      previous,
+      november,
+      next,
+      last,
+    ]);
+    expect(await month(outsider)).toEqual([]);
     expect(await get(past)).toMatchObject({ day: "2020-02-29" });
     expect(await get(future)).toMatchObject({ day: "2030-12-31" });
   });

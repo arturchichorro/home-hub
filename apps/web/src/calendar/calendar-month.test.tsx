@@ -26,7 +26,7 @@ it("renders a Monday-first semantic month with two previews, overflow count and 
   expect(html).toContain('aria-label="2026-11-11, 3 items"');
   expect(html).toContain('aria-current="date"');
   expect(html.match(/tabindex="0"/gu)).toHaveLength(1);
-  expect(html.match(/data-calendar-day=/gu)).toHaveLength(30);
+  expect(html.match(/data-calendar-day=/gu)).toHaveLength(42);
 });
 it("renders leap February and handles literal dates without local-time conversion", () => {
   const html = renderToStaticMarkup(
@@ -38,9 +38,63 @@ it("renders leap February and handles literal dates without local-time conversio
       onSelect={() => {}}
     />,
   );
-  expect(html.match(/data-calendar-day=/gu)).toHaveLength(29);
+  expect(html.match(/data-calendar-day=/gu)).toHaveLength(35);
   expect(html).toContain('data-calendar-day="2024-02-29"');
-  expect(html).not.toContain('aria-current="date"');
+  expect(html).toContain('data-calendar-day="2024-03-01"');
+  expect(html).toContain('aria-current="date"');
+});
+it("previews adjacent-month items with muted dates and an explicit accessible label", () => {
+  const html = renderToStaticMarkup(
+    <CalendarMonth
+      month="2026-11-01"
+      selected={day}
+      today={day}
+      onSelect={() => {}}
+      items={[
+        { id: "before", day: "2026-10-31", title: "October event" },
+        { id: "after", day: "2026-12-01", title: "December event" },
+      ]}
+    />,
+  );
+  expect(html).toContain("October event");
+  expect(html).toContain("December event");
+  expect(html.match(/data-calendar-outside-month="true"/gu)).toHaveLength(12);
+  const adjacent = html
+    .split('data-calendar-day="2026-12-01"')[1]
+    ?.split("</button>")[0];
+  expect(adjacent).toContain("text-muted/80");
+  expect(adjacent).toContain(
+    'aria-label="2026-12-01, 1 items, outside displayed month"',
+  );
+});
+it.each(["2026-10-31", "2026-12-01", "2027-01-01"])(
+  "keeps one grid tab stop with selection %s",
+  (selected) => {
+    const html = renderToStaticMarkup(
+      <CalendarMonth
+        month="2026-11-01"
+        selected={selected}
+        today={day}
+        items={[]}
+        onSelect={() => {}}
+      />,
+    );
+    expect(html.match(/tabindex="0"/gu)).toHaveLength(1);
+  },
+);
+it("leaves only unsupported days blank at the upper year boundary", () => {
+  const html = renderToStaticMarkup(
+    <CalendarMonth
+      month="9999-12-01"
+      selected="9999-12-31"
+      today={day}
+      items={[]}
+      onSelect={() => {}}
+    />,
+  );
+  expect(html.match(/data-calendar-day=/gu)).toHaveLength(33);
+  expect(html.match(/<td/gu)).toHaveLength(35);
+  expect(html).not.toContain("10000");
 });
 it("escapes titles rather than interpreting notes or markup", () => {
   const html = renderToStaticMarkup(
