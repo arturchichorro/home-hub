@@ -5,7 +5,7 @@
   "scripts": {
     "check": "biome check .",
     "check:write": "biome check --write .",
-    "diagnostics:generate": "node scripts/generate-diagnostics.mjs",
+    "diagnostics:generate": "node scripts/generate-diagnostics.mjs && node scripts/generate-observability.mjs",
     "db:generate": "pnpm --filter @home-hub/database generate",
     "db:migrate": "pnpm --filter @home-hub/database migrate",
     "test": "vitest run",

@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-#!/usr/bin/env bash
-
-set -Eeuo pipefail
-
 umask 077
+
+event_writer="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/record-ops-event.sh"
+temporary_directory=""
+phase=configuration
+bash "$event_writer" backup_started 0 2>/dev/null || true
+finish_backup() {
+  local status=$?
+  trap - EXIT
+  [[ -z "$temporary_directory" ]] || rm -rf "$temporary_directory" || true
+  local event=backup_failed
+  [[ "$status" == 0 ]] && event=backup_succeeded
+  bash "$event_writer" "$event" "$status" unknown "$phase" 2>/dev/null || true
+  exit "$status"
+}
+trap finish_backup EXIT
 
 app_directory="${HOME_HUB_APP_DIR:-/opt/home-hub}"
 backup_environment_file="${HOME_HUB_BACKUP_ENV_FILE:-${app_directory}/.env.backup}"
@@ -56,10 +67,10 @@ month="${timestamp:4:2}"
 remote_path="postgres/${year}/${month}/home-hub-${timestamp}.dump"
 
 temporary_directory="$(mktemp -d)"
-trap 'rm -rf "${temporary_directory}"' EXIT
 
 dump_file="${temporary_directory}/home-hub.dump"
 
+phase=dump
 "${compose[@]}" exec -T postgres \
   pg_dump \
   --username home_hub \
@@ -73,9 +84,11 @@ if [[ ! -s "${dump_file}" ]]; then
   exit 1
 fi
 
+phase=archive
 "${compose[@]}" exec -T postgres \
   pg_restore --list <"${dump_file}" >/dev/null
 
+phase=upload
 rclone copyto \
   "${dump_file}" \
   "backup:${BACKUP_R2_BUCKET}/${remote_path}" \
@@ -85,6 +98,7 @@ rclone copyto \
 
 local_size="$(wc -c <"${dump_file}" | tr -d ' ')"
 
+phase=verify_upload
 if ! rclone cat "backup:${BACKUP_R2_BUCKET}/${remote_path}" |
   cmp --silent "${dump_file}" -; then
   echo "Uploaded backup does not match the local dump" >&2

@@ -68,7 +68,7 @@ export const diagnosticSources: Readonly<Record<string, number>> = {
   "apps/api/src/media/sign-read.ts": 38,
   "apps/api/src/media/sign-upload.ts": 33,
   "apps/api/src/media/sign-video.ts": 30,
-  "apps/api/src/observability.ts": 119,
+  "apps/api/src/observability.ts": 127,
   "apps/api/src/readiness.ts": 15,
   "apps/api/src/recipes/images/confirm-upload.ts": 221,
   "apps/api/src/recipes/images/create-read-url.ts": 108,

@@ -28,7 +28,7 @@ export const diagnosticMessages = {
   HH_SHUTDOWN_FAILED: "Graceful shutdown did not complete successfully.",
 } as const;
 
-const diagnosticOperations = [
+export const diagnosticOperations = [
   "http.request",
   "http.health",
   "database.readiness",

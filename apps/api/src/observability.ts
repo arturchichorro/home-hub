@@ -18,13 +18,21 @@ export type StructuredLogger = {
   error: (record: StructuredLogRecord) => void;
 };
 
+function withBuildRevision(record: StructuredLogRecord) {
+  const revision = process.env.HOME_HUB_REVISION ?? "";
+  return {
+    ...record,
+    revision: /^[a-f0-9]{40}$/.test(revision) ? revision : "unknown",
+  };
+}
+
 export const consoleStructuredLogger: StructuredLogger = {
   info(record) {
-    console.info(JSON.stringify(record));
+    console.info(JSON.stringify(withBuildRevision(record)));
   },
 
   error(record) {
-    console.error(JSON.stringify(record));
+    console.error(JSON.stringify(withBuildRevision(record)));
   },
 };
 
