@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { calendarDateSchema, habitMonth } from "./habits";
+import { calendarDateSchema, habitMonth, shiftCalendarDate } from "./habits";
 
 export const cleanCalendarTitle = (s: string) => s.trim().replace(/\s+/gu, " ");
 
@@ -38,12 +38,28 @@ export const calendarReorderSchema = calendarScopeSchema.extend({
     .max(10000)
     .refine((ids) => new Set(ids).size === ids.length),
 });
+// Include only the adjacent days needed to complete Monday–Sunday weeks.
+export function calendarMonthGrid(anchor: string) {
+  const { startOn, dates: monthDates } = habitMonth(anchor);
+  const offset = (new Date(`${startOn}T12:00:00Z`).getUTCDay() + 6) % 7;
+  const length = Math.ceil((offset + monthDates.length) / 7) * 7;
+  const dates = Array.from({ length }, (_, index) =>
+    shiftCalendarDate(startOn, index - offset),
+  ).filter((day) => day >= "0001-01-01" && day <= "9999-12-31");
+
+  return {
+    startOn: dates[0] ?? startOn,
+    endOn: dates.at(-1) ?? startOn,
+    dates,
+  };
+}
+
 export const calendarRangeSchema = z
   .object({ householdId: z.uuid(), month: calendarFieldsSchema.shape.day })
   .strict()
   .transform(({ householdId, month }) => ({
     householdId,
-    ...habitMonth(month),
+    ...calendarMonthGrid(month),
   }));
 export const calendarItemQuerySchema = z
   .object({ householdId: z.uuid(), itemId: z.uuid() })

@@ -7,6 +7,10 @@ not restrict access or send notifications.
 ## Interface
 
 Monday-first month grid with two title previews and an overflow count per day.
+Leading/trailing cells show the adjacent months’ dates and items, with muted day
+numbers and previews. Only the weeks needed for the displayed month are shown.
+Selecting an adjacent day follows it into its month, using the same draft-save
+and keyboard-navigation guards. Reads cover this bounded grid (at most 42 days).
 Select a day for its full ordered list. Every name and existing note is always a
 seamless input: there is no click-to-edit mode or Done button. A note icon adds an
 empty note beside the name, like recipe ingredients. Actions stay visible without

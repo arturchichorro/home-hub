@@ -4,6 +4,7 @@ import {
   calendarChanges,
   calendarCreateSchema,
   calendarFieldsSchema,
+  calendarMonthGrid,
   calendarPersonSchema,
   calendarRangeSchema,
   calendarReorderSchema,
@@ -80,11 +81,34 @@ it("patches changed fields only, not a stale complete item snapshot", () => {
   });
   expect(calendarChanges(fields, fields)).toEqual({});
 });
-it("bounds date queries to the exact requested month, including leap years", () => {
+it("bounds date queries to the displayed Monday–Sunday grid, including leap years", () => {
   expect(
     calendarRangeSchema.parse({ householdId, month: "2024-02-17" }),
-  ).toMatchObject({ startOn: "2024-02-01", endOn: "2024-02-29" });
+  ).toMatchObject({ startOn: "2024-01-29", endOn: "2024-03-03" });
 });
+it.each([
+  ["2026-11-01", "2026-10-26", "2026-12-06", 42],
+  ["2024-02-01", "2024-01-29", "2024-03-03", 35],
+  ["2026-01-01", "2025-12-29", "2026-02-01", 35],
+  ["2026-12-01", "2026-11-30", "2027-01-03", 35],
+  ["2021-02-01", "2021-02-01", "2021-02-28", 28],
+  ["0001-01-01", "0001-01-01", "0001-02-04", 35],
+  ["9999-12-01", "9999-11-29", "9999-12-31", 33],
+])(
+  "fills only visible weeks for %s without leaving supported years",
+  (month, startOn, endOn, length) => {
+    const grid = calendarMonthGrid(month);
+    expect(grid.startOn).toBe(startOn);
+    expect(grid.endOn).toBe(endOn);
+    expect(grid.dates).toHaveLength(length);
+    expect(new Set(grid.dates).size).toBe(length);
+    expect(
+      grid.dates.every(
+        (day) => calendarFieldsSchema.shape.day.safeParse(day).success,
+      ),
+    ).toBe(true);
+  },
+);
 it("validates people and unique reorder identities", () => {
   expect(
     calendarPersonSchema.safeParse({ ...base, userId, selected: true }).success,
@@ -115,8 +139,8 @@ describe("calendar query authorization", () => {
       "householdModuleSettings",
       "calendar",
       "deletedAt",
-      "2026-11-01",
-      "2026-11-30",
+      "2026-10-26",
+      "2026-12-06",
     ]) {
       expect(filter).toContain(value);
     }
