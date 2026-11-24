@@ -26,6 +26,7 @@ Home Hub is organized into small built-in modules:
 - [Habits](./habits/) provides shared habits with personal daily checkmarks and
   monthly calendar views; goals and streaks are deferred.
 - [Workouts](./workouts/) provides shared workouts, private set logs, and completion history.
+- [Contacts](./contacts/) provides shared people profiles, typed details, pictures and dated shared entries; it replaces the former household Logs module.
 - Further built-in modules, such as household finance, may be added when their
   product boundaries are understood.
 

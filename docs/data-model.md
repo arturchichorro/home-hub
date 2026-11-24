@@ -182,6 +182,16 @@ stored assets independently of any feature; see [Shared media](./media/) for
 identity, validation, lifecycle, authorization and the forward migration.
 Videos and animated-image uploads remain deferred; no separate video table exists.
 
+### Contacts module tables
+
+`contacts` stores profiles and ordered typed detail arrays. `contact_entries` stores
+canonical dated text; `contact_entry_people` links it to one or more contacts.
+`contact_media` attaches shared assets to profiles or entries. All links are
+household-qualified. Published entries require people and text or a confirmed
+picture. Migration 0057 removes legacy `logs`, `log_entries` and `log_categories`
+without converting their data, while preserving module enablement.
+See [Contacts](./contacts/) for archive, concurrency and cutover rules.
+
 ### Habits module tables
 
 Habits owns `habits` and `habit_entries`; their fields, natural daily-entry

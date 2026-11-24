@@ -2,6 +2,10 @@ import { Hono } from "hono";
 import { type CreateAuthRoutesInput, createAuthRoutes } from "./auth/routes";
 import type { CalendarMediaServices } from "./calendar/media";
 import { createCalendarMediaRoutes } from "./calendar/routes";
+import type { ContactMediaServices } from "./contacts/media";
+import { createContactMediaRoutes } from "./contacts/media-routes";
+import type { ContactsServices } from "./contacts/records";
+import { createContactsRoutes } from "./contacts/routes";
 import { createDocumentRoutes } from "./documents/routes";
 import type { DocumentServices } from "./documents/service";
 import { createHabitStatsRoutes } from "./habits/routes";
@@ -12,8 +16,6 @@ import {
 } from "./households/routes";
 import type { ListMediaServices } from "./lists/media";
 import { createListMediaRoutes } from "./lists/routes";
-import type { LogEntryServices } from "./logs/entries";
-import { createLogRoutes } from "./logs/routes";
 import {
   installApiObservability,
   type ObservabilityEnv,
@@ -46,7 +48,9 @@ export type CreateAppInput = {
   calendarMedia?: CalendarMediaServices;
   documents?: DocumentServices;
   listMedia?: ListMediaServices;
-  logs?: LogEntryServices;
+  contacts?: ContactsServices;
+  contactProfileMedia?: ContactMediaServices;
+  contactEntryMedia?: ContactMediaServices;
   infrastructure: {
     isProduction: boolean;
     jwtSecret: string;
@@ -124,10 +128,28 @@ export function createApp(input: CreateAppInput) {
     );
   }
 
-  if (input.logs) {
+  if (input.contacts) {
     app.route(
-      "/api/households/:householdId/logs",
-      createLogRoutes({ jwtSecret, services: input.logs }),
+      "/api/households/:householdId/contacts",
+      createContactsRoutes({ jwtSecret, services: input.contacts }),
+    );
+  }
+  if (input.contactProfileMedia) {
+    app.route(
+      "/api/households/:householdId/contacts/profiles",
+      createContactMediaRoutes({
+        jwtSecret,
+        services: input.contactProfileMedia,
+      }),
+    );
+  }
+  if (input.contactEntryMedia) {
+    app.route(
+      "/api/households/:householdId/contacts/entries",
+      createContactMediaRoutes({
+        jwtSecret,
+        services: input.contactEntryMedia,
+      }),
     );
   }
 

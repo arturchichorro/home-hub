@@ -8,8 +8,13 @@ import { createLogoutService } from "./auth/logout";
 import { createMeService } from "./auth/me";
 import { createRefreshService } from "./auth/refresh";
 import { createSignupService } from "./auth/signup";
-import { createCalendarMediaServices } from "./calendar/media";
+import {
+  type CalendarMediaDependencies,
+  createCalendarMediaServices,
+} from "./calendar/media";
 import { config } from "./config";
+import { createContactMediaServices } from "./contacts/media";
+import { createContactsServices } from "./contacts/records";
 import { createDocumentServices } from "./documents/service";
 import { createDocumentStorage } from "./documents/storage";
 import { createHabitStatsService } from "./habits/stats";
@@ -27,7 +32,6 @@ import { createRevokeHouseholdInviteService } from "./households/revoke-invite";
 import { createSetHouseholdModuleEnabledService } from "./households/set-module-enabled";
 import { createTransferHouseholdOwnershipService } from "./households/transfer-ownership";
 import { createListMediaServices } from "./lists/media";
-import { createLogEntryServices } from "./logs/entries";
 import { inspectR2Object } from "./media/inspect-object";
 import { processMediaImage } from "./media/process-image";
 import { processMediaVideo } from "./media/process-video";
@@ -192,7 +196,7 @@ const exerciseMedia = createExerciseMediaServices({
     }),
 });
 
-const calendarMedia = createCalendarMediaServices({
+const imageAttachmentDependencies: CalendarMediaDependencies = {
   db,
 
   signUpload: (input) =>
@@ -214,7 +218,8 @@ const calendarMedia = createCalendarMediaServices({
       baseUrl: config.IMAGE_DELIVERY_BASE_URL,
       secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
     }),
-});
+};
+const calendarMedia = createCalendarMediaServices(imageAttachmentDependencies);
 
 const listMedia = createListMediaServices({
   db,
@@ -268,7 +273,15 @@ const app = createApp({
       secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
     }),
   }),
-  logs: createLogEntryServices({ db }),
+  contacts: createContactsServices({ db }),
+  contactProfileMedia: createContactMediaServices(
+    imageAttachmentDependencies,
+    "profile",
+  ),
+  contactEntryMedia: createContactMediaServices(
+    imageAttachmentDependencies,
+    "entry",
+  ),
   infrastructure: {
     zeroDbProvider: infrastructure.dbProvider,
     jwtSecret: infrastructure.config.API_JWT_SECRET,

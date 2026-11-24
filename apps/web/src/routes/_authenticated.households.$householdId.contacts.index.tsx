@@ -1,12 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { LogsIndex } from "../logs/logs-index";
+import { ContactsIndex } from "../contacts/contacts-index";
 
 export const Route = createFileRoute(
-  "/_authenticated/households/$householdId/logs/",
+  "/_authenticated/households/$householdId/contacts/",
 )({ component: Page });
 
 function Page() {
   const { householdId } = Route.useParams();
-
-  return <LogsIndex key={householdId} householdId={householdId} />;
+  return <ContactsIndex householdId={householdId} />;
 }

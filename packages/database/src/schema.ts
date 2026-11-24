@@ -6,6 +6,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -1558,30 +1559,22 @@ export const documentTagAssignmentsRelations = relations(
   }),
 );
 
-export const logCategories = pgTable(
-  "log_categories",
+// Bounded ordered profile details use the same revision as the name and archive state.
+export const contacts = pgTable(
+  "contacts",
   {
     id: uuid("id").primaryKey(),
-
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
-
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
-    color: text("color", {
-      enum: [
-        "slate",
-        "red",
-        "orange",
-        "amber",
-        "green",
-        "teal",
-        "blue",
-        "violet",
-      ],
-    }).notNull(),
-    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    searchText: text("search_text").notNull(),
+    details: jsonb("details").notNull().default([]),
+    archived: boolean("archived").notNull().default(false),
+    version: integer("version").notNull().default(1),
+    lastWriteId: uuid("last_write_id").notNull(),
+    lastWriteHash: text("last_write_hash").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -1590,75 +1583,97 @@ export const logCategories = pgTable(
       .defaultNow(),
   },
   (t) => [
-    unique("log_categories_context").on(t.householdId, t.id),
-    uniqueIndex("log_categories_active_name")
-      .on(t.householdId, t.normalizedName)
-      .where(sql`${t.deletedAt} IS NULL`),
+    unique("contacts_context").on(t.householdId, t.id),
+    check("contacts_name", sql`length(trim(${t.name})) BETWEEN 1 AND 150`),
     check(
-      "log_categories_name",
-      sql`length(trim(${t.name})) BETWEEN 1 AND 100`,
+      "contacts_details",
+      sql`jsonb_typeof(${t.details})='array' AND jsonb_array_length(${t.details})<=100`,
     ),
-    check(
-      "log_categories_color",
-      sql`${t.color} IN ('slate','red','orange','amber','green','teal','blue','violet')`,
+    check("contacts_version", sql`${t.version}>0`),
+    index("contacts_library").on(
+      t.householdId,
+      t.archived,
+      t.normalizedName,
+      t.id,
     ),
   ],
 );
 
-export const logs = pgTable(
-  "logs",
+export const contactEntries = pgTable(
+  "contact_entries",
   {
     id: uuid("id").primaryKey(),
-
     householdId: uuid("household_id")
       .notNull()
       .references(() => households.id),
-
-    title: text("title").notNull(),
-    normalizedTitle: text("normalized_title").notNull(),
-    categoryId: uuid("category_id"),
-    lastEntryOn: text("last_entry_on"),
-    deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [
-    unique("logs_context").on(t.householdId, t.id),
-    uniqueIndex("logs_active_title")
-      .on(t.householdId, t.normalizedTitle)
-      .where(sql`${t.deletedAt} IS NULL`),
-    foreignKey({
-      columns: [t.householdId, t.categoryId],
-      foreignColumns: [logCategories.householdId, logCategories.id],
-      name: "logs_category_fk",
-    }),
-    check("logs_title", sql`length(trim(${t.title})) BETWEEN 1 AND 100`),
-  ],
-);
-
-export const logEntries = pgTable(
-  "log_entries",
-  {
-    id: uuid("id").primaryKey(),
-    householdId: uuid("household_id").notNull(),
-    logId: uuid("log_id").notNull(),
     entryOn: text("entry_on").notNull(),
-    note: text("note").notNull(),
+    note: text("note").notNull().default(""),
+    published: boolean("published").notNull().default(false),
     version: integer("version").notNull().default(1),
-
     createdBy: uuid("created_by")
       .notNull()
       .references(() => users.id),
-
     lastEditedBy: uuid("last_edited_by")
       .notNull()
       .references(() => users.id),
-
     lastWriteId: uuid("last_write_id").notNull(),
+    lastWriteHash: text("last_write_hash").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("contact_entries_context").on(t.householdId, t.id),
+    check(
+      "contact_entries_date",
+      sql`${t.entryOn} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND ${t.entryOn}::date::text=${t.entryOn}`,
+    ),
+    check("contact_entries_note", sql`length(${t.note})<=20000`),
+    check("contact_entries_version", sql`${t.version}>0`),
+    index("contact_entries_history")
+      .on(t.householdId, t.entryOn, t.createdAt, t.id)
+      .where(sql`${t.deletedAt} IS NULL`),
+  ],
+);
+
+export const contactEntryPeople = pgTable(
+  "contact_entry_people",
+  {
+    householdId: uuid("household_id").notNull(),
+    entryId: uuid("entry_id").notNull(),
+    contactId: uuid("contact_id").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.entryId, t.contactId] }),
+    foreignKey({
+      columns: [t.householdId, t.entryId],
+      foreignColumns: [contactEntries.householdId, contactEntries.id],
+      name: "contact_people_entry_fk",
+    }),
+    foreignKey({
+      columns: [t.householdId, t.contactId],
+      foreignColumns: [contacts.householdId, contacts.id],
+      name: "contact_people_contact_fk",
+    }),
+    index("contact_people_profile").on(t.householdId, t.contactId, t.entryId),
+  ],
+);
+
+export const contactMedia = pgTable(
+  "contact_media",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id").notNull(),
+    parentId: uuid("parent_id").notNull(),
+    contactId: uuid("contact_id"),
+    entryId: uuid("entry_id"),
+    mediaId: uuid("media_id").notNull(),
+    sortKey: integer("sort_key").notNull(),
+    published: boolean("published").notNull().default(false),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -1669,54 +1684,76 @@ export const logEntries = pgTable(
   },
   (t) => [
     foreignKey({
-      columns: [t.householdId, t.logId],
-      foreignColumns: [logs.householdId, logs.id],
-      name: "log_entries_log_fk",
+      columns: [t.householdId, t.contactId],
+      foreignColumns: [contacts.householdId, contacts.id],
+      name: "contact_media_profile_fk",
     }),
-    uniqueIndex("log_entries_active_day")
-      .on(t.householdId, t.logId, t.entryOn)
-      .where(sql`${t.deletedAt} IS NULL`),
+    foreignKey({
+      columns: [t.householdId, t.entryId],
+      foreignColumns: [contactEntries.householdId, contactEntries.id],
+      name: "contact_media_entry_fk",
+    }),
+    foreignKey({
+      columns: [t.householdId, t.mediaId],
+      foreignColumns: [media.householdId, media.id],
+      name: "contact_media_asset_fk",
+    }),
     check(
-      "log_entries_date",
-      sql`${t.entryOn} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND ${t.entryOn}::date::text=${t.entryOn}`,
+      "contact_media_parent",
+      sql`(${t.contactId} IS NOT NULL AND ${t.entryId} IS NULL AND ${t.parentId}=${t.contactId}) OR (${t.entryId} IS NOT NULL AND ${t.contactId} IS NULL AND ${t.parentId}=${t.entryId})`,
     ),
-    check("log_entries_note", sql`length(trim(${t.note})) BETWEEN 1 AND 20000`),
-    check("log_entries_version", sql`${t.version}>0`),
+    uniqueIndex("contact_media_avatar")
+      .on(t.contactId)
+      .where(sql`${t.published} AND ${t.deletedAt} IS NULL`),
+    index("contact_media_order")
+      .on(t.householdId, t.parentId, t.sortKey, t.id)
+      .where(sql`${t.deletedAt} IS NULL`),
   ],
 );
 
-export const logsRelations = relations(logs, ({ one, many }) => ({
+export const contactsRelations = relations(contacts, ({ one, many }) => ({
   household: one(households, {
-    fields: [logs.householdId],
+    fields: [contacts.householdId],
     references: [households.id],
   }),
-  category: one(logCategories, {
-    fields: [logs.householdId, logs.categoryId],
-    references: [logCategories.householdId, logCategories.id],
-  }),
-  entries: many(logEntries),
+  media: many(contactMedia),
+  entries: many(contactEntryPeople),
 }));
-
-export const logCategoriesRelations = relations(logCategories, ({ one }) => ({
-  household: one(households, {
-    fields: [logCategories.householdId],
-    references: [households.id],
+export const contactEntriesRelations = relations(
+  contactEntries,
+  ({ one, many }) => ({
+    household: one(households, {
+      fields: [contactEntries.householdId],
+      references: [households.id],
+    }),
+    people: many(contactEntryPeople),
+    media: many(contactMedia),
   }),
-}));
-
-export const logEntriesRelations = relations(logEntries, ({ one }) => ({
-  log: one(logs, {
-    fields: [logEntries.householdId, logEntries.logId],
-    references: [logs.householdId, logs.id],
+);
+export const contactEntryPeopleRelations = relations(
+  contactEntryPeople,
+  ({ one }) => ({
+    entry: one(contactEntries, {
+      fields: [contactEntryPeople.householdId, contactEntryPeople.entryId],
+      references: [contactEntries.householdId, contactEntries.id],
+    }),
+    contact: one(contacts, {
+      fields: [contactEntryPeople.householdId, contactEntryPeople.contactId],
+      references: [contacts.householdId, contacts.id],
+    }),
   }),
-  creator: one(users, {
-    fields: [logEntries.createdBy],
-    references: [users.id],
-    relationName: "log_entry_creator",
+);
+export const contactMediaRelations = relations(contactMedia, ({ one }) => ({
+  contact: one(contacts, {
+    fields: [contactMedia.householdId, contactMedia.contactId],
+    references: [contacts.householdId, contacts.id],
   }),
-  editor: one(users, {
-    fields: [logEntries.lastEditedBy],
-    references: [users.id],
-    relationName: "log_entry_editor",
+  entry: one(contactEntries, {
+    fields: [contactMedia.householdId, contactMedia.entryId],
+    references: [contactEntries.householdId, contactEntries.id],
+  }),
+  asset: one(media, {
+    fields: [contactMedia.householdId, contactMedia.mediaId],
+    references: [media.householdId, media.id],
   }),
 }));

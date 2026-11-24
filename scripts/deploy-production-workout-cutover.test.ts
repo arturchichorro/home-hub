@@ -31,6 +31,10 @@ function rehearse(hasTable: boolean, applied: boolean) {
   const log = join(directory, "commands.log");
   mkdirSync(bin);
   mkdirSync(join(directory, "scripts"));
+  writeFileSync(
+    join(directory, ".env.production"),
+    "HOME_HUB_CONTACTS_CUTOVER_APPROVED=1\\n".replace("\\n", "\n"),
+  );
 
   const mock = (name: string, body: string) =>
     writeFileSync(
@@ -46,7 +50,7 @@ function rehearse(hasTable: boolean, applied: boolean) {
   mock("curl", 'printf "curl\\n" >> "$TEST_LOG"');
   mock(
     "docker",
-    'printf "docker %s\\n" "$*" >> "$TEST_LOG"\ncase "$*" in *to_regclass*) echo "$TEST_TABLE";; *created_at*) echo "$TEST_CUTOVER";; esac',
+    'printf "docker %s\\n" "$*" >> "$TEST_LOG"\ncase "$*" in *to_regclass*) echo "$TEST_TABLE";; *1795533820795*) echo f;; *created_at*) echo "$TEST_CUTOVER";; esac',
   );
   writeFileSync(
     join(directory, "scripts/backup-production-postgres.sh"),
@@ -102,7 +106,7 @@ it.each([
     line.endsWith("stop api zero-cache"),
   );
   const migrate = commands.findIndex((line) =>
-    /run --rm(?: -e HOME_HUB_LOGGING_CUTOVER_READY=1)? migrate$/.test(line),
+    /run --rm(?: -e HOME_HUB_[A-Z_]+=1)* migrate$/.test(line),
   );
   const backend = commands.findIndex((line) =>
     line.endsWith("up -d --no-build --wait api zero-cache"),
