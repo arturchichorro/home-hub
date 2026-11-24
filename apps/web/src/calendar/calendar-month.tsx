@@ -1,4 +1,5 @@
-import { habitMonth, shiftCalendarDate } from "@home-hub/shared/habits";
+import { calendarMonthGrid } from "@home-hub/shared/calendar";
+import { shiftCalendarDate } from "@home-hub/shared/habits";
 import { useEffect, useRef, useState } from "react";
 
 export function CalendarMonth({
@@ -27,10 +28,9 @@ export function CalendarMonth({
       setFocusDay(undefined);
     }
   }, [focusDay, selected, disabled]);
-  const { dates } = habitMonth(month);
-  const first = dates[0] ?? month;
-  const offset = (new Date(`${first}T12:00:00Z`).getUTCDay() + 6) % 7;
-  const cells = [...Array.from({ length: offset }, () => ""), ...dates];
+  const { dates } = calendarMonthGrid(month);
+  const first = `${month.slice(0, 7)}-01`;
+  const cells = [...dates];
   while (cells.length % 7 !== 0) {
     cells.push("");
   }
@@ -64,75 +64,80 @@ export function CalendarMonth({
       <tbody>
         {weeks.map((week) => (
           <tr key={week.find(Boolean)}>
-            {week.map((day, index) => (
-              <td
-                key={day || `empty-${index}`}
-                className="border border-border p-0 align-top"
-              >
-                {day && (
-                  <button
-                    type="button"
-                    data-calendar-day={day}
-                    disabled={disabled}
-                    aria-pressed={selected === day}
-                    aria-current={today === day ? "date" : undefined}
-                    tabIndex={
-                      selected === day ||
-                      (!dates.includes(selected) && day === first)
-                        ? 0
-                        : -1
-                    }
-                    aria-label={`${day}, ${items.filter((item) => item.day === day).length} items`}
-                    className={`grid h-20 w-full min-w-0 content-start gap-1 p-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring sm:h-24 sm:p-2 ${selected === day ? "bg-raised" : "hover:bg-raised/50"}`}
-                    onClick={() => onSelect(day)}
-                    onKeyDown={async (event) => {
-                      const deltas: Record<string, number> = {
-                        ArrowLeft: -1,
-                        ArrowRight: 1,
-                        ArrowUp: -7,
-                        ArrowDown: 7,
-                        Home: -index,
-                        End: 6 - index,
-                      };
-                      const delta = deltas[event.key];
-                      if (delta === undefined) {
-                        return;
+            {week.map((day, index) => {
+              const outsideMonth =
+                Boolean(day) && !day.startsWith(month.slice(0, 7));
+              return (
+                <td
+                  key={day || `empty-${index}`}
+                  className="border border-border p-0 align-top"
+                >
+                  {day && (
+                    <button
+                      type="button"
+                      data-calendar-day={day}
+                      data-calendar-outside-month={outsideMonth || undefined}
+                      disabled={disabled}
+                      aria-pressed={selected === day}
+                      aria-current={today === day ? "date" : undefined}
+                      tabIndex={
+                        selected === day ||
+                        (!dates.includes(selected) && day === first)
+                          ? 0
+                          : -1
                       }
-                      event.preventDefault();
-                      const next = shiftCalendarDate(day, delta);
-                      if (next < "0001-01-01" || next > "9999-12-31") {
-                        return;
-                      }
-                      // Inline drafts may need an acknowledged save before changing scope.
-                      const accepted = await onSelect(next);
-                      setFocusDay(accepted === false ? day : next);
-                    }}
-                  >
-                    <span
-                      className={`text-center text-xs ${today === day ? "font-bold text-foreground" : "text-muted"}`}
+                      aria-label={`${day}, ${items.filter((item) => item.day === day).length} items${outsideMonth ? ", outside displayed month" : ""}`}
+                      className={`grid h-20 w-full min-w-0 content-start gap-1 p-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring sm:h-24 sm:p-2 ${selected === day ? "bg-raised" : "hover:bg-raised/50"}`}
+                      onClick={() => onSelect(day)}
+                      onKeyDown={async (event) => {
+                        const deltas: Record<string, number> = {
+                          ArrowLeft: -1,
+                          ArrowRight: 1,
+                          ArrowUp: -7,
+                          ArrowDown: 7,
+                          Home: -index,
+                          End: 6 - index,
+                        };
+                        const delta = deltas[event.key];
+                        if (delta === undefined) {
+                          return;
+                        }
+                        event.preventDefault();
+                        const next = shiftCalendarDate(day, delta);
+                        if (next < "0001-01-01" || next > "9999-12-31") {
+                          return;
+                        }
+                        // Inline drafts may need an acknowledged save before changing scope.
+                        const accepted = await onSelect(next);
+                        setFocusDay(accepted === false ? day : next);
+                      }}
                     >
-                      {Number(day.slice(-2))}
-                    </span>
-                    {items
-                      .filter((item) => item.day === day)
-                      .slice(0, 2)
-                      .map((item) => (
-                        <span
-                          key={item.id}
-                          className="block min-w-0 truncate text-[10px] leading-4 sm:text-xs"
-                        >
-                          {item.title}
-                        </span>
-                      ))}
-                    {items.filter((item) => item.day === day).length > 2 && (
-                      <span className="text-[10px] text-muted">
-                        +{items.filter((item) => item.day === day).length - 2}
+                      <span
+                        className={`text-center text-xs ${today === day ? "font-bold text-foreground" : outsideMonth ? "text-muted/80" : "text-muted"}`}
+                      >
+                        {Number(day.slice(-2))}
                       </span>
-                    )}
-                  </button>
-                )}
-              </td>
-            ))}
+                      {items
+                        .filter((item) => item.day === day)
+                        .slice(0, 2)
+                        .map((item) => (
+                          <span
+                            key={item.id}
+                            className={`block min-w-0 truncate text-[10px] leading-4 sm:text-xs ${outsideMonth ? "text-muted" : ""}`}
+                          >
+                            {item.title}
+                          </span>
+                        ))}
+                      {items.filter((item) => item.day === day).length > 2 && (
+                        <span className="text-[10px] text-muted">
+                          +{items.filter((item) => item.day === day).length - 2}
+                        </span>
+                      )}
+                    </button>
+                  )}
+                </td>
+              );
+            })}
           </tr>
         ))}
       </tbody>
