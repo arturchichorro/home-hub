@@ -192,9 +192,8 @@ PostgreSQL must support logical replication, and the upstream connection must be
 The API owns:
 
 - account authentication, JWT issuance, and refresh-token rotation;
-- household selection data, lifecycle, membership, and ownership commands;
-- invite creation, acceptance, and revocation;
-- owner-authorized household module configuration;
+- household lifecycle, membership, ownership and module commands through Zero server mutators;
+- owner-only invitation metadata through Zero, with raw-token creation/acceptance over HTTP;
 - verification of Zero authentication tokens;
 - transformation of named Zero queries using trusted user context;
 - transactional execution and authorization of Zero mutations;

@@ -20,6 +20,7 @@ import { contactMutators } from "./contact-mutators";
 import type { ZeroAuthContext } from "./context";
 import { documentMutators } from "./document-mutators";
 import { habitMutatorDefinitions } from "./habit-mutators";
+import { householdMutators } from "./household-mutators";
 import { listMutatorDefinitions } from "./list-mutators";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
 import { appendSortKey, nextSortKey, planReorder } from "./ordering";
@@ -520,6 +521,7 @@ export const mutators = defineHomeHubMutators({
   documents: documentMutators,
   calendar: calendarMutators,
   contacts: contactMutators,
+  households: householdMutators,
   lists: listMutatorDefinitions,
   habits: habitMutatorDefinitions,
   workouts: workoutMutatorDefinitions,

@@ -4,6 +4,14 @@ import * as drizzleSchema from "./src/schema";
 
 export default drizzleZeroConfig(drizzleSchema, {
   tables: {
+    householdInvites: {
+      id: true,
+      householdId: true,
+      expiresAt: true,
+      acceptedAt: true,
+      revokedAt: true,
+      createdAt: true,
+    },
     calendarItems: true,
     calendarPeople: true,
     calendarMedia: true,

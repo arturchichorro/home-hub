@@ -8,10 +8,6 @@ export const createHouseholdRequestSchema = z
   })
   .strict();
 
-export type CreateHouseholdRequest = z.infer<
-  typeof createHouseholdRequestSchema
->;
-
 export const createHouseholdResponseSchema = z
   .object({
     household: z
@@ -22,10 +18,6 @@ export const createHouseholdResponseSchema = z
       .strict(),
   })
   .strict();
-
-export type CreateHouseholdResponse = z.infer<
-  typeof createHouseholdResponseSchema
->;
 
 export const reorderHouseholdsMutationSchema = z
   .object({
@@ -96,49 +88,8 @@ export const renameHouseholdRequestSchema = z
   })
   .strict();
 
-export type RenameHouseholdRequest = z.infer<
-  typeof renameHouseholdRequestSchema
->;
-
 export const transferHouseholdOwnershipRequestSchema = z
   .object({
     membershipId: z.uuid(),
   })
   .strict();
-
-export type TransferHouseholdOwnershipRequest = z.infer<
-  typeof transferHouseholdOwnershipRequestSchema
->;
-
-const householdMemberSummarySchema = z
-  .object({
-    id: z.uuid(),
-    username: z.string().min(1),
-    role: z.enum(["owner", "member"]),
-    joinedAt: z.iso.datetime(),
-  })
-  .strict();
-
-export const listHouseholdMembersResponseSchema = z
-  .object({
-    members: z.array(householdMemberSummarySchema),
-  })
-  .strict();
-
-const pendingHouseholdInviteSummarySchema = z
-  .object({
-    id: z.uuid(),
-    createdAt: z.iso.datetime(),
-    expiresAt: z.iso.datetime(),
-  })
-  .strict();
-
-export const listHouseholdInvitesResponseSchema = z
-  .object({
-    invites: z.array(pendingHouseholdInviteSummarySchema),
-  })
-  .strict();
-
-export type ListHouseholdInvitesResponse = z.infer<
-  typeof listHouseholdInvitesResponseSchema
->;

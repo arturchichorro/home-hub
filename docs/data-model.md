@@ -143,7 +143,8 @@ invite. An owner may revoke an unaccepted invitation by setting `revoked_at`.
 
 Enforce a unique `token_hash` and index `household_id`. Invite acceptance locks
 the invite and transactionally creates a `member` membership while setting
-`accepted_at`.
+`accepted_at`. Migration 0058 exposes only non-secret invitation metadata through
+owner-authorized Zero queries; token hashes and plaintext tokens remain excluded.
 
 ### `household_module_settings`
 

@@ -29,30 +29,7 @@ const defaultInput: CreateAppInput = {
   },
   households: {
     acceptHouseholdInvite: async () => ({ kind: "invalid_invite" }),
-
-    createHousehold: async () => ({ kind: "unauthorized" }),
-
     createHouseholdInvite: async () => ({ kind: "forbidden" }),
-
-    deleteHousehold: async () => ({ kind: "forbidden" }),
-
-    listHouseholds: async () => ({ kind: "unauthorized" }),
-
-    listHouseholdInvites: async () => ({ kind: "forbidden" }),
-
-    listHouseholdMembers: async () => ({ kind: "forbidden" }),
-
-    leaveHousehold: async () => ({ kind: "forbidden" }),
-
-    transferHouseholdOwnership: async () => ({ kind: "forbidden" }),
-
-    setHouseholdModuleEnabled: async () => ({ kind: "forbidden" }),
-
-    renameHousehold: async () => ({ kind: "forbidden" }),
-
-    revokeHouseholdInvite: async () => ({ kind: "forbidden" }),
-
-    removeHouseholdMember: async () => ({ kind: "forbidden" }),
   },
   exerciseMedia: {
     createUpload: async () => ({ kind: "forbidden" }),
@@ -178,7 +155,8 @@ describe("app", () => {
     const { logger, infoRecords, errorRecords } = createMemoryLogger();
     const app = createTestApp({ infrastructure: { logger } });
 
-    const response = await app.request("/api/households", {
+    const response = await app.request("/api/households/invites/accept", {
+      method: "POST",
       headers: { "X-Request-Id": "unauthorized-request-123" },
     });
 
@@ -189,7 +167,7 @@ describe("app", () => {
       expect.objectContaining({
         event: "http_request",
         requestId: "unauthorized-request-123",
-        method: "GET",
+        method: "POST",
         status: 401,
       }),
     );
@@ -200,14 +178,14 @@ describe("app", () => {
     const secret =
       "password=hunter2 token=secret-token signedUrl=https://example.test/?signature=secret";
     const { logger, infoRecords, errorRecords } = createMemoryLogger();
-    const createHousehold = async () => {
+    const acceptHouseholdInvite = async () => {
       const error = new Error(secret);
       error.name = secret;
 
       throw error;
     };
     const app = createTestApp({
-      households: { createHousehold },
+      households: { acceptHouseholdInvite },
       infrastructure: { logger },
     });
     const accessToken = signAccessToken({
@@ -216,14 +194,14 @@ describe("app", () => {
       secret: jwtSecret,
     });
 
-    const response = await app.request("/api/households", {
+    const response = await app.request("/api/households/invites/accept", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
         "X-Request-Id": "failed-request-123",
       },
-      body: JSON.stringify({ name: "Home" }),
+      body: JSON.stringify({ token: "a".repeat(43) }),
     });
     const responseBody = await response.json();
 
@@ -248,36 +226,11 @@ describe("app", () => {
     expect(JSON.stringify(responseBody)).not.toContain(secret);
   });
 
-  it("mounts household creation at POST /api/households", async () => {
-    const household = {
-      id: "d92e5c4e-1c68-4942-9cc9-710207661bca",
-      name: "Home",
-    };
-    const createHousehold = vi.fn(async () => ({
-      kind: "success" as const,
-      household,
-    }));
-    const app = createTestApp({
-      households: { createHousehold },
-    });
-    const accessToken = signAccessToken({
-      userId: "9f8a6942-f721-499d-957d-7bb3ed1158db",
-      jwtId: "49ef297e-ed36-44b0-913f-0ef66e81887d",
-      secret: jwtSecret,
-    });
-
-    const response = await app.request("/api/households", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name: "Home" }),
-    });
-
-    expect(response.status).toBe(201);
-    await expect(response.json()).resolves.toEqual({ household });
-    expect(createHousehold).toHaveBeenCalledOnce();
+  it("does not mount retired household CRUD", async () => {
+    const app = createTestApp();
+    expect(
+      (await app.request("/api/households", { method: "POST" })).status,
+    ).toBe(404);
   });
 
   it("does not mount retired Shopping endpoints", async () => {

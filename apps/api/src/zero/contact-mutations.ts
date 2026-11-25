@@ -4,11 +4,9 @@ import {
   contactProfileMutationSchema,
 } from "@home-hub/shared/zero/contact-mutators";
 import type { ZeroAuthContext } from "@home-hub/shared/zero/context";
-import { mutators } from "@home-hub/shared/zero/mutators";
 import type { Schema } from "@home-hub/shared/zero/schema";
 import {
   ApplicationError,
-  defineMutatorsWithType,
   defineMutatorWithType,
   type Transaction,
 } from "@rocicorp/zero";
@@ -50,13 +48,11 @@ async function execute<T>(write: () => Promise<T>) {
 
 // Zero's documented server overrides: optimistic recipes stay shared, while
 // authoritative writes own locking, private retry metadata and conflict details.
-export const serverMutators = defineMutatorsWithType<Schema>()(mutators, {
-  contacts: {
-    profile: define(contactProfileMutationSchema, ({ tx, ctx, args }) =>
-      execute(() => services(tx).writeProfile({ ...args, userId: ctx.userId })),
-    ),
-    entry: define(contactEntryMutationSchema, ({ tx, ctx, args }) =>
-      execute(() => services(tx).writeEntry({ ...args, userId: ctx.userId })),
-    ),
-  },
-});
+export const contactServerMutators = {
+  profile: define(contactProfileMutationSchema, ({ tx, ctx, args }) =>
+    execute(() => services(tx).writeProfile({ ...args, userId: ctx.userId })),
+  ),
+  entry: define(contactEntryMutationSchema, ({ tx, ctx, args }) =>
+    execute(() => services(tx).writeEntry({ ...args, userId: ctx.userId })),
+  ),
+};

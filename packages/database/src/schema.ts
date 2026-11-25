@@ -152,10 +152,21 @@ export const householdsRelations = relations(households, ({ many }) => ({
   images: many(recipeMedia),
   listItems: many(listItems),
   lists: many(lists),
+  invites: many(householdInvites),
   members: many(householdMembers),
   moduleSettings: many(householdModuleSettings),
   recipes: many(recipes),
 }));
+
+export const householdInvitesRelations = relations(
+  householdInvites,
+  ({ one }) => ({
+    household: one(households, {
+      fields: [householdInvites.householdId],
+      references: [households.id],
+    }),
+  }),
+);
 
 export const householdMembersRelations = relations(
   householdMembers,

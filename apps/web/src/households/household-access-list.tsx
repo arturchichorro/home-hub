@@ -1,7 +1,4 @@
-import type {
-  CreateHouseholdInviteResponse,
-  ListHouseholdInvitesResponse,
-} from "@home-hub/shared/households";
+import type { CreateHouseholdInviteResponse } from "@home-hub/shared/households";
 import { queries } from "@home-hub/shared/zero/queries";
 import {
   Button,
@@ -12,26 +9,24 @@ import {
   Trash2,
   UserPlus,
 } from "@home-hub/ui-web";
-import { useQuery } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useEffect, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
+import { createHouseholdInvite } from "./api";
 import {
-  createHouseholdInvite,
-  listHouseholdInvites,
   removeHouseholdMember,
   revokeHouseholdInvite,
   transferHouseholdOwnership,
-} from "./api";
+} from "./mutations";
 
 type HouseholdAccessListProps = {
   accessToken: string;
   householdId: string;
   isOwner: boolean;
-  onOwnershipTransferred: () => void;
   onSessionExpired: () => void;
 };
 
-type PendingInvite = ListHouseholdInvitesResponse["invites"][number];
+type PendingInvite = { id: string; createdAt: number; expiresAt: number };
 
 type CreatedInvite = CreateHouseholdInviteResponse["invite"];
 
@@ -53,15 +48,30 @@ export function HouseholdAccessList({
   accessToken,
   householdId,
   isOwner,
-  onOwnershipTransferred,
   onSessionExpired,
 }: HouseholdAccessListProps) {
   const [members, memberResult] = useQuery(
     queries.householdMemberships.byHousehold({ householdId }),
   );
-  const [inviteState, setInviteState] = useState<InviteState>(
-    isOwner ? { status: "loading" } : { status: "success", invites: [] },
+  const zero = useZero();
+  const [asOf, setAsOf] = useState(Date.now);
+  const [invitations, invitationResult] = useQuery(
+    isOwner ? queries.households.invites({ householdId, asOf }) : undefined,
   );
+  const inviteState: InviteState = !isOwner
+    ? { status: "success", invites: [] }
+    : invitationResult.type === "error"
+      ? { status: "error", message: "Unable to load pending invitations." }
+      : invitationResult.type === "complete"
+        ? {
+            status: "success",
+            invites: (invitations ?? []).map((invite) => ({
+              id: invite.id,
+              createdAt: invite.createdAt ?? 0,
+              expiresAt: invite.expiresAt,
+            })),
+          }
+        : { status: "loading" };
   const [createdInvite, setCreatedInvite] = useState<CreatedInvite>();
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string>();
@@ -76,57 +86,18 @@ export function HouseholdAccessList({
   const [actionError, setActionError] = useState<string | null>(null);
   const mutationEnabled = useZeroMutationEnabled();
 
+  const invitationScope = JSON.stringify([accessToken, householdId, isOwner]);
   useEffect(() => {
-    let active = true;
+    // Clear the one-time secret when the session, household or owner role changes.
+    void invitationScope;
     setCreatedInvite(undefined);
     setCopyStatus(undefined);
     setCreateError(undefined);
-
-    if (!isOwner) {
-      setInviteState({ status: "success", invites: [] });
-
-      return () => {
-        active = false;
-      };
-    }
-
-    setInviteState({ status: "loading" });
-    void listHouseholdInvites({ accessToken, householdId })
-      .then((result) => {
-        if (!active) {
-          return;
-        }
-
-        if (result.kind === "unauthorized") {
-          onSessionExpired();
-
-          return;
-        }
-
-        if (result.kind === "forbidden") {
-          setInviteState({
-            status: "error",
-            message: "You are no longer allowed to view household invites.",
-          });
-
-          return;
-        }
-
-        setInviteState({ status: "success", invites: result.invites });
-      })
-      .catch(() => {
-        if (active) {
-          setInviteState({
-            status: "error",
-            message: "Unable to load pending invitations.",
-          });
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [accessToken, householdId, isOwner, onSessionExpired]);
+    setAsOf(Date.now());
+    // Advance the expiration filter locally; metadata itself is synchronized by Zero.
+    const timer = setInterval(() => setAsOf(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, [invitationScope]);
 
   async function handleCreateInvite() {
     if (!mutationEnabled) {
@@ -153,21 +124,6 @@ export function HouseholdAccessList({
       }
 
       setCreatedInvite(result.invite);
-      setInviteState((current) =>
-        current.status === "success"
-          ? {
-              status: "success",
-              invites: [
-                ...current.invites,
-                {
-                  id: result.invite.id,
-                  createdAt: result.invite.createdAt,
-                  expiresAt: result.invite.expiresAt,
-                },
-              ],
-            }
-          : current,
-      );
     } catch {
       setCreateError("Unable to create an invitation.");
     } finally {
@@ -197,8 +153,7 @@ export function HouseholdAccessList({
     setActionError(null);
 
     try {
-      const result = await revokeHouseholdInvite({
-        accessToken,
+      const result = await revokeHouseholdInvite(zero, {
         householdId,
         inviteId,
       });
@@ -216,18 +171,6 @@ export function HouseholdAccessList({
       }
 
       if (result.kind === "success" || result.kind === "invalid_invite") {
-        setInviteState((current) =>
-          current.status === "success"
-            ? {
-                status: "success",
-
-                invites: current.invites.filter(
-                  (invite) => invite.id !== inviteId,
-                ),
-              }
-            : current,
-        );
-
         if (createdInvite?.id === inviteId) {
           setCreatedInvite(undefined);
           setCopyStatus(undefined);
@@ -249,8 +192,7 @@ export function HouseholdAccessList({
     setActionError(null);
 
     try {
-      const result = await removeHouseholdMember({
-        accessToken,
+      const result = await removeHouseholdMember(zero, {
         householdId,
         membershipId,
       });
@@ -280,8 +222,7 @@ export function HouseholdAccessList({
     setActionError(null);
 
     try {
-      const result = await transferHouseholdOwnership({
-        accessToken,
+      const result = await transferHouseholdOwnership(zero, {
         householdId,
         membershipId,
       });
@@ -303,8 +244,6 @@ export function HouseholdAccessList({
 
         return;
       }
-
-      onOwnershipTransferred();
     } catch {
       setActionError("Unable to transfer household ownership.");
     } finally {
@@ -381,11 +320,11 @@ export function HouseholdAccessList({
                     <span className="font-medium">Invitation</span>
                     <span className="text-muted">
                       {` · `}Created:{` `}
-                      <time dateTime={invite.createdAt}>
+                      <time dateTime={new Date(invite.createdAt).toISOString()}>
                         {inviteDateFormatter.format(new Date(invite.createdAt))}
                       </time>
                       {` · `}Expires:{` `}
-                      <time dateTime={invite.expiresAt}>
+                      <time dateTime={new Date(invite.expiresAt).toISOString()}>
                         {inviteDateFormatter.format(new Date(invite.expiresAt))}
                       </time>
                     </span>

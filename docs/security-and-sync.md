@@ -96,7 +96,9 @@ enrollment gate.
 Household selection is client navigation state, but every selected household
 must still be authorized independently. Member rosters, pending invites,
 renaming, invitation revocation, member removal, leaving, ownership transfer,
-and module toggles are connected API operations. Return only the safe account
+and module toggles use Zero queries/custom mutators. Permission-changing commands
+wait for authoritative server acknowledgement without optimistically granting roles.
+Return only the safe account
 fields required by the member-management interface.
 
 Only the owner may rename the household, revoke invitations, remove another
@@ -111,24 +113,24 @@ do not expose email addresses. Pending-invitation listings omit token hashes
 and raw tokens. Revocation returns the same generic result for records that
 must not be disclosed.
 
-`DELETE /api/households/:householdId/invites/:inviteId` performs revocation. It
+The `households.revokeInvite` Zero mutator performs revocation. It
 locks the current owner's membership and the active invitation in one
 transaction, then sets `revoked_at`. Unknown, expired, accepted, and already
 revoked invitation IDs receive the same generic response.
 
-`DELETE /api/households/:householdId/members/:membershipId` removes an ordinary
+The `households.removeMember` Zero mutator removes an ordinary
 member. It locks the caller's owner membership as authorization evidence, then
 locks and deletes a target membership scoped to the same household. The owner
 membership cannot be removed through this operation.
 
-`DELETE /api/households/:householdId/membership` removes the authenticated user's
-own membership. The API derives the user ID from the access token, locks that
+The `households.leave` Zero mutator removes the authenticated user's
+own membership. It derives the user ID from trusted Zero context, locks that
 membership for update, and rejects an owner until ownership has been
 transferred. After success, the client clears that household as its active
 selection rather than silently selecting another household.
 
-`PATCH /api/households/:householdId/ownership` transfers ownership to the existing
-member identified by the validated request body. The transaction locks the
+The `households.transferOwnership` Zero mutator transfers ownership to the existing
+member identified by validated mutation arguments. The transaction locks the
 current owner first and the target member second, demotes the current owner,
 then promotes the target. Both updates are guarded by their expected roles;
 any failure rolls back the whole transaction, so an ownerless intermediate
@@ -137,8 +139,9 @@ state is never committed or visible to another transaction.
 Any current household member may list the roster. Only the current owner may
 list pending invitations, which are restricted to unaccepted, unrevoked, and
 unexpired rows and expose only invitation ID, creation time, and expiry time.
-Use separate member and invitation endpoints rather than broadening the roster
-endpoint to owner-only management data. The API cannot reconstruct or
+Use separate member and owner-only invitation Zero queries rather than broadening
+the roster query to owner-only management data. Raw-token creation and acceptance
+remain authenticated HTTP exchanges so secrets never enter persisted mutation results. The API cannot reconstruct or
 redisplay a raw invitation token because only its hash was persisted.
 
 Module availability is mutable authorization state and does not belong in the
@@ -243,8 +246,10 @@ replication allowlist. It publishes the columns required from `households`,
 private training session/exercise/set tables. All five original logging tables
 are dropped after verified transfer and removed from publication. `users` publishes **only `id`
 and `username`** for authorized safe member profiles; it does not publish email,
-password hashes or account timestamps. `refresh_tokens` and `household_invites`
-are excluded entirely, so token hashes never enter the Zero replica. The
+password hashes or account timestamps. `refresh_tokens` is excluded entirely.
+Migration 0058 publishes only safe `household_invites` metadata (identity, household,
+expiry, acceptance/revocation and creation timestamps), never token hashes or creator
+account details. Owner-only named queries further restrict access. The
 shared-media publication also omits object keys. Media access must
 follow an authorized feature attachment, never household membership alone; see
 [Shared media](./media/). Publishing a
@@ -272,9 +277,11 @@ Lists-specific creation, rename, transition, normalization, and conflict
 rules are documented in
 [Lists synchronization and authorization](./lists/#synchronization-and-authorization).
 
-Synced mutators must never change authentication records, household ownership,
-membership, roles, invites, or module settings. Those remain online-only API
-commands.
+Authentication records and plaintext invitation-token exchange remain outside Zero.
+Household lifecycle, membership, ownership, invitation revocation and module settings
+use custom Zero server overrides with current database authorization and locking.
+Their SQL changes and Zero acknowledgement commit together; an optimistic client
+result alone is never treated as permission to grant access or report success.
 
 ## Connectivity policy
 

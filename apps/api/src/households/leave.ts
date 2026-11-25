@@ -15,7 +15,11 @@ export type LeaveHouseholdResult =
   | { kind: "owner_must_transfer" }
   | { kind: "success" };
 
-export function createLeaveHouseholdService({ db }: { db: Database }) {
+export function createLeaveHouseholdService({
+  db,
+}: {
+  db: Pick<Database, "transaction">;
+}) {
   return async function leaveHousehold({
     userId,
     householdId,

@@ -32,6 +32,7 @@
     "./recipe-images": "./src/recipe-images.ts",
     "./recipes": "./src/recipes.ts",
     "./zero/contact-mutators": "./src/zero/contact-mutators.ts",
+    "./zero/household-mutators": "./src/zero/household-mutators.ts",
     "./zero/context": "./src/zero/context.ts",
     "./zero/mutators": "./src/zero/mutators.ts",
     "./zero/queries": "./src/zero/queries.ts",

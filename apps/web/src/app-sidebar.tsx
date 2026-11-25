@@ -494,7 +494,6 @@ export function AppSidebar({
       </Drawer.Root>
 
       <CreateHouseholdDialog
-        accessToken={accessToken}
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onCreated={selectHousehold}

@@ -18,18 +18,7 @@ import { createDocumentServices } from "./documents/service";
 import { createDocumentStorage } from "./documents/storage";
 import { createHabitStatsService } from "./habits/stats";
 import { createAcceptHouseholdInviteService } from "./households/accept-invite";
-import { createHouseholdService } from "./households/create";
 import { createHouseholdInviteService } from "./households/create-invite";
-import { createDeleteHouseholdService } from "./households/delete";
-import { createLeaveHouseholdService } from "./households/leave";
-import { createListHouseholdsService } from "./households/list";
-import { createListHouseholdInvitesService } from "./households/list-invites";
-import { createListHouseholdMembersService } from "./households/list-members";
-import { createRemoveHouseholdMemberService } from "./households/remove-member";
-import { createRenameHouseholdService } from "./households/rename";
-import { createRevokeHouseholdInviteService } from "./households/revoke-invite";
-import { createSetHouseholdModuleEnabledService } from "./households/set-module-enabled";
-import { createTransferHouseholdOwnershipService } from "./households/transfer-ownership";
 import { createListMediaServices } from "./lists/media";
 import { inspectR2Object } from "./media/inspect-object";
 import { processMediaImage } from "./media/process-image";
@@ -85,30 +74,7 @@ const households = {
   acceptHouseholdInvite: createAcceptHouseholdInviteService({
     db: infrastructure.db,
   }),
-  createHousehold: createHouseholdService({ db: infrastructure.db }),
   createHouseholdInvite: createHouseholdInviteService({
-    db: infrastructure.db,
-  }),
-  deleteHousehold: createDeleteHouseholdService({ db: infrastructure.db }),
-  listHouseholds: createListHouseholdsService({ db: infrastructure.db }),
-  listHouseholdInvites: createListHouseholdInvitesService({
-    db: infrastructure.db,
-  }),
-  listHouseholdMembers: createListHouseholdMembersService({
-    db: infrastructure.db,
-  }),
-  leaveHousehold: createLeaveHouseholdService({ db: infrastructure.db }),
-  renameHousehold: createRenameHouseholdService({ db: infrastructure.db }),
-  revokeHouseholdInvite: createRevokeHouseholdInviteService({
-    db: infrastructure.db,
-  }),
-  removeHouseholdMember: createRemoveHouseholdMemberService({
-    db: infrastructure.db,
-  }),
-  transferHouseholdOwnership: createTransferHouseholdOwnershipService({
-    db: infrastructure.db,
-  }),
-  setHouseholdModuleEnabled: createSetHouseholdModuleEnabledService({
     db: infrastructure.db,
   }),
 };

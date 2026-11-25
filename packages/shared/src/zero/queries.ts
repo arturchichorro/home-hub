@@ -8,6 +8,7 @@ import { calendarQueries } from "./calendar-queries";
 import { contactQueries } from "./contact-queries";
 import type { ZeroAuthContext } from "./context";
 import { documentQueries } from "./document-queries";
+import { householdInvitesQuery } from "./household-queries";
 import { type Schema, zql } from "./schema.gen";
 import { trainingQueries } from "./training-queries";
 
@@ -690,6 +691,7 @@ export const queries = defineHomeHubQueries({
   },
   households: {
     mine: myHouseholds,
+    invites: householdInvitesQuery,
   },
   modules: {
     byHousehold: moduleSettingsByHousehold,

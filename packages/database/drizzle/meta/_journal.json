@@ -407,6 +407,13 @@
       "when": 1795533820795,
       "tag": "0057_contacts",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1795603976259,
+      "tag": "0058_publish_invite_metadata",
+      "breakpoints": true
     }
   ]
 }

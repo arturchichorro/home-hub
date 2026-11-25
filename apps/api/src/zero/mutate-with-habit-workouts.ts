@@ -7,12 +7,12 @@ import { trainingScopeSchema } from "@home-hub/shared/training";
 import { zql } from "@home-hub/shared/zero/schema";
 import { mustGetMutator, type ReadonlyJSONValue } from "@rocicorp/zero";
 import { sql } from "drizzle-orm";
-import { serverMutators } from "./contact-mutations";
 import type { ZeroDbProvider } from "./db-provider";
 import {
   lockHabitWorkoutCompletion,
   refreshHabitWorkoutCompletion,
 } from "./habit-workout-completion";
+import { serverMutators } from "./server-mutators";
 
 type ServerTransaction = Parameters<
   Parameters<ZeroDbProvider["transaction"]>[0]
