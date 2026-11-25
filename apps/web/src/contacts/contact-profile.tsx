@@ -2,6 +2,7 @@ import {
   type ContactEntryFields,
   type ContactFields,
   contactFieldsSchema,
+  detailLabels,
 } from "@home-hub/shared/contacts";
 import { calendarDate } from "@home-hub/shared/habits";
 import { queries } from "@home-hub/shared/zero/queries";
@@ -180,8 +181,16 @@ function ProfileContent({
     validate(value: ContactFields) {
       const parsed = contactFieldsSchema.safeParse(value);
       if (!parsed.success) {
+        const issue = parsed.error.issues[0];
+        const index = issue?.path[0] === "details" ? issue.path[1] : undefined;
+        const row =
+          typeof index === "number" ? value.details[index] : undefined;
+        const message = issue?.message ?? "Complete the details first";
+
         throw Error(
-          parsed.error.issues[0]?.message ?? "Complete the details first",
+          row
+            ? `${row.label.trim() || detailLabels[row.type]}: ${message}`
+            : message,
         );
       }
       return parsed.data;

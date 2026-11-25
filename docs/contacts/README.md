@@ -9,7 +9,9 @@ recipe cooking history and private training history are unrelated and unchanged.
 - Opt-in, household-shared people records, not accounts or permissions.
 - A–Z list; search names and detail values. Duplicate names are allowed.
 - Profiles have one picture and ordered, repeatable labeled Text, Phone, Email,
-  Link and Birthday details. Birthdays use day/month with an optional year; no reminders.
+  Link and Birthday details. The add action chooses the type; labels remain editable,
+  and a wrong type is removed/recreated rather than changed through a dropdown.
+  Birthdays use day/month with an optional year; no reminders.
 - Phone/email/link actions validate their destination; no country-specific phone rules.
 - Archive preserves the profile, pictures and linked history. Restore before profile
   edits, new entries or new links. Existing shared entries remain editable through
@@ -22,6 +24,8 @@ recipe cooking history and private training history are unrelated and unchanged.
   **Delete entry everywhere** is a separate confirmed action. Removing the final
   text/picture cannot silently delete a shared entry.
 
+Incomplete local typing stays quiet during autosave; explicit save/prepare actions
+report validation, while transport failures and conflicts remain visible.
 Inline editors retain invalid, failed and conflicted drafts, offer retry/discard,
 and guard navigation, filter/paging changes, unload and app updates. Revision
 conflicts show the saved version before an explicit replacement. Focused entries
@@ -39,7 +43,11 @@ and normal validation/image processing, with review and explicit execution appro
 
 ## Data and authorization
 
-`contacts` owns names, typed detail arrays, archive state and revisions.
+`contacts` owns names, archive state and revisions. Its `details` JSONB column stores
+an ordered array of `{ id, type, label, value }` objects, not separate per-type tables.
+Array order is the displayed order; stable detail UUIDs support reordering and repeated
+labels. Birthday values are `YYYY-MM-DD` or `--MM-DD` without a year. Writes use the
+profile's existing revision/conflict protocol; incomplete details stay local drafts.
 `contact_entries` owns canonical dates/text and tombstones;
 `contact_entry_people` links entries to one or more household contacts.
 `contact_media` attaches shared `media` assets to a profile or entry.
