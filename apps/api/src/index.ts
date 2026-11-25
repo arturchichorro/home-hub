@@ -33,7 +33,6 @@ import { createConfirmRecipeImageUploadService } from "./recipes/images/confirm-
 import { createRecipeImageReadUrlService } from "./recipes/images/create-read-url";
 import { createRecipeImageReadUrlsService } from "./recipes/images/create-read-urls";
 import { createRecipeImageUploadService } from "./recipes/images/create-upload";
-import { createDeleteRecipeImageService } from "./recipes/images/delete";
 import { recipeImageMediaIdentity } from "./recipes/images/media-identity";
 import { closeHttpServer, createGracefulShutdown } from "./server-lifecycle";
 import { createExerciseMediaServices } from "./workouts/exercise-media";
@@ -131,9 +130,6 @@ const recipeImages = {
         variant: input.variant,
         secret: infrastructure.config.IMAGE_DELIVERY_SIGNING_SECRET,
       }),
-  }),
-  deleteRecipeImage: createDeleteRecipeImageService({
-    db: infrastructure.db,
   }),
 };
 

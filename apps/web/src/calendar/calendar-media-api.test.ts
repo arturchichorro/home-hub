@@ -3,7 +3,6 @@ import {
   batchCalendarImageUrl,
   type CalendarImageIdentity,
   confirmCalendarImage,
-  deleteCalendarImage,
   requestCalendarImageUpload,
 } from "./calendar-media-api";
 
@@ -56,19 +55,14 @@ describe("calendar media API", () => {
       }),
     );
   });
-  it("handles invalid uploads and scoped deletion", async () => {
+  it("handles invalid uploads", async () => {
     const fetch = vi
       .fn()
-      .mockResolvedValueOnce(new Response(null, { status: 422 }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+      .mockResolvedValueOnce(new Response(null, { status: 422 }));
     vi.stubGlobal("fetch", fetch);
     expect(await confirmCalendarImage(identity)).toEqual({
       kind: "invalid_upload",
     });
-    expect(await deleteCalendarImage(identity)).toEqual({ kind: "success" });
-    expect(fetch.mock.calls[1]?.[0]).toContain(
-      `/${identity.itemId}/media/${identity.attachmentId}`,
-    );
   });
   it("batches thumbnails across items, bounds batches and omits missing entries", async () => {
     const fetch = vi.fn(async (_url: unknown, init: RequestInit) => {

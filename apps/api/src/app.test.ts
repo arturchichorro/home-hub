@@ -48,8 +48,6 @@ const defaultInput: CreateAppInput = {
     createRecipeImageReadUrls: async () => ({ kind: "forbidden" }),
 
     createRecipeImageUpload: async () => ({ kind: "forbidden" }),
-
-    deleteRecipeImage: async () => ({ kind: "forbidden" }),
   },
   infrastructure: {
     zeroDbProvider: dbProvider,

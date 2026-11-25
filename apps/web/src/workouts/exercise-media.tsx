@@ -35,6 +35,7 @@ import {
 } from "react";
 import { ImageViewer } from "../media/image-viewer";
 import { readImageDimensions } from "../media/read-image-dimensions";
+import { removeAttachment } from "../media/remove-attachment";
 import { type MediaSession, useMediaSession } from "../media/session";
 import { blockAppUpdate } from "../updates/activity";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
@@ -46,7 +47,6 @@ import {
 } from "./exercise-image-url";
 import {
   confirmExerciseImage,
-  deleteExerciseImage,
   requestExerciseImageUpload,
 } from "./exercise-media-api";
 import { workoutOrderingSensors } from "./workout-list";
@@ -251,7 +251,6 @@ function ExerciseMediaGallery({
     ? provided.complete
     : individualResult.type === "complete";
   const [selectedId, setSelectedId] = useState<string>();
-  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [reordering, setReordering] = useState(false);
@@ -265,9 +264,7 @@ function ExerciseMediaGallery({
   useEffect(() => () => notify.current?.(false), []);
   const button = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLInputElement>(null);
-  const images = exerciseImagesFromRows(rows).filter(
-    (image) => !hiddenIds.has(image.id),
-  );
+  const images = exerciseImagesFromRows(rows);
   const selected = images.find((image) => image.id === selectedId);
   const writable = enabled && !disabled && !readOnly && complete;
   const sortingDisabled = !writable || busy || deleting || reordering;
@@ -439,10 +436,10 @@ function ExerciseMediaGallery({
     setDeleteError(undefined);
 
     try {
-      const result = await deleteExerciseImage({
-        accessToken: session.accessToken,
+      const result = await removeAttachment(zero, {
+        kind: "exercise",
         householdId,
-        exerciseId,
+        parentId: exerciseId,
         attachmentId: image.id,
       });
 
@@ -462,7 +459,6 @@ function ExerciseMediaGallery({
         exerciseId,
         attachmentId: image.id,
       });
-      setHiddenIds((old) => new Set([...old, image.id]));
       setSelectedId(undefined);
     } catch {
       setDeleteError("Unable to remove this picture. Try again.");

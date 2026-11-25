@@ -26,11 +26,7 @@ type AttachmentScope = Scope & { attachmentId: string };
 
 export type ContactMediaKind = "profile" | "entry";
 
-export function createContactMediaServices(
-  deps: CalendarMediaDependencies,
-  kind: ContactMediaKind,
-) {
-  const { db, signUpload, inspectObject, processImage, signRead } = deps;
+function contactMediaRecords(kind: ContactMediaKind) {
   async function parent(tx: DatabaseTransaction, input: Scope, write: boolean) {
     if (kind === "profile") {
       const [row] = await tx
@@ -144,6 +140,66 @@ export function createContactMediaServices(
         .where(eq(contactEntries.id, row.id));
     }
   }
+  return { parent, attachment, identity, bump };
+}
+
+export async function removeContactAttachment(
+  tx: DatabaseTransaction,
+  input: AttachmentScope,
+  kind: ContactMediaKind,
+) {
+  const { parent, attachment, bump } = contactMediaRecords(kind);
+  await authorizeContacts(tx, input, true);
+  await parent(tx, input, true);
+  const row = (await attachment(tx, input))[0];
+  if (!row) {
+    return { kind: "success" as const };
+  }
+  if (kind === "entry" && row.attachment.published) {
+    const [entry] = await tx
+      .select()
+      .from(contactEntries)
+      .where(eq(contactEntries.id, input.itemId));
+    if (!entry) {
+      throw new ContactsError(404, "Entry unavailable");
+    }
+    const [other] = await tx
+      .select({ id: contactMedia.id })
+      .from(contactMedia)
+      .where(
+        and(
+          eq(contactMedia.entryId, entry.id),
+          ne(contactMedia.id, row.attachment.id),
+          eq(contactMedia.published, true),
+          isNull(contactMedia.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (!entry.note.trim() && !other) {
+      throw new ContactsError(
+        422,
+        "This is the entry's last content. Delete the entry everywhere instead.",
+      );
+    }
+  }
+  await tx
+    .update(contactMedia)
+    .set({
+      deletedAt: new Date(),
+      published: false,
+      updatedAt: new Date(),
+    })
+    .where(eq(contactMedia.id, row.attachment.id));
+  await bump(tx, input);
+  return { kind: "success" as const };
+}
+
+export function createContactMediaServices(
+  deps: CalendarMediaDependencies,
+  kind: ContactMediaKind,
+) {
+  const { db, signUpload, inspectObject, processImage, signRead } = deps;
+  const { parent, attachment, identity, bump } = contactMediaRecords(kind);
   return {
     async createUpload(
       input: Scope & {
@@ -307,51 +363,7 @@ export function createContactMediaServices(
       });
     },
     async deleteAttachment(input: AttachmentScope) {
-      return db.transaction(async (tx) => {
-        await authorizeContacts(tx, input, true);
-        await parent(tx, input, true);
-        const row = (await attachment(tx, input))[0];
-        if (!row) {
-          return { kind: "success" as const };
-        }
-        if (kind === "entry" && row.attachment.published) {
-          const [entry] = await tx
-            .select()
-            .from(contactEntries)
-            .where(eq(contactEntries.id, input.itemId));
-          if (!entry) {
-            throw new ContactsError(404, "Entry unavailable");
-          }
-          const [other] = await tx
-            .select({ id: contactMedia.id })
-            .from(contactMedia)
-            .where(
-              and(
-                eq(contactMedia.entryId, entry.id),
-                ne(contactMedia.id, row.attachment.id),
-                eq(contactMedia.published, true),
-                isNull(contactMedia.deletedAt),
-              ),
-            )
-            .limit(1);
-          if (!entry.note.trim() && !other) {
-            throw new ContactsError(
-              422,
-              "This is the entry's last content. Delete the entry everywhere instead.",
-            );
-          }
-        }
-        await tx
-          .update(contactMedia)
-          .set({
-            deletedAt: new Date(),
-            published: false,
-            updatedAt: new Date(),
-          })
-          .where(eq(contactMedia.id, row.attachment.id));
-        await bump(tx, input);
-        return { kind: "success" as const };
-      });
+      return db.transaction((tx) => removeContactAttachment(tx, input, kind));
     },
     async readUrls(
       input: Pick<Scope, "userId" | "householdId"> & {

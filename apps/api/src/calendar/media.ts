@@ -162,6 +162,36 @@ async function findAttachment(
   return row;
 }
 
+export async function removeCalendarAttachment(
+  tx: DatabaseTransaction,
+  input: AttachmentScope,
+) {
+  const access = await authorize(tx, input);
+
+  if (access.kind !== "authorized") {
+    return access;
+  }
+
+  const row = await findAttachment(tx, input, "update");
+
+  if (!row) {
+    return { kind: "success" as const };
+  }
+
+  const deletedAt = new Date();
+  await tx
+    .update(calendarMedia)
+    .set({ deletedAt, updatedAt: deletedAt })
+    .where(
+      and(
+        eq(calendarMedia.id, row.id),
+        eq(calendarMedia.householdId, input.householdId),
+      ),
+    );
+
+  return { kind: "success" as const };
+}
+
 export function createCalendarMediaServices(
   dependencies: CalendarMediaDependencies,
 ) {
@@ -346,32 +376,7 @@ export function createCalendarMediaServices(
     },
 
     async deleteAttachment(input: AttachmentScope) {
-      return db.transaction(async (tx) => {
-        const access = await authorize(tx, input);
-
-        if (access.kind !== "authorized") {
-          return access;
-        }
-
-        const row = await findAttachment(tx, input, "update");
-
-        if (!row) {
-          return { kind: "success" as const };
-        }
-
-        const deletedAt = new Date();
-        await tx
-          .update(calendarMedia)
-          .set({ deletedAt, updatedAt: deletedAt })
-          .where(
-            and(
-              eq(calendarMedia.id, row.id),
-              eq(calendarMedia.householdId, input.householdId),
-            ),
-          );
-
-        return { kind: "success" as const };
-      });
+      return db.transaction((tx) => removeCalendarAttachment(tx, input));
     },
 
     async readUrls(

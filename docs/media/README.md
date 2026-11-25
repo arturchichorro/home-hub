@@ -58,6 +58,15 @@ image, and closing/navigating discards stale decode work. Reduced-motion setting
 skip the fade. A failed larger image keeps the available lower-resolution image;
 no additional derivative, signing request or backend change is required.
 
+## Attachment removal
+
+Database-only unlinking uses the `attachments.remove` Zero custom mutator across
+Recipes, Calendar, Moodboards, Exercises and Contacts. Client recipes optimistically
+hide the attachment; authoritative server overrides preserve existing authorization,
+parent locks, retained assets, counts and contact-entry last-content protection.
+There are no HTTP metadata-deletion endpoints or parallel hidden-ID caches. Upload,
+processing and signed delivery remain HTTP boundaries.
+
 ## Storage, delivery and authorization
 
 New originals use `households/{householdId}/media/{mediaId}`. Migrated originals

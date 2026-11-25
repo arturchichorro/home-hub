@@ -52,7 +52,8 @@ an editor can query a known unpublished image-first entry by ID. Profile and ent
 writes use Zero custom mutators: optimistic client recipes and authoritative server
 overrides sharing Zero’s transaction and durable mutation queue. Editors wait for
 server acknowledgement, retain rejected drafts and receive structured revision
-conflicts. There are no separate CRUD HTTP endpoints or polling reads. HTTP is only
+conflicts. Picture unlinking also uses `attachments.remove`, including the canonical
+last-content guard. There are no separate CRUD HTTP endpoints or polling reads. HTTP is only
 for picture upload/processing and signed delivery. Internal write IDs/hashes are
 excluded from publication.
 

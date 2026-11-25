@@ -18,10 +18,6 @@ import type {
   CreateRecipeImageUploadInput,
   CreateRecipeImageUploadResult,
 } from "../images/create-upload";
-import type {
-  DeleteRecipeImageInput,
-  DeleteRecipeImageResult,
-} from "../images/delete";
 import { createRecipeRoutes } from "./index";
 
 const jwtSecret = "test-jwt-secret";
@@ -54,11 +50,6 @@ function createTestApp(
   ) => Promise<CreateRecipeImageReadUrlResult> = async () => ({
     kind: "forbidden",
   }),
-  deleteRecipeImage: (
-    input: DeleteRecipeImageInput,
-  ) => Promise<DeleteRecipeImageResult> = async () => ({
-    kind: "forbidden",
-  }),
   createRecipeImageReadUrls: (
     input: CreateRecipeImageReadUrlsInput,
   ) => Promise<CreateRecipeImageReadUrlsResult> = async () => ({
@@ -73,7 +64,6 @@ function createTestApp(
       createRecipeImageReadUrl,
       createRecipeImageReadUrls,
       createRecipeImageUpload,
-      deleteRecipeImage,
       jwtSecret,
     }),
   );
@@ -232,7 +222,6 @@ describe("recipe routes", () => {
       async () => ({ kind: "forbidden" }),
       async () => ({ kind: "forbidden" }),
       async () => ({ kind: "forbidden" }),
-      async () => ({ kind: "forbidden" }),
       createRecipeImageReadUrls,
     );
 
@@ -258,32 +247,18 @@ describe("recipe routes", () => {
     });
   });
 
-  it("mounts authenticated deletion under the recipe image", async () => {
-    const imageId = "671874b1-df9d-4a91-8f3c-8055473e8aa2";
-    const deleteRecipeImage = vi.fn(
-      async (): Promise<DeleteRecipeImageResult> => ({ kind: "success" }),
-    );
-    const app = createTestApp(
-      async () => ({ kind: "forbidden" }),
-      async () => ({ kind: "forbidden" }),
-      async () => ({ kind: "forbidden" }),
-      deleteRecipeImage,
-    );
-
-    const response = await app.request(
-      `/${householdId}/recipes/${recipeId}/images/${imageId}`,
-      {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${createAccessToken()}` },
-      },
-    );
-
-    expect(response.status).toBe(204);
-    expect(deleteRecipeImage).toHaveBeenCalledWith({
-      userId,
-      householdId,
-      recipeId,
-      imageId,
-    });
+  it("does not expose attachment removal over HTTP", async () => {
+    const app = createTestApp(async () => ({ kind: "forbidden" }));
+    expect(
+      (
+        await app.request(
+          `/${householdId}/recipes/${recipeId}/images/671874b1-df9d-4a91-8f3c-8055473e8aa2`,
+          {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${createAccessToken()}` },
+          },
+        )
+      ).status,
+    ).toBe(404);
   });
 });

@@ -9,7 +9,7 @@ import {
 } from "@home-hub/shared/media";
 import { queries } from "@home-hub/shared/zero/queries";
 import { Button, ErrorPopover, ImagePlus } from "@home-hub/ui-web";
-import { useQuery } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "@rocicorp/zero/react";
 import {
   type ChangeEvent,
   type ReactNode,
@@ -19,6 +19,7 @@ import {
 } from "react";
 import { ImageViewer } from "../media/image-viewer";
 import { readImageDimensions } from "../media/read-image-dimensions";
+import { removeAttachment } from "../media/remove-attachment";
 import { type MediaSession, useMediaSession } from "../media/session";
 import { blockAppUpdate } from "../updates/activity";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
@@ -29,7 +30,6 @@ import {
 } from "./contact-image-url";
 import {
   confirmContactImage,
-  deleteContactImage,
   requestContactImageUpload,
 } from "./contact-media-api";
 
@@ -122,12 +122,12 @@ function ContactMediaContent({
   children,
   session,
 }: Props & { session: MediaSession }) {
+  const zero = useZero();
   const enabled = useZeroMutationEnabled();
   const [rows, result] = useQuery(
     saved ? queries.contacts.media({ householdId, itemId, kind }) : undefined,
   );
   const [selectedId, setSelectedId] = useState<string>();
-  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string>();
@@ -144,9 +144,7 @@ function ContactMediaContent({
   }
 
   useEffect(() => () => callback.current(false), []);
-  const images = contactImagesFromRows(rows ?? []).filter(
-    (image) => !hiddenIds.has(image.id),
-  );
+  const images = contactImagesFromRows(rows ?? []);
   const selected = images.find((image) => image.id === selectedId);
   const writable =
     enabled &&
@@ -306,11 +304,10 @@ function ContactMediaContent({
     setDeleteError(undefined);
 
     try {
-      const result = await deleteContactImage({
-        accessToken: session.accessToken,
-        kind,
+      const result = await removeAttachment(zero, {
+        kind: kind === "profile" ? "contact-profile" : "contact-entry",
         householdId,
-        itemId,
+        parentId: itemId,
         attachmentId: image.id,
       });
 
@@ -331,7 +328,6 @@ function ContactMediaContent({
         itemId,
         attachmentId: image.id,
       });
-      setHiddenIds((old) => new Set([...old, image.id]));
       setSelectedId(undefined);
     } catch {
       setDeleteError(

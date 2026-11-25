@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   confirmRecipeImageUpload,
   createRecipeImageReadUrls,
-  deleteRecipeImage,
   requestRecipeImageUpload,
   uploadRecipeImageObject,
 } from "./image-api";
@@ -187,21 +186,6 @@ describe("recipe image API", () => {
         body: JSON.stringify({
           requests: [{ imageId, recipeId, variant: "thumbnail" }],
         }),
-      },
-    );
-  });
-
-  it("deletes image metadata and object through the API", async () => {
-    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
-
-    await expect(deleteRecipeImage(commandInput)).resolves.toEqual({
-      kind: "success",
-    });
-    expect(fetchMock).toHaveBeenCalledWith(
-      `/api/households/${householdId}/recipes/${recipeId}/images/${imageId}`,
-      {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${accessToken}` },
       },
     );
   });

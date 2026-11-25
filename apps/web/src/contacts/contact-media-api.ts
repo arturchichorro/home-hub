@@ -114,26 +114,6 @@ export async function confirmContactImage(
   return { kind: "success" as const };
 }
 
-export async function deleteContactImage(
-  input: Omit<ContactImageIdentity, "userId" | "variant">,
-) {
-  const response = await fetch(
-    `${base(input.householdId, input.kind)}/${input.itemId}/media/${input.attachmentId}`,
-    { method: "DELETE", headers: headers(input.accessToken) },
-  );
-  const rejected = failure(response);
-
-  if (rejected) {
-    return rejected;
-  }
-
-  if (!response.ok) {
-    throw new Error("Unable to remove contact image");
-  }
-
-  return { kind: "success" as const };
-}
-
 async function readContactImageUrls(input: {
   accessToken: string;
   kind: ContactMediaKind;

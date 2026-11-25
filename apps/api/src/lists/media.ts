@@ -190,6 +190,37 @@ async function refreshCount(tx: DatabaseTransaction, input: Scope) {
   );
 }
 
+export async function removeListAttachment(
+  tx: DatabaseTransaction,
+  input: AttachmentScope,
+) {
+  const access = await authorize(tx, input, "update");
+
+  if (access.kind !== "authorized") {
+    return access;
+  }
+
+  const row = await findAttachment(tx, input, "update");
+
+  if (!row) {
+    return { kind: "success" as const };
+  }
+
+  const deletedAt = new Date();
+  await tx
+    .update(listMedia)
+    .set({ deletedAt, updatedAt: deletedAt })
+    .where(
+      and(
+        eq(listMedia.id, row.id),
+        eq(listMedia.householdId, input.householdId),
+      ),
+    );
+  await refreshCount(tx, input);
+
+  return { kind: "success" as const };
+}
+
 export function createListMediaServices(dependencies: ListMediaDependencies) {
   const {
     db,
@@ -406,33 +437,7 @@ export function createListMediaServices(dependencies: ListMediaDependencies) {
     },
 
     async deleteAttachment(input: AttachmentScope) {
-      return db.transaction(async (tx) => {
-        const access = await authorize(tx, input, "update");
-
-        if (access.kind !== "authorized") {
-          return access;
-        }
-
-        const row = await findAttachment(tx, input, "update");
-
-        if (!row) {
-          return { kind: "success" as const };
-        }
-
-        const deletedAt = new Date();
-        await tx
-          .update(listMedia)
-          .set({ deletedAt, updatedAt: deletedAt })
-          .where(
-            and(
-              eq(listMedia.id, row.id),
-              eq(listMedia.householdId, input.householdId),
-            ),
-          );
-        await refreshCount(tx, input);
-
-        return { kind: "success" as const };
-      });
+      return db.transaction((tx) => removeListAttachment(tx, input));
     },
 
     async readUrls(

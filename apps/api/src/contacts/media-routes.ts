@@ -112,21 +112,6 @@ export function createContactMediaRoutes({
 
     return c.json({ attachment: result.attachment }, 200);
   });
-  routes.delete("/:itemId/media/:attachmentId", async (c) => {
-    const input = scope(c);
-    const attachmentId = z.uuid().safeParse(c.req.param("attachmentId"));
-
-    if (!input || !attachmentId.success) {
-      return c.json({ error: "Invalid request" }, 400);
-    }
-
-    await services.deleteAttachment({
-      ...input,
-      attachmentId: attachmentId.data,
-    });
-
-    return c.body(null, 204);
-  });
   routes.post("/media/read-urls", async (c) => {
     const householdId = z.uuid().safeParse(c.req.param("householdId"));
     const body = contactMediaReadRequestSchema.safeParse(

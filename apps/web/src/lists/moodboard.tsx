@@ -17,12 +17,12 @@ import {
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { type CSSProperties, useLayoutEffect, useRef, useState } from "react";
 import { ImageViewer } from "../media/image-viewer";
+import { removeAttachment } from "../media/remove-attachment";
 import { type MediaSession, useMediaSession } from "../media/session";
 import { useBlockAppUpdate } from "../updates/activity";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { listOrderingSensors } from "./list-card";
-import { deleteListImage } from "./list-media-api";
 import { invalidateListImageUrl, useListImageUrl } from "./list-media-url";
 import { MoodboardLayout } from "./moodboard-layout";
 import { applyMoodboardOrder, moveMoodboardPin } from "./moodboard-order";
@@ -525,10 +525,10 @@ export function Moodboard({
           onClose={() => setSelected(undefined)}
           onSelect={setSelected}
           onDelete={async () => {
-            const result = await deleteListImage({
-              ...session,
+            const result = await removeAttachment(zero, {
+              kind: "moodboard",
               householdId,
-              listId,
+              parentId: listId,
               attachmentId: current.id,
             });
 
