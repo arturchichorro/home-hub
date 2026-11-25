@@ -11,7 +11,7 @@ type HouseholdModuleRoute =
   | "/households/$householdId/habits"
   | "/households/$householdId/workouts"
   | "/households/$householdId/documents"
-  | "/households/$householdId/logs"
+  | "/households/$householdId/contacts"
   | "/households/$householdId/calendar"
   | "/households/$householdId/settings";
 
@@ -60,8 +60,8 @@ export function getDefaultHouseholdModuleRoute(
     return "/households/$householdId/documents";
   }
 
-  if (settings.some((s) => s.moduleKey === "logs" && s.enabled)) {
-    return "/households/$householdId/logs";
+  if (settings.some((s) => s.moduleKey === "contacts" && s.enabled)) {
+    return "/households/$householdId/contacts";
   }
 
   if (settings.some((s) => s.moduleKey === "calendar" && s.enabled)) {

@@ -110,26 +110,6 @@ export async function confirmCalendarImage(
   return { kind: "success" as const };
 }
 
-export async function deleteCalendarImage(
-  input: Omit<CalendarImageIdentity, "userId" | "variant">,
-) {
-  const response = await fetch(
-    `${base(input.householdId)}/${input.itemId}/media/${input.attachmentId}`,
-    { method: "DELETE", headers: headers(input.accessToken) },
-  );
-  const rejected = failure(response);
-
-  if (rejected) {
-    return rejected;
-  }
-
-  if (!response.ok) {
-    throw new Error("Unable to remove calendar image");
-  }
-
-  return { kind: "success" as const };
-}
-
 async function readCalendarImageUrls(input: {
   accessToken: string;
   householdId: string;

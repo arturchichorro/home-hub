@@ -6,7 +6,7 @@ export const householdModuleKeys = [
   "habits",
   "workouts",
   "documents",
-  "logs",
+  "contacts",
   "calendar",
 ] as const;
 
@@ -26,7 +26,7 @@ export const householdModuleCatalog = [
   { key: "habits", label: "Habits", defaultEnabled: false },
   { key: "workouts", label: "Workouts", defaultEnabled: false },
   { key: "documents", label: "Documents", defaultEnabled: false },
-  { key: "logs", label: "Logs", defaultEnabled: false },
+  { key: "contacts", label: "Contacts", defaultEnabled: false },
   { key: "calendar", label: "Calendar", defaultEnabled: false },
 ] as const satisfies readonly HouseholdModuleDefinition[];
 

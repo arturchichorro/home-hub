@@ -15,12 +15,14 @@ import {
   updateRecipeIngredientMutationSchema,
   updateRecipeMutationSchema,
 } from "../recipes";
+import { attachmentMutators } from "./attachment-mutators";
 import { calendarMutators } from "./calendar-mutators";
+import { contactMutators } from "./contact-mutators";
 import type { ZeroAuthContext } from "./context";
 import { documentMutators } from "./document-mutators";
 import { habitMutatorDefinitions } from "./habit-mutators";
+import { householdMutators } from "./household-mutators";
 import { listMutatorDefinitions } from "./list-mutators";
-import { logMutators } from "./log-mutators";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
 import { appendSortKey, nextSortKey, planReorder } from "./ordering";
 import { type Schema, zql } from "./schema.gen";
@@ -518,8 +520,10 @@ export const mutators = defineHomeHubMutators({
     reorder: reorderHouseholds,
   },
   documents: documentMutators,
-  logs: logMutators,
   calendar: calendarMutators,
+  contacts: contactMutators,
+  attachments: attachmentMutators,
+  households: householdMutators,
   lists: listMutatorDefinitions,
   habits: habitMutatorDefinitions,
   workouts: workoutMutatorDefinitions,

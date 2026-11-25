@@ -10,7 +10,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it, vi } from "vitest";
 import {
+  acknowledgedContactsEnvironment,
   bootstrapRequiredExitCode,
+  contactsMigrationWhen,
   loggingCutoverPending,
   loggingMigrationWhen,
   runProductionMigrations,
@@ -122,6 +124,54 @@ it("runs the native production entrypoint without a pnpm 12 runtime reinstall", 
   }
 });
 
+it("protects the Contacts cutover separately from training and acknowledges only the migration connection", async () => {
+  const journal = JSON.parse(
+    readFileSync(
+      new URL(
+        "../packages/database/drizzle/meta/_journal.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  expect(contactsMigrationWhen).toBe(
+    journal.entries.find((e: { tag: string }) => e.tag === "0057_contacts")
+      .when,
+  );
+  const migrate = vi.fn(() => 0);
+  expect(
+    await runProductionMigrations({
+      env: { HOME_HUB_REQUIRE_CONTACTS_CUTOVER: "1" },
+      contactsPending: async () => true,
+      migrate,
+      report: () => {},
+    }),
+  ).toBe(bootstrapRequiredExitCode);
+  expect(migrate).not.toHaveBeenCalled();
+  expect(
+    await runProductionMigrations({
+      env: {
+        HOME_HUB_REQUIRE_CONTACTS_CUTOVER: "1",
+        HOME_HUB_CONTACTS_CUTOVER_READY: "1",
+      },
+      contactsPending: async () => true,
+      migrate,
+    }),
+  ).toBe(0);
+  const env = {
+    DATABASE_URL:
+      "postgres://fixture:fixture@localhost/home_hub_test_fixture?options=-c%20statement_timeout%3D1000",
+    HOME_HUB_CONTACTS_CUTOVER_READY: "1",
+  };
+  const next = acknowledgedContactsEnvironment(env);
+  expect(new URL(next.DATABASE_URL).searchParams.get("options")).toContain(
+    "statement_timeout=1000",
+  );
+  expect(new URL(next.DATABASE_URL).searchParams.get("options")).toContain(
+    "home_hub.contacts_cutover_ready=1",
+  );
+  expect(env.DATABASE_URL).not.toContain("contacts_cutover_ready");
+});
 it("checks metadata read-only, including an empty database", async () => {
   const empty = vi.fn().mockResolvedValueOnce({ rows: [{ present: false }] });
   expect(await loggingCutoverPending({ query: empty })).toBe(true);

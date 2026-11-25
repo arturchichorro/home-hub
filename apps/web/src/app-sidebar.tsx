@@ -71,7 +71,7 @@ type ModuleDefinition = {
     | "habits"
     | "workouts"
     | "documents"
-    | "logs"
+    | "contacts"
     | "calendar";
   label: string;
   Icon: typeof BookOpen;
@@ -82,7 +82,7 @@ type ModuleDefinition = {
     | "/households/$householdId/habits"
     | "/households/$householdId/workouts"
     | "/households/$householdId/documents"
-    | "/households/$householdId/logs"
+    | "/households/$householdId/contacts"
     | "/households/$householdId/calendar";
 };
 
@@ -124,10 +124,10 @@ const moduleDefinitions: readonly ModuleDefinition[] = [
     to: "/households/$householdId/documents",
   },
   {
-    key: "logs",
-    label: "Logs",
+    key: "contacts",
+    label: "Contacts",
     Icon: NotebookPen,
-    to: "/households/$householdId/logs",
+    to: "/households/$householdId/contacts",
   },
   {
     key: "settings",
@@ -494,7 +494,6 @@ export function AppSidebar({
       </Drawer.Root>
 
       <CreateHouseholdDialog
-        accessToken={accessToken}
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onCreated={selectHousehold}

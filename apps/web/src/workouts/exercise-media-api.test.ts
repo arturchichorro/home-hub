@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   batchExerciseImageUrl,
   confirmExerciseImage,
-  deleteExerciseImage,
   type ExerciseImageIdentity,
   requestExerciseImageUpload,
 } from "./exercise-media-api";
@@ -56,19 +55,14 @@ describe("exercise media API", () => {
       }),
     );
   });
-  it("handles invalid uploads and scoped deletion", async () => {
+  it("handles invalid uploads", async () => {
     const fetch = vi
       .fn()
-      .mockResolvedValueOnce(new Response(null, { status: 422 }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+      .mockResolvedValueOnce(new Response(null, { status: 422 }));
     vi.stubGlobal("fetch", fetch);
     expect(await confirmExerciseImage(identity)).toEqual({
       kind: "invalid_upload",
     });
-    expect(await deleteExerciseImage(identity)).toEqual({ kind: "success" });
-    expect(fetch.mock.calls[1]?.[0]).toContain(
-      `/${identity.exerciseId}/media/${identity.attachmentId}`,
-    );
   });
   it("batches thumbnails across exercises, bounds batches and omits missing entries", async () => {
     const fetch = vi.fn(async (_url: unknown, init: RequestInit) => {

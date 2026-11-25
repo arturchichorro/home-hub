@@ -4,22 +4,21 @@ import {
 } from "@home-hub/shared/modules";
 import { queries } from "@home-hub/shared/zero/queries";
 import { InlineAlert, Switch } from "@home-hub/ui-web";
-import { useQuery } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
-import { setHouseholdModuleEnabled } from "./api";
+import { setHouseholdModuleEnabled } from "./mutations";
 
 type ModuleSettingsProps = {
-  accessToken: string;
   householdId: string;
   onSessionExpired: () => void;
 };
 
 export function ModuleSettings({
-  accessToken,
   householdId,
   onSessionExpired,
 }: ModuleSettingsProps) {
+  const zero = useZero();
   const [settings, result] = useQuery(
     queries.modules.byHousehold({ householdId }),
   );
@@ -44,8 +43,7 @@ export function ModuleSettings({
     setError(undefined);
 
     try {
-      const command = await setHouseholdModuleEnabled({
-        accessToken,
+      const command = await setHouseholdModuleEnabled(zero, {
         householdId,
         moduleKey,
         enabled,

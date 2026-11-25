@@ -50,8 +50,6 @@ export {
   Crown,
   Dumbbell,
   FileText,
-  Folder,
-  FolderPlus,
   GripVertical,
   History,
   House,

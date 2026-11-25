@@ -19,10 +19,10 @@ import {
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { removeAttachment } from "../media/remove-attachment";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { AddRecipeCookLogForm } from "./add-recipe-cook-log-form";
-import { deleteRecipeImage } from "./image-api";
 import {
   prefetchRecipeImage,
   scheduleIdleRecipeImagePrefetch,
@@ -55,9 +55,6 @@ export function RecipeDetail({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string>();
   const [selectedImage, setSelectedImage] = useState<RecipeImage>();
-  const [hiddenImageIds, setHiddenImageIds] = useState<Set<string>>(
-    () => new Set(),
-  );
   const [selectedCookLogIds, setSelectedCookLogIds] = useState<
     readonly string[] | null
   >(null);
@@ -71,9 +68,7 @@ export function RecipeDetail({
     currentDescription: recipe?.description ?? null,
   });
   const images = recipeImagesFromRows(recipe?.images ?? []);
-  const firstVisibleImageId = images.find(
-    (image) => !hiddenImageIds.has(image.id),
-  )?.id;
+  const firstVisibleImageId = images[0]?.id;
 
   useEffect(() => {
     if (!firstVisibleImageId) {
@@ -123,7 +118,7 @@ export function RecipeDetail({
     return deleting ? <p className="text-muted">Deleting recipe…</p> : null;
   }
 
-  const visibleImages = images.filter((image) => !hiddenImageIds.has(image.id));
+  const visibleImages = images;
   const viewerImages = selectedCookLogIds
     ? visibleImages.filter(
         (image) =>
@@ -194,41 +189,31 @@ export function RecipeDetail({
       return;
     }
 
-    setHiddenImageIds((current) => new Set(current).add(image.id));
     setSelectedImage(undefined);
-
-    const restoreImage = () =>
-      setHiddenImageIds((current) => {
-        const next = new Set(current);
-        next.delete(image.id);
-
-        return next;
-      });
+    setDeleteError(undefined);
 
     try {
-      const deletion = await deleteRecipeImage({
-        accessToken,
+      const result = await removeAttachment(zero, {
+        kind: "recipe",
+        householdId,
+        parentId: recipeId,
+        attachmentId: image.id,
+      });
+      if (result.kind === "unauthorized") {
+        onSessionExpired();
+      }
+      if (result.kind !== "success") {
+        throw Error("Picture removal rejected");
+      }
+      invalidateRecipeImageUrl({
         householdId,
         recipeId,
         imageId: image.id,
+        userId,
       });
-
-      if (deletion.kind === "unauthorized") {
-        onSessionExpired();
-      }
-
-      if (deletion.kind === "success") {
-        invalidateRecipeImageUrl({
-          householdId,
-          recipeId,
-          imageId: image.id,
-          userId,
-        });
-      } else {
-        restoreImage();
-      }
     } catch {
-      restoreImage();
+      // Zero rolls back the optimistic unlink; no parallel hidden-ID cache.
+      setDeleteError("The picture could not be removed. Please retry.");
     }
   }
 

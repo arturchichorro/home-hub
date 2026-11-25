@@ -17,7 +17,11 @@ export type RevokeHouseholdInviteResult =
   | { kind: "invalid_invite" }
   | { kind: "success" };
 
-export function createRevokeHouseholdInviteService({ db }: { db: Database }) {
+export function createRevokeHouseholdInviteService({
+  db,
+}: {
+  db: Pick<Database, "transaction">;
+}) {
   return async function revokeHouseholdInvite({
     userId,
     householdId,

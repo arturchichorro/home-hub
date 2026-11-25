@@ -136,14 +136,13 @@ describe("exercise media routes", () => {
       attachmentId,
     });
   });
-  it("confirms and deletes attachments", async () => {
+  it("confirms uploads but does not expose metadata deletion over HTTP", async () => {
     const { app, services, headers } = harness();
     const confirmedAt = new Date();
     services.confirmUpload.mockResolvedValue({
       kind: "success",
       attachment: { id: attachmentId, confirmedAt },
     });
-    services.deleteAttachment.mockResolvedValue({ kind: "success" });
 
     const response = await app.request(
       `${prefix}/${exerciseId}/media/${attachmentId}/confirm`,
@@ -159,7 +158,8 @@ describe("exercise media routes", () => {
           headers,
         })
       ).status,
-    ).toBe(204);
+    ).toBe(404);
+    expect(services.deleteAttachment).not.toHaveBeenCalled();
   });
   it("validates bounded read batches and preserves omitted unauthorized entries", async () => {
     const { app, services, headers } = harness();

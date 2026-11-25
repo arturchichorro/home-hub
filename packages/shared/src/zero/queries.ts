@@ -5,9 +5,10 @@ import { habitsQuerySchema, shiftCalendarDate } from "../habits";
 import { listMediaPageSchema } from "../list-media";
 import { listDetailArgsSchema, listPreviewItemLimit } from "../lists";
 import { calendarQueries } from "./calendar-queries";
+import { contactQueries } from "./contact-queries";
 import type { ZeroAuthContext } from "./context";
 import { documentQueries } from "./document-queries";
-import { logQueries } from "./log-queries";
+import { householdInvitesQuery } from "./household-queries";
 import { type Schema, zql } from "./schema.gen";
 import { trainingQueries } from "./training-queries";
 
@@ -676,7 +677,7 @@ export const queries = defineHomeHubQueries({
     mine: myHouseholdMemberships,
   },
   documents: documentQueries,
-  logs: logQueries,
+  contacts: contactQueries,
   calendar: calendarQueries,
   lists: {
     library: listsLibrary,
@@ -690,6 +691,7 @@ export const queries = defineHomeHubQueries({
   },
   households: {
     mine: myHouseholds,
+    invites: householdInvitesQuery,
   },
   modules: {
     byHousehold: moduleSettingsByHousehold,

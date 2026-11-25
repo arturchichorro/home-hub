@@ -7,12 +7,12 @@ import {
   FieldControl,
   InlineAlert,
 } from "@home-hub/ui-web";
+import { useZero } from "@rocicorp/zero/react";
 import { type SubmitEvent, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
-import { createHousehold } from "./api";
+import { createHousehold } from "./mutations";
 
 type CreateHouseholdDialogProps = {
-  accessToken: string;
   onCreated: (householdId: string) => void;
   onOpenChange: (open: boolean) => void;
   onSessionExpired: () => void;
@@ -20,12 +20,12 @@ type CreateHouseholdDialogProps = {
 };
 
 export function CreateHouseholdDialog({
-  accessToken,
   onCreated,
   onOpenChange,
   onSessionExpired,
   open,
 }: CreateHouseholdDialogProps) {
+  const zero = useZero();
   const [name, setName] = useState("");
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,7 +55,7 @@ export function CreateHouseholdDialog({
     setIsSubmitting(true);
 
     try {
-      const result = await createHousehold({ accessToken, name });
+      const result = await createHousehold(zero, { name });
 
       if (result.kind === "unauthorized") {
         onSessionExpired();

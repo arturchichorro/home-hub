@@ -17,7 +17,11 @@ export type RemoveHouseholdMemberResult =
   | { kind: "invalid_member" }
   | { kind: "success" };
 
-export function createRemoveHouseholdMemberService({ db }: { db: Database }) {
+export function createRemoveHouseholdMemberService({
+  db,
+}: {
+  db: Pick<Database, "transaction">;
+}) {
   return async function removeHouseholdMember({
     userId,
     householdId,

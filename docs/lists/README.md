@@ -91,7 +91,7 @@ tables. Migration `0017` removes the retired module's source tables, settings,
 and temporary mirroring bridge without changing live Lists data.
 
 Moodboards add typed `list_media` attachments to shared assets, plus dedicated
-media queries, upload/read/removal APIs and the `lists.reorderMedia` mutation.
+media queries, upload/read APIs, and the `attachments.remove` / `lists.reorderMedia` Zero mutations.
 They do not accept checklist items or change list type after creation.
 
 Flashcards add typed `list_flashcards` rows and dedicated card queries/mutators;

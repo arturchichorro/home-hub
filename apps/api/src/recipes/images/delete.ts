@@ -20,7 +20,11 @@ export type DeleteRecipeImageResult =
   | { kind: "forbidden" }
   | { kind: "success" };
 
-export function createDeleteRecipeImageService({ db }: { db: Database }) {
+export function createDeleteRecipeImageService({
+  db,
+}: {
+  db: Pick<Database, "transaction">;
+}) {
   return async function deleteRecipeImage({
     userId,
     householdId,

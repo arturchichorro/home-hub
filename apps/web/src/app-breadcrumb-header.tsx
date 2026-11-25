@@ -3,7 +3,6 @@ import { ChevronRight, IconButton, PanelLeft } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { LogTitle } from "./logs/log-title";
 
 type AppBreadcrumbHeaderProps = {
   onOpenSidebar: () => void;
@@ -19,7 +18,7 @@ type BreadcrumbLocation = {
     | "habits"
     | "workouts"
     | "documents"
-    | "logs"
+    | "contacts"
     | "calendar";
   recipeId?: string;
   listId?: string;
@@ -27,7 +26,7 @@ type BreadcrumbLocation = {
   exerciseId?: string;
   habitId?: string;
   training?: "history" | "session";
-  logId?: string;
+  contactId?: string;
 };
 
 export function getBreadcrumbLocation(pathname: string): BreadcrumbLocation {
@@ -44,7 +43,7 @@ export function getBreadcrumbLocation(pathname: string): BreadcrumbLocation {
     segments[2] === "habits" ||
     segments[2] === "workouts" ||
     segments[2] === "documents" ||
-    segments[2] === "logs" ||
+    segments[2] === "contacts" ||
     segments[2] === "calendar"
       ? segments[2]
       : undefined;
@@ -81,8 +80,8 @@ export function getBreadcrumbLocation(pathname: string): BreadcrumbLocation {
     }
   }
 
-  if (module === "logs" && segments[3]) {
-    location.logId = segments[3];
+  if (module === "contacts" && segments[3]) {
+    location.contactId = segments[3];
   }
 
   return location;
@@ -211,24 +210,21 @@ function HabitBreadcrumb({
   );
 }
 
-function LogBreadcrumb({
+function ContactBreadcrumb({
   householdId,
-  logId,
+  contactId,
 }: {
   householdId: string;
-  logId: string;
+  contactId: string;
 }) {
-  const [log] = useQuery(queries.logs.detail({ householdId, logId }));
-
+  const [contact] = useQuery(
+    queries.contacts.detail({ householdId, contactId }),
+  );
   return (
     <>
       <BreadcrumbSeparator />
-      <li className="min-w-0 flex-1" aria-current="page">
-        {log ? (
-          <LogTitle householdId={householdId} logId={logId} title={log.title} />
-        ) : (
-          <span>Log</span>
-        )}
+      <li className="min-w-0 flex-1 truncate" aria-current="page">
+        {contact?.name ?? "Contact"}
       </li>
     </>
   );
@@ -259,8 +255,8 @@ export function AppBreadcrumbHeader({
               ? "Workouts"
               : location.module === "documents"
                 ? "Documents"
-                : location.module === "logs"
-                  ? "Logs"
+                : location.module === "contacts"
+                  ? "Contacts"
                   : location.module === "calendar"
                     ? "Calendar"
                     : undefined;
@@ -319,13 +315,13 @@ export function AppBreadcrumbHeader({
                   >
                     Lists
                   </Link>
-                ) : location.logId ? (
+                ) : location.contactId ? (
                   <Link
-                    to="/households/$householdId/logs"
+                    to="/households/$householdId/contacts"
                     params={{ householdId: location.householdId }}
                     className="rounded-sm text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus-ring"
                   >
-                    Logs
+                    Contacts
                   </Link>
                 ) : location.habitId ? (
                   <Link
@@ -398,10 +394,10 @@ export function AppBreadcrumbHeader({
               </BreadcrumbItem>
             </>
           )}
-          {location.householdId && location.logId ? (
-            <LogBreadcrumb
+          {location.householdId && location.contactId ? (
+            <ContactBreadcrumb
               householdId={location.householdId}
-              logId={location.logId}
+              contactId={location.contactId}
             />
           ) : null}
         </ol>

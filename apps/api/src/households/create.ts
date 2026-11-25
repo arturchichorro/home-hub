@@ -18,7 +18,11 @@ export type CreateHouseholdResult =
   | { kind: "unauthorized" }
   | { kind: "success"; household: { id: string; name: string } };
 
-export function createHouseholdService({ db }: { db: Database }) {
+export function createHouseholdService({
+  db,
+}: {
+  db: Pick<Database, "transaction">;
+}) {
   return async function createHousehold({
     userId,
     name,

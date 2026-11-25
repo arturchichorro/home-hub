@@ -56,11 +56,6 @@ export type CreateRecipeImageReadUrlsResult =
       }>;
     };
 
-export type DeleteRecipeImageResult =
-  | { kind: "unauthorized" }
-  | { kind: "forbidden" }
-  | { kind: "success" };
-
 function imageUrl({
   householdId,
   recipeId,
@@ -206,30 +201,4 @@ export async function createRecipeImageReadUrls({
   );
 
   return { kind: "success", reads: result.reads };
-}
-
-export async function deleteRecipeImage({
-  accessToken,
-  householdId,
-  recipeId,
-  imageId,
-}: RecipeImageCommandInput): Promise<DeleteRecipeImageResult> {
-  const response = await fetch(imageUrl({ householdId, recipeId, imageId }), {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  if (response.status === 401) {
-    return { kind: "unauthorized" };
-  }
-
-  if (response.status === 403) {
-    return { kind: "forbidden" };
-  }
-
-  if (!response.ok) {
-    throw new Error("Failed to delete recipe image");
-  }
-
-  return { kind: "success" };
 }

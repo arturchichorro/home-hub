@@ -14,7 +14,11 @@ export type DeleteHouseholdResult =
   | { kind: "forbidden" }
   | { kind: "success" };
 
-export function createDeleteHouseholdService({ db }: { db: Database }) {
+export function createDeleteHouseholdService({
+  db,
+}: {
+  db: Pick<Database, "transaction">;
+}) {
   return async function deleteHousehold({
     householdId,
     userId,

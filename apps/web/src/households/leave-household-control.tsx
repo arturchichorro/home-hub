@@ -5,12 +5,12 @@ import {
   LogOut,
   Tooltip,
 } from "@home-hub/ui-web";
+import { useZero } from "@rocicorp/zero/react";
 import { useId, useRef, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
-import { leaveHousehold } from "./api";
+import { leaveHousehold } from "./mutations";
 
 type LeaveHouseholdControlProps = {
-  accessToken: string;
   householdId: string;
   isOwner: boolean;
   onLeftHousehold: () => void;
@@ -18,12 +18,12 @@ type LeaveHouseholdControlProps = {
 };
 
 export function LeaveHouseholdControl({
-  accessToken,
   householdId,
   isOwner,
   onLeftHousehold,
   onSessionExpired,
 }: LeaveHouseholdControlProps) {
+  const zero = useZero();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +39,7 @@ export function LeaveHouseholdControl({
     setError(null);
 
     try {
-      const result = await leaveHousehold({ accessToken, householdId });
+      const result = await leaveHousehold(zero, { householdId });
 
       if (result.kind === "unauthorized") {
         onSessionExpired();

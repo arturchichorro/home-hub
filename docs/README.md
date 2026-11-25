@@ -29,8 +29,8 @@ Connected changes should appear immediately and converge across clients. Previou
 - [Habits](./habits/) owns shared habits, personal completion tracking, calendar views,
   data and authorization.
 
-- [Logs](./logs/) owns opt-in shared topics, colored categories, daily manual notes,
-  conflict-safe editing and retained history.
+- [Contacts](./contacts/) owns shared people profiles, typed details, pictures and
+  canonical dated notes linked to one or more contacts; it replaces household Logs.
 
 - [Documents](./documents/) owns opt-in household file rows, reusable colored tags,
   private upload/download, replacement and retention.
@@ -39,6 +39,7 @@ Connected changes should appear immediately and converge across clients. Previou
 - [Workouts](./workouts/) owns shared definitions/catalog/media and private logging/history.
 - [Shared media](./media/) owns reusable asset storage, delivery and attachment security.
 - [Maintenance](./maintenance.md) records editing boundaries, bounded views and measured audit follow-ups.
+- [Statistics export](./statistics.md) documents the manual, operator-only JSON export and schema cleanup audit.
 
 ## Feature specifications and historical plans
 
