@@ -138,7 +138,7 @@ export function createContactsServices({
   db,
   now = () => new Date(),
 }: {
-  db: Database;
+  db: Pick<Database, "transaction">;
   now?: () => Date;
 }) {
   return {
@@ -414,5 +414,3 @@ export function createContactsServices({
       }),
   };
 }
-
-export type ContactsServices = ReturnType<typeof createContactsServices>;

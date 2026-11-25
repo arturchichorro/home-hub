@@ -2,18 +2,17 @@ import { contactImagesFromRows } from "@home-hub/shared/contact-media";
 import { contactFieldsSchema } from "@home-hub/shared/contacts";
 import { queries } from "@home-hub/shared/zero/queries";
 import { Button, InlineAlert, Input } from "@home-hub/ui-web";
-import { useQuery } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "@rocicorp/zero/react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { TextDraftGuard } from "../editing/text-draft-actions";
-import { useMediaSession } from "../media/session";
 import { useBlockAppUpdate } from "../updates/activity";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
-import { writeProfile } from "./api";
 import { ContactAvatar } from "./contact-avatar";
+import { writeProfile } from "./mutations";
 
 export function ContactsIndex({ householdId }: { householdId: string }) {
-  const session = useMediaSession();
+  const zero = useZero();
   const enabled = useZeroMutationEnabled();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -35,7 +34,7 @@ export function ContactsIndex({ householdId }: { householdId: string }) {
     enabled && settings.some((s) => s.moduleKey === "contacts" && s.enabled);
   useBlockAppUpdate(Boolean(name) || busy);
   async function create() {
-    if (!session || !writable || busy) {
+    if (!writable || busy) {
       return;
     }
     const parsed = contactFieldsSchema.safeParse({
@@ -54,7 +53,7 @@ export function ContactsIndex({ householdId }: { householdId: string }) {
     setBusy(true);
     setError(undefined);
     try {
-      const profile = await writeProfile(session, {
+      const profile = await writeProfile(zero, {
         householdId,
         contactId: pending.current.id,
         writeId: pending.current.writeId,

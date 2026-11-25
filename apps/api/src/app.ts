@@ -4,8 +4,6 @@ import type { CalendarMediaServices } from "./calendar/media";
 import { createCalendarMediaRoutes } from "./calendar/routes";
 import type { ContactMediaServices } from "./contacts/media";
 import { createContactMediaRoutes } from "./contacts/media-routes";
-import type { ContactsServices } from "./contacts/records";
-import { createContactsRoutes } from "./contacts/routes";
 import { createDocumentRoutes } from "./documents/routes";
 import type { DocumentServices } from "./documents/service";
 import { createHabitStatsRoutes } from "./habits/routes";
@@ -48,7 +46,6 @@ export type CreateAppInput = {
   calendarMedia?: CalendarMediaServices;
   documents?: DocumentServices;
   listMedia?: ListMediaServices;
-  contacts?: ContactsServices;
   contactProfileMedia?: ContactMediaServices;
   contactEntryMedia?: ContactMediaServices;
   infrastructure: {
@@ -128,12 +125,6 @@ export function createApp(input: CreateAppInput) {
     );
   }
 
-  if (input.contacts) {
-    app.route(
-      "/api/households/:householdId/contacts",
-      createContactsRoutes({ jwtSecret, services: input.contacts }),
-    );
-  }
   if (input.contactProfileMedia) {
     app.route(
       "/api/households/:householdId/contacts/profiles",

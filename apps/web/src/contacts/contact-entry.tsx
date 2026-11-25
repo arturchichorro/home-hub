@@ -12,14 +12,13 @@ import {
   Textarea,
   Trash2,
 } from "@home-hub/ui-web";
-import { useQuery } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "@rocicorp/zero/react";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { useMediaSession } from "../media/session";
-import { readEntry, writeEntry } from "./api";
 import { ContactMedia } from "./contact-media";
 import type { ContactRecordControl, ContactWork } from "./contact-profile";
 import { EditorStatus } from "./editor-status";
+import { writeEntry } from "./mutations";
 import { useContactRecord } from "./use-contact-record";
 
 export function ContactEntry({
@@ -43,7 +42,7 @@ export function ContactEntry({
   onWork: (id: string, work: ContactWork) => void;
   onRemoved: (id: string) => void;
 }) {
-  const session = useMediaSession();
+  const zero = useZero();
   const [row, result] = useQuery(
     queries.contacts.entry({ householdId, entryId }),
   );
@@ -83,9 +82,10 @@ export function ContactEntry({
       saving: work.current.saving || work.current.media || work.current.action,
     });
   const editor = useContactRecord({
+    externalSaving: actionBusy,
     current: snapshot,
     initial,
-    enabled: enabled && Boolean(session),
+    enabled,
     validate(value: ContactEntryFields) {
       const parsed = entryFieldsSchema.safeParse(value);
       if (!parsed.success) {
@@ -93,15 +93,8 @@ export function ContactEntry({
       }
       return parsed.data;
     },
-    read: () =>
-      session
-        ? readEntry(session, householdId, entryId)
-        : Promise.resolve(null),
     save: (fields, base, writeId, prepare) => {
-      if (!session) {
-        throw Error("Session unavailable");
-      }
-      return writeEntry(session, {
+      return writeEntry(zero, {
         householdId,
         entryId,
         fields,
@@ -134,7 +127,6 @@ export function ContactEntry({
   );
   async function remove(unlink: boolean) {
     if (
-      !session ||
       !enabled ||
       !editor.base ||
       editor.isSaving ||
@@ -149,7 +141,7 @@ export function ContactEntry({
     setActionError(undefined);
     try {
       const base = editor.base;
-      const record = await writeEntry(session, {
+      const record = await writeEntry(zero, {
         householdId,
         entryId,
         fields: unlink

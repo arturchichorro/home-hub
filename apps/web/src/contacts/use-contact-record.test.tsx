@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { ContactConflict } from "./api";
+import { ContactConflict } from "./mutations";
 import { type RecordSnapshot, useContactRecord } from "./use-contact-record";
 
 type Fields = { name: string };
@@ -17,6 +17,7 @@ function setup({
     version: (base?.version ?? 0) + 1,
   })),
   enabled = true,
+  externalSaving = false,
 } = {}) {
   let editor: ReturnType<typeof useContactRecord<Fields>> | undefined;
   const onWork = vi.fn();
@@ -26,8 +27,8 @@ function setup({
       current,
       initial: { name: "" },
       enabled,
+      externalSaving,
       save,
-      read: async () => current,
       validate: (fields) => {
         if (!fields.name.trim()) {
           throw Error("Name required");
@@ -155,4 +156,39 @@ it("does not create an untouched empty draft and requires connectivity for a rea
   expect(await editor.flush()).toBe(false);
   expect(save).not.toHaveBeenCalled();
   expect(editor.hasChanges).toBe(true);
+});
+
+it("does not acknowledge an optimistic query echo before the queued server result", async () => {
+  let resolve: (value: typeof initial) => void = () => undefined;
+  const save = vi.fn(
+    (_fields: Fields, _base: RecordSnapshot<Fields> | null) =>
+      new Promise<typeof initial>((done) => {
+        resolve = done;
+      }),
+  );
+  const { editor } = setup({ save });
+  editor.change({ name: "Queued" });
+  const pending = editor.flush();
+  const optimistic = { id, version: 2, fields: { name: "Queued" } };
+  editor.reconcile(optimistic);
+  expect(editor.base?.version).toBe(1);
+  expect(editor.hasChanges).toBe(true);
+  expect(editor.isSaving).toBe(true);
+  resolve(optimistic);
+  expect(await pending).toBe(true);
+  expect(editor.base).toEqual(optimistic);
+  expect(editor.hasChanges).toBe(false);
+});
+
+it("does not adopt an optimistic archive/unlink echo while its external mutation is pending", () => {
+  const { editor } = setup({ externalSaving: true });
+  editor.reconcile({ id, version: 2, fields: { name: "Optimistic only" } });
+  expect(editor.base).toEqual(initial);
+  expect(editor.value).toEqual(initial.fields);
+});
+
+it("reconciles same-version field changes from Zero rollback/rebase", () => {
+  const { editor } = setup();
+  editor.reconcile({ ...initial, fields: { name: "Rebased" } });
+  expect(editor.value).toEqual({ name: "Rebased" });
 });

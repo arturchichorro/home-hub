@@ -14,7 +14,6 @@ import {
 } from "./calendar/media";
 import { config } from "./config";
 import { createContactMediaServices } from "./contacts/media";
-import { createContactsServices } from "./contacts/records";
 import { createDocumentServices } from "./documents/service";
 import { createDocumentStorage } from "./documents/storage";
 import { createHabitStatsService } from "./habits/stats";
@@ -273,7 +272,6 @@ const app = createApp({
       secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
     }),
   }),
-  contacts: createContactsServices({ db }),
   contactProfileMedia: createContactMediaServices(
     imageAttachmentDependencies,
     "profile",

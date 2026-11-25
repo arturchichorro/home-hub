@@ -39,7 +39,6 @@ const entries = (householdId: string, userId: string) =>
   zql.contactEntries
     .where("householdId", householdId)
     .where("deletedAt", "IS", null)
-    .where("published", true)
     .whereExists("household", (h) => household(h, userId));
 
 const hydrated = (q: ReturnType<typeof entries>) =>
@@ -75,6 +74,7 @@ export const contactQueries = {
       .one(),
   ),
   entry: define(entryScopeSchema, ({ args, ctx }) =>
+    // Editors may know an unpublished image-first ID. History still hides staging.
     hydrated(
       entries(args.householdId, ctx.userId).where("id", args.entryId),
     ).one(),
@@ -107,6 +107,7 @@ export const contactQueries = {
       );
     }
     return hydrated(q)
+      .where("published", true)
       .orderBy("entryOn", "desc")
       .orderBy("createdAt", "desc")
       .orderBy("id", "desc")

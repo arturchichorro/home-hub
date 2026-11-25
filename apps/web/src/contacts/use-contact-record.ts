@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ContactConflict } from "./api";
+import { ContactConflict } from "./mutations";
 
 export type RecordSnapshot<F> = { id: string; version: number; fields: F };
 
@@ -10,21 +10,21 @@ export function useContactRecord<F>({
   current,
   initial,
   enabled,
+  externalSaving = false,
   save,
-  read,
   validate,
   onWork,
 }: {
   current: RecordSnapshot<F> | null | undefined;
   initial: F;
   enabled: boolean;
+  externalSaving?: boolean;
   save: (
     value: F,
     base: RecordSnapshot<F> | null,
     writeId: string,
     prepare: boolean,
   ) => Promise<RecordSnapshot<F> | null>;
-  read: () => Promise<RecordSnapshot<F> | null>;
   validate: (value: F) => F;
   onWork: (dirty: boolean, saving: boolean) => void;
 }) {
@@ -38,11 +38,17 @@ export function useContactRecord<F>({
     pending: undefined as { key: string; writeId: string } | undefined,
     echo: false,
   }).current;
-  const props = useRef({ enabled, save, read, validate, onWork, current });
-  props.current = { enabled, save, read, validate, onWork, current };
+  const props = useRef({
+    enabled,
+    externalSaving,
+    save,
+    validate,
+    onWork,
+    current,
+  });
+  props.current = { enabled, externalSaving, save, validate, onWork, current };
   const mounted = useRef(true);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const echoTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const saving = useRef<Promise<boolean> | undefined>(undefined);
   const dirty = () => {
     let canonical = s.value;
@@ -78,17 +84,23 @@ export function useContactRecord<F>({
     record: RecordSnapshot<F> | null | undefined,
     authoritative = false,
   ) {
-    if (record === undefined || s.saving) {
+    if (record === undefined || s.saving || props.current.externalSaving) {
       return;
     }
     if (
       !authoritative &&
       s.echo &&
-      (!record || record.version < (s.base?.version ?? 0))
+      record &&
+      record.version < (s.base?.version ?? 0)
     ) {
       return;
     }
-    if (record?.id === s.base?.id && record?.version === s.base?.version) {
+    if (
+      record?.id === s.base?.id &&
+      record?.version === s.base?.version &&
+      same(record?.fields, s.base?.fields)
+    ) {
+      s.echo = false;
       return;
     }
     s.echo = false;
@@ -147,17 +159,6 @@ export function useContactRecord<F>({
       s.pending = undefined;
       s.echo = true;
       // Keep focused text/caret verbatim; dirty comparison uses validated canonical fields.
-      clearTimeout(echoTimer.current);
-      echoTimer.current = setTimeout(async () => {
-        try {
-          const snapshot = await props.current.read();
-          if (mounted.current) {
-            syncRef.current(snapshot, true);
-          }
-        } catch {
-          /* A retry/live echo can recover. */
-        }
-      }, 1000);
       return true;
     } catch (error) {
       if (error instanceof ContactConflict) {
@@ -200,18 +201,21 @@ export function useContactRecord<F>({
     current === undefined
       ? "loading"
       : current
-        ? current.id + ":" + current.version
+        ? JSON.stringify(current)
         : "none";
+  const isSaving = s.saving;
   useEffect(() => {
     void key;
-    syncRef.current(props.current.current);
-  }, [key]);
+    // Acknowledgement may keep the same version as the optimistic query echo.
+    if (!isSaving && !externalSaving) {
+      syncRef.current(props.current.current);
+    }
+  }, [key, isSaving, externalSaving]);
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
       clearTimeout(timer.current);
-      clearTimeout(echoTimer.current);
       props.current.onWork(false, false);
     };
   }, []);
@@ -272,6 +276,7 @@ export function useContactRecord<F>({
     },
     accept(record: RecordSnapshot<F> | null) {
       adopt(record);
+      s.echo = true;
       notify();
     },
   };

@@ -4,10 +4,10 @@ import {
   linkHabitWorkoutsMutationSchema,
 } from "@home-hub/shared/habits";
 import { trainingScopeSchema } from "@home-hub/shared/training";
-import { mutators } from "@home-hub/shared/zero/mutators";
 import { zql } from "@home-hub/shared/zero/schema";
 import { mustGetMutator, type ReadonlyJSONValue } from "@rocicorp/zero";
 import { sql } from "drizzle-orm";
+import { serverMutators } from "./contact-mutations";
 import type { ZeroDbProvider } from "./db-provider";
 import {
   lockHabitWorkoutCompletion,
@@ -24,7 +24,8 @@ export async function mutateWithHabitWorkouts(
   name: string,
   args: ReadonlyJSONValue | undefined,
 ) {
-  const mutator = mustGetMutator(mutators, name);
+  const mutator = mustGetMutator(serverMutators, name);
+
   const training =
     name.startsWith("training.") &&
     args &&

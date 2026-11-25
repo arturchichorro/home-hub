@@ -11,17 +11,16 @@ import {
   InlineAlert,
   Input,
 } from "@home-hub/ui-web";
-import { useQuery } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TextDraftGuard } from "../editing/text-draft-actions";
-import { useMediaSession } from "../media/session";
 import { useBlockAppUpdate } from "../updates/activity";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
-import { readProfile, writeProfile } from "./api";
 import { ContactDetails } from "./contact-details";
 import { ContactEntry } from "./contact-entry";
 import { ContactMedia } from "./contact-media";
 import { EditorStatus } from "./editor-status";
+import { writeProfile } from "./mutations";
 import { useContactRecord } from "./use-contact-record";
 
 export type ContactRecordControl = { discard: () => void };
@@ -106,14 +105,13 @@ function ProfileContent({
     | undefined;
   initial: ContactFields;
 }) {
-  const session = useMediaSession();
+  const zero = useZero();
   const connected = useZeroMutationEnabled();
   const [settings, settingsResult] = useQuery(
     queries.modules.byHousehold({ householdId }),
   );
   const enabled =
     connected &&
-    Boolean(session) &&
     settingsResult.type === "complete" &&
     settings.some((s) => s.moduleKey === "contacts" && s.enabled);
   const [search, setSearch] = useState("");
@@ -175,6 +173,7 @@ function ProfileContent({
         localWork.current.action,
     });
   const editor = useContactRecord({
+    externalSaving: profileAction,
     current,
     initial,
     enabled,
@@ -187,15 +186,8 @@ function ProfileContent({
       }
       return parsed.data;
     },
-    read: () =>
-      session
-        ? readProfile(session, householdId, contactId)
-        : Promise.resolve(null),
     save: (fields, base, writeId) => {
-      if (!session) {
-        throw Error("Session unavailable");
-      }
-      return writeProfile(session, {
+      return writeProfile(zero, {
         householdId,
         contactId,
         fields,
@@ -229,7 +221,7 @@ function ProfileContent({
   const locked = dirty || saving;
   useBlockAppUpdate(locked);
   const archived = Boolean(current?.fields.archived || editor.value.archived);
-  const writable = enabled && !archived;
+  const writable = enabled && !archived && !profileAction;
   const [history, historyResult] = useQuery(
     queries.contacts.history({
       householdId,
@@ -309,7 +301,6 @@ function ProfileContent({
                 onConfirm={() => {
                   void (async () => {
                     if (
-                      !session ||
                       !enabled ||
                       profileAction ||
                       !editor.base ||
@@ -325,7 +316,7 @@ function ProfileContent({
                     localWork.current.action = true;
                     report();
                     try {
-                      const record = await writeProfile(session, {
+                      const record = await writeProfile(zero, {
                         householdId,
                         contactId,
                         expectedVersion: base.version,

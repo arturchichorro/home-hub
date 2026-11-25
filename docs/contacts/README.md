@@ -47,9 +47,14 @@ and normal validation/image processing, with review and explicit execution appro
 Household-qualified foreign keys prevent cross-household attachments/links.
 Deferred constraints enforce people and published text-or-confirmed-picture
 content. Private, unpublished staging permits image-first creation. Zero queries
-are bounded, module/membership-qualified and hide staging and tombstones; writes
-use authenticated REST with household serialization, expected revisions and retry
-IDs. Internal write IDs/hashes are excluded from publication.
+are bounded and module/membership-qualified. History hides staging and tombstones;
+an editor can query a known unpublished image-first entry by ID. Profile and entry
+writes use Zero custom mutators: optimistic client recipes and authoritative server
+overrides sharing Zero’s transaction and durable mutation queue. Editors wait for
+server acknowledgement, retain rejected drafts and receive structured revision
+conflicts. There are no separate CRUD HTTP endpoints or polling reads. HTTP is only
+for picture upload/processing and signed delivery. Internal write IDs/hashes are
+excluded from publication.
 
 ## Destructive cutover
 
