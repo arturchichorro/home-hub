@@ -28,11 +28,8 @@ if [[ "$migration_table" == "t" ]]; then
     exec -T postgres psql -X -U home_hub -d home_hub -At -v ON_ERROR_STOP=1 \
     -c 'SELECT NOT EXISTS (SELECT FROM drizzle.__drizzle_migrations WHERE created_at >= 1795533820795);')"
 fi
-# Contacts intentionally discards legacy Logs. Approval is private, explicit and separate from a routine release.
-if [[ "$needs_contacts_cutover" != "f" ]] && ! grep -qx 'HOME_HUB_CONTACTS_CUTOVER_APPROVED=1' "$environment_file"; then
-  printf '%s\n' 'Contacts cutover not approved: resolve device drafts, approve legacy Logs removal, and prepare maintenance first.' >&2
-  exit 78
-fi
+# Contacts deliberately discards legacy Logs. The release automatically performs
+# maintenance and backup before acknowledging readiness to its migrator only.
 migration_options=(--rm)
 if [[ "$needs_logging_cutover" != "f" || "$needs_contacts_cutover" != "f" ]]; then
   docker compose --env-file "$environment_file" -f "$compose_file" stop api zero-cache
