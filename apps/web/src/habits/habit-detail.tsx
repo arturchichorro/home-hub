@@ -23,9 +23,7 @@ import { HabitHistory } from "./habit-history";
 import { HabitNameInput } from "./habit-name-input";
 import { HabitNoteInput } from "./habit-note-input";
 import { HabitPersonSelect } from "./habit-person-select";
-import { HabitStatistics } from "./habit-statistics";
 import { HabitWorkoutLink } from "./habit-workout-link";
-import { useHabitStats } from "./use-habit-stats";
 import { useHabitView } from "./use-habit-view";
 
 export function HabitDetailPage({
@@ -71,13 +69,6 @@ function HabitDetail({
   const selected = date ?? view.today;
   const [management, setManagement] = useState<"rename" | "archive">();
   const archived = habit?.status === "archived";
-  const stats = useHabitStats(
-    householdId,
-    habitId,
-    view.personId,
-    view.today,
-    !!habit && view.memberResult.type === "complete",
-  );
   useBlockAppUpdate(management !== undefined);
   useEffect(() => {
     if (!view.locked && selected > view.today) {
@@ -222,11 +213,6 @@ function HabitDetail({
           />
         </section>
       )}
-      <HabitStatistics
-        data={stats.data}
-        error={stats.error}
-        archived={archived}
-      />
       <DialogRoot
         open={management !== undefined}
         onOpenChange={(open) => {

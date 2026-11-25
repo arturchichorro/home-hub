@@ -1,9 +1,8 @@
-import type { HabitStats } from "@home-hub/shared/habit-stats";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { HabitDetailPage } from "./habit-detail";
 
-const mocks = vi.hoisted(() => ({ useQuery: vi.fn(), stats: vi.fn() }));
+const mocks = vi.hoisted(() => ({ useQuery: vi.fn() }));
 vi.mock("@rocicorp/zero/react", () => ({
   useZero: () => ({ userID: "me", mutate: vi.fn() }),
   useQuery: mocks.useQuery,
@@ -18,21 +17,10 @@ vi.mock("../zero/use-zero-mutation-enabled", () => ({
 vi.mock("../app-header-right-component", () => ({
   useAppHeaderRightComponent: vi.fn(),
 }));
-vi.mock("./use-habit-stats", () => ({ useHabitStats: mocks.stats }));
-const data: HabitStats = {
-  asOf: "2026-11-10",
-  completedDays: 5,
-  lastOn: "2026-11-09",
-  last7: 2,
-  last30: 5,
-  currentWeeks: 2,
-  bestWeeks: 3,
-};
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-11-10T12:00:00Z"));
-  mocks.stats.mockReturnValue({ data, error: undefined });
 });
 afterEach(() => vi.useRealTimers());
 function render(archived = false, person?: string) {
@@ -84,9 +72,7 @@ it("opens today's direct editor with one month and existing shared/daily text", 
   expect(html.indexOf("Details for Read")).toBeLessThan(html.indexOf("<table"));
   expect(html).toContain("Saved shared instructions");
   expect(html).toContain("Saved daily note");
-  expect(html).toContain("Current weekly streak");
-  expect(html).toContain("Last 7 days");
-  expect(html).toContain("2/7");
+  expect(html).not.toContain("statistics");
 });
 it("inspects another member's day without editing their note/completion, while shared management stays shared", () => {
   const html = render(false, "peer");
@@ -95,11 +81,9 @@ it("inspects another member's day without editing their note/completion, while s
   expect(html).not.toContain('aria-label="Note for Read on');
   expect(html).toContain('aria-label="Note for Read"');
 });
-it("retains archived totals, best weekly streak and all stored text, without active streak/editing", () => {
+it("retains archived stored text without statistics or active editing", () => {
   const html = render(true);
-  expect(html).toContain("Completed days");
-  expect(html).toContain("Best weekly streak");
-  expect(html).toContain("Last completion");
+  expect(html).not.toContain("Completed days");
   expect(html).not.toContain("Current weekly streak");
   expect(html).not.toMatch(/<textarea|Mark done|Clear completion/);
   expect(html).toContain("Saved shared instructions");

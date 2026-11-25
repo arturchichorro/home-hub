@@ -7,10 +7,8 @@ import { useState } from "react";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { CatalogExerciseEditor } from "./exercise-catalog";
-import { ExerciseStatistics } from "./exercise-statistics";
 import { TrainingHistoryPage } from "./training-history";
 import type { CatalogSaveResult } from "./use-catalog-exercise-editor";
-import { useExerciseStats } from "./use-exercise-stats";
 
 export function ExerciseDetailPage({
   householdId,
@@ -26,7 +24,6 @@ export function ExerciseDetailPage({
   const enabled = useZeroMutationEnabled();
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
-  const stats = useExerciseStats(householdId, exerciseId);
 
   if (!exercise) {
     return (
@@ -123,17 +120,6 @@ export function ExerciseDetailPage({
               });
           }}
         />
-      )}
-      {stats.data ? (
-        <ExerciseStatistics stats={stats.data} />
-      ) : stats.error ? (
-        <InlineAlert variant="danger" role="alert">
-          {stats.error}
-        </InlineAlert>
-      ) : (
-        <p role="status" className="text-sm text-muted">
-          Loading statistics…
-        </p>
       )}
       <div className="grid gap-2">
         <h2 className="text-sm font-medium">History</h2>

@@ -150,35 +150,6 @@ function postQuery(input: {
 }
 
 describe("Zero routes", () => {
-  it("validates statistics day labels using the trusted gateway clock, not client context", async () => {
-    const app = createZeroRoutes({ dbProvider, jwtSecret });
-    const response = await postQuery({
-      app,
-      accessToken: createAccessToken(),
-      body: [
-        "transform",
-        [
-          {
-            id: "stats",
-            name: "habits.statistics",
-            args: [
-              {
-                householdId,
-                habitId: itemId,
-                personId: userId,
-                today: "0001-01-01",
-                timeZone: "UTC",
-              },
-            ],
-          },
-        ],
-      ],
-    });
-    expect(response.status).toBe(200);
-    expect(JSON.stringify(await response.json())).toContain(
-      "Statistics date changed",
-    );
-  });
   it("rejects the retired bulk log writer before touching archived measurements", async () => {
     const provider = createMutationTestProvider();
     const app = createZeroRoutes({

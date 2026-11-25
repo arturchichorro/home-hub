@@ -45,63 +45,51 @@ const sessions = (
     .orderBy("completedAt", "desc")
     .orderBy("id", "desc");
 
-const exerciseArgs = z
-  .object({ householdId: z.uuid(), exerciseId: z.uuid() })
-  .strict();
-const authorizedExercise = (
-  args: z.infer<typeof exerciseArgs>,
-  ctx: ZeroAuthContext,
-) =>
-  zql.exercises
-    .where("householdId", args.householdId)
-    .where("id", args.exerciseId)
-    .whereExists("household", (h) =>
-      h
-        .where("deletedAt", "IS", null)
-        .whereExists("members", (m) => m.where("userId", ctx.userId))
-        .whereExists("moduleSettings", (s) =>
-          s.where("moduleKey", "workouts").where("enabled", true),
-        ),
-    )
-    .where(({ or, cmp, exists }) =>
-      or(
-        cmp("deletedAt", "IS", null),
-        exists("performances", (p) =>
+export const trainingQueries = {
+  exercise: define(
+    z.object({ householdId: z.uuid(), exerciseId: z.uuid() }).strict(),
+    ({ args, ctx }) =>
+      zql.exercises
+        .where("householdId", args.householdId)
+        .where("id", args.exerciseId)
+        .whereExists("household", (h) =>
+          h
+            .where("deletedAt", "IS", null)
+            .whereExists("members", (m) => m.where("userId", ctx.userId))
+            .whereExists("moduleSettings", (s) =>
+              s.where("moduleKey", "workouts").where("enabled", true),
+            ),
+        )
+        .where(({ or, cmp, exists }) =>
+          or(
+            cmp("deletedAt", "IS", null),
+            exists("performances", (p) =>
+              p
+                .where("householdId", args.householdId)
+                .where("userId", ctx.userId)
+                .where("deletedAt", "IS", null)
+                .whereExists("sets")
+                .whereExists("session", (t) =>
+                  t.where("deletedAt", "IS", null),
+                ),
+            ),
+          ),
+        )
+        .related("performances", (p) =>
           p
             .where("householdId", args.householdId)
             .where("userId", ctx.userId)
             .where("deletedAt", "IS", null)
             .whereExists("sets")
-            .whereExists("session", (t) => t.where("deletedAt", "IS", null)),
-        ),
-      ),
-    );
-const exercise = define(exerciseArgs, ({ args, ctx }) =>
-  authorizedExercise(args, ctx)
-    .related("performances", (p) =>
-      p
-        .where("householdId", args.householdId)
-        .where("userId", ctx.userId)
-        .where("deletedAt", "IS", null)
-        .whereExists("sets")
-        .whereExists("session", (t) => t.where("deletedAt", "IS", null))
-        .orderBy("performedOn", "desc")
-        .orderBy("performedAt", "desc")
-        .orderBy("id", "desc")
-        .limit(1),
-    )
-    .one(),
-);
-
-export const trainingQueries = {
-  exercise,
-  statistics: define(exerciseArgs, ({ args, ctx }) =>
-    authorizedExercise(args, ctx)
-      .related("statistics", (rows) =>
-        rows.where("userId", ctx.userId).limit(1),
-      )
-      .one(),
+            .whereExists("session", (t) => t.where("deletedAt", "IS", null))
+            .orderBy("performedOn", "desc")
+            .orderBy("performedAt", "desc")
+            .orderBy("id", "desc")
+            .limit(1),
+        )
+        .one(),
   ),
+
   session: define(
     z
       .object({

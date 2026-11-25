@@ -414,13 +414,6 @@
       "when": 1795603976259,
       "tag": "0058_publish_invite_metadata",
       "breakpoints": true
-    },
-    {
-      "idx": 59,
-      "version": "7",
-      "when": 1795607779577,
-      "tag": "0059_zero_statistics",
-      "breakpoints": true
     }
   ]
 }

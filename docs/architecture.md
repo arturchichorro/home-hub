@@ -92,15 +92,12 @@ binary transfer/processing, signed delivery URLs, health and external integratio
 Do not add parallel CRUD endpoints, fetch-on-focus statistics, mirrored record
 caches or mutations disguised as reads.
 
-When a value needs lifetime aggregation, synchronize a bounded derived projection,
-not unlimited history. Migration `0059` adds one author-private exercise summary
-and weekly habit metadata with seven day bits and prefix counts/streaks. Statistics
-read one exercise summary or at most six habit weeks. Canonical SQL functions
-perform the initial backfill and subsequent source-mutation updates in the same
-transaction; there are no jobs, refresh endpoints or secondary summary service.
-Stop old writers for the backfill and resume with the matching API. Administrative
-bulk changes to canonical data must refresh the same aggregates before commit.
-See [Habits](./habits/) and [Workouts](./workouts/).
+Statistics are not displayed or maintained in the app. An explicit operator-only
+[JSON export](./statistics.md) reads canonical records directly from PostgreSQL in
+one read-only snapshot, computes statistics on demand and streams supporting
+records to a private file. This operational tool is deliberately outside app
+data access: no summary tables, write-time aggregation, HTTP endpoint, scheduled
+job or automatic AI upload.
 
 ### React application
 

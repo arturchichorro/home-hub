@@ -1,8 +1,7 @@
 import { defineQueriesWithType, defineQueryWithType } from "@rocicorp/zero";
 import * as z from "zod";
 import { flashcardDeckSchema, flashcardPreviewLimit } from "../flashcards";
-import { habitStatisticsArgsSchema, habitWeekStart } from "../habit-stats";
-import { calendarDate, habitsQuerySchema, shiftCalendarDate } from "../habits";
+import { habitsQuerySchema, shiftCalendarDate } from "../habits";
 import { listMediaPageSchema } from "../list-media";
 import { listDetailArgsSchema, listPreviewItemLimit } from "../lists";
 import { calendarQueries } from "./calendar-queries";
@@ -439,28 +438,6 @@ const habitDetail = defineHomeHubQuery(
       .one(),
 );
 
-const habitStatistics = defineHomeHubQuery(
-  habitStatisticsArgsSchema,
-  ({ args, ctx }) => {
-    if (
-      ctx.serverNow !== undefined &&
-      calendarDate(ctx.serverNow, args.timeZone) !== args.today
-    ) {
-      throw new Error("Statistics date changed");
-    }
-    return authorizedPersonHabits(args.householdId, ctx.userId, args.personId)
-      .where("id", args.habitId)
-      .related("weeklyStatistics", (rows) =>
-        rows
-          .where("userId", args.personId)
-          .where("weekOn", "<=", habitWeekStart(args.today))
-          .orderBy("weekOn", "desc")
-          .limit(6),
-      )
-      .one();
-  },
-);
-
 const recentPersonHabits = defineHomeHubQuery(
   personHabitArgs.refine(
     (args) => args.endOn <= shiftCalendarDate(args.startOn, 6),
@@ -689,7 +666,6 @@ export const queries = defineHomeHubQueries({
   },
   habits: {
     detail: habitDetail,
-    statistics: habitStatistics,
     byHousehold: habitsByHousehold,
     recentForPerson: recentPersonHabits,
     workoutChoices: habitWorkoutChoices,

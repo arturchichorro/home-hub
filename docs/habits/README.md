@@ -28,8 +28,7 @@ The overview defaults to **Me**, with the existing person selector and shared or
   scope and block person/date/month/reorder/archive-view changes. Navigation/unload
   and PWA guards protect unsaved text. Today refreshes on focus/periodically without
   retargeting a pending editor across midnight.
-- Cached Zero history and synchronized statistics remain inspectable offline, with
-  writes disabled. Statistics use the same Zero loading/error lifecycle as records.
+- Cached Zero history remains inspectable offline, with writes disabled.
 
 Only the selected person's seven-day window loads on overview. Detail uses
 `habits.detail` for metadata and `habits.historyForPerson` for one selected month.
@@ -37,36 +36,14 @@ Only the selected person's seven-day window loads on overview. Detail uses
 `habits.byHousehold` query remains available to existing clients. No per-day
 subscriptions, per-row calendars or lifetime-entry download is introduced.
 
-## Derived statistics
+## Statistics export
 
-Detail shows completed-day totals, last completion, explicit last-7/30-calendar-day
-counts, and current/best **weekly activity streaks**. A completed day is manual
-**OR** training-derived, counted once; notes/empty entries and future dates do not
-count. A week is Monday–Sunday with any completion; an open current week preserves
-a run ending last week. Gaps break runs, and historical corrections update totals.
-Archived detail omits an active current streak but retains totals, best run and recency.
-There are no daily streaks, adherence scores, targets or charts.
-
-`habits.statistics` is a named Zero query, gated by live viewer/selected-person
-memberships, live household and enabled Habits module. It reads at most **six**
-`habit_weekly_statistics` rows, never daily notes or lifetime entries. Seven bits
-encode completed days within each Monday-based week; prefix totals and running/best
-weekly streaks keep lifetime results exact, including historical corrections and
-long gaps. The client folds only these bounded rows for today's partial week and
-inclusive 7/30-day windows. Future days in the current week's bitmap do not count.
-
-The query gateway supplies a trusted clock to validate today's label in the
-requested timezone. The existing date clock changes the subscription at midnight;
-there is no statistics polling, focus fetch, revision counter or retry endpoint.
-Zero propagates source transaction results and handles transport reconnection.
-
-Additive migration `0059_zero_statistics.sql` creates/backfills the projection and
-adds it to the explicit publication. Its canonical SQL aggregate is called inside
-manual-completion and changed workout-completion transactions. Both use the same
-household completion lock, preventing lost totals under concurrent writes; removed
-weeks and all later prefix counters are repaired together. Only changed derived
-values are written. No scheduled job or cache reset is needed. This does not
-authorize the separate destructive Contacts cutover in migration `0057`.
+Statistics are not displayed in the app. The optional operator-only
+[statistics export](../statistics.md) computes summaries and exports supporting
+completion flags/dates for current household members, including archived habits.
+It omits notes and skips a disabled Habits module. Ordinary mutations maintain
+only their canonical records and existing workout-derived completion flags;
+there are no statistics counters, summary tables or refresh jobs.
 
 ## Optional workout links
 

@@ -3,7 +3,7 @@
 - Ordinary application records/metadata, including privileged household operations and database-only attachment removal, use named Zero queries/custom mutators.
 - Keep HTTP narrowly for authentication, confidential invitation-token exchange, binary transfer/processing, signed URLs, health and external integrations.
 - Put authoritative locks/SQL in Zero server overrides, inside the source mutation's transaction. Do not add parallel CRUD, polling, mirrored record caches or read-as-mutation workarounds.
-- Keep statistics reads bounded; maintain derived projections transactionally rather than downloading lifetime history. See `docs/architecture.md`.
+- Statistics are an explicit operator-only, read-only JSON export, not an app feature. Do not add summary tables, mutation-time aggregation, polling or statistics endpoints. See `docs/statistics.md`.
 
 # Code readability
 

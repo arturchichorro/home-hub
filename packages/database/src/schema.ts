@@ -363,7 +363,6 @@ export const habitEntries = pgTable(
 );
 
 export const habitsRelations = relations(habits, ({ one, many }) => ({
-  weeklyStatistics: many(habitWeeklyStatistics),
   workoutLinks: many(habitWorkoutLinks),
   household: one(households, {
     fields: [habits.householdId],
@@ -1026,7 +1025,6 @@ export const exerciseMediaRelations = relations(exerciseMedia, ({ one }) => ({
 }));
 
 export const exercisesRelations = relations(exercises, ({ one, many }) => ({
-  statistics: many(exerciseStatistics),
   images: many(exerciseMedia),
   performances: many(trainingSessionExercises),
   household: one(households, {
@@ -1770,100 +1768,3 @@ export const contactMediaRelations = relations(contactMedia, ({ one }) => ({
     references: [media.householdId, media.id],
   }),
 }));
-
-// Derived in the same transaction as canonical Zero writes; never client-written.
-export const exerciseStatistics = pgTable(
-  "exercise_statistics",
-  {
-    householdId: uuid("household_id")
-      .notNull()
-      .references(() => households.id),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id),
-    exerciseId: uuid("exercise_id").notNull(),
-    stats: jsonb("stats").notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    primaryKey({
-      columns: [table.householdId, table.userId, table.exerciseId],
-    }),
-    foreignKey({
-      columns: [table.householdId, table.exerciseId],
-      foreignColumns: [exercises.householdId, exercises.id],
-    }),
-    check(
-      "exercise_statistics_object",
-      sql`jsonb_typeof(${table.stats}) = 'object'`,
-    ),
-  ],
-);
-
-export const exerciseStatisticsRelations = relations(
-  exerciseStatistics,
-  ({ one }) => ({
-    exercise: one(exercises, {
-      fields: [exerciseStatistics.householdId, exerciseStatistics.exerciseId],
-      references: [exercises.householdId, exercises.id],
-    }),
-  }),
-);
-
-export const habitWeeklyStatistics = pgTable(
-  "habit_weekly_statistics",
-  {
-    householdId: uuid("household_id")
-      .notNull()
-      .references(() => households.id),
-    habitId: uuid("habit_id").notNull(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id),
-    weekOn: text("week_on").notNull(),
-    completedMask: integer("completed_mask").notNull(),
-    completedDays: integer("completed_days").notNull(),
-    lastOn: text("last_on").notNull(),
-    runLength: integer("run_length").notNull(),
-    bestWeeks: integer("best_weeks").notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    primaryKey({
-      columns: [table.householdId, table.habitId, table.userId, table.weekOn],
-    }),
-    foreignKey({
-      columns: [table.householdId, table.habitId],
-      foreignColumns: [habits.householdId, habits.id],
-    }),
-    check(
-      "habit_weekly_statistics_mask",
-      sql`${table.completedMask} between 1 and 127`,
-    ),
-    check(
-      "habit_weekly_statistics_counts",
-      sql`${table.completedDays} > 0 and ${table.runLength} > 0 and ${table.bestWeeks} >= ${table.runLength}`,
-    ),
-    check(
-      "habit_weekly_statistics_week",
-      sql`${table.weekOn} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' and extract(isodow from ${table.weekOn}::date) = 1`,
-    ),
-  ],
-);
-
-export const habitWeeklyStatisticsRelations = relations(
-  habitWeeklyStatistics,
-  ({ one }) => ({
-    habit: one(habits, {
-      fields: [
-        habitWeeklyStatistics.householdId,
-        habitWeeklyStatistics.habitId,
-      ],
-      references: [habits.householdId, habits.id],
-    }),
-  }),
-);

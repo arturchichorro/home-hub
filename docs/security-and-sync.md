@@ -338,12 +338,13 @@ sessions and their directly owned occurrences, never another member's performanc
 relations. Composite ownership FKs and server guards enforce this boundary.
 No legacy logging tables or recovery schema remain in the application database;
 recovery uses the pre-release backup.
-Exercise-detail and Zero lifetime-statistics queries apply the same
-actor/household/live-membership/module boundary. Retired detail access requires
-the actor's own recorded performance. The derived exercise summary is scoped to
-trusted actor context, never a browser-supplied author ID; shared catalog/media
-controls do not authorize another member's statistics. Habit weekly summaries
-retain household-shared person semantics and require both current memberships. Timeline age restrictions are presentation rules, not a global ban on
+Exercise-detail queries apply the same actor/household/live-membership/module
+boundary. Retired detail access requires the actor's own recorded performance.
+No statistics queries or endpoints are exposed to clients. The separate
+[operator export](./statistics.md) requires direct server/database access and an
+explicit current-member training username; it does not grant app owners access
+to other members' actuals. Export files are private, local and potentially
+sensitive even without notes or authentication data. Timeline age restrictions are presentation rules, not a global ban on
 historical corrections.
 See [Workouts](./workouts/).
 

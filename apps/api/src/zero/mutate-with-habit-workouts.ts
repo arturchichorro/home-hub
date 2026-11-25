@@ -2,7 +2,6 @@ import { calendarScopeSchema } from "@home-hub/shared/calendar";
 import {
   archiveHabitMutationSchema,
   linkHabitWorkoutsMutationSchema,
-  setHabitCompletedMutationSchema,
 } from "@home-hub/shared/habits";
 import { trainingScopeSchema } from "@home-hub/shared/training";
 import { zql } from "@home-hub/shared/zero/schema";
@@ -14,10 +13,6 @@ import {
   refreshHabitWorkoutCompletion,
 } from "./habit-workout-completion";
 import { serverMutators } from "./server-mutators";
-import {
-  refreshExerciseStatistics,
-  refreshHabitWeeklyStatistics,
-} from "./statistics";
 
 type ServerTransaction = Parameters<
   Parameters<ZeroDbProvider["transaction"]>[0]
@@ -48,12 +43,7 @@ export async function mutateWithHabitWorkouts(
       : name === "habits.archive"
         ? archiveHabitMutationSchema.parse(args)
         : undefined;
-  const completion =
-    name === "habits.setCompleted"
-      ? setHabitCompletedMutationSchema.parse(args)
-      : undefined;
-  const householdId =
-    training?.householdId ?? habit?.householdId ?? completion?.householdId;
+  const householdId = training?.householdId ?? habit?.householdId;
   const db = tx.dbTransaction.wrappedTransaction;
 
   if (householdId) {
@@ -99,13 +89,6 @@ export async function mutateWithHabitWorkouts(
       userId,
       ...(row ? { entryOn: row.completedOn } : {}),
     });
-    if (name !== "training.update") {
-      await refreshExerciseStatistics(db, training.householdId, userId);
-    }
-  } else if (completion) {
-    await refreshHabitWeeklyStatistics(db, completion.householdId, userId, [
-      completion.habitId,
-    ]);
   } else if (name === "habits.linkWorkouts" && habit) {
     await refreshHabitWorkoutCompletion(db, {
       householdId: habit.householdId,
