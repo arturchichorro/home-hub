@@ -23,7 +23,7 @@ afterEach(() => {
   }
 });
 
-function rehearse(hasTable: boolean, applied: boolean) {
+function rehearse(hasTable: boolean, applied: boolean, contactsApplied = true) {
   const directory = mkdtempSync(join(tmpdir(), "home-hub-cutover-"));
   directories.push(directory);
 
@@ -31,10 +31,7 @@ function rehearse(hasTable: boolean, applied: boolean) {
   const log = join(directory, "commands.log");
   mkdirSync(bin);
   mkdirSync(join(directory, "scripts"));
-  writeFileSync(
-    join(directory, ".env.production"),
-    "HOME_HUB_CONTACTS_CUTOVER_APPROVED=1\\n".replace("\\n", "\n"),
-  );
+  writeFileSync(join(directory, ".env.production"), "");
 
   const mock = (name: string, body: string) =>
     writeFileSync(
@@ -50,7 +47,7 @@ function rehearse(hasTable: boolean, applied: boolean) {
   mock("curl", 'printf "curl\\n" >> "$TEST_LOG"');
   mock(
     "docker",
-    'printf "docker %s\\n" "$*" >> "$TEST_LOG"\ncase "$*" in *to_regclass*) echo "$TEST_TABLE";; *1795533820795*) echo f;; *created_at*) echo "$TEST_CUTOVER";; esac',
+    'printf "docker %s\\n" "$*" >> "$TEST_LOG"\ncase "$*" in *to_regclass*) echo "$TEST_TABLE";; *1795533820795*) echo "$TEST_CONTACTS_CUTOVER";; *created_at*) echo "$TEST_CUTOVER";; esac',
   );
   writeFileSync(
     join(directory, "scripts/backup-production-postgres.sh"),
@@ -72,6 +69,7 @@ function rehearse(hasTable: boolean, applied: boolean) {
       TEST_LOG: log,
       TEST_TABLE: hasTable ? "t" : "f",
       TEST_CUTOVER: applied ? "f" : "t",
+      TEST_CONTACTS_CUTOVER: contactsApplied ? "f" : "t",
     },
     stdio: "pipe",
   });
@@ -97,38 +95,46 @@ it("keeps the one-time writer cutover aligned with the actual migration journal"
 });
 
 it.each([
-  { hasTable: true, applied: false },
-  { hasTable: false, applied: false },
-  { hasTable: true, applied: true },
-])("orders the real deployment script safely: %j", ({ hasTable, applied }) => {
-  const commands = rehearse(hasTable, applied);
-  const stop = commands.findIndex((line) =>
-    line.endsWith("stop api zero-cache"),
-  );
-  const migrate = commands.findIndex((line) =>
-    /run --rm(?: -e HOME_HUB_[A-Z_]+=1)* migrate$/.test(line),
-  );
-  const backend = commands.findIndex((line) =>
-    line.endsWith("up -d --no-build --wait api zero-cache"),
-  );
-  const web = commands.findIndex((line) =>
-    line.endsWith("up -d --no-build --wait web"),
-  );
-  expect(migrate).toBeGreaterThan(-1);
-  expect(backend).toBeGreaterThan(migrate);
-  expect(web).toBeGreaterThan(backend);
-  expect(commands[migrate]?.includes("HOME_HUB_LOGGING_CUTOVER_READY=1")).toBe(
-    !applied,
-  );
+  { hasTable: true, applied: false, contactsApplied: true },
+  { hasTable: false, applied: false, contactsApplied: false },
+  { hasTable: true, applied: true, contactsApplied: true },
+  { hasTable: true, applied: true, contactsApplied: false },
+  { hasTable: true, applied: false, contactsApplied: false },
+])(
+  "orders the real deployment script safely without manual approval: %j",
+  ({ hasTable, applied, contactsApplied }) => {
+    const commands = rehearse(hasTable, applied, contactsApplied);
+    const stop = commands.findIndex((line) =>
+      line.endsWith("stop api zero-cache"),
+    );
+    const migrate = commands.findIndex((line) =>
+      /run --rm(?: -e HOME_HUB_[A-Z_]+=1)* migrate$/.test(line),
+    );
+    const backend = commands.findIndex((line) =>
+      line.endsWith("up -d --no-build --wait api zero-cache"),
+    );
+    const web = commands.findIndex((line) =>
+      line.endsWith("up -d --no-build --wait web"),
+    );
+    expect(migrate).toBeGreaterThan(-1);
+    expect(backend).toBeGreaterThan(migrate);
+    expect(web).toBeGreaterThan(backend);
+    expect(
+      commands[migrate]?.includes("HOME_HUB_LOGGING_CUTOVER_READY=1"),
+    ).toBe(!hasTable || !applied);
+    expect(
+      commands[migrate]?.includes("HOME_HUB_CONTACTS_CUTOVER_READY=1"),
+    ).toBe(!hasTable || !contactsApplied);
 
-  if (applied) {
-    expect(stop).toBe(-1);
-    // The locked bootstrap takes the routine pre-update backup.
-    expect(commands.filter((line) => line === "backup")).toHaveLength(0);
-  } else {
-    expect(stop).toBeGreaterThan(-1);
-    expect(stop).toBeLessThan(migrate);
-    expect(commands.lastIndexOf("backup")).toBeGreaterThan(stop);
-    expect(commands.lastIndexOf("backup")).toBeLessThan(migrate);
-  }
-});
+    if (hasTable && applied && contactsApplied) {
+      expect(stop).toBe(-1);
+      // The locked bootstrap takes the routine pre-update backup.
+      expect(commands.filter((line) => line === "backup")).toHaveLength(0);
+    } else {
+      expect(stop).toBeGreaterThan(-1);
+      expect(stop).toBeLessThan(migrate);
+      expect(commands.lastIndexOf("backup")).toBeGreaterThan(stop);
+      expect(commands.lastIndexOf("backup")).toBeLessThan(migrate);
+    }
+  },
+);

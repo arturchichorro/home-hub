@@ -156,24 +156,24 @@ or permission to deploy.
 
 This migration deliberately drops the former household Logs topics, categories and
 entries. It does not convert them and does not affect operational diagnostics,
-recipe history or training. **Do not run a routine release into this cutover without
-separate approval.**
+recipe history or training. **Review and accept permanent legacy Logs removal
+before merging the release to main.** There is no additional approval environment
+flag; a pending 0057 is handled automatically by the normal release.
 
-1. Resolve every device/profile's drafts and queued writes, pause users and approve
-   permanent legacy Logs removal. The script cannot verify device readiness.
-2. After explicit approval, put `HOME_HUB_CONTACTS_CUTOVER_APPROVED=1` in the private
-   `.env.production` for this cutover. Without it, `deploy-release.sh` refuses the
-   pending 0057 before stopping writers or migrating.
-3. The release stops API/Zero writers, takes the existing off-host-verified backup
+1. Resolve every device/profile's drafts and queued writes and pause users.
+   The script cannot verify device readiness.
+2. The release stops API/Zero writers, takes the existing off-host-verified backup
    and grants `HOME_HUB_CONTACTS_CUTOVER_READY=1` only to its migrator process.
-   Inspect/retain the recoverable backup; the connection-local
-   `home_hub.contacts_cutover_ready=1` is not a substitute for approval or backup.
-4. Start matching API/official Zero/web, verify household setting preservation,
+   Backup failure prevents migration. Inspect/retain the recoverable backup;
+   the connection-local `home_hub.contacts_cutover_ready=1` is an internal safety
+   acknowledgement, not a setting to add to application services.
+3. Start matching API/official Zero/web, verify household setting preservation,
    profiles, note sharing and picture-only entries, then resume users.
    No new browser storage key or manual replica reset is required by this feature.
-5. Remove the approval line afterwards. Migration journal timestamp
-   **1795533820795** identifies this cutover. Keep canonical training 0053's
-   **1794127975016** guard and existing training replica/browser keys unchanged.
+
+Migration journal timestamp **1795533820795** identifies this cutover. Keep
+canonical training 0053's **1794127975016** guard and existing training
+replica/browser keys unchanged.
 
 Before new writes, rollback restores the backup and matching old code together.
 After new writes, stop and plan recovery explicitly instead of discarding them.

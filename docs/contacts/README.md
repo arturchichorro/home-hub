@@ -64,8 +64,10 @@ their trigger function, and preserves household module enablement by renaming it
 setting. Applied migration history is unchanged, including canonical training 0053.
 
 This is **not** permission to apply it to production. Resolve every device's drafts
-and queued writes, approve legacy Logs deletion, stop old writers, take a recoverable
-backup and use matching app/Zero versions. See the [deployment procedure](../deployment.md#contacts-replacement-cutover-0057).
+and queued writes and accept legacy Logs deletion before merging the release.
+Deployment automatically stops old writers, takes a recoverable backup and supplies
+the migrator-only readiness acknowledgement; no manual approval flag is required.
+Use matching app/Zero versions. See the [deployment procedure](../deployment.md#contacts-replacement-cutover-0057).
 
 Verification includes populated-0056 fail-closed/repeat migration tests, PostgreSQL
 authorization/conflict/media tests, editor tests and manual real-component browser
