@@ -8,11 +8,13 @@ import {
   households,
   users,
 } from "@home-hub/database/schema";
+import { habitStatsFromWeeks } from "@home-hub/shared/habit-stats";
+import { calendarDate, shiftCalendarDate } from "@home-hub/shared/habits";
 import { queries } from "@home-hub/shared/zero/queries";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createZeroDbProvider } from "../zero/db-provider";
-import { createHabitStatsService } from "./stats";
+import { refreshHabitWeeklyStatistics } from "../zero/statistics";
 
 const url = process.env.TEST_DATABASE_URL;
 
@@ -32,11 +34,35 @@ describe.runIf(Boolean(url))(
       habitId,
       timeZone: "UTC",
     });
-    const stats = (now = "2027-01-10T12:00:00Z", overrides = {}) =>
-      createHabitStatsService({ db: client.db, now: () => new Date(now) })({
-        ...scope(),
-        ...overrides,
-      });
+    const stats = async (now = "2027-01-10T12:00:00Z", overrides = {}) => {
+      const input = { ...scope(), ...overrides };
+      // Direct fixture writes model a populated migration/backfill, not app commands.
+      await refreshHabitWeeklyStatistics(
+        client.db,
+        input.householdId,
+        undefined,
+        [input.habitId],
+      );
+      const today = calendarDate(new Date(now), input.timeZone);
+      const row = await createZeroDbProvider({ db: client.db }).run(
+        queries.habits.statistics.fn({
+          args: {
+            householdId: input.householdId,
+            habitId: input.habitId,
+            personId: input.personId,
+            today,
+            timeZone: input.timeZone,
+          },
+          ctx: { userId: input.userId, serverNow: Date.parse(now) },
+        }),
+      );
+      return row
+        ? {
+            kind: "success" as const,
+            stats: habitStatsFromWeeks(today, row.weeklyStatistics),
+          }
+        : { kind: "unavailable" as const };
+    };
 
     beforeAll(() => {
       if (!url || !new URL(url).pathname.startsWith("/home_hub_test_")) {
@@ -209,6 +235,22 @@ describe.runIf(Boolean(url))(
         await stats("2027-01-10T00:30:00Z", { timeZone: "Pacific/Kiritimati" }),
       ).toMatchObject({ stats: { asOf: "2027-01-10", completedDays: 1 } });
     });
+    it("covers a thirty-day window spanning six weeks and ignores future bits in the current week", async () => {
+      for (let n = 0; n < 30; n++) {
+        await entry(shiftCalendarDate("2027-02-01", -n));
+      }
+      await entry("2027-02-02");
+      expect(await stats("2027-02-01T12:00:00Z")).toMatchObject({
+        stats: {
+          completedDays: 30,
+          last7: 7,
+          last30: 30,
+          currentWeeks: 6,
+          bestWeeks: 6,
+          lastOn: "2027-02-01",
+        },
+      });
+    });
     it("retains archived history/statistics and exposes authorized metadata without a lifetime entries query", async () => {
       await entry("2027-01-04");
       await client.db
@@ -265,22 +307,20 @@ describe.runIf(Boolean(url))(
             .set({ deletedAt: new Date() })
             .where(eq(households.id, householdId));
         }
-        expect(await stats()).toEqual({ kind: "forbidden" });
+        expect(await stats()).toEqual({ kind: "unavailable" });
       },
     );
     it("rejects outsider viewers/targets and wrong-household habit IDs", async () => {
-      expect(await stats(undefined, { userId: randomUUID() })).toEqual({
-        kind: "unauthorized",
-      });
-      expect(await stats(undefined, { userId: outsider })).toEqual({
-        kind: "forbidden",
-      });
-      expect(await stats(undefined, { personId: outsider })).toEqual({
-        kind: "forbidden",
-      });
-      expect(await stats(undefined, { habitId: randomUUID() })).toEqual({
-        kind: "not_found",
-      });
+      for (const overrides of [
+        { userId: randomUUID() },
+        { userId: outsider },
+        { personId: outsider },
+        { habitId: randomUUID() },
+      ]) {
+        expect(await stats(undefined, overrides)).toEqual({
+          kind: "unavailable",
+        });
+      }
     });
   },
 );

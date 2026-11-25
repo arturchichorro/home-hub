@@ -79,6 +79,29 @@ flowchart LR
 
 
 
+### Data access standard
+
+Application records and metadata use named Zero queries and custom mutators,
+including household administration and database-only attachment removal. Use
+server mutator overrides for authoritative authorization, locks and private
+metadata; their SQL writes and Zero acknowledgements share one transaction.
+Permission changes wait for server acknowledgement rather than guessing locally.
+
+HTTP is limited to authentication, confidential invitation-token exchange,
+binary transfer/processing, signed delivery URLs, health and external integrations.
+Do not add parallel CRUD endpoints, fetch-on-focus statistics, mirrored record
+caches or mutations disguised as reads.
+
+When a value needs lifetime aggregation, synchronize a bounded derived projection,
+not unlimited history. Migration `0059` adds one author-private exercise summary
+and weekly habit metadata with seven day bits and prefix counts/streaks. Statistics
+read one exercise summary or at most six habit weeks. Canonical SQL functions
+perform the initial backfill and subsequent source-mutation updates in the same
+transaction; there are no jobs, refresh endpoints or secondary summary service.
+Stop old writers for the backfill and resume with the matching API. Administrative
+bulk changes to canonical data must refresh the same aggregates before commit.
+See [Habits](./habits/) and [Workouts](./workouts/).
+
 ### React application
 
 The browser application owns rendering, forms, navigation, and presentation of connection state. It reads synchronized application data through Zero queries and performs connected optimistic changes through custom Zero mutators.

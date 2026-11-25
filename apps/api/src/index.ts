@@ -16,7 +16,6 @@ import { config } from "./config";
 import { createContactMediaServices } from "./contacts/media";
 import { createDocumentServices } from "./documents/service";
 import { createDocumentStorage } from "./documents/storage";
-import { createHabitStatsService } from "./habits/stats";
 import { createAcceptHouseholdInviteService } from "./households/accept-invite";
 import { createHouseholdInviteService } from "./households/create-invite";
 import { createListMediaServices } from "./lists/media";
@@ -36,7 +35,6 @@ import { createRecipeImageUploadService } from "./recipes/images/create-upload";
 import { recipeImageMediaIdentity } from "./recipes/images/media-identity";
 import { closeHttpServer, createGracefulShutdown } from "./server-lifecycle";
 import { createExerciseMediaServices } from "./workouts/exercise-media";
-import { createExerciseStatsService } from "./workouts/exercise-stats";
 import { createZeroDbProvider } from "./zero/db-provider";
 
 const { db, close: closeDatabase } = createDbClient(config.DATABASE_URL);
@@ -223,8 +221,6 @@ const app = createApp({
   recipeImages,
   exerciseMedia,
   calendarMedia,
-  exerciseStats: createExerciseStatsService({ db }),
-  habitStats: createHabitStatsService({ db }),
   documents: createDocumentServices({
     db,
     storage: createDocumentStorage({

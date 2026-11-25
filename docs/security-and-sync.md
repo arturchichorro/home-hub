@@ -338,11 +338,12 @@ sessions and their directly owned occurrences, never another member's performanc
 relations. Composite ownership FKs and server guards enforce this boundary.
 No legacy logging tables or recovery schema remain in the application database;
 recovery uses the pre-release backup.
-Exercise-detail queries and the lifetime-statistics endpoint apply the same
+Exercise-detail and Zero lifetime-statistics queries apply the same
 actor/household/live-membership/module boundary. Retired detail access requires
-the actor’s own recorded performance; statistics responses use `Cache-Control:
-no-store`. Shared catalog/media controls do not authorize viewing another member’s
-statistics. Timeline age restrictions are presentation rules, not a global ban on
+the actor's own recorded performance. The derived exercise summary is scoped to
+trusted actor context, never a browser-supplied author ID; shared catalog/media
+controls do not authorize another member's statistics. Habit weekly summaries
+retain household-shared person semantics and require both current memberships. Timeline age restrictions are presentation rules, not a global ban on
 historical corrections.
 See [Workouts](./workouts/).
 

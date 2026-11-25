@@ -28,8 +28,8 @@ The overview defaults to **Me**, with the existing person selector and shared or
   scope and block person/date/month/reorder/archive-view changes. Navigation/unload
   and PWA guards protect unsaved text. Today refreshes on focus/periodically without
   retargeting a pending editor across midnight.
-- Cached Zero history remains inspectable offline, with writes disabled. Statistics
-  report unavailable/retry when HTTP access is unavailable.
+- Cached Zero history and synchronized statistics remain inspectable offline, with
+  writes disabled. Statistics use the same Zero loading/error lifecycle as records.
 
 Only the selected person's seven-day window loads on overview. Detail uses
 `habits.detail` for metadata and `habits.historyForPerson` for one selected month.
@@ -47,14 +47,26 @@ a run ending last week. Gaps break runs, and historical corrections update total
 Archived detail omits an active current streak but retains totals, best run and recency.
 There are no daily streaks, adherence scores, targets or charts.
 
-`GET /api/households/:householdId/habits/:habitId/stats?personId=…&timeZone=…`
-aggregates existing entries in PostgreSQL, returning counts/date labels only with
-`no-store`. Reads validate the authenticated viewer, live viewer/selected-person
-memberships, live household and enabled Habits module. Server time in the validated
-device timezone determines today; stored date labels determine weeks/windows.
-The client refreshes on entry, relevant visible completion changes, focus/resume,
-date/person changes and explicit retry, with abort/timeout and stale-scope protection.
-There are **no new tables, migrations, indexes, persisted counters or publication changes**.
+`habits.statistics` is a named Zero query, gated by live viewer/selected-person
+memberships, live household and enabled Habits module. It reads at most **six**
+`habit_weekly_statistics` rows, never daily notes or lifetime entries. Seven bits
+encode completed days within each Monday-based week; prefix totals and running/best
+weekly streaks keep lifetime results exact, including historical corrections and
+long gaps. The client folds only these bounded rows for today's partial week and
+inclusive 7/30-day windows. Future days in the current week's bitmap do not count.
+
+The query gateway supplies a trusted clock to validate today's label in the
+requested timezone. The existing date clock changes the subscription at midnight;
+there is no statistics polling, focus fetch, revision counter or retry endpoint.
+Zero propagates source transaction results and handles transport reconnection.
+
+Additive migration `0059_zero_statistics.sql` creates/backfills the projection and
+adds it to the explicit publication. Its canonical SQL aggregate is called inside
+manual-completion and changed workout-completion transactions. Both use the same
+household completion lock, preventing lost totals under concurrent writes; removed
+weeks and all later prefix counters are repaired together. Only changed derived
+values are written. No scheduled job or cache reset is needed. This does not
+authorize the separate destructive Contacts cutover in migration `0057`.
 
 ## Optional workout links
 

@@ -11,11 +11,15 @@ import {
   users,
   workouts,
 } from "@home-hub/database/schema";
+import {
+  emptyExerciseStats,
+  exerciseStatsSchema,
+} from "@home-hub/shared/exercise-stats";
 import { queries } from "@home-hub/shared/zero/queries";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createZeroDbProvider } from "../zero/db-provider";
-import { createExerciseStatsService } from "./exercise-stats";
+import { refreshExerciseStatistics } from "../zero/statistics";
 
 const url = process.env.TEST_DATABASE_URL;
 
@@ -31,7 +35,31 @@ describe.runIf(Boolean(url))(
     let otherExercise: string;
     let workoutId: string;
     const scope = () => ({ userId, householdId, exerciseId });
-    const stats = () => createExerciseStatsService({ db: client.db })(scope());
+    const stats = async (overrides = {}) => {
+      const input = { ...scope(), ...overrides };
+      await refreshExerciseStatistics(
+        client.db,
+        input.householdId,
+        input.userId,
+      );
+      const row = await query().run(
+        queries.training.statistics.fn({
+          args: {
+            householdId: input.householdId,
+            exerciseId: input.exerciseId,
+          },
+          ctx: { userId: input.userId },
+        }),
+      );
+      return row
+        ? {
+            kind: "success" as const,
+            stats: exerciseStatsSchema.parse(
+              row.statistics?.[0]?.stats ?? emptyExerciseStats,
+            ),
+          }
+        : { kind: "unavailable" as const };
+    };
     const query = () => createZeroDbProvider({ db: client.db });
     const history = (author = userId) =>
       query().run(
@@ -335,16 +363,10 @@ describe.runIf(Boolean(url))(
         "Frozen exercise",
       );
       expect(await detail(outsider)).toBeUndefined();
-      expect(
-        await createExerciseStatsService({ db: client.db })({
-          ...scope(),
-          userId: outsider,
-        }),
-      ).toEqual({ kind: "not_found" });
-      const empty = await createExerciseStatsService({ db: client.db })({
-        ...scope(),
-        exerciseId: otherExercise,
+      expect(await stats({ userId: outsider })).toEqual({
+        kind: "unavailable",
       });
+      const empty = await stats({ exerciseId: otherExercise });
       expect(empty.kind).toBe("success");
     });
 
@@ -363,12 +385,9 @@ describe.runIf(Boolean(url))(
         load: "bodyweight",
         unilateral: false,
       });
-      expect(
-        await createExerciseStatsService({ db: client.db })({
-          ...scope(),
-          exerciseId: foreignExercise,
-        }),
-      ).toEqual({ kind: "not_found" });
+      expect(await stats({ exerciseId: foreignExercise })).toEqual({
+        kind: "unavailable",
+      });
       expect(
         await query().run(
           queries.training.exercise.fn({
@@ -399,7 +418,7 @@ describe.runIf(Boolean(url))(
     });
 
     it.each(["membership", "module", "household", "user"] as const)(
-      "fails closed after %s access loss in API and Zero",
+      "fails closed after %s access loss in Zero statistics and history",
       async (change) => {
         await populated();
         if (change === "membership") {
@@ -419,13 +438,11 @@ describe.runIf(Boolean(url))(
             .set({ deletedAt: new Date() })
             .where(eq(households.id, householdId));
         }
-        const result = await createExerciseStatsService({ db: client.db })({
+        const result = await stats({
           ...scope(),
           ...(change === "user" ? { userId: randomUUID() } : {}),
         });
-        expect(result.kind).toBe(
-          change === "user" ? "unauthorized" : "forbidden",
-        );
+        expect(result.kind).toBe("unavailable");
         if (change !== "user") {
           expect(await history()).toEqual([]);
           expect(

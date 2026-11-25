@@ -169,15 +169,24 @@ the shared Base UI Stats details accordion; no charts or date filters. Routine U
 explanations and repeated visible Saved labels are omitted, while errors, pending
 states, accessible save feedback and partial-statistics caveats remain. Stored
 names, targets, instructions and notes are retained in full. Exercise detail reuses
-the catalog editor without creating an unnecessary sortable catalog context. Statistics refresh on entry/resume, visible performance changes and
-acknowledged catalog changes, with retry and stale-response protection. This is
-not a second-by-second dashboard.
+the catalog editor without creating an unnecessary sortable catalog context.
+Statistics subscribe directly to Zero; there are no HTTP reads, focus refreshes,
+revision counters or duplicate hidden client caches.
 
-No schema, publication, index or migration change is needed: bounded Zero queries
-read canonical sessions/occurrences/sets, and the authenticated
-`GET /api/households/:householdId/workouts/exercises/:exerciseId/stats` endpoint
-aggregates lifetime values in PostgreSQL. It never downloads lifetime sets into the
-browser or maintains duplicate counters. Responses are not cacheable.
+The named `training.statistics` query reads one `exercise_statistics` row for
+the verified actor, household and catalog identity, using the same authorization
+predicate as exercise detail. Retired identities still require the actor's own
+actual performance. Shared catalog/media controls never authorize another person's
+totals. No lifetime sets or private notes are downloaded for statistics.
+
+Additive migration `0059_zero_statistics.sql` creates/backfills the projection and
+publishes it to Zero. One canonical SQL aggregate serves backfill and actual-set,
+occurrence-removal and session-deletion mutations in their existing authorized
+transaction. Refreshing the author's household scope handles canonical daily-ID
+convergence and clears emptied summaries without a second dependency graph.
+Unchanged JSON is not rewritten; metadata-only session edits skip the aggregate.
+There are no jobs, refresh endpoints or replica/browser cache resets. Canonical
+training migration `0053` and its cutover safeguards are unchanged.
 
 ## Data model
 

@@ -37,3 +37,14 @@ export const exerciseStatsSchema = z
   .strict();
 
 export type ExerciseStats = z.infer<typeof exerciseStatsSchema>;
+
+export const emptyExerciseStats: ExerciseStats = {
+  sessions: 0,
+  sets: 0,
+  lastOn: null,
+  reps: { total: 0, left: 0, right: 0, sets: 0, unilateralSets: 0 },
+  seconds: { total: 0, left: 0, right: 0, sets: 0, unilateralSets: 0 },
+  volumeKg: null,
+  unmeasuredSets: 0,
+  records: [],
+};

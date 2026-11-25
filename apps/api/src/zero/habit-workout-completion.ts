@@ -1,4 +1,6 @@
+import type { DatabaseTransaction } from "@home-hub/database";
 import { type SQL, sql } from "drizzle-orm";
+import { refreshHabitWeeklyStatistics } from "./statistics";
 
 type Executor = { execute: (query: SQL) => PromiseLike<unknown> };
 
@@ -14,7 +16,7 @@ export async function lockHabitWorkoutCompletion(
 }
 
 export async function refreshHabitWorkoutCompletion(
-  db: Executor,
+  db: Pick<DatabaseTransaction, "execute">,
   scope: {
     householdId: string;
     habitId?: string;
@@ -35,7 +37,7 @@ export async function refreshHabitWorkoutCompletion(
   const entryDay = scope.entryOn ? sql`and e.entry_on=${scope.entryOn}` : sql``;
   // Only the derived bit is written. Manual checks, notes and existing rows survive
   // unlinking, log removal and concurrent edits. Archived habits stay frozen.
-  await db.execute(sql`
+  const changed = await db.execute<{ habitId: string }>(sql`
     WITH eligible AS MATERIALIZED (
       SELECT h.household_id, h.id AS habit_id, l.user_id, l.completed_on AS entry_on
       FROM habits h JOIN training_sessions l ON l.household_id=h.household_id
@@ -61,11 +63,22 @@ export async function refreshHabitWorkoutCompletion(
           SELECT 1 FROM eligible q WHERE q.habit_id=e.habit_id AND q.user_id=e.user_id AND q.entry_on=e.entry_on
         )
       RETURNING e.habit_id
-    )
+    ), applied AS (
     INSERT INTO habit_entries(household_id,habit_id,user_id,entry_on,completed,workout_completed)
       SELECT household_id,habit_id,user_id,entry_on,false,true FROM eligible
     ON CONFLICT(habit_id,user_id,entry_on) DO UPDATE
       SET workout_completed=true,updated_at=now()
       WHERE habit_entries.workout_completed IS DISTINCT FROM true
+      RETURNING habit_id
+    )
+    SELECT DISTINCT habit_id AS "habitId" FROM (
+      SELECT habit_id FROM cleared UNION ALL SELECT habit_id FROM applied
+    ) changes
   `);
+  await refreshHabitWeeklyStatistics(
+    db,
+    scope.householdId,
+    scope.userId,
+    changed.rows.map((row) => row.habitId),
+  );
 }

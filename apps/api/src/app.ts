@@ -6,8 +6,6 @@ import type { ContactMediaServices } from "./contacts/media";
 import { createContactMediaRoutes } from "./contacts/media-routes";
 import { createDocumentRoutes } from "./documents/routes";
 import type { DocumentServices } from "./documents/service";
-import { createHabitStatsRoutes } from "./habits/routes";
-import type { HabitStatsService } from "./habits/stats";
 import {
   type CreateHouseholdRoutesInput,
   createHouseholdRoutes,
@@ -25,9 +23,7 @@ import {
   createRecipeRoutes,
 } from "./recipes/routes";
 import type { ExerciseMediaServices } from "./workouts/exercise-media";
-import type { ExerciseStatsService } from "./workouts/exercise-stats";
 import { createExerciseMediaRoutes } from "./workouts/routes";
-import { createExerciseStatsRoutes } from "./workouts/stats-routes";
 import { type CreateZeroRoutesInput, createZeroRoutes } from "./zero/routes";
 
 type AuthServices = Omit<CreateAuthRoutesInput, "isProduction" | "jwtSecret">;
@@ -41,8 +37,6 @@ export type CreateAppInput = {
   households: HouseholdServices;
   recipeImages: RecipeImageServices;
   exerciseMedia: ExerciseMediaServices;
-  exerciseStats?: ExerciseStatsService;
-  habitStats?: HabitStatsService;
   calendarMedia?: CalendarMediaServices;
   documents?: DocumentServices;
   listMedia?: ListMediaServices;
@@ -95,19 +89,6 @@ export function createApp(input: CreateAppInput) {
     app.route(
       "/api/households/:householdId/calendar/items",
       createCalendarMediaRoutes({ jwtSecret, services: input.calendarMedia }),
-    );
-  }
-
-  if (input.habitStats) {
-    app.route(
-      "/api/households/:householdId/habits",
-      createHabitStatsRoutes({ jwtSecret, stats: input.habitStats }),
-    );
-  }
-  if (input.exerciseStats) {
-    app.route(
-      "/api/households/:householdId/workouts/exercises",
-      createExerciseStatsRoutes({ jwtSecret, stats: input.exerciseStats }),
     );
   }
 

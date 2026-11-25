@@ -59,6 +59,8 @@ export default drizzleZeroConfig(drizzleSchema, {
     contactMedia: true,
     exercises: true,
     exerciseMedia: true,
+    exerciseStatistics: true,
+    habitWeeklyStatistics: true,
     workouts: true,
     workoutExercises: true,
     trainingSessions: true,

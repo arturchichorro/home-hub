@@ -18,7 +18,7 @@ export function createZeroQueryRoute() {
       handler: (name, args) =>
         mustGetQuery(queries, name).fn({
           args,
-          ctx: { userId },
+          ctx: { userId, serverNow: Date.now() },
         }),
     });
 

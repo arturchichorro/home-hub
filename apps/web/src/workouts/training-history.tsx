@@ -41,11 +41,9 @@ function useLocalDay() {
 export function TrainingHistoryPage({
   householdId,
   exerciseId,
-  onPerformanceChange,
 }: {
   householdId: string;
   exerciseId?: string;
-  onPerformanceChange?: (version: string) => void;
 }) {
   const [cursors, setCursors] = useState<TrainingHistoryCursor[]>([]);
   const [dirty, setDirty] = useState<ReadonlySet<string>>(new Set());
@@ -59,10 +57,6 @@ export function TrainingHistoryPage({
       cursor: cursors.at(-1),
     }),
   );
-  const fingerprint = JSON.stringify(sessions);
-  useEffect(() => {
-    onPerformanceChange?.(fingerprint);
-  }, [fingerprint, onPerformanceChange]);
   const ready = result.type === "complete";
   const blocked = !ready || dirty.size > 0;
   const dirtyChanged = useCallback((id: string, changed: boolean) => {

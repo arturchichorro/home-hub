@@ -1,9 +1,9 @@
 import { exerciseCatalogSchema } from "@home-hub/shared/workouts";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
-import { Button, InlineAlert } from "@home-hub/ui-web";
+import { InlineAlert } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { acknowledgeMutation } from "../zero/acknowledge-mutation";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { CatalogExerciseEditor } from "./exercise-catalog";
@@ -26,9 +26,7 @@ export function ExerciseDetailPage({
   const enabled = useZeroMutationEnabled();
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
-  const [revision, setRevision] = useState(0);
-  const refresh = useCallback(() => setRevision((value) => value + 1), []);
-  const stats = useExerciseStats(householdId, exerciseId, revision);
+  const stats = useExerciseStats(householdId, exerciseId);
 
   if (!exercise) {
     return (
@@ -69,7 +67,6 @@ export function ExerciseDetailPage({
           initial={current}
           current={current}
           enabled={writable}
-          onSaved={refresh}
           save={async (next, previous): Promise<CatalogSaveResult> => {
             if (!writable || !previous) {
               return { error: "Unable to save exercise." };
@@ -123,7 +120,6 @@ export function ExerciseDetailPage({
               })
               .finally(() => {
                 setDeleting(false);
-                refresh();
               });
           }}
         />
@@ -133,9 +129,6 @@ export function ExerciseDetailPage({
       ) : stats.error ? (
         <InlineAlert variant="danger" role="alert">
           {stats.error}
-          <Button variant="ghost" onClick={refresh}>
-            Retry
-          </Button>
         </InlineAlert>
       ) : (
         <p role="status" className="text-sm text-muted">
@@ -147,7 +140,6 @@ export function ExerciseDetailPage({
         <TrainingHistoryPage
           householdId={householdId}
           exerciseId={exerciseId}
-          onPerformanceChange={refresh}
         />
       </div>
     </div>

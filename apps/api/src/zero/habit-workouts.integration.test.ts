@@ -14,6 +14,14 @@ import {
   workoutExercises,
   workouts,
 } from "@home-hub/database/schema";
+import {
+  emptyExerciseStats,
+  exerciseStatsSchema,
+} from "@home-hub/shared/exercise-stats";
+import {
+  habitStatsFromWeeks,
+  habitWeekStart,
+} from "@home-hub/shared/habit-stats";
 import { calendarDate, shiftCalendarDate } from "@home-hub/shared/habits";
 import type { SaveTrainingSet } from "@home-hub/shared/training";
 import { queries } from "@home-hub/shared/zero/queries";
@@ -21,6 +29,7 @@ import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createZeroDbProvider } from "./db-provider";
 import { mutateWithHabitWorkouts } from "./mutate-with-habit-workouts";
+import { refreshHabitWeeklyStatistics } from "./statistics";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 
@@ -153,6 +162,36 @@ describe.runIf(Boolean(databaseUrl))(
             ),
           )
       )[0];
+    const exerciseStats = async (author = userId) => {
+      const row = await createZeroDbProvider({ db: client.db }).run(
+        queries.training.statistics.fn({
+          args: { householdId, exerciseId: catalogId },
+          ctx: { userId: author },
+        }),
+      );
+      return exerciseStatsSchema.parse(
+        row?.statistics?.[0]?.stats ?? emptyExerciseStats,
+      );
+    };
+    const habitStats = async (viewer = userId) => {
+      const row = await createZeroDbProvider({ db: client.db }).run(
+        queries.habits.statistics.fn({
+          args: {
+            householdId,
+            habitId,
+            personId: userId,
+            today,
+            timeZone: "UTC",
+          },
+          ctx: { userId: viewer, serverNow: Date.now() },
+        }),
+      );
+      expect(row).toBeDefined();
+      return {
+        row,
+        stats: habitStatsFromWeeks(today, row?.weeklyStatistics ?? []),
+      };
+    };
     function args(template = false): SaveTrainingSet {
       const id = randomUUID();
 
@@ -225,6 +264,140 @@ describe.runIf(Boolean(databaseUrl))(
       },
     );
 
+    it("commits reactive summaries with actuals, corrections and removals and rolls them back together", async () => {
+      await configure("any");
+      const input = args();
+      input.values.amount = 4;
+      await run("training.saveSet", input);
+      expect(await exerciseStats()).toMatchObject({
+        sessions: 1,
+        sets: 1,
+        reps: { total: 4 },
+      });
+      expect((await habitStats()).stats.completedDays).toBe(1);
+      expect(await exerciseStats(otherUser)).toEqual(emptyExerciseStats);
+      await expect(
+        createZeroDbProvider({ db: client.db }).transaction(async (tx) => {
+          await mutateWithHabitWorkouts(tx, userId, "training.saveSet", {
+            ...input,
+            values: { ...input.values, amount: 99 },
+          });
+          throw new Error("rollback fixture");
+        }),
+      ).rejects.toThrow("rollback fixture");
+      expect(await exerciseStats()).toMatchObject({
+        sets: 1,
+        reps: { total: 4 },
+      });
+      expect((await query())[0]?.exercises[0]?.sets[0]?.amount).toBe(4);
+      await run("training.saveSet", {
+        ...input,
+        values: { ...input.values, amount: 9 },
+      });
+      expect(await exerciseStats()).toMatchObject({
+        sets: 1,
+        reps: { total: 9 },
+      });
+      await run("training.removeSet", {
+        householdId,
+        logId: input.logId,
+        sessionExerciseId: input.sessionExerciseId,
+        round: 1,
+      });
+      expect(await exerciseStats()).toEqual(emptyExerciseStats);
+      expect((await habitStats()).stats.completedDays).toBe(0);
+      await run("training.saveSet", input);
+      await run("training.removeExercise", {
+        householdId,
+        logId: input.logId,
+        sessionExerciseId: input.sessionExerciseId,
+      });
+      expect(await exerciseStats()).toEqual(emptyExerciseStats);
+      const fresh = { ...args(), logId: input.logId };
+      await run("training.saveSet", fresh);
+      await run("training.delete", {
+        householdId,
+        logId: input.logId,
+        optimisticTimestamp: Date.now(),
+      });
+      expect(await exerciseStats()).toEqual(emptyExerciseStats);
+      expect((await habitStats()).stats.completedDays).toBe(0);
+    });
+
+    it("serializes manual and workout completion summaries without losing either day or counting one day twice", async () => {
+      await configure("any");
+      const input = args();
+      const manual = (entryOn: string, completed: boolean) =>
+        run("habits.setCompleted", {
+          householdId,
+          habitId,
+          entryOn,
+          completed,
+          timeZone: "UTC",
+          optimisticTimestamp: Date.now(),
+        });
+      await Promise.all([
+        run("training.saveSet", input),
+        manual(yesterday, true),
+      ]);
+      expect((await habitStats()).stats.completedDays).toBe(2);
+      await Promise.all([
+        manual(today, true),
+        run("training.removeSet", {
+          householdId,
+          logId: input.logId,
+          sessionExerciseId: input.sessionExerciseId,
+          round: 1,
+        }),
+      ]);
+      expect((await habitStats()).stats.completedDays).toBe(2);
+      await manual(today, false);
+      expect((await habitStats()).stats.completedDays).toBe(1);
+    });
+
+    it("reads six note-free weekly rows for a thousand-week lifetime and repairs a historical gap exactly", async () => {
+      const week = habitWeekStart(today);
+      const days = Array.from({ length: 1000 }, (_, i) =>
+        shiftCalendarDate(week, -7 * i),
+      );
+      await client.db.insert(habitEntries).values(
+        days.map((entryOn) => ({
+          householdId,
+          habitId,
+          userId,
+          entryOn,
+          completed: true,
+          note: "Never sync this daily note for statistics",
+        })),
+      );
+      await refreshHabitWeeklyStatistics(client.db, householdId, userId, [
+        habitId,
+      ]);
+      const initial = await habitStats(otherUser);
+      expect(initial.row?.weeklyStatistics).toHaveLength(6);
+      expect(JSON.stringify(initial.row)).not.toContain(
+        "Never sync this daily note",
+      );
+      expect(initial.stats).toMatchObject({
+        completedDays: 1000,
+        currentWeeks: 1000,
+        bestWeeks: 1000,
+      });
+      await run("habits.setCompleted", {
+        householdId,
+        habitId,
+        entryOn: days[500],
+        completed: false,
+        timeZone: "UTC",
+        optimisticTimestamp: Date.now(),
+      });
+      expect((await habitStats()).stats).toMatchObject({
+        completedDays: 999,
+        currentWeeks: 500,
+        bestWeeks: 500,
+      });
+    });
+
     it("persists all selected rows in added order when a later exercise is logged first", async () => {
       const input = args();
       const id = randomUUID();
@@ -285,6 +458,7 @@ describe.runIf(Boolean(databaseUrl))(
         );
         await run("training.saveSet", first);
         expect(await query()).toHaveLength(1);
+        expect(await exerciseStats()).toMatchObject({ sessions: 1, sets: 2 });
       },
     );
 

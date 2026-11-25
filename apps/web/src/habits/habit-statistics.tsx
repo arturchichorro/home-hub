@@ -1,25 +1,20 @@
 import type { HabitStats } from "@home-hub/shared/habit-stats";
-import { Button, InlineAlert } from "@home-hub/ui-web";
+import { InlineAlert } from "@home-hub/ui-web";
 import { formatHabitDate } from "./habit-days";
 
 export function HabitStatistics({
   data,
   error,
   archived,
-  onRetry,
 }: {
   data: HabitStats | undefined;
   error: string | undefined;
   archived: boolean;
-  onRetry: () => void;
 }) {
   if (error) {
     return (
       <InlineAlert role="alert" variant="danger">
-        {error}{" "}
-        <Button variant="ghost" size="compact" onClick={onRetry}>
-          Retry
-        </Button>
+        {error}
       </InlineAlert>
     );
   }
