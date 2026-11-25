@@ -106,6 +106,7 @@ function Detail({
     disabled,
   });
   const href = detailHref(row);
+  const label = row.label.trim() || detailLabels[row.type];
   return (
     <li
       ref={sortable.ref}
@@ -114,57 +115,33 @@ function Detail({
       <IconButton
         ref={sortable.handleRef}
         className="size-7! shrink-0 touch-none"
-        aria-label={"Reorder " + row.label}
+        aria-label={"Reorder " + label}
         disabled={disabled}
       >
         <GripVertical className="size-4" />
       </IconButton>
       <div className="grid min-w-0 flex-1 gap-1">
-        <div className="flex min-w-0 gap-1">
-          <select
-            aria-label={"Type for " + row.label}
-            value={row.type}
-            disabled={disabled}
-            className="h-7 w-24 shrink-0 bg-transparent text-xs text-muted"
-            onChange={(e) => {
-              const type = e.target.value as ContactDetail["type"];
-              change({
-                ...row,
-                type,
-                label:
-                  row.label === detailLabels[row.type]
-                    ? detailLabels[type]
-                    : row.label,
-              });
-            }}
-          >
-            {detailTypes.map((type) => (
-              <option key={type} value={type}>
-                {detailLabels[type]}
-              </option>
-            ))}
-          </select>
-          <Input
-            appearance="seamless"
-            aria-label="Detail label"
-            className="h-7! min-w-0 text-xs text-muted"
-            maxLength={100}
-            value={row.label}
-            disabled={disabled}
-            onValueChange={(label) => change({ ...row, label })}
-          />
-        </div>
+        <Input
+          appearance="seamless"
+          aria-label="Detail label"
+          placeholder={detailLabels[row.type]}
+          className="h-7! min-w-0 text-xs text-muted"
+          maxLength={100}
+          value={row.label}
+          disabled={disabled}
+          onValueChange={(label) => change({ ...row, label })}
+        />
         {row.type === "birthday" ? (
           <Birthday
             value={row.value}
-            label={row.label}
+            label={label}
             disabled={disabled}
             change={(value) => change({ ...row, value })}
           />
         ) : row.type === "text" ? (
           <Textarea
             appearance="seamless"
-            aria-label={"Value for " + row.label}
+            aria-label={"Value for " + label}
             className="min-h-7! min-w-0 py-0! text-sm"
             rows={1}
             maxLength={5000}
@@ -176,7 +153,14 @@ function Detail({
           <Input
             appearance="seamless"
             className="h-7! min-w-0"
-            aria-label={"Value for " + row.label}
+            aria-label={"Value for " + label}
+            placeholder={
+              row.type === "phone"
+                ? "Phone number"
+                : row.type === "email"
+                  ? "name@example.com"
+                  : "https://example.com"
+            }
             type={
               row.type === "phone"
                 ? "tel"
@@ -197,7 +181,7 @@ function Detail({
           target={row.type === "link" ? "_blank" : undefined}
           rel="noopener noreferrer"
           className="shrink-0 px-1 text-xs leading-7 text-muted underline"
-          aria-label={"Open " + row.label}
+          aria-label={"Open " + label}
         >
           {row.type === "phone"
             ? "Call"
@@ -208,7 +192,7 @@ function Detail({
       ) : null}
       <IconButton
         className="size-7! shrink-0"
-        aria-label={"Remove " + row.label}
+        aria-label={"Remove " + label}
         disabled={disabled}
         onClick={remove}
       >
