@@ -162,6 +162,36 @@ async function findAttachment(
   return row;
 }
 
+export async function removeExerciseAttachment(
+  tx: DatabaseTransaction,
+  input: AttachmentScope,
+) {
+  const access = await authorize(tx, input);
+
+  if (access.kind !== "authorized") {
+    return access;
+  }
+
+  const row = await findAttachment(tx, input, "update");
+
+  if (!row) {
+    return { kind: "success" as const };
+  }
+
+  const deletedAt = new Date();
+  await tx
+    .update(exerciseMedia)
+    .set({ deletedAt, updatedAt: deletedAt })
+    .where(
+      and(
+        eq(exerciseMedia.id, row.id),
+        eq(exerciseMedia.householdId, input.householdId),
+      ),
+    );
+
+  return { kind: "success" as const };
+}
+
 export function createExerciseMediaServices(
   dependencies: ExerciseMediaDependencies,
 ) {
@@ -346,32 +376,7 @@ export function createExerciseMediaServices(
     },
 
     async deleteAttachment(input: AttachmentScope) {
-      return db.transaction(async (tx) => {
-        const access = await authorize(tx, input);
-
-        if (access.kind !== "authorized") {
-          return access;
-        }
-
-        const row = await findAttachment(tx, input, "update");
-
-        if (!row) {
-          return { kind: "success" as const };
-        }
-
-        const deletedAt = new Date();
-        await tx
-          .update(exerciseMedia)
-          .set({ deletedAt, updatedAt: deletedAt })
-          .where(
-            and(
-              eq(exerciseMedia.id, row.id),
-              eq(exerciseMedia.householdId, input.householdId),
-            ),
-          );
-
-        return { kind: "success" as const };
-      });
+      return db.transaction((tx) => removeExerciseAttachment(tx, input));
     },
 
     async readUrls(

@@ -15,7 +15,7 @@ describe("household module catalogue", () => {
       "habits",
       "workouts",
       "documents",
-      "logs",
+      "contacts",
       "calendar",
     ]);
     expect(householdModuleCatalog.map(({ key }) => key)).toEqual([
@@ -24,7 +24,7 @@ describe("household module catalogue", () => {
       "habits",
       "workouts",
       "documents",
-      "logs",
+      "contacts",
       "calendar",
     ]);
   });
@@ -42,7 +42,7 @@ describe("household module catalogue", () => {
       { key: "habits", label: "Habits", defaultEnabled: false },
       { key: "workouts", label: "Workouts", defaultEnabled: false },
       { key: "documents", label: "Documents", defaultEnabled: false },
-      { key: "logs", label: "Logs", defaultEnabled: false },
+      { key: "contacts", label: "Contacts", defaultEnabled: false },
       { key: "calendar", label: "Calendar", defaultEnabled: false },
     ]);
   });

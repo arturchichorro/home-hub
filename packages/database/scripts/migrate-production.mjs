@@ -5,10 +5,14 @@ import { Client } from "pg";
 import { withPublicSearchPath } from "../src/connection-url.ts";
 
 export const loggingMigrationWhen = 1794127975016;
+export const contactsMigrationWhen = 1795533820795;
 
 export const bootstrapRequiredExitCode = 78;
 
-export async function loggingCutoverPending(client) {
+export async function loggingCutoverPending(
+  client,
+  cutoff = loggingMigrationWhen,
+) {
   const table = await client.query(
     "SELECT to_regclass('drizzle.__drizzle_migrations') IS NOT NULL AS present",
   );
@@ -19,13 +23,13 @@ export async function loggingCutoverPending(client) {
 
   const result = await client.query(
     "SELECT NOT EXISTS (SELECT FROM drizzle.__drizzle_migrations WHERE created_at >= $1) AS pending",
-    [loggingMigrationWhen],
+    [cutoff],
   );
 
   return result.rows[0].pending;
 }
 
-async function checkPending(env) {
+async function checkPending(env, cutoff = loggingMigrationWhen) {
   const client = new Client({
     connectionString: withPublicSearchPath(env.DATABASE_URL),
   });
@@ -33,21 +37,36 @@ async function checkPending(env) {
   try {
     await client.connect();
 
-    return await loggingCutoverPending(client);
+    return await loggingCutoverPending(client, cutoff);
   } finally {
     await client.end();
   }
 }
 
+export function acknowledgedContactsEnvironment(env) {
+  const url = new URL(env.DATABASE_URL);
+  url.searchParams.set(
+    "options",
+    [url.searchParams.get("options"), "-c home_hub.contacts_cutover_ready=1"]
+      .filter(Boolean)
+      .join(" "),
+  );
+  return { ...env, DATABASE_URL: url.toString() };
+}
+
 export async function runProductionMigrations({
   env = process.env,
   pending = () => checkPending(env),
+  contactsPending = () => checkPending(env, contactsMigrationWhen),
   // Dependencies are frozen into the image at build time, not reinstalled by
   // pnpm 12 under the non-root runtime user.
   migrate = () =>
     spawnSync("pnpm", ["--config.verifyDepsBeforeRun=false", "migrate"], {
       stdio: "inherit",
-      env,
+      env:
+        env.HOME_HUB_CONTACTS_CUTOVER_READY === "1"
+          ? acknowledgedContactsEnvironment(env)
+          : env,
     }).status ?? 1,
   report = (message) => console.error(message),
 } = {}) {
@@ -63,6 +82,16 @@ export async function runProductionMigrations({
     return bootstrapRequiredExitCode;
   }
 
+  if (
+    env.HOME_HUB_REQUIRE_CONTACTS_CUTOVER === "1" &&
+    env.HOME_HUB_CONTACTS_CUTOVER_READY !== "1" &&
+    (await contactsPending())
+  ) {
+    report(
+      "Contacts cutover required (78): no migrations applied. Explicit approval, stopped writers and a fresh backup are required before discarding legacy Logs.",
+    );
+    return bootstrapRequiredExitCode;
+  }
   return migrate();
 }
 

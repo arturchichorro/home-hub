@@ -110,26 +110,6 @@ export async function confirmExerciseImage(
   return { kind: "success" as const };
 }
 
-export async function deleteExerciseImage(
-  input: Omit<ExerciseImageIdentity, "userId" | "variant">,
-) {
-  const response = await fetch(
-    `${base(input.householdId)}/${input.exerciseId}/media/${input.attachmentId}`,
-    { method: "DELETE", headers: headers(input.accessToken) },
-  );
-  const rejected = failure(response);
-
-  if (rejected) {
-    return rejected;
-  }
-
-  if (!response.ok) {
-    throw new Error("Unable to remove exercise image");
-  }
-
-  return { kind: "success" as const };
-}
-
 async function readExerciseImageUrls(input: {
   accessToken: string;
   householdId: string;

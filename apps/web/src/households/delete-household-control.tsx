@@ -4,23 +4,23 @@ import {
   IconButton,
   Trash2,
 } from "@home-hub/ui-web";
+import { useZero } from "@rocicorp/zero/react";
 import { useId, useRef, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
-import { deleteHousehold } from "./api";
+import { deleteHousehold } from "./mutations";
 
 type DeleteHouseholdControlProps = {
-  accessToken: string;
   householdId: string;
   onDeletedHousehold: () => void;
   onSessionExpired: () => void;
 };
 
 export function DeleteHouseholdControl({
-  accessToken,
   householdId,
   onDeletedHousehold,
   onSessionExpired,
 }: DeleteHouseholdControlProps) {
+  const zero = useZero();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string>();
@@ -36,7 +36,7 @@ export function DeleteHouseholdControl({
     setError(undefined);
 
     try {
-      const result = await deleteHousehold({ accessToken, householdId });
+      const result = await deleteHousehold(zero, { householdId });
 
       if (result.kind === "unauthorized") {
         onSessionExpired();

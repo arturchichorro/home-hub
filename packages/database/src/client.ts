@@ -15,9 +15,13 @@ export type DatabaseTransaction = NodePgTransaction<
   ExtractTablesWithRelations<typeof schema>
 >;
 
-export function createDbClient(databaseUrl: string) {
+export function createDbClient(
+  databaseUrl: string,
+  { connectionTimeoutMillis = 0 }: { connectionTimeoutMillis?: number } = {},
+) {
   const pool = new Pool({
     connectionString: withPublicSearchPath(databaseUrl),
+    connectionTimeoutMillis,
   });
 
   const db = drizzle({ client: pool, schema });

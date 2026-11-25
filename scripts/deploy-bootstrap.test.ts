@@ -96,6 +96,7 @@ it("boots from the installed legacy script, refuses unsafe migration, then recon
       `printf 'docker %s\\n' "$*" >> "$TEST_LOG"
  case "$*" in
  *to_regclass*) echo t;;
+ *1795533820795*) echo f;;
  *created_at*) if [[ -f "$TEST_REPO/applied" ]]; then echo f; else echo t; fi;;
  *"run --rm"*)
   if [[ "$*" != *HOME_HUB_LOGGING_CUTOVER_READY=1* && ! -f "$TEST_REPO/applied" ]]; then

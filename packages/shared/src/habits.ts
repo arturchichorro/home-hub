@@ -28,6 +28,11 @@ export const habitNoteSchema = z
   .transform(cleanHabitNote)
   .pipe(z.string().max(500).nullable());
 
+export const habitViewSearchSchema = z.object({
+  person: z.uuid().optional(),
+  archived: z.boolean().optional(),
+});
+
 export const timeZoneSchema = z
   .string()
   .max(100)

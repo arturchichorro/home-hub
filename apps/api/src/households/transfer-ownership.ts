@@ -20,7 +20,7 @@ export type TransferHouseholdOwnershipResult =
 export function createTransferHouseholdOwnershipService({
   db,
 }: {
-  db: Database;
+  db: Pick<Database, "transaction">;
 }) {
   return async function transferHouseholdOwnership({
     userId,

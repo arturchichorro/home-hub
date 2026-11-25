@@ -2,18 +2,16 @@ import { Hono } from "hono";
 import { type CreateAuthRoutesInput, createAuthRoutes } from "./auth/routes";
 import type { CalendarMediaServices } from "./calendar/media";
 import { createCalendarMediaRoutes } from "./calendar/routes";
+import type { ContactMediaServices } from "./contacts/media";
+import { createContactMediaRoutes } from "./contacts/media-routes";
 import { createDocumentRoutes } from "./documents/routes";
 import type { DocumentServices } from "./documents/service";
-import { createHabitStatsRoutes } from "./habits/routes";
-import type { HabitStatsService } from "./habits/stats";
 import {
   type CreateHouseholdRoutesInput,
   createHouseholdRoutes,
 } from "./households/routes";
 import type { ListMediaServices } from "./lists/media";
 import { createListMediaRoutes } from "./lists/routes";
-import type { LogEntryServices } from "./logs/entries";
-import { createLogRoutes } from "./logs/routes";
 import {
   installApiObservability,
   type ObservabilityEnv,
@@ -25,9 +23,7 @@ import {
   createRecipeRoutes,
 } from "./recipes/routes";
 import type { ExerciseMediaServices } from "./workouts/exercise-media";
-import type { ExerciseStatsService } from "./workouts/exercise-stats";
 import { createExerciseMediaRoutes } from "./workouts/routes";
-import { createExerciseStatsRoutes } from "./workouts/stats-routes";
 import { type CreateZeroRoutesInput, createZeroRoutes } from "./zero/routes";
 
 type AuthServices = Omit<CreateAuthRoutesInput, "isProduction" | "jwtSecret">;
@@ -41,12 +37,11 @@ export type CreateAppInput = {
   households: HouseholdServices;
   recipeImages: RecipeImageServices;
   exerciseMedia: ExerciseMediaServices;
-  exerciseStats?: ExerciseStatsService;
-  habitStats?: HabitStatsService;
   calendarMedia?: CalendarMediaServices;
   documents?: DocumentServices;
   listMedia?: ListMediaServices;
-  logs?: LogEntryServices;
+  contactProfileMedia?: ContactMediaServices;
+  contactEntryMedia?: ContactMediaServices;
   infrastructure: {
     isProduction: boolean;
     jwtSecret: string;
@@ -97,19 +92,6 @@ export function createApp(input: CreateAppInput) {
     );
   }
 
-  if (input.habitStats) {
-    app.route(
-      "/api/households/:householdId/habits",
-      createHabitStatsRoutes({ jwtSecret, stats: input.habitStats }),
-    );
-  }
-  if (input.exerciseStats) {
-    app.route(
-      "/api/households/:householdId/workouts/exercises",
-      createExerciseStatsRoutes({ jwtSecret, stats: input.exerciseStats }),
-    );
-  }
-
   if (input.documents) {
     app.route(
       "/api/households/:householdId/documents",
@@ -124,10 +106,22 @@ export function createApp(input: CreateAppInput) {
     );
   }
 
-  if (input.logs) {
+  if (input.contactProfileMedia) {
     app.route(
-      "/api/households/:householdId/logs",
-      createLogRoutes({ jwtSecret, services: input.logs }),
+      "/api/households/:householdId/contacts/profiles",
+      createContactMediaRoutes({
+        jwtSecret,
+        services: input.contactProfileMedia,
+      }),
+    );
+  }
+  if (input.contactEntryMedia) {
+    app.route(
+      "/api/households/:householdId/contacts/entries",
+      createContactMediaRoutes({
+        jwtSecret,
+        services: input.contactEntryMedia,
+      }),
     );
   }
 

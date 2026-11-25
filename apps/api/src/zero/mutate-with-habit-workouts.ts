@@ -4,7 +4,6 @@ import {
   linkHabitWorkoutsMutationSchema,
 } from "@home-hub/shared/habits";
 import { trainingScopeSchema } from "@home-hub/shared/training";
-import { mutators } from "@home-hub/shared/zero/mutators";
 import { zql } from "@home-hub/shared/zero/schema";
 import { mustGetMutator, type ReadonlyJSONValue } from "@rocicorp/zero";
 import { sql } from "drizzle-orm";
@@ -13,6 +12,7 @@ import {
   lockHabitWorkoutCompletion,
   refreshHabitWorkoutCompletion,
 } from "./habit-workout-completion";
+import { serverMutators } from "./server-mutators";
 
 type ServerTransaction = Parameters<
   Parameters<ZeroDbProvider["transaction"]>[0]
@@ -24,7 +24,8 @@ export async function mutateWithHabitWorkouts(
   name: string,
   args: ReadonlyJSONValue | undefined,
 ) {
-  const mutator = mustGetMutator(mutators, name);
+  const mutator = mustGetMutator(serverMutators, name);
+
   const training =
     name.startsWith("training.") &&
     args &&

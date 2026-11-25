@@ -30,31 +30,7 @@ function createTestRoutes(
 ) {
   return createHouseholdRoutes({
     acceptHouseholdInvite,
-
-    createHousehold: async () => ({ kind: "unauthorized" }),
-
     createHouseholdInvite: async () => ({ kind: "forbidden" }),
-
-    deleteHousehold: async () => ({ kind: "forbidden" }),
-
-    listHouseholds: async () => ({ kind: "unauthorized" }),
-
-    listHouseholdInvites: async () => ({ kind: "forbidden" }),
-
-    listHouseholdMembers: async () => ({ kind: "forbidden" }),
-
-    leaveHousehold: async () => ({ kind: "forbidden" }),
-
-    transferHouseholdOwnership: async () => ({ kind: "forbidden" }),
-
-    setHouseholdModuleEnabled: async () => ({ kind: "forbidden" }),
-
-    renameHousehold: async () => ({ kind: "forbidden" }),
-
-    revokeHouseholdInvite: async () => ({ kind: "forbidden" }),
-
-    removeHouseholdMember: async () => ({ kind: "forbidden" }),
-
     jwtSecret,
   });
 }

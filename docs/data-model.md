@@ -143,7 +143,8 @@ invite. An owner may revoke an unaccepted invitation by setting `revoked_at`.
 
 Enforce a unique `token_hash` and index `household_id`. Invite acceptance locks
 the invite and transactionally creates a `member` membership while setting
-`accepted_at`.
+`accepted_at`. Migration 0058 exposes only non-secret invitation metadata through
+owner-authorized Zero queries; token hashes and plaintext tokens remain excluded.
 
 ### `household_module_settings`
 
@@ -181,6 +182,16 @@ Recipes owns `recipes`, `recipe_ingredients`, `recipe_cook_logs`, and
 stored assets independently of any feature; see [Shared media](./media/) for
 identity, validation, lifecycle, authorization and the forward migration.
 Videos and animated-image uploads remain deferred; no separate video table exists.
+
+### Contacts module tables
+
+`contacts` stores profiles and ordered typed detail arrays. `contact_entries` stores
+canonical dated text; `contact_entry_people` links it to one or more contacts.
+`contact_media` attaches shared assets to profiles or entries. All links are
+household-qualified. Published entries require people and text or a confirmed
+picture. Migration 0057 removes legacy `logs`, `log_entries` and `log_categories`
+without converting their data, while preserving module enablement.
+See [Contacts](./contacts/) for archive, concurrency and cutover rules.
 
 ### Habits module tables
 

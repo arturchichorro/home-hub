@@ -15,7 +15,11 @@ export type RenameHouseholdResult =
   | { kind: "forbidden" }
   | { kind: "success"; household: { id: string; name: string } };
 
-export function createRenameHouseholdService({ db }: { db: Database }) {
+export function createRenameHouseholdService({
+  db,
+}: {
+  db: Pick<Database, "transaction">;
+}) {
   return async function renameHousehold({
     userId,
     householdId,

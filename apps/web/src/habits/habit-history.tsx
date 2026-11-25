@@ -13,7 +13,6 @@ import {
   InlineAlert,
 } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
-import { useEffect, useRef } from "react";
 import {
   formatHabitDate,
   HabitDayPreview,
@@ -41,7 +40,6 @@ export function HabitHistory({
   onDate,
   onCompleted,
   onDirtyChange,
-  onEntriesChanged,
 }: {
   householdId: string;
   habitId: string;
@@ -59,7 +57,6 @@ export function HabitHistory({
   onDate: (date: string) => void;
   onCompleted: (date: string, completed: boolean) => void;
   onDirtyChange: (dirty: boolean) => void;
-  onEntriesChanged?: () => void;
 }) {
   const period = habitMonth(clampHabitMonth(anchor, today));
   const [rows, result] = useQuery(
@@ -79,16 +76,6 @@ export function HabitHistory({
   );
   const entry = selectedDate ? entries.get(selectedDate) : undefined;
   const loading = result.type !== "complete";
-  const fingerprint = JSON.stringify(
-    rows[0]?.entries.map((e) => [e.entryOn, e.completed, e.workoutCompleted]),
-  );
-  const notified = useRef<string>(undefined);
-  useEffect(() => {
-    if (result.type === "complete" && notified.current !== fingerprint) {
-      notified.current = fingerprint;
-      onEntriesChanged?.();
-    }
-  }, [fingerprint, result.type, onEntriesChanged]);
 
   return (
     <section

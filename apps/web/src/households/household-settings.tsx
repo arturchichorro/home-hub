@@ -1,7 +1,6 @@
 import { queries } from "@home-hub/shared/zero/queries";
 import { InlineAlert } from "@home-hub/ui-web";
 import { useQuery } from "@rocicorp/zero/react";
-import { useEffect, useState } from "react";
 import { DeleteHouseholdControl } from "./delete-household-control";
 import { HouseholdAccessList } from "./household-access-list";
 import { HouseholdNameInput } from "./household-name-input";
@@ -22,18 +21,10 @@ export function HouseholdSettings({
   onLeftHousehold,
 }: HouseholdSettingsProps) {
   const [households, result] = useQuery(queries.households.mine({}));
-  const [locallyTransferredHouseholdId, setLocallyTransferredHouseholdId] =
-    useState<string>();
   const household = households.find(
     (candidate) => candidate.id === householdId,
   );
   const membership = household?.members[0];
-
-  useEffect(() => {
-    if (membership?.role !== "owner") {
-      setLocallyTransferredHouseholdId(undefined);
-    }
-  }, [membership?.role]);
 
   if (result.type === "error") {
     return (
@@ -47,9 +38,7 @@ export function HouseholdSettings({
     return null;
   }
 
-  const isOwner =
-    membership?.role === "owner" &&
-    locallyTransferredHouseholdId !== household.id;
+  const isOwner = membership?.role === "owner";
 
   return (
     <div
@@ -59,7 +48,6 @@ export function HouseholdSettings({
       <div className="flex">
         {isOwner ? (
           <HouseholdNameInput
-            accessToken={accessToken}
             currentName={household.name}
             householdId={household.id}
             onSessionExpired={onSessionExpired}
@@ -71,7 +59,6 @@ export function HouseholdSettings({
         )}
         <div className="flex shrink-0 items-center gap-1">
           <LeaveHouseholdControl
-            accessToken={accessToken}
             householdId={household.id}
             isOwner={isOwner}
             onLeftHousehold={onLeftHousehold}
@@ -79,7 +66,6 @@ export function HouseholdSettings({
           />
           {isOwner ? (
             <DeleteHouseholdControl
-              accessToken={accessToken}
               householdId={household.id}
               onDeletedHousehold={onLeftHousehold}
               onSessionExpired={onSessionExpired}
@@ -95,9 +81,6 @@ export function HouseholdSettings({
           householdId={household.id}
           isOwner={isOwner}
           onSessionExpired={onSessionExpired}
-          onOwnershipTransferred={() =>
-            setLocallyTransferredHouseholdId(household.id)
-          }
         />
       </section>
 
@@ -105,7 +88,6 @@ export function HouseholdSettings({
         <section className="grid gap-4">
           <h3 className="text-lg font-semibold">Modules</h3>
           <ModuleSettings
-            accessToken={accessToken}
             householdId={household.id}
             onSessionExpired={onSessionExpired}
           />

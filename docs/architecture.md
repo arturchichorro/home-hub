@@ -79,6 +79,26 @@ flowchart LR
 
 
 
+### Data access standard
+
+Application records and metadata use named Zero queries and custom mutators,
+including household administration and database-only attachment removal. Use
+server mutator overrides for authoritative authorization, locks and private
+metadata; their SQL writes and Zero acknowledgements share one transaction.
+Permission changes wait for server acknowledgement rather than guessing locally.
+
+HTTP is limited to authentication, confidential invitation-token exchange,
+binary transfer/processing, signed delivery URLs, health and external integrations.
+Do not add parallel CRUD endpoints, fetch-on-focus statistics, mirrored record
+caches or mutations disguised as reads.
+
+Statistics are not displayed or maintained in the app. An explicit operator-only
+[JSON export](./statistics.md) reads canonical records directly from PostgreSQL in
+one read-only snapshot, computes statistics on demand and streams supporting
+records to a private file. This operational tool is deliberately outside app
+data access: no summary tables, write-time aggregation, HTTP endpoint, scheduled
+job or automatic AI upload.
+
 ### React application
 
 The browser application owns rendering, forms, navigation, and presentation of connection state. It reads synchronized application data through Zero queries and performs connected optimistic changes through custom Zero mutators.
@@ -192,9 +212,8 @@ PostgreSQL must support logical replication, and the upstream connection must be
 The API owns:
 
 - account authentication, JWT issuance, and refresh-token rotation;
-- household selection data, lifecycle, membership, and ownership commands;
-- invite creation, acceptance, and revocation;
-- owner-authorized household module configuration;
+- household lifecycle, membership, ownership and module commands through Zero server mutators;
+- owner-only invitation metadata through Zero, with raw-token creation/acceptance over HTTP;
 - verification of Zero authentication tokens;
 - transformation of named Zero queries using trusted user context;
 - transactional execution and authorization of Zero mutations;

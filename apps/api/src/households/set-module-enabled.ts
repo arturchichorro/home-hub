@@ -25,7 +25,7 @@ export type SetHouseholdModuleEnabledResult =
 export function createSetHouseholdModuleEnabledService({
   db,
 }: {
-  db: Database;
+  db: Pick<Database, "transaction">;
 }) {
   return async function setHouseholdModuleEnabled({
     userId,

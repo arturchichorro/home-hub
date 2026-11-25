@@ -16,16 +16,14 @@ import {
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppHeaderRightComponent } from "../app-header-right-component";
 import { useBlockAppUpdate } from "../updates/activity";
 import { HabitHistory } from "./habit-history";
 import { HabitNameInput } from "./habit-name-input";
 import { HabitNoteInput } from "./habit-note-input";
 import { HabitPersonSelect } from "./habit-person-select";
-import { HabitStatistics } from "./habit-statistics";
 import { HabitWorkoutLink } from "./habit-workout-link";
-import { useHabitStats } from "./use-habit-stats";
 import { useHabitView } from "./use-habit-view";
 
 export function HabitDetailPage({
@@ -70,17 +68,7 @@ function HabitDetail({
   const [date, setDate] = useState<string>();
   const selected = date ?? view.today;
   const [management, setManagement] = useState<"rename" | "archive">();
-  const [revision, setRevision] = useState(0);
-  const changed = useCallback(() => setRevision((value) => value + 1), []);
   const archived = habit?.status === "archived";
-  const stats = useHabitStats(
-    householdId,
-    habitId,
-    view.personId,
-    revision,
-    view.today,
-    !!habit && !view.locked && view.memberResult.type === "complete",
-  );
   useBlockAppUpdate(management !== undefined);
   useEffect(() => {
     if (!view.locked && selected > view.today) {
@@ -206,7 +194,6 @@ function HabitDetail({
           view.completed(habitId, date, value, archived)
         }
         onDirtyChange={(dirty) => view.dirtyChanged("day-note", dirty)}
-        onEntriesChanged={changed}
       />
       {(!archived || habit.note) && (
         <section
@@ -226,12 +213,6 @@ function HabitDetail({
           />
         </section>
       )}
-      <HabitStatistics
-        data={stats.data}
-        error={stats.error}
-        archived={archived}
-        onRetry={changed}
-      />
       <DialogRoot
         open={management !== undefined}
         onOpenChange={(open) => {

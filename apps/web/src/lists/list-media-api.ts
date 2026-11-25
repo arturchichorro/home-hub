@@ -110,26 +110,6 @@ export async function confirmListImage(
   return { kind: "success" as const };
 }
 
-export async function deleteListImage(
-  input: Omit<ListImageIdentity, "userId" | "variant">,
-) {
-  const response = await fetch(
-    `${base(input.householdId)}/${input.listId}/media/${input.attachmentId}`,
-    { method: "DELETE", headers: headers(input.accessToken) },
-  );
-  const rejected = failure(response);
-
-  if (rejected) {
-    return rejected;
-  }
-
-  if (!response.ok) {
-    throw new Error("Unable to remove list image");
-  }
-
-  return { kind: "success" as const };
-}
-
 async function readListImageUrls(input: {
   accessToken: string;
   householdId: string;

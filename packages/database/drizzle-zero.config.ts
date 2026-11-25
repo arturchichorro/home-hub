@@ -4,6 +4,14 @@ import * as drizzleSchema from "./src/schema";
 
 export default drizzleZeroConfig(drizzleSchema, {
   tables: {
+    householdInvites: {
+      id: true,
+      householdId: true,
+      expiresAt: true,
+      acceptedAt: true,
+      revokedAt: true,
+      createdAt: true,
+    },
     calendarItems: true,
     calendarPeople: true,
     calendarMedia: true,
@@ -22,14 +30,24 @@ export default drizzleZeroConfig(drizzleSchema, {
     },
     listMedia: true,
     listFlashcards: true,
-    logs: true,
-    logCategories: true,
-    logEntries: {
+    contacts: {
       id: true,
       householdId: true,
-      logId: true,
+      name: true,
+      normalizedName: true,
+      searchText: true,
+      details: true,
+      archived: true,
+      version: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    contactEntries: {
+      id: true,
+      householdId: true,
       entryOn: true,
       note: true,
+      published: true,
       version: true,
       createdBy: true,
       lastEditedBy: true,
@@ -37,6 +55,8 @@ export default drizzleZeroConfig(drizzleSchema, {
       createdAt: true,
       updatedAt: true,
     },
+    contactEntryPeople: true,
+    contactMedia: true,
     exercises: true,
     exerciseMedia: true,
     workouts: true,

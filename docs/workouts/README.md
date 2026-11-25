@@ -135,49 +135,25 @@ habit completion stays frozen. Deletion clears the session's text/occurrences/se
 not catalog entries or other logs. Session/exercise row tombstones, with text and
 measurements cleared, prevent stale devices from recreating removed data.
 
-## Exercise details and lifetime statistics
+## Exercise details and history
 
 Compact detail actions in the catalog, workout rows and recorded history open an
 exercise page without replacing existing inline editing. Active pages reuse the
-shared name/measure/load/side editor and gallery (upload, preview, removal and
-ordering). Those edits never rewrite frozen performances. Removed catalog entries
-remain readable through your own recorded history, with catalog/media editing
-removed and existing retired-gallery restrictions unchanged.
+shared name/measure/load/side editor and gallery. Those edits never rewrite frozen
+performances. Removed catalog entries remain readable through your own recorded
+history, without catalog/media editing.
 
 Private exercise history groups actual sets by session, preserving repeated slots,
 roles and original occurrence dates. It returns only the selected exercise, not
-other movements or the session’s note. Pages contain twenty sessions plus a
+other movements or the session's note. Pages contain twenty sessions plus a
 lookahead; the source-log action opens the original logger for corrections.
 
-Lifetime statistics are author/household/catalog-ID scoped across workout and free
-training, including all roles. Distinct sessions and actual set rows count once;
-drafts, unperformed prescriptions and deleted sessions/occurrences do not count.
-Reps and seconds remain separate. Unilateral totals sum both sides and expose a
-left/right breakdown; historical null right amounts retain their left-equals-right
-meaning, while explicit zero remains zero.
-
-External-load volume uses rep-based loaded sets only:
-`kg × (2 for per-hand, otherwise 1) × (left + right for unilateral, otherwise amount)`.
-Single load is the entered total load; per-hand means two equal weights even when
-reps are per side. Body mass and timed holds are excluded. Missing historical
-weights produce an explicitly partial/not-recorded result rather than invented
-volume. Heaviest kilograms stay separate by recorded measure/load/side convention,
-not one estimated strength score.
-
-The summary is compact, with aligned mobile totals and side/load records under
-the shared Base UI Stats details accordion; no charts or date filters. Routine UI
-explanations and repeated visible Saved labels are omitted, while errors, pending
-states, accessible save feedback and partial-statistics caveats remain. Stored
-names, targets, instructions and notes are retained in full. Exercise detail reuses
-the catalog editor without creating an unnecessary sortable catalog context. Statistics refresh on entry/resume, visible performance changes and
-acknowledged catalog changes, with retry and stale-response protection. This is
-not a second-by-second dashboard.
-
-No schema, publication, index or migration change is needed: bounded Zero queries
-read canonical sessions/occurrences/sets, and the authenticated
-`GET /api/households/:householdId/workouts/exercises/:exerciseId/stats` endpoint
-aggregates lifetime values in PostgreSQL. It never downloads lifetime sets into the
-browser or maintains duplicate counters. Responses are not cacheable.
+There are no in-app statistics or summary-maintenance mutations. The manual
+[operator export](../statistics.md) calculates statistics and streams supporting
+actuals only when explicitly invoked for a selected current member's username.
+It includes retired exercise identities with actuals, omits notes, and skips a
+disabled Workouts module. App permissions remain author-private; this privileged
+CLI is not a household-owner API permission.
 
 ## Data model
 

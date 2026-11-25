@@ -1,4 +1,5 @@
 import { ErrorPopover, Input } from "@home-hub/ui-web";
+import { useZero } from "@rocicorp/zero/react";
 import { useRef } from "react";
 import {
   TextDraftActions,
@@ -6,21 +7,20 @@ import {
 } from "../editing/text-draft-actions";
 import { useDebouncedTextEditor } from "../editing/use-debounced-text-editor";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
-import { renameHousehold } from "./api";
+import { renameHousehold } from "./mutations";
 
 type HouseholdNameInputProps = {
-  accessToken: string;
   currentName: string;
   householdId: string;
   onSessionExpired: () => void;
 };
 
 export function HouseholdNameInput({
-  accessToken,
   currentName,
   householdId,
   onSessionExpired,
 }: HouseholdNameInputProps) {
+  const zero = useZero();
   const inputRef = useRef<HTMLInputElement>(null);
   const mutationEnabled = useZeroMutationEnabled();
   const editor = useDebouncedTextEditor({
@@ -36,8 +36,7 @@ export function HouseholdNameInput({
 
     save: async (name) => {
       try {
-        const result = await renameHousehold({
-          accessToken,
+        const result = await renameHousehold(zero, {
           householdId,
           name,
         });

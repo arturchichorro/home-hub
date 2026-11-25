@@ -143,7 +143,11 @@ describe("create household service", () => {
           moduleKey: "documents",
           enabled: false,
         },
-        { householdId: result.household.id, moduleKey: "logs", enabled: false },
+        {
+          householdId: result.household.id,
+          moduleKey: "contacts",
+          enabled: false,
+        },
         {
           householdId: result.household.id,
           moduleKey: "calendar",

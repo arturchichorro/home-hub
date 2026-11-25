@@ -28,8 +28,7 @@ The overview defaults to **Me**, with the existing person selector and shared or
   scope and block person/date/month/reorder/archive-view changes. Navigation/unload
   and PWA guards protect unsaved text. Today refreshes on focus/periodically without
   retargeting a pending editor across midnight.
-- Cached Zero history remains inspectable offline, with writes disabled. Statistics
-  report unavailable/retry when HTTP access is unavailable.
+- Cached Zero history remains inspectable offline, with writes disabled.
 
 Only the selected person's seven-day window loads on overview. Detail uses
 `habits.detail` for metadata and `habits.historyForPerson` for one selected month.
@@ -37,24 +36,14 @@ Only the selected person's seven-day window loads on overview. Detail uses
 `habits.byHousehold` query remains available to existing clients. No per-day
 subscriptions, per-row calendars or lifetime-entry download is introduced.
 
-## Derived statistics
+## Statistics export
 
-Detail shows completed-day totals, last completion, explicit last-7/30-calendar-day
-counts, and current/best **weekly activity streaks**. A completed day is manual
-**OR** training-derived, counted once; notes/empty entries and future dates do not
-count. A week is Monday–Sunday with any completion; an open current week preserves
-a run ending last week. Gaps break runs, and historical corrections update totals.
-Archived detail omits an active current streak but retains totals, best run and recency.
-There are no daily streaks, adherence scores, targets or charts.
-
-`GET /api/households/:householdId/habits/:habitId/stats?personId=…&timeZone=…`
-aggregates existing entries in PostgreSQL, returning counts/date labels only with
-`no-store`. Reads validate the authenticated viewer, live viewer/selected-person
-memberships, live household and enabled Habits module. Server time in the validated
-device timezone determines today; stored date labels determine weeks/windows.
-The client refreshes on entry, relevant visible completion changes, focus/resume,
-date/person changes and explicit retry, with abort/timeout and stale-scope protection.
-There are **no new tables, migrations, indexes, persisted counters or publication changes**.
+Statistics are not displayed in the app. The optional operator-only
+[statistics export](../statistics.md) computes summaries and exports supporting
+completion flags/dates for current household members, including archived habits.
+It omits notes and skips a disabled Habits module. Ordinary mutations maintain
+only their canonical records and existing workout-derived completion flags;
+there are no statistics counters, summary tables or refresh jobs.
 
 ## Optional workout links
 

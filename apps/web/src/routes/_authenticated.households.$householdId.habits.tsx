@@ -1,4 +1,4 @@
-import { habitViewSearchSchema } from "@home-hub/shared/habit-stats";
+import { habitViewSearchSchema } from "@home-hub/shared/habits";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { HouseholdModuleGate } from "../households/household-module-gate";
 

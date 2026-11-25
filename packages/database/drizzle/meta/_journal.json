@@ -400,6 +400,20 @@
       "when": 1795105740856,
       "tag": "0056_ambiguous_roland_deschain",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1795533820795,
+      "tag": "0057_contacts",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1795603976259,
+      "tag": "0058_publish_invite_metadata",
+      "breakpoints": true
     }
   ]
 }

@@ -38,6 +38,14 @@ Habits day boxes and optional workout-linked completion are integrated into
 When a review item merges, remove its pending entry and update the corresponding
 subject/history. Guest Access remains excluded from this integration.
 
+## Contacts replacing Logs
+
+Implemented shared profiles/details/pictures and canonical multi-contact dated
+entries, with guarded drafts, archive/restore and conflict-safe writes. Migration
+0057 intentionally discards legacy Logs and preserves module enablement, behind a
+separate production approval/backup cutover. No production action or permanent
+importer is included. See [Contacts](./contacts/).
+
 ## Flashcards in Lists
 
 Promoted from Backlog. The approved household-shared, text-only deck design is

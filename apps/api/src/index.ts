@@ -8,26 +8,17 @@ import { createLogoutService } from "./auth/logout";
 import { createMeService } from "./auth/me";
 import { createRefreshService } from "./auth/refresh";
 import { createSignupService } from "./auth/signup";
-import { createCalendarMediaServices } from "./calendar/media";
+import {
+  type CalendarMediaDependencies,
+  createCalendarMediaServices,
+} from "./calendar/media";
 import { config } from "./config";
+import { createContactMediaServices } from "./contacts/media";
 import { createDocumentServices } from "./documents/service";
 import { createDocumentStorage } from "./documents/storage";
-import { createHabitStatsService } from "./habits/stats";
 import { createAcceptHouseholdInviteService } from "./households/accept-invite";
-import { createHouseholdService } from "./households/create";
 import { createHouseholdInviteService } from "./households/create-invite";
-import { createDeleteHouseholdService } from "./households/delete";
-import { createLeaveHouseholdService } from "./households/leave";
-import { createListHouseholdsService } from "./households/list";
-import { createListHouseholdInvitesService } from "./households/list-invites";
-import { createListHouseholdMembersService } from "./households/list-members";
-import { createRemoveHouseholdMemberService } from "./households/remove-member";
-import { createRenameHouseholdService } from "./households/rename";
-import { createRevokeHouseholdInviteService } from "./households/revoke-invite";
-import { createSetHouseholdModuleEnabledService } from "./households/set-module-enabled";
-import { createTransferHouseholdOwnershipService } from "./households/transfer-ownership";
 import { createListMediaServices } from "./lists/media";
-import { createLogEntryServices } from "./logs/entries";
 import { inspectR2Object } from "./media/inspect-object";
 import { processMediaImage } from "./media/process-image";
 import { processMediaVideo } from "./media/process-video";
@@ -41,11 +32,9 @@ import { createConfirmRecipeImageUploadService } from "./recipes/images/confirm-
 import { createRecipeImageReadUrlService } from "./recipes/images/create-read-url";
 import { createRecipeImageReadUrlsService } from "./recipes/images/create-read-urls";
 import { createRecipeImageUploadService } from "./recipes/images/create-upload";
-import { createDeleteRecipeImageService } from "./recipes/images/delete";
 import { recipeImageMediaIdentity } from "./recipes/images/media-identity";
 import { closeHttpServer, createGracefulShutdown } from "./server-lifecycle";
 import { createExerciseMediaServices } from "./workouts/exercise-media";
-import { createExerciseStatsService } from "./workouts/exercise-stats";
 import { createZeroDbProvider } from "./zero/db-provider";
 
 const { db, close: closeDatabase } = createDbClient(config.DATABASE_URL);
@@ -82,30 +71,7 @@ const households = {
   acceptHouseholdInvite: createAcceptHouseholdInviteService({
     db: infrastructure.db,
   }),
-  createHousehold: createHouseholdService({ db: infrastructure.db }),
   createHouseholdInvite: createHouseholdInviteService({
-    db: infrastructure.db,
-  }),
-  deleteHousehold: createDeleteHouseholdService({ db: infrastructure.db }),
-  listHouseholds: createListHouseholdsService({ db: infrastructure.db }),
-  listHouseholdInvites: createListHouseholdInvitesService({
-    db: infrastructure.db,
-  }),
-  listHouseholdMembers: createListHouseholdMembersService({
-    db: infrastructure.db,
-  }),
-  leaveHousehold: createLeaveHouseholdService({ db: infrastructure.db }),
-  renameHousehold: createRenameHouseholdService({ db: infrastructure.db }),
-  revokeHouseholdInvite: createRevokeHouseholdInviteService({
-    db: infrastructure.db,
-  }),
-  removeHouseholdMember: createRemoveHouseholdMemberService({
-    db: infrastructure.db,
-  }),
-  transferHouseholdOwnership: createTransferHouseholdOwnershipService({
-    db: infrastructure.db,
-  }),
-  setHouseholdModuleEnabled: createSetHouseholdModuleEnabledService({
     db: infrastructure.db,
   }),
 };
@@ -163,9 +129,6 @@ const recipeImages = {
         secret: infrastructure.config.IMAGE_DELIVERY_SIGNING_SECRET,
       }),
   }),
-  deleteRecipeImage: createDeleteRecipeImageService({
-    db: infrastructure.db,
-  }),
 };
 
 const exerciseMedia = createExerciseMediaServices({
@@ -192,7 +155,7 @@ const exerciseMedia = createExerciseMediaServices({
     }),
 });
 
-const calendarMedia = createCalendarMediaServices({
+const imageAttachmentDependencies: CalendarMediaDependencies = {
   db,
 
   signUpload: (input) =>
@@ -214,7 +177,8 @@ const calendarMedia = createCalendarMediaServices({
       baseUrl: config.IMAGE_DELIVERY_BASE_URL,
       secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
     }),
-});
+};
+const calendarMedia = createCalendarMediaServices(imageAttachmentDependencies);
 
 const listMedia = createListMediaServices({
   db,
@@ -257,8 +221,6 @@ const app = createApp({
   recipeImages,
   exerciseMedia,
   calendarMedia,
-  exerciseStats: createExerciseStatsService({ db }),
-  habitStats: createHabitStatsService({ db }),
   documents: createDocumentServices({
     db,
     storage: createDocumentStorage({
@@ -268,7 +230,14 @@ const app = createApp({
       secret: config.IMAGE_DELIVERY_SIGNING_SECRET,
     }),
   }),
-  logs: createLogEntryServices({ db }),
+  contactProfileMedia: createContactMediaServices(
+    imageAttachmentDependencies,
+    "profile",
+  ),
+  contactEntryMedia: createContactMediaServices(
+    imageAttachmentDependencies,
+    "entry",
+  ),
   infrastructure: {
     zeroDbProvider: infrastructure.dbProvider,
     jwtSecret: infrastructure.config.API_JWT_SECRET,
