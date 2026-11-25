@@ -92,6 +92,20 @@ it("provides escaped email/phone actions and accepts only supported field types"
     }).success,
   ).toBe(false);
 });
+it("does not build actions from incomplete phone or email drafts", () => {
+  expect(
+    detailHref({ id: id(), type: "phone", label: "Phone", value: "" }),
+  ).toBeUndefined();
+  expect(
+    detailHref({ id: id(), type: "phone", label: "Phone", value: "+" }),
+  ).toBeUndefined();
+  expect(
+    detailHref({ id: id(), type: "email", label: "Email", value: "a@" }),
+  ).toBeUndefined();
+  expect(
+    detailHref({ id: id(), type: "email", label: "Email", value: "" }),
+  ).toBeUndefined();
+});
 it("requires people, preserves note whitespace, bounds text and normalizes the person set", () => {
   const a = id();
   const b = id();

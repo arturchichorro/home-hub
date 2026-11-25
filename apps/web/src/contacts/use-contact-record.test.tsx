@@ -72,6 +72,86 @@ it("retains invalid edits, reports validation errors and discards to declared sa
   expect(editor.value).toEqual({ name: "Alice" });
   expect(editor.hasChanges).toBe(false);
 });
+it("keeps incomplete autosave drafts quiet, protects them, and reports only on explicit flush", async () => {
+  const { editor, save, onWork } = setup();
+  editor.change({ name: " " });
+  await vi.advanceTimersByTimeAsync(600);
+  expect(editor.error).toBeUndefined();
+  expect(editor.value.name).toBe(" ");
+  expect(editor.hasChanges).toBe(true);
+  expect(onWork).toHaveBeenLastCalledWith(true, false);
+  expect(save).not.toHaveBeenCalled();
+  expect(await editor.flush()).toBe(false);
+  expect(editor.error).toBe("Name required");
+  editor.change({ name: "Valid" });
+  await vi.advanceTimersByTimeAsync(600);
+  expect(editor.error).toBeUndefined();
+  expect(editor.hasChanges).toBe(false);
+  expect(save).toHaveBeenCalledOnce();
+});
+it("keeps incomplete follow-up typing quiet while an earlier autosave is acknowledged", async () => {
+  let finish: (r: RecordSnapshot<Fields>) => void = () => {};
+  const save = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    )
+    .mockImplementation(
+      async (fields: Fields, base: RecordSnapshot<Fields>) => ({
+        id,
+        fields,
+        version: base.version + 1,
+      }),
+    );
+  const { editor } = setup({ save });
+  editor.change({ name: "First" });
+  await vi.advanceTimersByTimeAsync(600);
+  editor.change({ name: "" });
+  finish({ id, fields: { name: "First" }, version: 2 });
+  await vi.advanceTimersByTimeAsync(600);
+  expect(editor.error).toBeUndefined();
+  expect(editor.hasChanges).toBe(true);
+  expect(editor.value.name).toBe("");
+  expect(save).toHaveBeenCalledOnce();
+  expect(await editor.flush()).toBe(false);
+  expect(editor.error).toBe("Name required");
+  editor.change({ name: "Second" });
+  await vi.advanceTimersByTimeAsync(600);
+  expect(editor.base?.version).toBe(3);
+  expect(editor.error).toBeUndefined();
+});
+it("reports an explicit validation request queued behind an automatic save", async () => {
+  let finish: (r: typeof initial) => void = () => {};
+  const save = vi.fn(
+    (_fields: Fields, _base: RecordSnapshot<Fields> | null) =>
+      new Promise<typeof initial>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const { editor } = setup({ save });
+  editor.change({ name: "First" });
+  await vi.advanceTimersByTimeAsync(600);
+  editor.change({ name: "" });
+  const explicit = editor.flush();
+  finish({ id, fields: { name: "First" }, version: 2 });
+  expect(await explicit).toBe(false);
+  expect(editor.error).toBe("Name required");
+  expect(editor.value.name).toBe("");
+  expect(editor.hasChanges).toBe(true);
+  expect(save).toHaveBeenCalledOnce();
+});
+it("still exposes transport failures from automatic saves", async () => {
+  const save = vi.fn().mockRejectedValue(new Error("Network failure"));
+  const { editor } = setup({ save });
+  editor.change({ name: "Changed" });
+  await vi.advanceTimersByTimeAsync(600);
+  expect(editor.error).toBe("Network failure");
+  expect(editor.hasChanges).toBe(true);
+  expect(save).toHaveBeenCalledOnce();
+});
 it("keeps a failed write id stable for safe network retries", async () => {
   const save = vi.fn(
     async (_fields: Fields, _base: RecordSnapshot<Fields> | null) => {

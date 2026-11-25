@@ -9,7 +9,7 @@ const text = (max: number) =>
 
 const contactNameSchema = text(150)
   .transform((s) => s.trim().replace(/\s+/gu, " "))
-  .pipe(z.string().min(1));
+  .pipe(z.string().min(1, "Add a contact name"));
 
 export const detailTypes = [
   "text",
@@ -40,7 +40,7 @@ export const contactDetailSchema = z
   .object({
     id: z.uuid(),
     type: z.enum(detailTypes),
-    label: text(100).trim().min(1),
+    label: text(100).trim().min(1, "Add a label"),
     value: text(5000).refine((v) => v.trim().length > 0, "Add a value"),
   })
   .strict()
@@ -194,9 +194,11 @@ export type ContactEntrySnapshot = {
 
 export function detailHref(row: ContactDetail): string | undefined {
   if (row.type === "phone") {
-    return "tel:" + row.value.replace(/[^+0-9*#,;]/g, "");
+    const number = row.value.replace(/[^+0-9*#,;]/g, "");
+
+    return /[0-9*#]/.test(number) ? "tel:" + number : undefined;
   }
-  if (row.type === "email") {
+  if (row.type === "email" && contactDetailSchema.safeParse(row).success) {
     return "mailto:" + encodeURIComponent(row.value.trim());
   }
   if (row.type === "link" && contactDetailSchema.safeParse(row).success) {

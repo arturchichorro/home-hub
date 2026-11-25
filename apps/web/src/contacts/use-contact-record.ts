@@ -115,7 +115,10 @@ export function useContactRecord<F>({
   }
   const syncRef = useRef(sync);
   syncRef.current = sync;
-  async function perform(prepare: boolean): Promise<boolean> {
+  async function perform(
+    prepare: boolean,
+    quietValidation: boolean,
+  ): Promise<boolean> {
     if (s.conflict !== undefined) {
       return false;
     }
@@ -128,8 +131,12 @@ export function useContactRecord<F>({
     try {
       value = props.current.validate(s.value);
     } catch (error) {
-      s.error =
-        error instanceof Error ? error.message : "Check the incomplete fields";
+      if (!quietValidation) {
+        s.error =
+          error instanceof Error
+            ? error.message
+            : "Check the incomplete fields";
+      }
       notify();
       return false;
     }
@@ -176,22 +183,33 @@ export function useContactRecord<F>({
       notify();
     }
   }
-  async function flush(prepare = false): Promise<boolean> {
+  async function flush(
+    prepare = false,
+    quietValidation = false,
+  ): Promise<boolean> {
     cancel();
     while (saving.current) {
       if (!(await saving.current)) {
-        return false;
+        // A quiet validation failure has no reported error. An explicit action
+        // must validate again rather than silently inheriting that failure.
+        if (
+          quietValidation ||
+          s.error !== undefined ||
+          s.conflict !== undefined
+        ) {
+          return false;
+        }
       }
     }
     if (!dirty() && (!prepare || s.base)) {
       return true;
     }
-    const promise = perform(prepare);
+    const promise = perform(prepare, quietValidation);
     saving.current = promise;
     const result = await promise;
     saving.current = undefined;
     if (result && dirty()) {
-      return flush(prepare);
+      return flush(prepare, quietValidation);
     }
     return result;
   }
@@ -246,10 +264,15 @@ export function useContactRecord<F>({
       cancel();
       notify();
       if (s.conflict === undefined) {
-        timer.current = setTimeout(() => void flushRef.current(), 600);
+        // Incomplete typing is a draft, not a failed save. Explicit flushes
+        // still report validation; transport errors and conflicts remain visible.
+        timer.current = setTimeout(
+          () => void flushRef.current(false, true),
+          600,
+        );
       }
     },
-    flush,
+    flush: (prepare = false) => flush(prepare),
     retry: () => void flush(),
     discard() {
       cancel();
