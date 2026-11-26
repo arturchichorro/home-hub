@@ -117,6 +117,7 @@ export function AddExercisePicker({
       }}
     >
       <ComboboxTrigger
+        aria-label="Add exercise"
         render={
           <Button
             variant="ghost"
