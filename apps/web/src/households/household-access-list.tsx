@@ -13,6 +13,7 @@ import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useEffect, useState } from "react";
 import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { createHouseholdInvite } from "./api";
+import { isCreatedInvitePending } from "./invitation-state";
 import {
   removeHouseholdMember,
   revokeHouseholdInvite,
@@ -73,6 +74,17 @@ export function HouseholdAccessList({
           }
         : { status: "loading" };
   const [createdInvite, setCreatedInvite] = useState<CreatedInvite>();
+  const [createdStatus] = useQuery(
+    isOwner && createdInvite
+      ? queries.households.invitation({
+          householdId,
+          inviteId: createdInvite.id,
+        })
+      : undefined,
+  );
+  const showCreatedInvite = createdInvite
+    ? isCreatedInvitePending(createdInvite, createdStatus, isOwner, asOf)
+    : false;
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string>();
   const [copyStatus, setCopyStatus] = useState<"copied" | "error">();
@@ -98,6 +110,13 @@ export function HouseholdAccessList({
     const timer = setInterval(() => setAsOf(Date.now()), 60000);
     return () => clearInterval(timer);
   }, [invitationScope]);
+
+  useEffect(() => {
+    if (createdInvite && !showCreatedInvite) {
+      setCreatedInvite(undefined);
+      setCopyStatus(undefined);
+    }
+  }, [createdInvite, showCreatedInvite]);
 
   async function handleCreateInvite() {
     if (!mutationEnabled) {
@@ -132,7 +151,7 @@ export function HouseholdAccessList({
   }
 
   async function handleCopyInvite() {
-    if (!createdInvite) {
+    if (!createdInvite || !showCreatedInvite) {
       return;
     }
 
@@ -417,7 +436,7 @@ export function HouseholdAccessList({
         <p className="text-sm text-muted">There are no household members.</p>
       ) : null}
 
-      {createdInvite ? (
+      {createdInvite && showCreatedInvite ? (
         <InlineAlert
           variant="success"
           title="Invitation created"

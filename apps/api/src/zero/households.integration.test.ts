@@ -201,6 +201,21 @@ describe.runIf(Boolean(url))(
             ctx: { userId },
           }),
         );
+      const status = (userId: string, inviteId = id) =>
+        createZeroDbProvider({ db: client.db }).run(
+          queries.households.invitation.fn({
+            args: { householdId, inviteId },
+            ctx: { userId },
+          }),
+        );
+      expect(await status(owner)).toMatchObject({
+        id,
+        acceptedAt: null,
+        revokedAt: null,
+      });
+      expect(await status(member)).toBeUndefined();
+      expect(await status(outsider)).toBeUndefined();
+      expect(await status(owner, randomUUID())).toBeUndefined();
       expect((await list(owner)).map((row) => row.id)).toEqual([id]);
       expect(await list(member)).toEqual([]);
       expect(await list(outsider)).toEqual([]);
@@ -219,6 +234,12 @@ describe.runIf(Boolean(url))(
       ).rejects.toMatchObject({ details: { kind: "forbidden" } });
       await run("revokeInvite", { householdId, inviteId: id });
       expect(await list(owner)).toEqual([]);
+      expect((await status(owner))?.revokedAt).not.toBeNull();
+      await client.db
+        .update(householdInvites)
+        .set({ acceptedAt: new Date() })
+        .where(eq(householdInvites.id, id));
+      expect((await status(owner))?.acceptedAt).not.toBeNull();
     });
 
     it("rejects forged actor fields rather than trusting identity in mutation args", async () => {
