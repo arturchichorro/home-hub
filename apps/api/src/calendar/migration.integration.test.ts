@@ -82,7 +82,7 @@ describe.runIf(Boolean(url))("calendar pictures migration", () => {
       expect(
         (
           await db.execute(
-            sql`SELECT to_jsonb(t) value FROM calendar_items t WHERE id=${item}`,
+            sql`SELECT to_jsonb(t) - 'end_day' value FROM calendar_items t WHERE id=${item}`,
           )
         ).rows,
       ).toEqual(before);

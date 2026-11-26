@@ -50,10 +50,14 @@ export const calendarQueries = {
   month: define(calendarRangeSchema, ({ args, ctx }) =>
     people(
       active(args.householdId, ctx.userId)
-        .where("day", ">=", args.startOn)
-        .where("day", "<=", args.endOn),
+        .where("day", "<=", args.endOn)
+        .where(({ and, or, cmp }) =>
+          or(
+            cmp("endDay", ">=", args.startOn),
+            and(cmp("endDay", "IS", null), cmp("day", ">=", args.startOn)),
+          ),
+        ),
     )
-      .orderBy("day", "asc")
       .orderBy("sortKey", "desc")
       .orderBy("id", "asc"),
   ),

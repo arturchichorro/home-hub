@@ -1,4 +1,7 @@
-import { calendarMonthGrid } from "@home-hub/shared/calendar";
+import {
+  calendarItemIncludesDay,
+  calendarMonthGrid,
+} from "@home-hub/shared/calendar";
 import { shiftCalendarDate } from "@home-hub/shared/habits";
 import { useEffect, useRef, useState } from "react";
 
@@ -13,8 +16,13 @@ export function CalendarMonth({
   month: string;
   selected: string;
   today: string;
-  items: readonly { id: string; day: string; title: string }[];
-  onSelect: (day: string) => boolean | void | Promise<boolean | void>;
+  items: readonly {
+    id: string;
+    day: string;
+    endDay: string | null;
+    title: string;
+  }[];
+  onSelect: (day: string) => boolean | undefined | Promise<boolean | undefined>;
   disabled?: boolean;
 }) {
   const table = useRef<HTMLTableElement>(null);
@@ -65,6 +73,9 @@ export function CalendarMonth({
         {weeks.map((week) => (
           <tr key={week.find(Boolean)}>
             {week.map((day, index) => {
+              const dayItems = items.filter((item) =>
+                calendarItemIncludesDay(item, day),
+              );
               const outsideMonth =
                 Boolean(day) && !day.startsWith(month.slice(0, 7));
               return (
@@ -86,7 +97,7 @@ export function CalendarMonth({
                           ? 0
                           : -1
                       }
-                      aria-label={`${day}, ${items.filter((item) => item.day === day).length} items${outsideMonth ? ", outside displayed month" : ""}`}
+                      aria-label={`${day}, ${dayItems.length} items${outsideMonth ? ", outside displayed month" : ""}`}
                       className={`grid h-20 w-full min-w-0 content-start gap-1 p-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring sm:h-24 sm:p-2 ${selected === day ? "bg-raised" : "hover:bg-raised/50"}`}
                       onClick={() => onSelect(day)}
                       onKeyDown={async (event) => {
@@ -117,20 +128,17 @@ export function CalendarMonth({
                       >
                         {Number(day.slice(-2))}
                       </span>
-                      {items
-                        .filter((item) => item.day === day)
-                        .slice(0, 2)
-                        .map((item) => (
-                          <span
-                            key={item.id}
-                            className={`block min-w-0 truncate text-[10px] leading-4 sm:text-xs ${outsideMonth ? "text-muted" : ""}`}
-                          >
-                            {item.title}
-                          </span>
-                        ))}
-                      {items.filter((item) => item.day === day).length > 2 && (
+                      {dayItems.slice(0, 2).map((item) => (
+                        <span
+                          key={item.id}
+                          className={`block min-w-0 truncate text-[10px] leading-4 sm:text-xs ${outsideMonth ? "text-muted" : ""}`}
+                        >
+                          {item.title}
+                        </span>
+                      ))}
+                      {dayItems.length > 2 && (
                         <span className="text-[10px] text-muted">
-                          +{items.filter((item) => item.day === day).length - 2}
+                          +{dayItems.length - 2}
                         </span>
                       )}
                     </button>

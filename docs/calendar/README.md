@@ -17,11 +17,13 @@ empty note beside the name, like recipe ingredients. Actions stay visible withou
 focusing the row. Text, drag handles and actions share a genuine 28px height. Multiline note content remains intact; the compact editor scrolls
 rather than rewriting it. There is no item form or editing dialog.
 People use a dropdown checklist that stays open for multiple selections.
-The calendar icon opens a compact, dismissible date picker. It closes after a
-successful move, on Escape/outside click, or with its close button. Choose a day
-then press Move (or Enter), so partially typed dates never move an item mid-entry.
-Closing cancels an unapplied/failed date choice without dropping other drafts. The actions
-menu retains confirmed deletion.
+The calendar icon opens a compact Start/optional End picker. Both dates are
+inclusive; End before Start is rejected. Apply (or Enter) saves both endpoints
+together, so partially typed dates never move an item. Changing Start leaves End
+unchanged. Clearing End or choosing equal endpoints makes the item single-day.
+Escape/outside click or the close button cancels an unapplied/failed date edit
+without dropping other drafts. A direct trash icon uses the standard confirmation
+popover; deleting a span removes it from every day for everyone.
 
 A photo icon adds pictures to a saved item, just like cooking logs: a horizontal
 48px thumbnail strip beneath the row opens the shared full-screen viewer, with
@@ -32,10 +34,13 @@ scope changes, navigation/unload and PWA updates without discarding text drafts.
 Pictures stay with the item when its day changes; deleting an item hides its pictures
 from the calendar. There is no separate gallery or picture-ordering mode.
 
-Items contain one literal day, a required title (150 characters), an optional
-multiline plain-text note (10,000 characters), and optional current-member labels.
-Duplicate titles and past/future dates are allowed. No time conversion is applied
-to stored dates, including when the device changes timezone.
+Items contain a literal start day and optional inclusive end, a required title
+(150 characters), an optional multiline plain-text note (10,000 characters), and
+optional current-member labels. One record appears on every covered day; text,
+people, pictures and deletion are shared, not copied. Detail rows show a small
+date-range label; month previews remain title-only. Duplicate titles, past/future
+dates and cross-month/year spans have no additional duration limit. No time
+conversion is applied to stored dates, including when the device changes timezone.
 
 Adding a blank inline row creates nothing. The first valid title creates the item;
 note/people edits before that remain local. Subsequent edits autosave. Text uses
@@ -47,13 +52,14 @@ Discard removes only unsaved edits, never previously autosaved changes. Drafts
 protect navigation, unloading and PWA updates; no persistent draft-storage layer
 is added. Cached inspection remains available offline; writes require connectivity.
 
-New/moved items append to their destination day. The day list supports the app's
-mouse, touch-hold and keyboard ordering gestures. Moving across months follows the
-accepted date without remounting the pinned inline editor, including while the
-new month loads. Other row drafts flush before a date move, and remote changes
+New items start single-day on the selected day. New items and changed starts
+append among items covering their start day. The day list supports the app's
+mouse, touch-hold and keyboard ordering gestures. Each item has one shared order:
+reordering a span can affect its position on other covered days. Applying dates
+keeps the calendar on the viewed day; an item disappears there if it no longer
+covers that day. Other row drafts flush before date changes, and remote changes
 cannot unmount unsaved rows. Ordering pauses only while drafts or operations are
-pending, not simply because an input is focused. Delete requires confirmation;
-there is no archive/trash/restore UI.
+pending, not simply because an input is focused. There is no archive/restore UI.
 
 ## Data and authorization
 
@@ -61,7 +67,14 @@ Migration `0054_medical_colossus.sql` adds `calendar_items` and `calendar_people
 their indexes/constraints/publication entries, and disabled settings for existing
 households. It does not rewrite existing module content or applied migrations.
 
-Items have a direct household ID, a UUID, date/title/note/order, timestamps and a
+Migration `0059_glorious_energizer.sql` adds nullable `end_day` with a valid-date
+and end-on/after-start constraint. Existing items retain their dates, content,
+labels, ordering and tombstones; null means single-day. The existing whole-table
+publication includes the new column. No daily copies or occurrence tables exist.
+Month queries select ranges overlapping the visible grid, rendering only those
+visible days even for very long spans.
+
+Items have a direct household ID, a UUID, start/end/title/note/order, timestamps and a
 deletion tombstone. Date/text constraints and household-qualified attachment FKs
 are enforced in PostgreSQL. Tombstones prevent stale writes or reused IDs from
 reviving deleted items. Reads require a live household, live viewer membership and
@@ -77,8 +90,10 @@ creator leaving.
 Calendar item/people/order writes take a household-scoped PostgreSQL advisory transaction lock in
 the existing server mutation wrapper. This serializes append/move/rebalance
 operations. Shared reorder planning preserves unseen additions and rejects stale
-foreign/day scopes. Field patches merge independent edits; the latest accepted
-write wins same-field conflicts. Month reads are date-bounded, and the open item
+foreign/day scopes. Reorders include every item covering the selected day,
+regardless of its start. Field patches merge independent text edits; dates are
+patched and merged as a pair, with locked current-range validation on the server.
+The latest accepted write wins same-field conflicts. Month reads are date-bounded, and the open item
 has an independent subscription rather than depending on the month's row list.
 
 Migration `0055_unusual_molecule_man.sql` adds typed `calendar_media` attachments

@@ -1,0 +1,2 @@
+ALTER TABLE "calendar_items" ADD COLUMN "end_day" text;--> statement-breakpoint
+ALTER TABLE "calendar_items" ADD CONSTRAINT "calendar_items_end_day" CHECK ("calendar_items"."end_day" IS NULL OR ("calendar_items"."end_day" ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND "calendar_items"."end_day"::date::text = "calendar_items"."end_day" AND "calendar_items"."end_day" >= "calendar_items"."day"));

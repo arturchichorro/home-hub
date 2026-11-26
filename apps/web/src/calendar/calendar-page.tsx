@@ -1,5 +1,6 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable } from "@dnd-kit/react/sortable";
+import { calendarItemIncludesDay } from "@home-hub/shared/calendar";
 import { adjacentHabitMonth, calendarDate } from "@home-hub/shared/habits";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
@@ -71,7 +72,9 @@ export function CalendarPage({ householdId }: { householdId: string }) {
   const snapshots = [...controls.current.values()].map((c) => c.snapshot());
   const anyDirty = snapshots.some((s) => s.hasChanges);
   const items: Item[] = (
-    moduleEnabled ? rows.filter((r) => r.day === selected) : []
+    moduleEnabled
+      ? rows.filter((r) => calendarItemIncludesDay(r, selected))
+      : []
   ).map((row) => ({
     id: row.id,
     existing: true,
@@ -79,13 +82,16 @@ export function CalendarPage({ householdId }: { householdId: string }) {
       title: row.title,
       note: row.note ?? "",
       day: row.day,
+      endDay: row.endDay,
       people: row.people.map((p) => p.userId).sort(),
     },
   }));
   useEffect(() => {
     if (
       pinned &&
-      rows.some((row) => row.id === pinned.id && row.day === selected)
+      rows.some(
+        (row) => row.id === pinned.id && calendarItemIncludesDay(row, selected),
+      )
     ) {
       setPinned(undefined);
     }
@@ -147,7 +153,13 @@ export function CalendarPage({ householdId }: { householdId: string }) {
       setDraft({
         id: crypto.randomUUID(),
         existing: false,
-        initial: { title: "", note: "", day: selected, people: [] },
+        initial: {
+          title: "",
+          note: "",
+          day: selected,
+          endDay: null,
+          people: [],
+        },
       });
     });
   }
@@ -333,10 +345,13 @@ export function CalendarPage({ householdId }: { householdId: string }) {
                   onActivityChange={onActivityChange}
                   beforeMove={() => beforeMove(item.id)}
                   endMove={() => endMove(item.id)}
-                  onFollow={(value) => {
-                    setPinned({ id: item.id, initial: value, existing: true });
+                  onSaved={(value) => {
+                    setPinned(
+                      calendarItemIncludesDay(value, selected)
+                        ? { id: item.id, initial: value, existing: true }
+                        : undefined,
+                    );
                     setDraft(undefined);
-                    follow(value.day);
                   }}
                   onRemoved={() => {
                     controls.current.delete(item.id);

@@ -1,27 +1,23 @@
 import { useSortable } from "@dnd-kit/react/sortable";
 import {
   calendarChanges,
-  calendarFieldsSchema,
+  calendarDatesSchema,
+  calendarRangeLabel,
 } from "@home-hub/shared/calendar";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import {
   Button,
   Calendar,
-  DialogPopup,
-  DialogRoot,
+  ConfirmationPopover,
   GripVertical,
   Input,
-  MenuItem,
-  MenuPopup,
-  MenuRoot,
-  MenuTrigger,
-  MoreHorizontal,
   PopoverPopup,
   PopoverRoot,
   PopoverTrigger,
   StickyNote,
   Textarea,
+  Trash2,
   X,
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
@@ -59,6 +55,7 @@ type Row = {
   title: string;
   note: string | null;
   day: string;
+  endDay: string | null;
   people: readonly { userId: string }[];
 };
 type Member = { userId: string; user?: { username: string } | undefined };
@@ -71,7 +68,7 @@ export function CalendarItemEditor({
   enabled,
   members,
   onRemoved,
-  onFollow,
+  onSaved,
   beforeMove,
   endMove,
   onActivityChange,
@@ -88,7 +85,7 @@ export function CalendarItemEditor({
   enabled: boolean;
   members: readonly Member[];
   onRemoved: () => void;
-  onFollow: (value: CalendarDraft) => void;
+  onSaved: (value: CalendarDraft) => void;
   beforeMove: () => Promise<boolean>;
   endMove: () => void;
   onActivityChange: (dirty: boolean, saving: boolean) => void;
@@ -106,11 +103,10 @@ export function CalendarItemEditor({
   const titleInput = useRef<HTMLInputElement>(null);
   const noteInput = useRef<HTMLTextAreaElement>(null);
   const dateInput = useRef<HTMLInputElement>(null);
-  const menuInput = useRef<HTMLButtonElement>(null);
-  const skipFocus = useRef(false);
   const [noteOpen, setNoteOpen] = useState(Boolean(initialValue.note));
   const [dayOpen, setDayOpen] = useState(false);
   const [dayDraft, setDayDraft] = useState(initialValue.day);
+  const [endDayDraft, setEndDayDraft] = useState(initialValue.endDay ?? "");
   const [dayError, setDayError] = useState<string>();
   const sortable = useSortable({
     id: itemId,
@@ -129,6 +125,7 @@ export function CalendarItemEditor({
     title: r.title,
     note: r.note ?? "",
     day: r.day,
+    endDay: r.endDay,
     people: r.people.map((p) => p.userId).sort(),
   });
   const [initial] = useState(initialValue);
@@ -155,7 +152,9 @@ export function CalendarItemEditor({
       let confirmed = previous
         ? { ...previous, people: previous.people.filter((p) => active.has(p)) }
         : undefined;
-      const moved = next.day !== (confirmed?.day ?? initialValue.day);
+      const previousDates = confirmed ?? initialValue;
+      const moved =
+        next.day !== previousDates.day || next.endDay !== previousDates.endDay;
       try {
         if (moved && !(await beforeMove())) {
           throw Error("Resolve other calendar drafts first");
@@ -168,6 +167,7 @@ export function CalendarItemEditor({
                 title: next.title,
                 note: next.note,
                 day: next.day,
+                endDay: next.endDay,
               }),
             ),
           );
@@ -175,8 +175,6 @@ export function CalendarItemEditor({
             throw Error("Save failed");
           }
           confirmed = { ...next, people: [] };
-          onFollow(next);
-          setDayOpen(false);
         } else {
           const changes = calendarChanges(next, confirmed);
           if (Object.keys(changes).length > 0) {
@@ -186,12 +184,7 @@ export function CalendarItemEditor({
             if (outcome.type === "error") {
               throw Error("Save failed");
             }
-            const moved = next.day !== confirmed.day;
             confirmed = { ...confirmed, ...changes };
-            if (moved) {
-              onFollow(next);
-              setDayOpen(false);
-            }
           }
         }
         // Per-person deltas preserve hidden former-member links and independent edits.
@@ -216,6 +209,7 @@ export function CalendarItemEditor({
             ).sort(),
           };
         }
+        onSaved(confirmed);
         return { confirmed };
       } catch {
         return {
@@ -232,32 +226,45 @@ export function CalendarItemEditor({
   const unavailable = editor.saved && result.type === "complete" && !row;
   const disabled =
     !enabled || !loaded || unavailable || deleting || blocked || mediaBusy;
+  const rangeLabel = calendarRangeLabel(editor.value);
   function closeDay() {
+    if (editor.isSaving) {
+      return;
+    }
     setDayOpen(false);
     setDayError(undefined);
-    // Cancel a failed date move without discarding any title/note/people draft.
+    // Cancel only the date edit, retaining unrelated title/note/people drafts.
+    const savedDates = row ?? initial;
     if (
       editor.saved &&
-      !editor.isSaving &&
-      editor.value.day !== (row?.day ?? initial.day)
+      (editor.value.day !== savedDates.day ||
+        editor.value.endDay !== savedDates.endDay)
     ) {
-      editor.change({ day: row?.day ?? initial.day }, true);
+      editor.change({ day: savedDates.day, endDay: savedDates.endDay }, true);
     }
   }
-  async function moveDay() {
+  async function applyDates() {
     if (disabled || editor.isSaving) {
       return;
     }
-    if (!calendarFieldsSchema.shape.day.safeParse(dayDraft).success) {
-      setDayError("Choose a valid day.");
+    const dates = calendarDatesSchema.safeParse({
+      day: dayDraft,
+      endDay: endDayDraft || null,
+    });
+    if (!dates.success) {
+      setDayError("Choose valid dates, with End on or after Start.");
       return;
     }
     setDayError(undefined);
-    if (dayDraft === editor.value.day && !editor.error) {
+    if (
+      dates.data.day === editor.value.day &&
+      dates.data.endDay === editor.value.endDay &&
+      !editor.error
+    ) {
       setDayOpen(false);
       return;
     }
-    editor.change({ day: dayDraft }, true);
+    editor.change(dates.data, true);
     if (!editor.saved && !editor.value.title.trim()) {
       setDayOpen(false);
       return;
@@ -267,6 +274,9 @@ export function CalendarItemEditor({
     }
   }
   async function remove() {
+    if (disabled || editor.isSaving || !editor.saved || deletingRef.current) {
+      return;
+    }
     deletingRef.current = true;
     setDeleting(true);
     setDeleteError(false);
@@ -313,168 +323,174 @@ export function CalendarItemEditor({
     onActivityChange,
   ]);
   return (
-    <>
-      <li
-        ref={sortable.ref}
-        data-calendar-item={itemId}
-        className="flex min-w-0 items-start gap-1 p-2"
+    <li
+      ref={sortable.ref}
+      data-calendar-item={itemId}
+      className="flex min-w-0 items-start gap-1 p-2"
+    >
+      <Button
+        ref={sortable.handleRef}
+        variant="ghost"
+        size="compact"
+        className="size-7! shrink-0 touch-none p-0!"
+        aria-label={`Reorder ${editor.value.title || "calendar item"}`}
+        disabled={orderDisabled}
       >
-        <Button
-          ref={sortable.handleRef}
-          variant="ghost"
-          size="compact"
-          className="size-7! shrink-0 touch-none p-0!"
-          aria-label={`Reorder ${editor.value.title || "calendar item"}`}
-          disabled={orderDisabled}
-        >
-          <GripVertical aria-hidden="true" className="size-4 text-muted" />
-        </Button>
-        <CalendarMedia
-          householdId={householdId}
-          itemId={itemId}
-          name={editor.value.title}
-          saved={editor.saved}
-          disabled={disabled}
-          onBusyChange={onMediaBusyChange}
-        >
-          {({ upload, gallery }) => (
-            <div className="min-w-0 flex-1">
-              <div
-                className="flex h-7 min-w-0 items-center gap-1"
-                data-calendar-line
-              >
-                <div className="flex min-w-0 flex-1 items-center gap-1">
-                  <Input
-                    ref={titleInput}
-                    appearance="seamless"
-                    aria-label="Calendar item name"
-                    placeholder="Item name"
-                    className={`field-sizing-content h-7! min-w-0 flex-initial! px-1! text-sm leading-7 ${noteOpen || editor.value.note ? "max-w-[65%]" : "max-w-full"}`}
-                    value={editor.value.title}
-                    maxLength={150}
-                    required
-                    readOnly={disabled}
-                    onValueChange={(title) => editor.change({ title })}
-                    onBlur={() => {
-                      if (!editor.error && editor.value.title.trim()) {
-                        void editor.flush();
-                      }
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        void editor.flush();
-                      }
-                    }}
-                  />
-                  {(noteOpen || editor.value.note) && (
-                    <div
-                      className="flex h-7 min-w-0 flex-1 items-center gap-1 overflow-hidden"
-                      data-calendar-note-inline
+        <GripVertical aria-hidden="true" className="size-4 text-muted" />
+      </Button>
+      <CalendarMedia
+        householdId={householdId}
+        itemId={itemId}
+        name={editor.value.title}
+        saved={editor.saved}
+        disabled={disabled}
+        onBusyChange={onMediaBusyChange}
+      >
+        {({ upload, gallery }) => (
+          <div className="min-w-0 flex-1">
+            <div
+              className="flex h-7 min-w-0 items-center gap-1"
+              data-calendar-line
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-1">
+                <Input
+                  ref={titleInput}
+                  appearance="seamless"
+                  aria-label="Calendar item name"
+                  placeholder="Item name"
+                  className={`field-sizing-content h-7! min-w-0 flex-initial! px-1! text-sm leading-7 ${noteOpen || editor.value.note ? "max-w-[65%]" : "max-w-full"}`}
+                  value={editor.value.title}
+                  maxLength={150}
+                  required
+                  readOnly={disabled}
+                  onValueChange={(title) => editor.change({ title })}
+                  onBlur={() => {
+                    if (!editor.error && editor.value.title.trim()) {
+                      void editor.flush();
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void editor.flush();
+                    }
+                  }}
+                />
+                {(noteOpen || editor.value.note) && (
+                  <div
+                    className="flex h-7 min-w-0 flex-1 items-center gap-1 overflow-hidden"
+                    data-calendar-note-inline
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="shrink-0 text-xs leading-7 text-muted"
                     >
-                      <span
-                        aria-hidden="true"
-                        className="shrink-0 text-xs leading-7 text-muted"
-                      >
-                        —
-                      </span>
-                      <Textarea
-                        ref={noteInput}
-                        appearance="seamless"
-                        aria-label="Calendar item note"
-                        placeholder="Note"
-                        title={editor.value.note}
-                        className="field-sizing-fixed! h-7! min-h-7! min-w-0 flex-1 overflow-x-auto overflow-y-hidden py-0! text-xs leading-7 text-muted whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                        rows={1}
-                        maxLength={10000}
-                        value={editor.value.note}
-                        readOnly={disabled}
-                        onChange={(event) =>
-                          editor.change({ note: event.target.value })
+                      —
+                    </span>
+                    <Textarea
+                      ref={noteInput}
+                      appearance="seamless"
+                      aria-label="Calendar item note"
+                      placeholder="Note"
+                      title={editor.value.note}
+                      className="field-sizing-fixed! h-7! min-h-7! min-w-0 flex-1 overflow-x-auto overflow-y-hidden py-0! text-xs leading-7 text-muted whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                      rows={1}
+                      maxLength={10000}
+                      value={editor.value.note}
+                      readOnly={disabled}
+                      onChange={(event) =>
+                        editor.change({ note: event.target.value })
+                      }
+                      onBlur={() => {
+                        if (!editor.error) {
+                          void editor.flush();
                         }
-                        onBlur={() => {
-                          if (!editor.error) {
-                            void editor.flush();
-                          }
-                          if (!editor.value.note) {
-                            setNoteOpen(false);
-                          }
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-                <div className="ml-auto flex shrink-0 items-center gap-1">
-                  {!noteOpen && !editor.value.note && (
-                    <Button
-                      variant="ghost"
-                      size="compact"
-                      className="size-7! p-0!"
-                      aria-label="Add calendar note"
-                      title="Note"
-                      onClick={() => {
-                        setNoteOpen(true);
-                        requestAnimationFrame(() => noteInput.current?.focus());
+                        if (!editor.value.note) {
+                          setNoteOpen(false);
+                        }
                       }}
-                    >
-                      <StickyNote aria-hidden="true" className="size-4" />
-                    </Button>
-                  )}
-                  {upload}
-                  <CalendarPeoplePicker
-                    members={members}
-                    selected={editor.value.people}
-                    disabled={disabled}
-                    onChange={(people) => editor.change({ people }, true)}
-                  />
-                  <PopoverRoot
-                    open={dayOpen}
-                    onOpenChange={(open) => {
-                      if (open) {
-                        setDayDraft(editor.value.day);
-                        setDayError(undefined);
-                        setDayOpen(true);
-                      } else {
-                        closeDay();
-                      }
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="ml-auto flex shrink-0 items-center gap-1">
+                {!noteOpen && !editor.value.note && (
+                  <Button
+                    variant="ghost"
+                    size="compact"
+                    className="size-7! p-0!"
+                    aria-label="Add calendar note"
+                    title="Note"
+                    onClick={() => {
+                      setNoteOpen(true);
+                      requestAnimationFrame(() => noteInput.current?.focus());
                     }}
                   >
-                    <PopoverTrigger
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="compact"
-                          className="size-7! p-0!"
-                          aria-label="Move calendar item"
-                          title="Move to another day"
-                          disabled={disabled}
-                        >
-                          <Calendar aria-hidden="true" className="size-4" />
-                        </Button>
-                      }
-                    />
-                    <PopoverPopup
-                      aria-label="Move calendar item"
-                      className="w-64!"
-                      initialFocus={() => dateInput.current}
+                    <StickyNote aria-hidden="true" className="size-4" />
+                  </Button>
+                )}
+                {upload}
+                <CalendarPeoplePicker
+                  members={members}
+                  selected={editor.value.people}
+                  disabled={disabled}
+                  onChange={(people) => editor.change({ people }, true)}
+                />
+                <PopoverRoot
+                  open={dayOpen}
+                  onOpenChange={(open) => {
+                    if (open) {
+                      setDayDraft(editor.value.day);
+                      setEndDayDraft(editor.value.endDay ?? "");
+                      setDayError(undefined);
+                      setDayOpen(true);
+                    } else {
+                      closeDay();
+                    }
+                  }}
+                >
+                  <PopoverTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="compact"
+                        className="size-7! p-0!"
+                        aria-label="Calendar item dates"
+                        title="Change dates"
+                        disabled={disabled}
+                      >
+                        <Calendar aria-hidden="true" className="size-4" />
+                      </Button>
+                    }
+                  />
+                  <PopoverPopup
+                    aria-label="Calendar item dates"
+                    className="w-64!"
+                    initialFocus={() => dateInput.current}
+                  >
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium text-muted">
+                        Dates
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="compact"
+                        className="size-7! p-0!"
+                        aria-label="Close date picker"
+                        onClick={closeDay}
+                      >
+                        <X aria-hidden="true" className="size-4" />
+                      </Button>
+                    </div>
+                    <label
+                      htmlFor={`${itemId}-start`}
+                      className="grid gap-1 text-xs text-muted"
                     >
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <span className="text-xs font-medium text-muted">
-                          Move to another day
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="compact"
-                          className="size-7! p-0!"
-                          aria-label="Close date picker"
-                          onClick={closeDay}
-                        >
-                          <X aria-hidden="true" className="size-4" />
-                        </Button>
-                      </div>
+                      Start
                       <Input
                         ref={dateInput}
-                        aria-label="Calendar item day"
+                        id={`${itemId}-start`}
+                        aria-label="Calendar item start"
                         type="date"
                         min="0001-01-01"
                         max="9999-12-31"
@@ -487,137 +503,110 @@ export function CalendarItemEditor({
                         onKeyDown={(event) => {
                           if (event.key === "Enter") {
                             event.preventDefault();
-                            moveDay();
+                            void applyDates();
                           }
                         }}
                       />
-                      {(dayError || editor.error) && (
-                        <p role="alert" className="mt-2 text-sm text-danger">
-                          {dayError || editor.error}
-                        </p>
-                      )}
-                      <div className="mt-3 flex justify-end">
-                        <Button
-                          size="compact"
-                          disabled={disabled || editor.isSaving}
-                          onClick={moveDay}
-                        >
-                          Move
-                        </Button>
-                      </div>
-                    </PopoverPopup>
-                  </PopoverRoot>
-                  <MenuRoot
-                    onOpenChange={(open) => {
-                      if (open) {
-                        skipFocus.current = false;
-                      }
-                    }}
-                  >
-                    <MenuTrigger
-                      ref={menuInput}
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="compact"
-                          className="size-7! p-0!"
-                          aria-label="Calendar item actions"
-                        >
-                          <MoreHorizontal
-                            aria-hidden="true"
-                            className="size-4"
-                          />
-                        </Button>
-                      }
-                    />
-                    <MenuPopup
-                      align="end"
-                      finalFocus={() =>
-                        skipFocus.current ? false : menuInput.current
-                      }
+                    </label>
+                    <label
+                      htmlFor={`${itemId}-end`}
+                      className="mt-2 grid gap-1 text-xs text-muted"
                     >
-                      {editor.saved && (
-                        <MenuItem
-                          variant="danger"
-                          disabled={disabled || editor.isSaving}
-                          onClick={() => {
-                            skipFocus.current = true;
-                            setConfirmDelete(true);
-                          }}
-                        >
-                          Delete
-                        </MenuItem>
-                      )}
-                    </MenuPopup>
-                  </MenuRoot>
-                </div>
+                      End (optional, included)
+                      <Input
+                        id={`${itemId}-end`}
+                        aria-label="Calendar item end"
+                        type="date"
+                        min="0001-01-01"
+                        max="9999-12-31"
+                        value={endDayDraft}
+                        readOnly={disabled || editor.isSaving}
+                        onValueChange={(day) => {
+                          setEndDayDraft(day);
+                          setDayError(undefined);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            void applyDates();
+                          }
+                        }}
+                      />
+                    </label>
+                    {(dayError || editor.error) && (
+                      <p role="alert" className="mt-2 text-sm text-danger">
+                        {dayError || editor.error}
+                      </p>
+                    )}
+                    <div className="mt-3 flex justify-end">
+                      <Button
+                        size="compact"
+                        disabled={disabled || editor.isSaving}
+                        onClick={() => void applyDates()}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </PopoverPopup>
+                </PopoverRoot>
+                {editor.saved && (
+                  <ConfirmationPopover
+                    message={
+                      rangeLabel
+                        ? "Delete this item from all days for everyone in the household? Its pictures will also be removed."
+                        : "Delete this item and its pictures for everyone in the household?"
+                    }
+                    onOpenChange={setConfirmDelete}
+                    onConfirm={() => void remove()}
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="compact"
+                        aria-label="Delete calendar item"
+                        title="Delete calendar item"
+                        className="size-7! p-0!"
+                        disabled={disabled || editor.isSaving}
+                      >
+                        <Trash2 aria-hidden="true" className="size-4" />
+                      </Button>
+                    }
+                  />
+                )}
               </div>
-              {gallery}
-              {unavailable && (
-                <p role="alert" className="text-sm text-danger">
-                  This item is no longer available. Any unsaved draft remains
-                  here.
-                </p>
-              )}
-              {editor.error && !dayOpen && (
-                <p role="alert" className="text-sm text-danger">
-                  {editor.error}
-                </p>
-              )}
-              <TextDraftActions editor={editor} />
-              <span role="status" className="sr-only">
-                {editor.isSaving
-                  ? "Saving"
-                  : editor.hasChanges
-                    ? "Unsaved changes"
-                    : editor.saved
-                      ? "Saved"
-                      : "New item"}
-              </span>
             </div>
-          )}
-        </CalendarMedia>
-      </li>
-      <DialogRoot
-        open={confirmDelete}
-        onOpenChange={(open) => {
-          if (!deleting) {
-            setConfirmDelete(open);
-          }
-        }}
-      >
-        <DialogPopup
-          title="Delete calendar item?"
-          finalFocus={() =>
-            menuInput.current ??
-            document.querySelector<HTMLElement>("[data-calendar-add]")
-          }
-          actions={
-            <>
-              <Button
-                variant="ghost"
-                disabled={deleting}
-                onClick={() => setConfirmDelete(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                disabled={!enabled || deleting}
-                onClick={() => void remove()}
-              >
-                Delete item
-              </Button>
-            </>
-          }
-        >
-          This removes the item and its pictures from the calendar for everyone
-          in the household.
-          {deleteError && (
-            <p role="alert">Unable to delete this item. Try again.</p>
-          )}
-        </DialogPopup>
-      </DialogRoot>
-    </>
+            {rangeLabel && (
+              <p className="px-1 text-xs text-muted">{rangeLabel}</p>
+            )}
+            {gallery}
+            {deleteError && (
+              <p role="alert" className="text-sm text-danger">
+                Unable to delete this item. Try again.
+              </p>
+            )}
+            {unavailable && (
+              <p role="alert" className="text-sm text-danger">
+                This item is no longer available. Any unsaved draft remains
+                here.
+              </p>
+            )}
+            {editor.error && !dayOpen && (
+              <p role="alert" className="text-sm text-danger">
+                {editor.error}
+              </p>
+            )}
+            <TextDraftActions editor={editor} />
+            <span role="status" className="sr-only">
+              {editor.isSaving
+                ? "Saving"
+                : editor.hasChanges
+                  ? "Unsaved changes"
+                  : editor.saved
+                    ? "Saved"
+                    : "New item"}
+            </span>
+          </div>
+        )}
+      </CalendarMedia>
+    </li>
   );
 }

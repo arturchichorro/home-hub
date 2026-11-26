@@ -14,6 +14,7 @@ it("renders a Monday-first semantic month with two previews, overflow count and 
         id: title,
         title,
         day,
+        endDay: null,
       }))}
     />,
   );
@@ -51,8 +52,18 @@ it("previews adjacent-month items with muted dates and an explicit accessible la
       today={day}
       onSelect={() => {}}
       items={[
-        { id: "before", day: "2026-10-31", title: "October event" },
-        { id: "after", day: "2026-12-01", title: "December event" },
+        {
+          id: "before",
+          day: "2026-10-31",
+          endDay: null,
+          title: "October event",
+        },
+        {
+          id: "after",
+          day: "2026-12-01",
+          endDay: null,
+          title: "December event",
+        },
       ]}
     />,
   );
@@ -96,13 +107,51 @@ it("leaves only unsupported days blank at the upper year boundary", () => {
   expect(html.match(/<td/gu)).toHaveLength(35);
   expect(html).not.toContain("10000");
 });
+it("shows one preview per covered day across months, with inclusive endpoints", () => {
+  const html = renderToStaticMarkup(
+    <CalendarMonth
+      month="2026-11-01"
+      selected={day}
+      today={day}
+      onSelect={() => {}}
+      items={[
+        { id: "trip", title: "Trip", day: "2026-11-30", endDay: "2026-12-02" },
+      ]}
+    />,
+  );
+  expect(html.match(/>Trip</gu)).toHaveLength(3);
+  for (const date of ["2026-11-30", "2026-12-01", "2026-12-02"]) {
+    expect(html).toContain(`aria-label="${date}, 1 items`);
+  }
+  expect(html).toContain('aria-label="2026-12-03, 0 items');
+});
+it("renders only visible days even for a range covering every supported year", () => {
+  const html = renderToStaticMarkup(
+    <CalendarMonth
+      month="2026-11-01"
+      selected={day}
+      today={day}
+      onSelect={() => {}}
+      items={[
+        {
+          id: "long",
+          title: "Long span",
+          day: "0001-01-01",
+          endDay: "9999-12-31",
+        },
+      ]}
+    />,
+  );
+  expect(html.match(/>Long span</gu)).toHaveLength(42);
+  expect(html).not.toContain("9999");
+});
 it("escapes titles rather than interpreting notes or markup", () => {
   const html = renderToStaticMarkup(
     <CalendarMonth
       month="2026-11-01"
       selected={day}
       today={day}
-      items={[{ id: "x", day, title: "<script>bad()</script>" }]}
+      items={[{ id: "x", day, endDay: null, title: "<script>bad()</script>" }]}
       onSelect={() => {}}
     />,
   );
