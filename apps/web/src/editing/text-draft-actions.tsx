@@ -25,9 +25,9 @@ export function TextDraftNavigation({ children }: { children: ReactNode }) {
     registry.getSnapshot,
   );
   const blocker = useBlocker({
-    shouldBlockFn: () => registry.getSnapshot().hasChanges,
+    shouldBlockFn: () => registry.hasChanges(),
 
-    enableBeforeUnload: () => registry.getSnapshot().hasChanges,
+    enableBeforeUnload: () => registry.hasChanges(),
 
     withResolver: true,
   });

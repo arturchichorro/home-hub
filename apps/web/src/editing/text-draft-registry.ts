@@ -14,8 +14,8 @@ export function createTextDraftRegistry() {
 
   function refresh() {
     const values = Array.from(drafts.values(), (read) => read());
-    const hasChanges = values.some((d) => d.hasChanges || d.isSaving);
-    const isSaving = values.some((d) => d.isSaving);
+    const hasChanges = values.some((d) => d.hasChanges);
+    const isSaving = values.some((d) => d.hasChanges && d.isSaving);
 
     if (snapshot.hasChanges === hasChanges && snapshot.isSaving === isSaving) {
       return;
@@ -30,6 +30,8 @@ export function createTextDraftRegistry() {
 
   return {
     refresh,
+    hasChanges: () =>
+      Array.from(drafts.values()).some((read) => read().hasChanges),
     getSnapshot: () => snapshot,
     subscribe(listener: () => void) {
       listeners.add(listener);

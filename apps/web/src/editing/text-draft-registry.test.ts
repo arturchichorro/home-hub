@@ -38,6 +38,29 @@ it("reads current state and preserves failed or newer drafts after a save comple
   expect(registry.getSnapshot().hasChanges).toBe(false);
 });
 
+it("honors live confirmed-save getters before post-save navigation finishes", () => {
+  const registry = createTextDraftRegistry();
+  let saved = false;
+  registry.register(() =>
+    draft({
+      get hasChanges() {
+        return !saved;
+      },
+      isSaving: true,
+    }),
+  );
+  expect(registry.hasChanges()).toBe(true);
+  // Contact creation acknowledges first, then awaits navigation before clearing
+  // its busy UI. Busy is not evidence of an unacknowledged draft.
+  saved = true;
+  expect(registry.hasChanges()).toBe(false);
+  registry.refresh();
+  expect(registry.getSnapshot()).toEqual({
+    hasChanges: false,
+    isSaving: false,
+  });
+});
+
 it("does not resume while another field still has retained work", () => {
   const registry = createTextDraftRegistry();
   const remove = registry.register(() => draft({ isSaving: true }));
