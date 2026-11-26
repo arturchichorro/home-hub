@@ -246,7 +246,12 @@ export function ListItems({ householdId, listId, items }: ListItemsProps) {
   }
 
   return (
-    <section ref={root} tabIndex={-1} aria-label="List" className="grid gap-5">
+    <section
+      ref={root}
+      tabIndex={-1}
+      aria-label="List"
+      className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5"
+    >
       {actionError ? (
         <InlineAlert role="alert" variant="danger">
           {actionError}

@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { TextDraftNavigation } from "../editing/text-draft-actions";
 import { MediaSessionProvider } from "../media/session";
 import { HomeHubZeroProvider } from "../zero/provider";
 
@@ -41,7 +42,9 @@ function AuthenticatedLayout() {
           onSessionExpired,
         }}
       >
-        <Outlet />
+        <TextDraftNavigation>
+          <Outlet />
+        </TextDraftNavigation>
       </MediaSessionProvider>
     </HomeHubZeroProvider>
   );

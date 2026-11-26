@@ -369,6 +369,7 @@ function ContactMediaContent({
         <input
           ref={input}
           type="file"
+          aria-label={`Choose picture for ${name || "contact item"}`}
           className="sr-only"
           accept="image/jpeg,image/png,image/webp"
           tabIndex={-1}

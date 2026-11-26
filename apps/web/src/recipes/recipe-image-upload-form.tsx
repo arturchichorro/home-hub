@@ -147,6 +147,9 @@ export function RecipeImageUploadForm({
         ref={fileInputRef}
         className="sr-only"
         type="file"
+        aria-label={
+          cookLogId ? "Choose cooking entry picture" : "Choose recipe picture"
+        }
         accept="image/jpeg,image/png,image/webp"
         tabIndex={-1}
         onChange={(event) => void uploadImage(event)}
