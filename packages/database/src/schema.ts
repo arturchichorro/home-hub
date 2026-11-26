@@ -192,6 +192,7 @@ export const calendarItems = pgTable(
       .notNull()
       .references(() => households.id),
     day: text("day").notNull(),
+    endDay: text("end_day"),
     title: text("title").notNull(),
     note: text("note").notNull().default(""),
     sortKey: integer("sort_key").notNull(),
@@ -211,6 +212,10 @@ export const calendarItems = pgTable(
     check(
       "calendar_items_day",
       sql`${t.day} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND ${t.day}::date::text = ${t.day}`,
+    ),
+    check(
+      "calendar_items_end_day",
+      sql`${t.endDay} IS NULL OR (${t.endDay} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND ${t.endDay}::date::text = ${t.endDay} AND ${t.endDay} >= ${t.day})`,
     ),
     check(
       "calendar_items_title",

@@ -414,6 +414,13 @@
       "when": 1795603976259,
       "tag": "0058_publish_invite_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1795687245876,
+      "tag": "0059_glorious_energizer",
+      "breakpoints": true
     }
   ]
 }

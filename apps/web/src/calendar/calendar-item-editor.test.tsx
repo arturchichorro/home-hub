@@ -2,7 +2,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it, vi } from "vitest";
 import { CalendarItemEditor } from "./calendar-item-editor";
 
-const row = { title: "Dinner", note: "", day: "2026-11-12", people: [] };
+const row = {
+  title: "Dinner",
+  note: "",
+  day: "2026-11-12",
+  endDay: null,
+  people: [],
+};
 vi.mock("@rocicorp/zero/react", () => ({
   useQuery: () => [row, { type: "complete" }],
   useZero: () => ({ mutate: vi.fn() }),
@@ -18,7 +24,7 @@ const props = {
   enabled: true,
   members: [],
   onRemoved() {},
-  onFollow() {},
+  onSaved() {},
   async beforeMove() {
     return true;
   },
@@ -39,13 +45,20 @@ it("always renders seamless name input and actions without click-to-edit or Done
   expect(html).toContain('aria-label="Calendar item name"');
   expect(html).toContain('value="Dinner"');
   expect(html).toContain('aria-label="Add calendar note"');
-  expect(html).toContain('aria-label="Calendar item actions"');
+  expect(html).toContain('aria-label="Delete calendar item"');
+  expect(html).toContain('aria-label="Calendar item dates"');
+  expect(html).not.toContain('aria-label="Calendar item actions"');
+  expect(html).not.toContain('aria-haspopup="menu"');
   expect(html).toContain('aria-label="Calendar item people"');
   expect(html).not.toContain("Done editing");
   expect(html).not.toContain("data-calendar-open");
   expect(html).not.toContain('role="dialog"');
   expect(html).not.toContain("<form");
-  expect(html).not.toContain("size-10!");
+  const trash = html
+    .split('aria-label="Delete calendar item"')[1]
+    ?.split("</button>")[0];
+  expect(trash).toContain("size-7!");
+  expect(trash).toContain("lucide-trash");
 });
 it("keeps note editable beside the name with a fixed-height horizontal scrolling input", () => {
   const html = renderToStaticMarkup(
@@ -65,6 +78,19 @@ it("keeps note editable beside the name with a fixed-height horizontal scrolling
     html.indexOf('aria-label="Calendar item note"'),
   );
   expect(html).not.toContain('aria-label="Add calendar note"');
+});
+it("shows the shared range only for spanning items and keeps the trash directly accessible", () => {
+  const html = renderToStaticMarkup(
+    <ul>
+      <CalendarItemEditor
+        {...props}
+        initialValue={{ ...props.initialValue, endDay: "2026-11-14" }}
+      />
+    </ul>,
+  );
+  expect(html).toContain("Nov 2026");
+  expect(html).toContain('aria-label="Delete calendar item"');
+  expect(html).not.toContain("Calendar item actions");
 });
 it("retains multiline note contents and read-only inspection offline", () => {
   const html = renderToStaticMarkup(
