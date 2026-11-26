@@ -12,7 +12,7 @@ export type CalendarSaveResult = {
   confirmed: CalendarDraft | undefined;
   error?: string;
 };
-const fields = ["title", "note", "day", "people"] as const;
+const fields = ["title", "note", "day", "endDay", "people"] as const;
 const equal = (a: unknown, b: unknown) =>
   JSON.stringify(a) === JSON.stringify(b);
 const matchesField = (
@@ -22,7 +22,9 @@ const matchesField = (
 ) =>
   field === "title"
     ? cleanCalendarTitle(a.title) === cleanCalendarTitle(b.title)
-    : equal(a[field], b[field]);
+    : field === "day" || field === "endDay"
+      ? a.day === b.day && a.endDay === b.endDay
+      : equal(a[field], b[field]);
 
 export function useCalendarEditor({
   initial,
@@ -86,7 +88,7 @@ export function useCalendarEditor({
             return true;
           }
           setError(
-            "A title, valid day and note within the limits are required. Your changes are still here.",
+            "A title, valid date range and note within the limits are required. Your changes are still here.",
           );
           return false;
         }
@@ -125,7 +127,7 @@ export function useCalendarEditor({
         // Keep title whitespace/caret intact while typing; compare its canonical value for dirtiness.
         const merged = { ...draft.current };
         for (const field of fields) {
-          if (field !== "title" && equal(merged[field], raw[field])) {
+          if (field !== "title" && matchesField(field, draft.current, raw)) {
             Object.assign(merged, {
               [field]: result.confirmed?.[field] ?? next[field],
             });
@@ -152,7 +154,7 @@ export function useCalendarEditor({
     const merged = { ...draft.current };
     for (const field of fields) {
       if (
-        matchesField(field, merged, confirmed.current) &&
+        matchesField(field, draft.current, confirmed.current) &&
         !(field === "title" && cleanCalendarTitle(merged.title) === next.title)
       ) {
         Object.assign(merged, { [field]: next[field] });

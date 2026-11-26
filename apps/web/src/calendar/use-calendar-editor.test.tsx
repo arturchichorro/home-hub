@@ -10,6 +10,7 @@ const existing: CalendarDraft = {
   title: "Dinner",
   note: "Old note",
   day: "2026-11-11",
+  endDay: null,
   people: [],
 };
 const blank: CalendarDraft = { ...existing, title: "", note: "" };
@@ -151,6 +152,47 @@ it("retains invalid/cleared titles and offline edits without writing or deleting
   offline.editor.change({ note: "Offline draft" });
   expect(await offline.editor.flush()).toBe(false);
   expect(offline.save).not.toHaveBeenCalled();
+});
+it("saves a range atomically and rejects inverted dates without discarding the draft", async () => {
+  const { editor, save } = setup();
+  editor.change({ day: "2026-11-30", endDay: "2026-12-02" }, true);
+  expect(await editor.flush()).toBe(true);
+  expect(save.mock.calls[0]?.[0]).toMatchObject({
+    day: "2026-11-30",
+    endDay: "2026-12-02",
+  });
+  editor.change({ day: "2026-12-03" }, true);
+  expect(await editor.flush()).toBe(false);
+  expect(save).toHaveBeenCalledTimes(1);
+  editor.change({ endDay: "2026-12-04" }, true);
+  expect(await editor.flush()).toBe(true);
+  expect(save.mock.calls[1]?.[0]).toMatchObject({
+    day: "2026-12-03",
+    endDay: "2026-12-04",
+  });
+});
+it("retries both retained endpoints and can cancel only dates while keeping text", async () => {
+  const save = vi
+    .fn(
+      async (
+        next: CalendarDraft,
+        _previous: CalendarDraft | undefined,
+      ): Promise<CalendarSaveResult> => ({ confirmed: next }),
+    )
+    .mockResolvedValueOnce({ confirmed: existing, error: "Rejected" });
+  const { editor } = setup({ save });
+  editor.change({
+    note: "Keep my note",
+    day: "2026-11-30",
+    endDay: "2026-12-02",
+  });
+  expect(await editor.flush()).toBe(false);
+  editor.change({ day: existing.day, endDay: existing.endDay }, true);
+  expect(await editor.flush()).toBe(true);
+  expect(save.mock.calls[1]?.[0]).toEqual({
+    ...existing,
+    note: "Keep my note",
+  });
 });
 it("treats rejected promises as retained failed drafts", async () => {
   const save = vi.fn(

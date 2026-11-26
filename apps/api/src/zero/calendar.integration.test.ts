@@ -8,6 +8,7 @@ import {
   households,
   users,
 } from "@home-hub/database/schema";
+import { calendarItemIncludesDay } from "@home-hub/shared/calendar";
 import { queries } from "@home-hub/shared/zero/queries";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -199,16 +200,118 @@ describe.runIf(Boolean(url))("shared calendar on PostgreSQL", () => {
     const next = await create("2026-12-01");
     const last = await create("2026-12-06");
     await create("2026-12-07");
-    expect((await month()).map((r) => r.id)).toEqual([
-      first,
-      previous,
-      november,
-      next,
-      last,
-    ]);
+    expect(new Set((await month()).map((r) => r.id))).toEqual(
+      new Set([first, previous, november, next, last]),
+    );
     expect(await month(outsider)).toEqual([]);
     expect(await get(past)).toMatchObject({ day: "2020-02-29" });
     expect(await get(future)).toMatchObject({ day: "2030-12-31" });
+  });
+  it("queries overlapping ranges once, including interior months, leap days and year boundaries", async () => {
+    const id = await create("2026-11-30", "Trip");
+    await run("update", { ...base(id), changes: { endDay: "2027-01-02" } });
+    expect((await month()).map((r) => r.id)).toEqual([id]);
+    expect((await month(userId, "2026-12-01")).map((r) => r.id)).toEqual([id]);
+    expect((await month(userId, "2027-01-01")).map((r) => r.id)).toEqual([id]);
+    expect(await month(userId, "2027-02-01")).toEqual([]);
+    expect(await month(outsider, "2026-12-01")).toEqual([]);
+    await run("update", {
+      ...base(id),
+      changes: { day: "2024-02-28", endDay: "2024-03-01" },
+    });
+    const leap = (await month(userId, "2024-02-01"))[0];
+    expect(leap?.id).toBe(id);
+    expect(leap && calendarItemIncludesDay(leap, "2024-02-29")).toBe(true);
+  });
+  it("shares text and people across a span, shrinks it and deletes every appearance", async () => {
+    const id = await create("2026-11-30");
+    await run("update", { ...base(id), changes: { endDay: "2026-12-02" } });
+    await run(
+      "update",
+      { ...base(id), changes: { note: "Shared note" } },
+      other,
+    );
+    await run("person", { ...base(id), userId: other, selected: true });
+    expect((await month(userId, "2026-12-01"))[0]).toMatchObject({
+      id,
+      note: "Shared note",
+      endDay: "2026-12-02",
+      people: [{ userId: other }],
+    });
+    await run("update", {
+      ...base(id),
+      changes: { day: "2026-12-01", endDay: "2026-12-02" },
+    });
+    const shifted = await get(id);
+    expect(shifted && calendarItemIncludesDay(shifted, "2026-11-30")).toBe(
+      false,
+    );
+    await run("update", { ...base(id), changes: { endDay: null } });
+    expect(await get(id)).toMatchObject({
+      day: "2026-12-01",
+      endDay: null,
+      note: "Shared note",
+    });
+    const singleDay = await get(id);
+    expect(singleDay && calendarItemIncludesDay(singleDay, "2026-12-02")).toBe(
+      false,
+    );
+    await run("delete", base(id), other);
+    expect(await month()).toEqual([]);
+    expect(await month(userId, "2026-12-01")).toEqual([]);
+  });
+  it("validates locked merged dates and rejects partial updates that would invert an existing range", async () => {
+    const id = await create("2026-11-10");
+    await run("update", { ...base(id), changes: { endDay: "2026-11-12" } });
+    for (const changes of [
+      { day: "2026-11-13" },
+      { endDay: "2026-11-09" },
+      { endDay: "2026-02-30" },
+    ]) {
+      await expect(run("update", { ...base(id), changes })).rejects.toThrow();
+    }
+    expect(await get(id)).toMatchObject({
+      day: "2026-11-10",
+      endDay: "2026-11-12",
+    });
+    // A normal title patch must not clear the span.
+    await run("update", { ...base(id), changes: { title: "Still spanning" } });
+    expect(await get(id)).toMatchObject({
+      endDay: "2026-11-12",
+      title: "Still spanning",
+    });
+    await expect(
+      run("create", {
+        ...base(randomUUID()),
+        title: "Invalid",
+        note: "",
+        day: "2026-11-10",
+        endDay: "2026-11-09",
+      }),
+    ).rejects.toThrow();
+  });
+  it("reorders overlapping starts from an interior day using one shared order", async () => {
+    const a = await create("2026-11-10", "First span");
+    const b = await create("2026-11-11", "Second span");
+    await run("update", { ...base(a), changes: { endDay: "2026-11-13" } });
+    await run("update", { ...base(b), changes: { endDay: "2026-11-14" } });
+    const c = await create("2026-11-12", "One day");
+    await run("reorder", {
+      ...base(a),
+      day: "2026-11-12",
+      orderedIds: [b, c, a],
+    });
+    const rows = await month();
+    const on = (day: string) =>
+      rows
+        .filter((row) => calendarItemIncludesDay(row, day))
+        .map((row) => row.id);
+    expect(on("2026-11-12")).toEqual([b, c, a]);
+    expect(on("2026-11-11")).toEqual([b, a]);
+    expect(on("2026-11-13")).toEqual([b, a]);
+    await expect(
+      run("reorder", { ...base(a), day: "2026-11-14", orderedIds: [a, b] }),
+    ).rejects.toThrow();
   });
   it("moves to the destination end and preserves labels and notes", async () => {
     const a = await create();

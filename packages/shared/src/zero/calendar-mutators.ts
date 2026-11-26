@@ -1,6 +1,8 @@
 import { defineMutatorWithType, type Transaction } from "@rocicorp/zero";
 import {
   calendarCreateSchema,
+  calendarDatesSchema,
+  calendarItemIncludesDay,
   calendarPersonSchema,
   calendarReorderSchema,
   calendarScopeSchema,
@@ -25,7 +27,13 @@ const now = (tx: Tx, stamp: number) =>
 const scope = (householdId: string, day: string) =>
   zql.calendarItems
     .where("householdId", householdId)
-    .where("day", day)
+    .where("day", "<=", day)
+    .where(({ and, or, cmp }) =>
+      or(
+        cmp("endDay", ">=", day),
+        and(cmp("endDay", "IS", null), cmp("day", ">=", day)),
+      ),
+    )
     .where("deletedAt", "IS", null);
 
 async function item(
@@ -81,6 +89,7 @@ export const calendarMutators = {
       id: args.itemId,
       householdId: args.householdId,
       day: args.day,
+      endDay: args.endDay,
       title: args.title,
       note: args.note,
       sortKey: await bottom(tx, args.householdId, args.day),
@@ -91,6 +100,8 @@ export const calendarMutators = {
   }),
   update: define(calendarUpdateSchema, async ({ tx, ctx, args }) => {
     const row = await item(tx, ctx, args);
+    // Validate against the locked current record, including partial/stale clients.
+    calendarDatesSchema.parse({ ...row, ...args.changes });
     const moved =
       args.changes.day !== undefined && args.changes.day !== row.day;
     await tx.mutate.calendarItems.update({
@@ -139,7 +150,7 @@ export const calendarMutators = {
   }),
   reorder: define(calendarReorderSchema, async ({ tx, ctx, args }) => {
     const moved = await item(tx, ctx, args);
-    if (moved.day !== args.day) {
+    if (!calendarItemIncludesDay(moved, args.day)) {
       throw Error("Calendar item moved");
     }
     const rows = await tx.run(
