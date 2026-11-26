@@ -23,8 +23,8 @@ it("contains checklist intrinsic widths in a zero-minimum grid track", () => {
       householdId="house"
       listId="shopping"
       items={[
-        { id: "bread", name: "Bread", status: "active", sortKey: "a" },
-        { id: "milk", name: "Oat milk", status: "crossed", sortKey: "b" },
+        { id: "bread", name: "Bread", status: "active", sortKey: 0 },
+        { id: "milk", name: "Oat milk", status: "crossed", sortKey: 1 },
       ]}
     />,
   );
