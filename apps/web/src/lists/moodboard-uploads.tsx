@@ -333,6 +333,8 @@ export function MoodboardUploads({
         ref={ref}
         className="sr-only"
         type="file"
+        aria-label="Choose images or videos"
+        tabIndex={-1}
         multiple
         accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
         onChange={(event) => {

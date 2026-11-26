@@ -47,16 +47,22 @@ vi.mock("@tanstack/react-router", () => ({
     params,
     className,
     draggable,
+    role,
+    "aria-roledescription": roleDescription,
   }: {
     children: ReactNode;
     params: { workoutId: string };
     className: string;
     draggable: boolean;
+    role: "link";
+    "aria-roledescription": string;
   }) => (
     <a
       href={`/workouts/${params.workoutId}`}
       className={className}
       draggable={draggable}
+      role={role}
+      aria-roledescription={roleDescription}
     >
       {children}
     </a>
@@ -163,6 +169,9 @@ describe("workout reordering", () => {
     const html = render();
     expect(html).toContain('href="/workouts/A"');
     expect(html).toContain('draggable="false"');
+    expect(html.match(/role="link"/g)).toHaveLength(3);
+    expect(html).toContain('aria-roledescription="draggable link"');
+    expect(html).not.toContain('role="button"');
     expect(html).toContain("touch-pan-y");
     expect(html).not.toContain("<button");
     drag();

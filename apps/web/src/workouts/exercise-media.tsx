@@ -569,6 +569,7 @@ function ExerciseMediaGallery({
         <input
           ref={input}
           type="file"
+          aria-label={`Choose picture for ${name}`}
           className="sr-only"
           accept="image/jpeg,image/png,image/webp"
           tabIndex={-1}

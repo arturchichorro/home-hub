@@ -192,6 +192,8 @@ function WorkoutRow({
     >
       <Link
         ref={sortable.handleRef}
+        role="link"
+        aria-roledescription="draggable link"
         to="/households/$householdId/workouts/$workoutId"
         params={{ householdId: workout.householdId, workoutId: workout.id }}
         preload="intent"
