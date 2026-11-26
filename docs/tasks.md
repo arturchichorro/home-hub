@@ -28,35 +28,14 @@ deployment applies tested forward migrations after an off-host backup.
 
 ## Work in review
 
-As of 3 November 2026, these branches are open PRs, not part of `develop` or
-completed backlog items. Review status is not authorization to merge or deploy:
+Checked against GitHub and `develop` on 26 November 2026. These dependent PRs
+remain open; review status is not authorization to merge or deploy:
 
-- Guest access prototype stack [#35](https://github.com/arturchichorro/home-hub/pull/35), [#36](https://github.com/arturchichorro/home-hub/pull/36), [#38](https://github.com/arturchichorro/home-hub/pull/38), [#39](https://github.com/arturchichorro/home-hub/pull/39): requires reconciliation with current `develop` and current module/privacy rules before integration. The earlier foundation was reverted; the prototype does not establish current Guest support.
+- [#91](https://github.com/arturchichorro/home-hub/pull/91): privacy-safe application diagnostics, based on `develop`.
+- [#140](https://github.com/arturchichorro/home-hub/pull/140): non-root loopback log collection, based on #91.
+- [#141](https://github.com/arturchichorro/home-hub/pull/141): bounded read-only agent log search, based on #140.
 
-Habits day boxes and optional workout-linked completion are integrated into
-`develop`; see [Task history](./task-history.md#recent-completed-deliveries).
-When a review item merges, remove its pending entry and update the corresponding
-subject/history. Guest Access remains excluded from this integration.
-
-## Contacts replacing Logs
-
-Implemented shared profiles/details/pictures and canonical multi-contact dated
-entries, with guarded drafts, archive/restore and conflict-safe writes. Migration
-0057 intentionally discards legacy Logs and preserves module enablement, behind a
-separate production approval/backup cutover. No production action or permanent
-importer is included. See [Contacts](./contacts/).
-
-## Flashcards in Lists
-
-Promoted from Backlog. The approved household-shared, text-only deck design is
-implemented on `feat/list-flashcards`, pending review/integration. See
-[Flashcards](./lists/flashcards.md) for behavior, data and verification. No spaced
-repetition or progress storage; this status is not migration/merge/deploy approval.
-
-- [x] Add the typed card schema, reviewed additive migration and authorized synchronization
-- [x] Integrate the third list type, protected inline editing and manual practice
-- [x] Verify permissions, data preservation, drafts and desktop/mobile interactions
-- [ ] Review the implementation before any separately authorized commit, migration or release
+When a review item merges, remove its pending entry and update its subject/history.
 
 ## Deploy to and migrate onto the Raspberry Pi
 
