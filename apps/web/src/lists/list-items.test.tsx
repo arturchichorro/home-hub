@@ -17,14 +17,28 @@ vi.mock("@dnd-kit/react/sortable", () => ({
   isSortable: () => false,
 }));
 
+const fields = {
+  householdId: "house",
+  listId: "shopping",
+  normalizedName: "item",
+  createdAt: 0,
+  updatedAt: 0,
+};
+
 it("contains checklist intrinsic widths in a zero-minimum grid track", () => {
   const markup = renderToStaticMarkup(
     <ListItems
       householdId="house"
       listId="shopping"
       items={[
-        { id: "bread", name: "Bread", status: "active", sortKey: 0 },
-        { id: "milk", name: "Oat milk", status: "crossed", sortKey: 1 },
+        { ...fields, id: "bread", name: "Bread", status: "active", sortKey: 0 },
+        {
+          ...fields,
+          id: "milk",
+          name: "Oat milk",
+          status: "crossed",
+          sortKey: 1,
+        },
       ]}
     />,
   );
