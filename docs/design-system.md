@@ -478,7 +478,12 @@ remains its accessible name and live-region content.
 Module navigation is grouped by household in the sidebar. Each default-open
 household disclosure contains enabled modules with icons and text labels,
 indicates the current destination, and places Settings last. Settings remains
-available regardless of module settings.
+available regardless of module settings. Whole module rows can be reordered
+within their household using mouse drag, touch-hold or Space/arrow-key sorting;
+click/Enter still navigates. Settings cannot be dragged. Ordering is personal,
+autosaved across devices, and never navigates or closes the drawer. Disabled
+modules retain their stored place; newly introduced modules append before
+Settings in customized orders. Leaving/rejoining resets the preference.
 
 ### Content and forms
 

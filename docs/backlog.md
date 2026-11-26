@@ -12,8 +12,6 @@ implemented system, not with unmerged feature branches.
 - [ ] Assign household members to individual list items.
 - [ ] Attach an already-uploaded recipe image to a cooking log.
 - [ ] Add recipe ratings, such as overall rating and ease of cooking.
-- [ ] Add household-specific module ordering.
-- [ ] Open the last visited household/module on app start, or select the first available household/module; the root route still renders the shell without choosing one.
 - [ ] Copy recipe ingredients into a chosen list, authorizing both modules.
 - [ ] Show local image previews before upload/processing confirmation.
 - [ ] Further simplify database/domain/transport boundaries where a concrete feature needs it.

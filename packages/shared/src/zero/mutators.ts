@@ -1,5 +1,6 @@
 import { defineMutatorsWithType, defineMutatorWithType } from "@rocicorp/zero";
 import { reorderHouseholdsMutationSchema } from "../households";
+import { moveHouseholdModule, reorderModulesSchema } from "../module-order";
 import {
   createRecipeCookLogMutationSchema,
   createRecipeIngredientMutationSchema,
@@ -67,6 +68,48 @@ const reorderHouseholds = defineHomeHubMutator(
         updatedAt,
       });
     }
+  },
+);
+
+const reorderModules = defineHomeHubMutator(
+  reorderModulesSchema,
+  async ({ tx, ctx, args }) => {
+    const get = () =>
+      tx.run(
+        zql.householdMembers
+          .where("householdId", args.householdId)
+          .where("userId", ctx.userId)
+          .whereExists("household", (household) =>
+            household.where("deletedAt", "IS", null),
+          )
+          .one(),
+      );
+    let membership = await get();
+    if (!membership) {
+      throw Error("Module ordering unavailable");
+    }
+
+    // Lock and re-read the authoritative membership before applying a move.
+    // A concurrent removal must not resurrect a preference or another membership.
+    const updatedAt =
+      tx.location === "server" ? Date.now() : args.optimisticUpdatedAt;
+    if (tx.location === "server") {
+      await tx.mutate.householdMembers.update({ id: membership.id, updatedAt });
+      membership = await get();
+      if (!membership) {
+        throw Error("Module ordering unavailable");
+      }
+    }
+
+    await tx.mutate.householdMembers.update({
+      id: membership.id,
+      moduleOrder: moveHouseholdModule(
+        membership.moduleOrder,
+        args.moduleKey,
+        args.orderedModuleKeys,
+      ),
+      updatedAt,
+    });
   },
 );
 
@@ -518,6 +561,7 @@ const reorderRecipeImages = defineHomeHubMutator(
 export const mutators = defineHomeHubMutators({
   householdMemberships: {
     reorder: reorderHouseholds,
+    reorderModules,
   },
   documents: documentMutators,
   calendar: calendarMutators,

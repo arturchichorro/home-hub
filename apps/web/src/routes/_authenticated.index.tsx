@@ -1,6 +1,7 @@
 import { queries } from "@home-hub/shared/zero/queries";
 import { createFileRoute } from "@tanstack/react-router";
 import App from "../App";
+import { HouseholdLanding } from "../households/household-landing";
 
 export const Route = createFileRoute("/_authenticated/")({
   loader: ({ context }) => {
@@ -20,6 +21,8 @@ function HomeRoute() {
       username={session.user.username}
       onLoggedOut={onLoggedOut}
       onSessionExpired={onSessionExpired}
-    />
+    >
+      <HouseholdLanding />
+    </App>
   );
 }
