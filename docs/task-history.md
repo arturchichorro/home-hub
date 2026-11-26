@@ -378,6 +378,8 @@ These items are integrated into `develop`; this is implementation history, not
 an instruction to replay migrations or proof of a particular live deployment.
 Open review work remains in [Tasks](./tasks.md#work-in-review).
 
+- [x] Open Home at the first household's first enabled module and support personal per-household sidebar module ordering, synced through Zero. Keep Settings last, explicit links and empty no-household pages unchanged, with cached offline landing and reset-on-rejoin preferences (`0060`).
+
 - [x] Replace legacy Logs with shared [Contacts](./contacts/): profiles, pictures, repeatable details, dated multi-contact notes, archive/restore and guarded conflict-safe edits (#146, #153). This fulfils the former friend-list-with-timestamped-notes backlog item; no permanent importer is included.
 - [x] Deliver household-shared [Flashcard decks](./lists/flashcards.md) inside Lists, with protected inline editing and manual practice, without stored progress or spaced repetition (#138).
 - [x] Deliver shared [Calendar](./calendar/) items, people labels and pictures, then inclusive multi-day spans with shared edits/order/deletion and direct trash-button confirmation (#164). One record covers the range; no daily copies or recurrence.

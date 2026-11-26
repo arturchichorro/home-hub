@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { moduleIsActive } from "../app-sidebar";
-import { getDefaultHouseholdModuleRoute } from "../households/household-module-gate";
+import { getDefaultHouseholdModuleRoute } from "../households/navigation";
 
 describe("Lists navigation", () => {
   it("highlights Lists in the library and on a list detail page", () => {

@@ -421,6 +421,13 @@
       "when": 1795687245876,
       "tag": "0059_glorious_energizer",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1795700498272,
+      "tag": "0060_luxuriant_sunspot",
+      "breakpoints": true
     }
   ]
 }

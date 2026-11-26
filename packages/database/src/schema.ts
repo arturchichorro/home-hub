@@ -90,6 +90,7 @@ export const householdMembers = pgTable(
 
     role: householdMemberRoleEnum().notNull(),
     sortKey: integer("sort_key").notNull(),
+    moduleOrder: jsonb("module_order").notNull().default([]),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -98,6 +99,10 @@ export const householdMembers = pgTable(
       .defaultNow(),
   },
   (table) => [
+    check(
+      "household_members_module_order_array",
+      sql`jsonb_typeof(${table.moduleOrder}) = 'array'`,
+    ),
     uniqueIndex("household_members_household_id_user_id_idx").on(
       table.householdId,
       table.userId,
