@@ -43,9 +43,6 @@ Connected changes should appear immediately and converge across clients. Previou
 
 ## Feature specifications and historical plans
 
-- [Guest access](./guest-access/) specifies accountless, household-scoped
-  access through revocable QR codes while reusing the existing module
-  interfaces. The prototype review stack is not part of `develop`; see [Tasks](./tasks.md#work-in-review).
 - [Shared media foundation plan](./plans/shared-media.md) is a completed historical design, not pending implementation.
 
 ## Useful commands

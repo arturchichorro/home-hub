@@ -35,10 +35,6 @@ remain open; review status is not authorization to merge or deploy:
 - [#140](https://github.com/arturchichorro/home-hub/pull/140): non-root loopback log collection, based on #91.
 - [#141](https://github.com/arturchichorro/home-hub/pull/141): bounded read-only agent log search, based on #140.
 
-Contacts, Flashcards, multi-day Calendar items and the UI audit fixes are integrated
-into `develop`; see [Task history](./task-history.md#recent-completed-deliveries).
-The Guest-access prototype PRs are closed, not pending review; future work belongs
-in [Backlog](./backlog.md#future-modules-and-capabilities).
 When a review item merges, remove its pending entry and update its subject/history.
 
 ## Deploy to and migrate onto the Raspberry Pi

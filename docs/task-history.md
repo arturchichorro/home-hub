@@ -409,7 +409,7 @@ Open review work remains in [Tasks](./tasks.md#work-in-review).
 
 ## Manual Logs module
 
-- [x] Implement opt-in household topics, colored categories and one shared multiline entry per calendar date, with inline creation, conflict-safe autosave, backfill/search/paged history and retained soft deletion. See [Logs](./logs/README.md) for date/conflict rules and migration coordination. Implementation history is not deployment approval.
+- [x] Implement opt-in household topics, colored categories and one shared multiline entry per calendar date, with inline creation, conflict-safe autosave, backfill/search/paged history and retained soft deletion. This module was subsequently replaced by [Contacts](./contacts/). Implementation history is not deployment approval.
 
 ## Moodboard UI refinement
 
