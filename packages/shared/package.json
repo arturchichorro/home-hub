@@ -17,6 +17,7 @@
     "./workout-seed": "./src/workout-seed.ts",
     "./households": "./src/households.ts",
     "./modules": "./src/modules.ts",
+    "./module-order": "./src/module-order.ts",
     "./media": "./src/media.ts",
     "./list-media": "./src/list-media.ts",
     "./video-delivery": "./src/video-delivery.ts",

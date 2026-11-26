@@ -102,6 +102,7 @@ export default drizzleZeroConfig(drizzleSchema, {
       updatedAt: true,
     },
     householdMembers: {
+      moduleOrder: true,
       id: true,
       householdId: true,
       userId: true,

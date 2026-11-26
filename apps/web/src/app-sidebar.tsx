@@ -6,6 +6,8 @@ import {
 } from "@dnd-kit/dom";
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
+import { enabledHouseholdModules } from "@home-hub/shared/module-order";
+import type { HouseholdModuleKey } from "@home-hub/shared/modules";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import {
@@ -28,10 +30,13 @@ import {
 } from "@home-hub/ui-web";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, type Ref, useRef, useState } from "react";
 import { AccountMenu } from "./auth/account-menu";
 import { CreateHouseholdDialog } from "./households/create-household-dialog";
 import { JoinHouseholdDialog } from "./households/join-household-dialog";
+import type { HouseholdModuleRoute } from "./households/navigation";
+import { useBlockAppUpdate } from "./updates/activity";
+import { acknowledgeMutation } from "./zero/acknowledge-mutation";
 import { ZeroConnectionStatus } from "./zero/connection-status";
 import { useZeroMutationEnabled } from "./zero/use-zero-mutation-enabled";
 
@@ -59,31 +64,16 @@ type HouseholdNavigationGroupProps = {
   disabled: boolean;
   householdId: string;
   householdName: string;
+  moduleOrder: unknown;
   index: number;
   onNavigate?: (() => void) | undefined;
 };
 
 type ModuleDefinition = {
-  key:
-    | "recipes"
-    | "settings"
-    | "lists"
-    | "habits"
-    | "workouts"
-    | "documents"
-    | "contacts"
-    | "calendar";
+  key: HouseholdModuleKey | "settings";
   label: string;
   Icon: typeof BookOpen;
-  to:
-    | "/households/$householdId/recipes"
-    | "/households/$householdId/settings"
-    | "/households/$householdId/lists"
-    | "/households/$householdId/habits"
-    | "/households/$householdId/workouts"
-    | "/households/$householdId/documents"
-    | "/households/$householdId/contacts"
-    | "/households/$householdId/calendar";
+  to: HouseholdModuleRoute;
 };
 
 const moduleDefinitions: readonly ModuleDefinition[] = [
@@ -197,10 +187,18 @@ function HouseholdNavigationGroup({
   disabled,
   householdId,
   householdName,
+  moduleOrder,
   index,
   onNavigate,
 }: HouseholdNavigationGroupProps) {
   const navigate = useNavigate();
+  const zero = useZero();
+  const [saving, setSaving] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [orderError, setOrderError] = useState(false);
+  const pending = useRef(false);
+  const suppressNavigation = useRef(false);
+  useBlockAppUpdate(saving || dragging);
   const [open, setOpen] = useState(true);
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
@@ -215,17 +213,60 @@ function HouseholdNavigationGroup({
     accept: "user-household",
     disabled,
   });
-  const enabledModuleKeys = new Set(
-    settings
-      .filter((setting) => setting.enabled)
-      .map((setting) => setting.moduleKey),
-  );
-  const modules =
-    result.type === "unknown"
-      ? moduleDefinitions
-      : moduleDefinitions.filter(
-          ({ key }) => key === "settings" || enabledModuleKeys.has(key),
-        );
+  const orderedKeys = enabledHouseholdModules(settings, moduleOrder);
+  const modules = [
+    ...orderedKeys.flatMap((key) =>
+      moduleDefinitions.filter((module) => module.key === key),
+    ),
+    ...moduleDefinitions.filter((module) => module.key === "settings"),
+  ];
+  async function reorderModules(from: number, to: number) {
+    if (
+      disabled ||
+      pending.current ||
+      from === to ||
+      to < 0 ||
+      to >= orderedKeys.length
+    ) {
+      return;
+    }
+    const orderedModuleKeys = [...orderedKeys];
+    const [moduleKey] = orderedModuleKeys.splice(from, 1);
+    if (!moduleKey) {
+      return;
+    }
+    orderedModuleKeys.splice(to, 0, moduleKey);
+    pending.current = true;
+    setSaving(true);
+    setOrderError(false);
+    try {
+      const outcome = await acknowledgeMutation(
+        zero.mutate(
+          mutators.householdMemberships.reorderModules({
+            householdId,
+            moduleKey,
+            orderedModuleKeys,
+            optimisticUpdatedAt: Date.now(),
+          }),
+        ),
+      );
+      if (outcome.type === "error") {
+        throw Error("Reorder failed");
+      }
+    } catch {
+      setOrderError(true);
+    } finally {
+      pending.current = false;
+      setSaving(false);
+    }
+  }
+  function selectModule(module: ModuleDefinition) {
+    if (suppressNavigation.current || pending.current) {
+      return;
+    }
+    void navigate({ to: module.to, params: { householdId } });
+    onNavigate?.();
+  }
   const householdPath = `/households/${householdId}`;
   const householdSelected =
     pathname === householdPath || pathname.startsWith(`${householdPath}/`);
@@ -233,6 +274,7 @@ function HouseholdNavigationGroup({
   return (
     <details
       ref={sortable.ref}
+      data-household-id={householdId}
       open={open}
       className="group/household"
       onToggle={(event) => setOpen(event.currentTarget.open)}
@@ -254,27 +296,122 @@ function HouseholdNavigationGroup({
         {result.type === "error" ? (
           <p className="px-2 py-1 text-xs text-danger">Modules unavailable</p>
         ) : null}
-        {modules.map(({ key, label, Icon, to }) => {
-          const active = moduleIsActive(pathname, householdId, key);
-
-          return (
-            <button
-              key={key}
-              type="button"
-              aria-current={active ? "page" : undefined}
-              className={`flex min-h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm outline-none hover:bg-raised focus-visible:ring-2 focus-visible:ring-focus-ring ${active ? "bg-raised text-foreground" : "text-muted"}`}
-              onClick={() => {
-                void navigate({ to, params: { householdId } });
-                onNavigate?.();
-              }}
-            >
-              <Icon aria-hidden="true" className="size-4 shrink-0" />
-              <span className="truncate">{label}</span>
-            </button>
-          );
-        })}
+        <DragDropProvider
+          sensors={householdSensors}
+          onDragStart={() => {
+            suppressNavigation.current = true;
+            setDragging(true);
+          }}
+          onDragEnd={(event) => {
+            setDragging(false);
+            // Ignore the click synthesized by dropping/ending a keyboard drag.
+            requestAnimationFrame(() => {
+              suppressNavigation.current = false;
+            });
+            const source = event.operation.source;
+            if (
+              !event.canceled &&
+              isSortable(source) &&
+              source.type === `household-module:${householdId}`
+            ) {
+              void reorderModules(source.initialIndex, source.index);
+            }
+          }}
+        >
+          {modules.map((module, moduleIndex) =>
+            module.key === "settings" ||
+            disabled ||
+            result.type !== "complete" ? (
+              <ModuleNavigationButton
+                key={module.key}
+                module={module}
+                active={moduleIsActive(pathname, householdId, module.key)}
+                onSelect={() => selectModule(module)}
+              />
+            ) : (
+              <SortableModuleNavigation
+                key={module.key}
+                module={module}
+                householdId={householdId}
+                index={moduleIndex}
+                disabled={saving}
+                active={moduleIsActive(pathname, householdId, module.key)}
+                onSelect={() => selectModule(module)}
+              />
+            ),
+          )}
+        </DragDropProvider>
+        {orderError && (
+          <p role="alert" className="px-2 py-1 text-xs text-danger">
+            Unable to reorder modules. Try again.
+          </p>
+        )}
       </div>
     </details>
+  );
+}
+
+function ModuleNavigationButton({
+  module,
+  active,
+  onSelect,
+  buttonRef,
+}: {
+  module: ModuleDefinition;
+  active: boolean;
+  onSelect: () => void;
+  buttonRef?: Ref<HTMLButtonElement>;
+}) {
+  const { key, label, Icon } = module;
+  return (
+    <button
+      ref={buttonRef}
+      type="button"
+      data-module-key={key}
+      data-base-ui-swipe-ignore
+      draggable={false}
+      aria-current={active ? "page" : undefined}
+      className={`flex min-h-8 w-full touch-pan-y select-none items-center gap-2 rounded-md px-2 text-left text-sm outline-none hover:bg-raised focus-visible:ring-2 focus-visible:ring-focus-ring ${active ? "bg-raised text-foreground" : "text-muted"}`}
+      onClick={onSelect}
+    >
+      <Icon aria-hidden="true" className="size-4 shrink-0" />
+      <span className="truncate">{label}</span>
+    </button>
+  );
+}
+
+function SortableModuleNavigation({
+  module,
+  householdId,
+  index,
+  disabled,
+  active,
+  onSelect,
+}: {
+  module: ModuleDefinition;
+  householdId: string;
+  index: number;
+  disabled: boolean;
+  active: boolean;
+  onSelect: () => void;
+}) {
+  const sortable = useSortable({
+    id: `${householdId}:${module.key}`,
+    index,
+    type: `household-module:${householdId}`,
+    accept: `household-module:${householdId}`,
+    disabled,
+  });
+
+  return (
+    <div ref={sortable.ref}>
+      <ModuleNavigationButton
+        module={module}
+        active={active}
+        onSelect={onSelect}
+        buttonRef={sortable.handleRef}
+      />
+    </div>
   );
 }
 
@@ -362,6 +499,7 @@ function SidebarNavigation({
             if (
               !event.canceled &&
               isSortable(source) &&
+              source.type === "user-household" &&
               source.initialIndex !== source.index
             ) {
               moveHousehold(source.initialIndex, source.index);
@@ -376,6 +514,7 @@ function SidebarNavigation({
                   disabled={!mutationEnabled}
                   householdId={membership.household.id}
                   householdName={membership.household.name}
+                  moduleOrder={membership.moduleOrder}
                   index={index}
                   onNavigate={onNavigate}
                 />

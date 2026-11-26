@@ -108,12 +108,17 @@ to be unique.
 - `user_id`
 - `role`: `owner | member`
 - `sort_key`
+- `module_order`: JSON array of personal content-module keys; empty uses the default order
 - `created_at`, `updated_at`
 
 Use `id` as the primary key and enforce a unique household/user pair.
 `sort_key` stores that user's private sidebar order; changing it never changes
 the order seen by another member. New and newly joined households are placed at
-the top.
+the top. Migration `0060_luxuriant_sunspot.sql` adds `module_order` and explicitly
+publishes it through Zero, preserving existing membership data and household
+order. Only the caller's live membership may be reordered; moves lock and re-read
+that membership, preserve hidden modules and do not change roles or enablement.
+Deleting the membership removes its preference; rejoining gets the default.
 
 Each household has exactly one owner. Enforce at most one owner with a partial
 unique index on `household_id` for rows whose role is `owner`; household

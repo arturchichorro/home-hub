@@ -172,10 +172,16 @@ Create one Zero client for the authenticated route tree and keep its non-authent
 
 The authenticated application shell owns household and module navigation. It
 reactively lists every current membership and each household's enabled modules;
-Household settings remains available independently of optional module settings.
-The household index route chooses the first enabled module, and each optional
-module route redirects only when its completed settings query says that module
-is disabled. The shell does not perform global fallback redirects.
+Settings stays last and remains available independently of optional modules.
+Each membership stores its user's personal module order, shared across devices
+but independent of other members and household-wide enablement. The home route
+chooses the first sidebar household's first enabled module; a bare household URL
+uses that household's first enabled module. No enabled modules means Settings;
+no households leaves the existing empty homepage unchanged. Explicit content
+URLs are preserved. Online landing waits for complete queries; cold offline
+landing can use cached memberships and a full cached module-settings set.
+Disabled-module redirects use the same ordering without unmounting protected
+drafts. The shell does not perform global fallback redirects.
 
 There will be no PowerSync, TanStack DB, Redux persistence layer, or custom offline mutation queue.
 

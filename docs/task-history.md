@@ -378,6 +378,15 @@ These items are integrated into `develop`; this is implementation history, not
 an instruction to replay migrations or proof of a particular live deployment.
 Open review work remains in [Tasks](./tasks.md#work-in-review).
 
+- [x] Open Home at the first household's first enabled module and support personal per-household sidebar module ordering, synced through Zero. Keep Settings last, explicit links and empty no-household pages unchanged, with cached offline landing and reset-on-rejoin preferences (`0060`).
+
+- [x] Replace legacy Logs with shared [Contacts](./contacts/): profiles, pictures, repeatable details, dated multi-contact notes, archive/restore and guarded conflict-safe edits (#146, #153). This fulfils the former friend-list-with-timestamped-notes backlog item; no permanent importer is included.
+- [x] Deliver household-shared [Flashcard decks](./lists/flashcards.md) inside Lists, with protected inline editing and manual practice, without stored progress or spaced repetition (#138).
+- [x] Deliver shared [Calendar](./calendar/) items, people labels and pictures, then inclusive multi-day spans with shared edits/order/deletion and direct trash-button confirmation (#164). One record covers the range; no daily copies or recurrence.
+- [x] Consolidate author-private training into canonical sessions, exercise occurrences and sets, preserving frozen historical conventions (#114, `0053`). See [Workouts](./workouts/).
+- [x] Move household lifecycle/permissions and database-only attachment removal to Zero custom mutators (#147–#148); replace application statistics with a bounded, operator-only read-only [JSON export](./statistics.md) (#149).
+- [x] Complete the isolated UI audit and merge its seven fixes (#155–#161): navigation after autosave, narrow checklists, upload/picker labels, readable contact conflicts, consumed invitation cleanup and sortable workout link semantics.
+
 - [x] Deliver opt-in Habits with shared definitions, personal daily notes/completions, Me-first bounded recent queries and one expanded month. See [Habits](./habits/).
 - [x] Add seven adjacent habit day boxes (#83) and optional private-source-safe workout-linked completion (#84, `0049`), retaining manual completion and frozen archived results.
 - [x] Deliver standalone Workouts, a shared movement catalog, author-private performance/history, catalog deletion/ordering and exercise reference pictures. See [Workouts](./workouts/).
@@ -402,7 +411,7 @@ Open review work remains in [Tasks](./tasks.md#work-in-review).
 
 ## Manual Logs module
 
-- [x] Implement opt-in household topics, colored categories and one shared multiline entry per calendar date, with inline creation, conflict-safe autosave, backfill/search/paged history and retained soft deletion. See [Logs](./logs/README.md) for date/conflict rules and migration coordination. Implementation history is not deployment approval.
+- [x] Implement opt-in household topics, colored categories and one shared multiline entry per calendar date, with inline creation, conflict-safe autosave, backfill/search/paged history and retained soft deletion. This module was subsequently replaced by [Contacts](./contacts/). Implementation history is not deployment approval.
 
 ## Moodboard UI refinement
 
