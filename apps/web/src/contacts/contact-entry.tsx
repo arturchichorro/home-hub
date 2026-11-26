@@ -401,7 +401,10 @@ export function ContactEntry({
           </>
         )}
       </ContactMedia>
-      <EditorStatus editor={editor} />
+      <EditorStatus
+        editor={editor}
+        getPersonName={(id) => labels.get(id)?.name}
+      />
       {actionError ? (
         <p role="alert" className="text-sm text-danger">
           {actionError}
