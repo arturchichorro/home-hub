@@ -69,8 +69,21 @@ describe.runIf(Boolean(url))("personal module order migration", () => {
           sql`SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename`,
         )
       ).rows;
-      await migrate(db, { migrationsFolder: source });
-      await migrate(db, { migrationsFolder: source });
+      // Rehearse this migration only, not unrelated later schema changes.
+      const target = journal.entries.find((entry) => entry.idx === 60);
+      if (!target) {
+        throw Error("Missing module order migration");
+      }
+      await copyFile(
+        join(source, `${target.tag}.sql`),
+        join(directory, `${target.tag}.sql`),
+      );
+      await writeFile(
+        join(directory, "meta/_journal.json"),
+        JSON.stringify({ ...journal, entries: [...entries, target] }),
+      );
+      await migrate(db, { migrationsFolder: directory });
+      await migrate(db, { migrationsFolder: directory });
       expect(
         (
           await db.execute(

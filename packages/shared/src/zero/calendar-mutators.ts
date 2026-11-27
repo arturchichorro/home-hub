@@ -1,4 +1,8 @@
-import { defineMutatorWithType, type Transaction } from "@rocicorp/zero";
+import {
+  ApplicationError,
+  defineMutatorWithType,
+  type Transaction,
+} from "@rocicorp/zero";
 import {
   calendarCreateSchema,
   calendarDatesSchema,
@@ -8,6 +12,7 @@ import {
   calendarScopeSchema,
   calendarUpdateSchema,
 } from "../calendar";
+import { calendarHabitSchema } from "../calendar-habits";
 import type { ZeroAuthContext } from "./context";
 import { requireServerHouseholdModuleAccess } from "./mutation-authorization";
 import { appendSortKey, planReorder } from "./ordering";
@@ -78,6 +83,72 @@ async function bottom(tx: Tx, householdId: string, day: string) {
 }
 
 export const calendarMutators = {
+  habit: define(calendarHabitSchema, async ({ tx, ctx, args }) => {
+    const row = await item(tx, ctx, args);
+    const key = { itemId: args.itemId, userId: ctx.userId };
+    const previous = await tx.run(
+      zql.calendarHabitAttachments
+        .where("householdId", args.householdId)
+        .where("itemId", args.itemId)
+        .where("userId", ctx.userId)
+        .one(),
+    );
+    if (previous?.habitId === args.habitId) {
+      return;
+    }
+    if (previous && !args.confirmArchived) {
+      const enabled = await tx.run(
+        zql.householdModuleSettings
+          .where("householdId", args.householdId)
+          .where("moduleKey", "habits")
+          .where("enabled", true)
+          .one(),
+      );
+      const oldHabit = await tx.run(
+        zql.habits
+          .where("householdId", args.householdId)
+          .where("id", previous.habitId)
+          .one(),
+      );
+      // With Habits disabled use the same response for every target, so cleanup
+      // cannot be used to probe a disabled habit's archive status.
+      if (!enabled || oldHabit?.status === "archived") {
+        throw new ApplicationError(
+          "Confirm removal of this habit attachment.",
+          { details: { kind: "confirm_removal" } },
+        );
+      }
+    }
+    if (args.habitId === null) {
+      await tx.mutate.calendarHabitAttachments.delete(key);
+      return;
+    }
+    await requireServerHouseholdModuleAccess({
+      tx,
+      userId: ctx.userId,
+      householdId: args.householdId,
+      moduleKey: "habits",
+    });
+    if (row.endDay && row.endDay !== row.day) {
+      throw Error("Only single-day items can have habit attachments.");
+    }
+    const habit = await tx.run(
+      zql.habits
+        .where("householdId", args.householdId)
+        .where("id", args.habitId)
+        .where("status", "active")
+        .one(),
+    );
+    if (!habit) {
+      throw Error("Habit unavailable");
+    }
+    await tx.mutate.calendarHabitAttachments.upsert({
+      ...key,
+      householdId: args.householdId,
+      habitId: args.habitId,
+      timeZone: args.timeZone,
+    });
+  }),
   create: define(calendarCreateSchema, async ({ tx, ctx, args }) => {
     await access(tx, ctx, args.householdId);
     // Never reuse an existing ID, including a deletion tombstone.
@@ -101,7 +172,22 @@ export const calendarMutators = {
   update: define(calendarUpdateSchema, async ({ tx, ctx, args }) => {
     const row = await item(tx, ctx, args);
     // Validate against the locked current record, including partial/stale clients.
-    calendarDatesSchema.parse({ ...row, ...args.changes });
+    const dates = calendarDatesSchema.parse({ ...row, ...args.changes });
+    if (
+      dates.endDay &&
+      dates.endDay !== dates.day &&
+      (await tx.run(
+        zql.calendarHabitAttachments
+          .where("householdId", args.householdId)
+          .where("itemId", row.id)
+          .one(),
+      ))
+    ) {
+      throw new ApplicationError(
+        "Remove habit attachments before making this item multi-day.",
+        { details: { kind: "habit_attachments" } },
+      );
+    }
     const moved =
       args.changes.day !== undefined && args.changes.day !== row.day;
     await tx.mutate.calendarItems.update({
@@ -121,6 +207,17 @@ export const calendarMutators = {
   }),
   delete: define(calendarScopeSchema, async ({ tx, ctx, args }) => {
     await item(tx, ctx, args);
+    const links = await tx.run(
+      zql.calendarHabitAttachments
+        .where("householdId", args.householdId)
+        .where("itemId", args.itemId),
+    );
+    for (const link of links) {
+      await tx.mutate.calendarHabitAttachments.delete({
+        itemId: link.itemId,
+        userId: link.userId,
+      });
+    }
     await tx.mutate.calendarItems.update({
       id: args.itemId,
       deletedAt: now(tx, args.optimisticTimestamp),

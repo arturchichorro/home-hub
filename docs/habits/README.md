@@ -60,18 +60,42 @@ completion is shared as habit activity: raw workout logs, sets and notes stay
 author-private. The chooser subscribes only while open, requires both enabled modules,
 and retains selections after rejected saves.
 
+## Personal Calendar contributions
+
+Each member can privately attach one active habit to a saved single-day Calendar
+item. The item contributes on its literal date only after midnight in the
+attachment's captured IANA timezone. Completion is manual **OR** workout **OR**
+eligible Calendar support; duplicate supporting items still count once. It cannot
+be manually unchecked while an automatic source supports it.
+
+Calendar date/deletion/link changes update only the safe daily eligibility,
+preserving independent checks, notes and creation timestamps. Existing Calendar
+links continue contributing with Calendar disabled and even after archival;
+this explicitly differs from frozen archived workout contributions. Archived
+habits cannot be selected for new attachments. Removing an archived mapping
+requires confirmation, since it cannot be recreated.
+
+Only the owner receives item-to-habit mappings. Other current members retain the
+existing habit-day activity visibility, without source IDs or attachment details.
+Leaving/removal clears the member's mappings and Calendar support, not their
+manual/workout/note records. No midnight job or visit is required: a nullable
+eligibility instant becomes effective when the clock reaches it. Source changes
+maintain it transactionally; UI deadlines and the read-only export interpret it.
+
 ## Data and authorization
 
-Three tables, all household-scoped:
+Habit records remain household-scoped:
 
 - `habits`: UUID `id`, `household_id`, `name`, nullable `note`, `sort_key`,
   `status` (`active | archived`), `workout_mode` (`none | any | selected`),
   and creation/update timestamps.
 - `habit_entries`: `household_id`, `habit_id`, `user_id`, `entry_on`, `completed`
   (manual, default false), `workout_completed` (server-derived, default false),
-  nullable `note`, and timestamps. Primary key
+  nullable `calendar_eligible_at` (earliest supporting midnight), nullable `note`, and timestamps. Primary key
   `(habit_id, user_id, entry_on)` gives one daily entry without a redundant ID.
   Empty/incomplete entries may remain after clearing; they produce no marks or details.
+- `calendar_habit_attachments`: private `(item_id, user_id)` mapping, household,
+  habit and captured timezone; membership deletion cascades. See [Calendar](../calendar/).
 - `habit_workout_links`: primary key `(habit_id, workout_id)`, with composite
   household/habit and household/workout foreign keys; indexed by household/workout.
 

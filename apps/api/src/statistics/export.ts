@@ -33,6 +33,7 @@ type HabitRow = {
   entryOn: string | null;
   completed: boolean | null;
   workoutCompleted: boolean | null;
+  calendarCompleted: boolean | null;
 };
 type TrainingRow = ActualSet & {
   exerciseId: string;
@@ -81,6 +82,7 @@ async function writeHabits(
   householdId: string,
   from: string | undefined,
   to: string,
+  now: Date,
   checkBudget: () => void,
 ) {
   const start = from ? sql`AND e.entry_on >= ${from}` : sql``;
@@ -95,7 +97,8 @@ async function writeHabits(
     "export_habits",
     sql`
     SELECT h.id AS "habitId",h.name,h.status,m.user_id AS "userId",u.username,
-      e.entry_on AS "entryOn",e.completed,e.workout_completed AS "workoutCompleted"
+      e.entry_on AS "entryOn",e.completed,e.workout_completed AS "workoutCompleted",
+      coalesce(e.calendar_eligible_at <= ${now.toISOString()}::timestamptz, false) AS "calendarCompleted"
     FROM habits h
     JOIN household_members m ON m.household_id=h.household_id
     JOIN users u ON u.id=m.user_id
@@ -125,13 +128,17 @@ async function writeHabits(
     }
 
     if (row.entryOn !== null) {
-      totals.add(row.entryOn, !!row.completed || !!row.workoutCompleted);
+      totals.add(
+        row.entryOn,
+        !!row.completed || !!row.workoutCompleted || !!row.calendarCompleted,
+      );
       await write(
         (firstRecord ? "" : ",") +
           JSON.stringify({
             entryOn: row.entryOn,
             completed: row.completed,
             workoutCompleted: row.workoutCompleted,
+            calendarCompleted: row.calendarCompleted,
           }),
       );
       firstRecord = false;
@@ -329,6 +336,7 @@ export async function exportStatistics(
           household.id,
           options.from,
           to,
+          now,
           checkBudget,
         );
       } else {

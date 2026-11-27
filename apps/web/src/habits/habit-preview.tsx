@@ -1,5 +1,6 @@
 import { habitCompleted, shiftCalendarDate } from "@home-hub/shared/habits";
 import { formatHabitDate, type HabitEntry } from "./habit-days";
+import { useHabitCompletionClock } from "./use-habit-completion-clock";
 
 const weekday = new Intl.DateTimeFormat(undefined, {
   weekday: "short",
@@ -14,6 +15,7 @@ export function HabitPreview({
   today: string;
   entries: readonly HabitEntry[];
 }) {
+  const now = useHabitCompletionClock(entries);
   const byDate = new Map(entries.map((entry) => [entry.entryOn, entry]));
   return (
     <ol
@@ -24,7 +26,7 @@ export function HabitPreview({
         shiftCalendarDate(today, index - 6),
       ).map((date) => {
         const entry = byDate.get(date);
-        const completed = habitCompleted(entry);
+        const completed = habitCompleted(entry, now);
         return (
           <li
             key={date}

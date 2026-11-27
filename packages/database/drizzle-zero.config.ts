@@ -14,6 +14,7 @@ export default drizzleZeroConfig(drizzleSchema, {
     },
     calendarItems: true,
     calendarPeople: true,
+    calendarHabitAttachments: true,
     calendarMedia: true,
     documents: true,
     documentTags: true,

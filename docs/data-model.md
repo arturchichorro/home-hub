@@ -32,6 +32,9 @@ erDiagram
   households ||--o{ household_module_settings : configures
   households ||--o{ calendar_items : owns
   calendar_items ||--o{ calendar_people : labels
+  calendar_items ||--o{ calendar_habit_attachments : personal_links
+  habits ||--o{ calendar_habit_attachments : supports
+  household_members ||--o{ calendar_habit_attachments : personal_owner
   calendar_items ||--o{ calendar_media : pictures
   media ||--o{ calendar_media : attaches
   users ||--o{ calendar_people : identifies
@@ -202,6 +205,11 @@ See [Contacts](./contacts/) for archive, concurrency and cutover rules.
 
 Habits owns `habits` and `habit_entries`; their fields, natural daily-entry
 key and calendar-date constraints are documented in the [Habits module](./habits/).
+Migration `0061` adds private `calendar_habit_attachments` and the existing daily
+entry's nullable `calendar_eligible_at`. The mapping stays owner-only; daily
+eligibility contains no item reference and becomes completion at its deadline.
+Source mutations preserve other contributions; no clock-driven writes or summary
+tables are required. Habits remains a standalone module.
 
 ### Workouts module tables
 

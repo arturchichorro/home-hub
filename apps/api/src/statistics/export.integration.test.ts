@@ -208,6 +208,51 @@ describe.runIf(Boolean(url))("operator statistics export on PostgreSQL", () => {
     expect(JSON.stringify(report)).not.toContain(former);
   });
 
+  it("counts calendar eligibility at the report instant without exposing mappings or requiring Calendar enabled", async () => {
+    await entry("2027-01-04", false, false);
+    await entry("2027-01-09", false, false);
+    await client.db
+      .update(habitEntries)
+      .set({ calendarEligibleAt: new Date("2027-01-05T00:00:00Z") })
+      .where(
+        and(
+          eq(habitEntries.habitId, habit),
+          eq(habitEntries.entryOn, "2027-01-04"),
+        ),
+      );
+    await client.db
+      .update(habitEntries)
+      .set({ calendarEligibleAt: new Date("2027-01-11T00:00:00Z") })
+      .where(
+        and(
+          eq(habitEntries.habitId, habit),
+          eq(habitEntries.entryOn, "2027-01-09"),
+        ),
+      );
+    const report = await collect();
+    const item = report.habits.items.find(
+      (value: { person: { id: string } }) => value.person.id === user,
+    );
+    expect(item.statistics.completedDays).toBe(1);
+    expect(item.records).toEqual([
+      {
+        entryOn: "2027-01-04",
+        completed: false,
+        workoutCompleted: false,
+        calendarCompleted: true,
+      },
+      {
+        entryOn: "2027-01-09",
+        completed: false,
+        workoutCompleted: false,
+        calendarCompleted: false,
+      },
+    ]);
+    expect(JSON.stringify(report)).not.toMatch(
+      /calendarEligibleAt|timeZone.*UTC.*itemId|calendar_habit_attachments/,
+    );
+  });
+
   it("clips all date-range metrics and open weekly streaks to inclusive boundaries", async () => {
     await entry("2026-12-28");
     await entry("2027-01-03");

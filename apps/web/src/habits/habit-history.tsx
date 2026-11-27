@@ -1,6 +1,8 @@
 import {
   adjacentHabitMonth,
   clampHabitMonth,
+  habitAutomaticallyCompleted,
+  habitCalendarCompleted,
   habitCompleted,
   habitMonth,
 } from "@home-hub/shared/habits";
@@ -22,6 +24,7 @@ import {
   weekdayLabels,
 } from "./habit-days";
 import { HabitEntryNote } from "./habit-entry-note";
+import { useHabitCompletionClock } from "./use-habit-completion-clock";
 
 export function HabitHistory({
   householdId,
@@ -69,6 +72,7 @@ export function HabitHistory({
       endOn: period.endOn,
     }),
   );
+  const now = useHabitCompletionClock(rows[0]?.entries ?? []);
   const entries = new Map(
     rows[0]?.entries
       .filter((e) => e.userId === personId)
@@ -76,6 +80,7 @@ export function HabitHistory({
   );
   const entry = selectedDate ? entries.get(selectedDate) : undefined;
   const loading = result.type !== "complete";
+  const automatic = habitAutomaticallyCompleted(entry, now);
 
   return (
     <section
@@ -93,11 +98,13 @@ export function HabitHistory({
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm">{formatHabitDate(selectedDate)}</span>
-                {!own || archived || entry?.workoutCompleted ? (
+                {!own || archived || automatic ? (
                   <span className="text-xs text-muted">
-                    {entry?.workoutCompleted
-                      ? "From training"
-                      : habitCompleted(entry)
+                    {automatic
+                      ? habitCalendarCompleted(entry, now)
+                        ? "From calendar"
+                        : "From training"
+                      : habitCompleted(entry, now)
                         ? "Completed"
                         : "Not recorded"}
                   </span>
@@ -105,18 +112,18 @@ export function HabitHistory({
                   <HabitTodayToggle
                     name={name}
                     date={selectedDate}
-                    completed={habitCompleted(entry)}
+                    completed={habitCompleted(entry, now)}
                     pending={pending.has(`${habitId}:${selectedDate}`)}
                     disabled={
                       !own ||
-                      !!entry?.workoutCompleted ||
+                      automatic ||
                       archived ||
                       !enabled ||
                       selectedDate > today ||
                       pending.has(`${habitId}:${selectedDate}`)
                     }
                     onToggle={() =>
-                      onCompleted(selectedDate, !habitCompleted(entry))
+                      onCompleted(selectedDate, !habitCompleted(entry, now))
                     }
                   />
                 )}

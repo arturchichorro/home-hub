@@ -22,6 +22,50 @@ const people = (q: ReturnType<typeof active>) =>
   );
 
 export const calendarQueries = {
+  habitChoices: define(
+    calendarItemQuerySchema.pick({ householdId: true }),
+    ({ args, ctx }) =>
+      zql.habits
+        .where("householdId", args.householdId)
+        .where("status", "active")
+        .whereExists("household", (h) =>
+          h
+            .where("deletedAt", "IS", null)
+            .whereExists("members", (m) => m.where("userId", ctx.userId))
+            .whereExists("moduleSettings", (s) =>
+              s.where("moduleKey", "calendar").where("enabled", true),
+            )
+            .whereExists("moduleSettings", (s) =>
+              s.where("moduleKey", "habits").where("enabled", true),
+            ),
+        )
+        .orderBy("sortKey", "desc")
+        .orderBy("id", "asc"),
+  ),
+  habitAttachment: define(calendarItemQuerySchema, ({ args, ctx }) =>
+    zql.calendarHabitAttachments
+      .where("householdId", args.householdId)
+      .where("itemId", args.itemId)
+      .where("userId", ctx.userId)
+      .whereExists("item", (i) =>
+        i.where("deletedAt", "IS", null).whereExists("household", (h) =>
+          h
+            .where("deletedAt", "IS", null)
+            .whereExists("members", (m) => m.where("userId", ctx.userId))
+            .whereExists("moduleSettings", (s) =>
+              s.where("moduleKey", "calendar").where("enabled", true),
+            ),
+        ),
+      )
+      .related("habit", (h) =>
+        h.whereExists("household", (hh) =>
+          hh.whereExists("moduleSettings", (s) =>
+            s.where("moduleKey", "habits").where("enabled", true),
+          ),
+        ),
+      )
+      .one(),
+  ),
   media: define(calendarItemQuerySchema, ({ args, ctx }) =>
     zql.calendarMedia
       .where("householdId", args.householdId)
