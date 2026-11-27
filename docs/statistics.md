@@ -48,7 +48,7 @@ One versioned JSON file contains:
 - `schemaVersion`, `generatedAt`, household identity, effective `period` and
   interpretation notes.
 - `habits`: current members' active/archived habits. Each item has habit/person
-  identity, stored date/manual/workout flags, and statistics. Missing dates remain
+  identity, stored dates and manual/workout/calendar completion flags, and statistics. Missing dates remain
   unrecorded, not fabricated failures.
 - `training`: only the explicitly selected current member. Each exercise has its
   identity, supporting performances/sets and statistics. Retired catalog entries
@@ -58,7 +58,10 @@ One versioned JSON file contains:
   author selection) `not_requested`. Missing module settings fail closed as
   disabled, rather than appearing as genuine empty data.
 
-Habit completion is manual **OR** workout-derived, counted once. Weekly streaks
+Habit completion is manual **OR** workout-derived **OR** calendar-eligible, counted once.
+`calendarCompleted` is evaluated against the single report generation instant,
+using canonical eligibility deadlines (not the report timezone or a refresh job).
+Calendar-disabled source links still count; private mappings/timezones are not exported. Weekly streaks
 are Monday–Sunday activity weeks **within the period**; partial boundary weeks
 count. `endingWeeks` preserves an open end week when the preceding week was
 active. `bestWeeks` is the longest run within the period. `last7`/`last30` end

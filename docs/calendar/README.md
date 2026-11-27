@@ -107,5 +107,29 @@ serialize uploads with item deletion. Signed delivery and URL caching reuse the
 on logout. Removing a picture soft-deletes its attachment, not shared asset bytes;
 item deletion retains stored attachment/asset records. Physical cleanup is deferred.
 
-No recurrence, reminders, invitations, RSVP, completion states, categories, generic
-file attachments, person filters, calendar sync or cross-module integrations.
+## Personal habit attachments
+
+Saved single-day rows have a compact habit picker; your selection appears as a
+name chip below the row. Other members cannot inspect your mapping. One optional
+active habit per item/member is allowed; month cells remain title-only. Both
+modules are required for selection, but an existing link can be removed with
+Habits disabled without exposing its name. Archived targets require confirmation
+before removal/replacement and cannot be selected anew.
+
+The item credits its owner's habit only after midnight in the IANA timezone
+captured on attachment creation/replacement. Moving/deleting/unlinking recalculates
+only calendar support, preserving manual checks, notes, workouts and other items.
+Existing links remain live with Calendar disabled or the habit archived.
+Multi-day conversion is blocked while any member has a link; leaving/removal
+clears that member's links. Shared edits never change captured timezones.
+
+Migration `0061_heavy_silver_samurai.sql` adds private
+`calendar_habit_attachments` with household-qualified item/habit/membership FKs,
+and a safe `habit_entries.calendar_eligible_at` deadline. Source transactions
+maintain that eligibility under the existing completion lock, then Calendar lock;
+no polling, background job, read-side mutation or per-day calendar copies are
+needed. Habit views use a local deadline timer; exports use their snapshot instant.
+See [Habits](../habits/) for source precedence and permissions.
+
+No recurrence, reminders, invitations, RSVP, calendar-item completion states,
+categories, generic file attachments, person filters or calendar sync.

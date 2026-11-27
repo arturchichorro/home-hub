@@ -428,6 +428,13 @@
       "when": 1795700498272,
       "tag": "0060_luxuriant_sunspot",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1795795411262,
+      "tag": "0061_heavy_silver_samurai",
+      "breakpoints": true
     }
   ]
 }

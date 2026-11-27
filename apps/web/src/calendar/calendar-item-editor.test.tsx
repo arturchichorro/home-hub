@@ -2,6 +2,17 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it, vi } from "vitest";
 import { CalendarItemEditor } from "./calendar-item-editor";
 
+vi.mock("./calendar-habit-picker", () => ({
+  CalendarHabitPicker: ({
+    children,
+  }: {
+    children: (slots: {
+      action: null;
+      chip: null;
+    }) => import("react").ReactNode;
+  }) => children({ action: null, chip: null }),
+}));
+
 const row = {
   title: "Dinner",
   note: "",

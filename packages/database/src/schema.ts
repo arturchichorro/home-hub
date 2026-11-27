@@ -260,6 +260,7 @@ export const calendarItemsRelations = relations(
     }),
     people: many(calendarPeople),
     images: many(calendarMedia),
+    habitAttachments: many(calendarHabitAttachments),
   }),
 );
 
@@ -273,6 +274,69 @@ export const calendarPeopleRelations = relations(calendarPeople, ({ one }) => ({
     references: [householdMembers.householdId, householdMembers.userId],
   }),
 }));
+
+// Personal mapping stays private; only its date-based eligibility is shared through habit_entries.
+export const calendarHabitAttachments = pgTable(
+  "calendar_habit_attachments",
+  {
+    householdId: uuid("household_id").notNull(),
+    itemId: uuid("item_id").notNull(),
+    userId: uuid("user_id").notNull(),
+    habitId: uuid("habit_id").notNull(),
+    timeZone: text("time_zone").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.itemId, t.userId] }),
+    foreignKey({
+      columns: [t.householdId, t.itemId],
+      foreignColumns: [calendarItems.householdId, calendarItems.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.householdId, t.habitId],
+      foreignColumns: [habits.householdId, habits.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.householdId, t.userId],
+      foreignColumns: [householdMembers.householdId, householdMembers.userId],
+    }).onDelete("cascade"),
+    index("calendar_habit_attachments_habit").on(
+      t.householdId,
+      t.habitId,
+      t.userId,
+    ),
+    check(
+      "calendar_habit_attachments_zone",
+      sql`length(${t.timeZone}) BETWEEN 1 AND 100`,
+    ),
+  ],
+);
+
+export const calendarHabitAttachmentsRelations = relations(
+  calendarHabitAttachments,
+  ({ one }) => ({
+    item: one(calendarItems, {
+      fields: [
+        calendarHabitAttachments.householdId,
+        calendarHabitAttachments.itemId,
+      ],
+      references: [calendarItems.householdId, calendarItems.id],
+    }),
+    habit: one(habits, {
+      fields: [
+        calendarHabitAttachments.householdId,
+        calendarHabitAttachments.habitId,
+      ],
+      references: [habits.householdId, habits.id],
+    }),
+    member: one(householdMembers, {
+      fields: [
+        calendarHabitAttachments.householdId,
+        calendarHabitAttachments.userId,
+      ],
+      references: [householdMembers.householdId, householdMembers.userId],
+    }),
+  }),
+);
 
 export const usersRelations = relations(users, ({ many }) => ({
   householdMemberships: many(householdMembers),
@@ -341,6 +405,9 @@ export const habitEntries = pgTable(
     entryOn: text("entry_on").notNull(),
     completed: boolean("completed").notNull().default(false),
     workoutCompleted: boolean("workout_completed").notNull().default(false),
+    calendarEligibleAt: timestamp("calendar_eligible_at", {
+      withTimezone: true,
+    }),
     note: text("note"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

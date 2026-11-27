@@ -6,6 +6,7 @@ export type HabitEntry = {
   entryOn: string;
   completed: boolean | null;
   workoutCompleted?: boolean | null;
+  calendarEligibleAt?: number | null;
   note?: string | null;
 };
 
@@ -74,6 +75,7 @@ export function HabitDayPreview({
   disabled,
   onInspect,
   calendar = false,
+  now = Date.now(),
 }: {
   name: string;
   date: string;
@@ -83,8 +85,9 @@ export function HabitDayPreview({
   disabled?: boolean;
   onInspect: () => void;
   calendar?: boolean;
+  now?: number;
 }) {
-  const label = `${name}, ${date}. ${habitCompleted(entry) ? "Completed" : "Not recorded"}${entry?.note ? `. Note: ${entry.note}` : ""}`;
+  const label = `${name}, ${date}. ${habitCompleted(entry, now) ? "Completed" : "Not recorded"}${entry?.note ? `. Note: ${entry.note}` : ""}`;
   const trigger = (
     <Button
       variant="ghost"
@@ -105,7 +108,7 @@ export function HabitDayPreview({
       </span>
       <span
         aria-hidden="true"
-        className={`size-2 rounded-sm ${habitCompleted(entry) ? "bg-foreground" : "bg-border"}`}
+        className={`size-2 rounded-sm ${habitCompleted(entry, now) ? "bg-foreground" : "bg-border"}`}
       />
       {entry?.note ? (
         <span
@@ -124,7 +127,7 @@ export function HabitDayPreview({
         <div className="max-w-64 whitespace-pre-wrap break-words">
           <p>
             {formatHabitDate(date)} ·{" "}
-            {habitCompleted(entry) ? "Completed" : "Not recorded"}
+            {habitCompleted(entry, now) ? "Completed" : "Not recorded"}
           </p>
           <p>{entry.note}</p>
         </div>

@@ -8,6 +8,7 @@ import { zql } from "@home-hub/shared/zero/schema";
 import { mustGetMutator, type ReadonlyJSONValue } from "@rocicorp/zero";
 import { sql } from "drizzle-orm";
 import type { ZeroDbProvider } from "./db-provider";
+import { refreshHabitCalendarCompletion } from "./habit-calendar-completion";
 import {
   lockHabitWorkoutCompletion,
   refreshHabitWorkoutCompletion,
@@ -43,7 +44,20 @@ export async function mutateWithHabitWorkouts(
       : name === "habits.archive"
         ? archiveHabitMutationSchema.parse(args)
         : undefined;
-  const householdId = training?.householdId ?? habit?.householdId;
+  const calendarChange = [
+    "calendar.habit",
+    "calendar.update",
+    "calendar.delete",
+    "households.leave",
+    "households.removeMember",
+    "households.delete",
+  ].includes(name);
+  const calendarHousehold =
+    calendarChange && args && typeof args === "object" && "householdId" in args
+      ? calendarScopeSchema.shape.householdId.parse(args.householdId)
+      : undefined;
+  const householdId =
+    training?.householdId ?? habit?.householdId ?? calendarHousehold;
   const db = tx.dbTransaction.wrappedTransaction;
 
   if (householdId) {
@@ -51,7 +65,7 @@ export async function mutateWithHabitWorkouts(
   }
 
   if (
-    name.startsWith("calendar.") &&
+    (name.startsWith("calendar.") || calendarHousehold) &&
     args &&
     typeof args === "object" &&
     "householdId" in args
@@ -94,6 +108,10 @@ export async function mutateWithHabitWorkouts(
       householdId: habit.householdId,
       habitId: habit.habitId,
     });
+  }
+
+  if (calendarHousehold && name !== "households.delete") {
+    await refreshHabitCalendarCompletion(db, calendarHousehold);
   }
 
   return result;

@@ -2,11 +2,26 @@ import * as z from "zod";
 
 export const habitWorkoutModeSchema = z.enum(["none", "any", "selected"]);
 
+type HabitCompletion = {
+  completed?: boolean | null;
+  workoutCompleted?: boolean | null;
+  calendarEligibleAt?: number | null;
+};
+
+export const habitCalendarCompleted = (
+  entry: HabitCompletion | undefined,
+  now = Date.now(),
+) => entry?.calendarEligibleAt != null && entry.calendarEligibleAt <= now;
+
+export const habitAutomaticallyCompleted = (
+  entry: HabitCompletion | undefined,
+  now = Date.now(),
+) => !!entry?.workoutCompleted || habitCalendarCompleted(entry, now);
+
 export const habitCompleted = (
-  entry:
-    | { completed?: boolean | null; workoutCompleted?: boolean | null }
-    | undefined,
-) => !!entry?.completed || !!entry?.workoutCompleted;
+  entry: HabitCompletion | undefined,
+  now = Date.now(),
+) => !!entry?.completed || habitAutomaticallyCompleted(entry, now);
 
 export const calendarDateSchema = z.iso.date();
 

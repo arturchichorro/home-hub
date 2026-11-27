@@ -1,4 +1,9 @@
-import { habitCompleted, shiftCalendarDate } from "@home-hub/shared/habits";
+import {
+  habitAutomaticallyCompleted,
+  habitCalendarCompleted,
+  habitCompleted,
+  shiftCalendarDate,
+} from "@home-hub/shared/habits";
 import { mutators } from "@home-hub/shared/zero/mutators";
 import { queries } from "@home-hub/shared/zero/queries";
 import {
@@ -19,6 +24,7 @@ import { HabitGrid } from "./habit-grid";
 import { HabitNameDialog } from "./habit-name-dialog";
 import { HabitPersonSelect } from "./habit-person-select";
 import { HabitPreview } from "./habit-preview";
+import { useHabitCompletionClock } from "./use-habit-completion-clock";
 import { type HabitView, useHabitView } from "./use-habit-view";
 
 export function HabitsPage({
@@ -186,8 +192,10 @@ function HabitOverviewRow({
   );
   const [noteOpen, setNoteOpen] = useState(Boolean(current?.note));
   const row = useRef<HTMLDivElement>(null);
-  const auto = Boolean(current?.workoutCompleted);
-  const completed = habitCompleted(current);
+  const now = useHabitCompletionClock(habit.entries);
+  const auto = habitAutomaticallyCompleted(current, now);
+  const source = habitCalendarCompleted(current, now) ? "Calendar" : "Training";
+  const completed = habitCompleted(current, now);
   const detail = {
     to: "/households/$householdId/habits/$habitId" as const,
     params: { householdId, habitId: habit.id },
@@ -220,8 +228,8 @@ function HabitOverviewRow({
           <Link
             {...detail}
             disabled={view.pending.size > 0}
-            aria-label={`${habit.name}: ${auto ? "Completed from training" : completed ? "Completed" : "Not recorded"}. View details`}
-            title={auto ? "From training" : "View habit"}
+            aria-label={`${habit.name}: ${auto ? `Completed from ${source.toLowerCase()}` : completed ? "Completed" : "Not recorded"}. View details`}
+            title={auto ? `From ${source.toLowerCase()}` : "View habit"}
             className="relative flex size-11 shrink-0 items-center justify-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           >
             <span
@@ -244,7 +252,7 @@ function HabitOverviewRow({
         >
           {habit.name}
         </Link>
-        {auto && <span className="text-xs text-muted">Training</span>}
+        {auto && <span className="text-xs text-muted">{source}</span>}
         {view.own && !archived && (
           <IconButton
             aria-label={`Edit today's note for ${habit.name}`}

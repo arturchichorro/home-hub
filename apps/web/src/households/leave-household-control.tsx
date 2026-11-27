@@ -76,7 +76,7 @@ export function LeaveHouseholdControl({
           <span className="inline-flex" tabIndex={isOwner ? 0 : undefined}>
             <ConfirmationPopover
               confirmLabel="Leave"
-              message="Are you sure you want to leave this household?"
+              message="Leave this household? Your personal calendar habit attachments and their contributions will be removed."
               trigger={
                 <IconButton
                   ref={buttonRef}
