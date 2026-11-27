@@ -1,7 +1,8 @@
 import { mutators } from "@home-hub/shared/zero/mutators";
+import { queries } from "@home-hub/shared/zero/queries";
 import { ErrorPopover, Input } from "@home-hub/ui-web";
-import { useZero } from "@rocicorp/zero/react";
-import { useEffect, useRef } from "react";
+import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import {
   TextDraftActions,
   TextDraftGuard,
@@ -31,11 +32,16 @@ export function WorkoutLogNoteInput({
 }) {
   const zero = useZero();
   const enabled = useZeroMutationEnabled();
+  const [record, result] = useQuery(
+    queries.training.note({ householdId, logId }),
+  );
+  const writable =
+    enabled && !disabled && result.type === "complete" && Boolean(record);
   const input = useRef<HTMLInputElement>(null);
   const editor = useDebouncedTextEditor({
     preserveOnFailure: true,
-    currentValue: note,
-    mutationEnabled: enabled && !disabled,
+    currentValue: record?.note ?? note,
+    mutationEnabled: writable,
 
     normalize: (value) => value.trim(),
 
@@ -51,17 +57,17 @@ export function WorkoutLogNoteInput({
     },
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     onDirtyChange?.(editor.hasChanges);
 
     return () => onDirtyChange?.(false);
   }, [editor.hasChanges, onDirtyChange]);
 
   useEffect(() => {
-    if (focusOnMount) {
+    if (focusOnMount && writable) {
       input.current?.focus();
     }
-  }, [focusOnMount]);
+  }, [focusOnMount, writable]);
 
   return (
     <>
@@ -72,7 +78,7 @@ export function WorkoutLogNoteInput({
         placeholder="Note…"
         maxLength={1000000}
         className="h-7! w-full py-1 text-sm text-muted"
-        disabled={!enabled || disabled}
+        disabled={!writable}
         value={editor.value}
         aria-busy={editor.isSaving || undefined}
         aria-invalid={editor.error ? true : undefined}

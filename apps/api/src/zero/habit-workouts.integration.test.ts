@@ -567,7 +567,169 @@ describe.runIf(Boolean(databaseUrl))(
       });
     });
 
-    it("keeps an empty daily entry and uses row tombstones to reject stale resurrection", async () => {
+    it.each([false, true])(
+      "hides a completely emptied session from all history but keeps its logger resumable, template=%s",
+      async (template) => {
+        const input = { ...args(template), note: "" };
+        await configure("any");
+        await run("training.saveSet", input);
+        await run("training.saveSet", { ...input, round: 2 });
+        expect(await query()).toHaveLength(1);
+        expect((await completion())?.workoutCompleted).toBe(true);
+        await run("training.removeSet", {
+          householdId,
+          logId: input.logId,
+          sessionExerciseId: input.sessionExerciseId,
+          round: 1,
+        });
+        expect((await query())[0]?.exercises[0]?.sets).toHaveLength(1);
+        await run("training.removeSet", {
+          householdId,
+          logId: input.logId,
+          sessionExerciseId: input.sessionExerciseId,
+          round: 2,
+        });
+        expect(await query()).toEqual([]);
+        expect((await completion())?.workoutCompleted).toBe(false);
+        const provider = createZeroDbProvider({ db: client.db });
+        for (const filter of [{}, { workoutId }, { exerciseId: catalogId }]) {
+          const history = await provider.run(
+            queries.training.history.fn({
+              ctx: { userId },
+              args: { householdId, ...filter },
+            }),
+          );
+          expect(history).toEqual([]);
+        }
+        const rows = await provider.run(
+          queries.training.session.fn({
+            ctx: { userId },
+            args: {
+              householdId,
+              workoutId: input.workoutId,
+              completedOn: today,
+            },
+          }),
+        );
+        expect(rows[0]).toMatchObject({
+          id: input.logId,
+          deletedAt: null,
+          note: "",
+        });
+        expect(rows[0]?.exercises[0]?.sets).toEqual([]);
+        const noteArgs = { householdId, logId: input.logId };
+        expect(
+          await provider.run(
+            queries.training.note.fn({ ctx: { userId }, args: noteArgs }),
+          ),
+        ).toMatchObject({ id: input.logId, note: "" });
+        expect(
+          await provider.run(
+            queries.training.note.fn({
+              ctx: { userId: otherUser },
+              args: noteArgs,
+            }),
+          ),
+        ).toBeUndefined();
+        if (template) {
+          const listing = await provider.run(
+            queries.workouts.byHousehold.fn({
+              ctx: { userId },
+              args: { householdId },
+            }),
+          );
+          expect(listing[0]?.logs).toEqual([]);
+          expect(rows[0]?.exercises[0]).toMatchObject({
+            role: "warmup",
+            plannedSets: 2,
+            target: "8-12",
+          });
+        }
+        // A later set reuses the canonical daily session and frozen occurrence.
+        await run("training.saveSet", input);
+        expect((await query())[0]?.id).toBe(input.logId);
+        expect((await query())[0]?.exercises[0]?.sets).toHaveLength(1);
+        expect((await completion())?.workoutCompleted).toBe(true);
+      },
+    );
+
+    it("retains intentional note-only history and hides it when the final note is cleared", async () => {
+      const input = args();
+      await run("training.saveSet", input);
+      await run("training.removeSet", {
+        householdId,
+        logId: input.logId,
+        sessionExerciseId: input.sessionExerciseId,
+        round: 1,
+      });
+      expect((await query())[0]).toMatchObject({
+        id: input.logId,
+        note: input.note,
+      });
+      await run("training.update", {
+        householdId,
+        logId: input.logId,
+        changes: { note: "  \n " },
+      });
+      expect(await query()).toEqual([]);
+      await run("training.update", {
+        householdId,
+        logId: input.logId,
+        changes: { note: "Keep this note" },
+      });
+      expect((await query())[0]).toMatchObject({
+        id: input.logId,
+        note: "Keep this note",
+      });
+    });
+
+    it("hides an empty free session after its last exercise is removed", async () => {
+      const input = { ...args(), note: "" };
+      await run("training.saveSet", input);
+      await run("training.removeExercise", {
+        householdId,
+        logId: input.logId,
+        sessionExerciseId: input.sessionExerciseId,
+      });
+      expect(await query()).toEqual([]);
+      await expect(run("training.saveSet", input)).rejects.toThrow("removed");
+      await run("training.saveSet", {
+        ...args(),
+        logId: input.logId,
+        note: "",
+      });
+      expect((await query())[0]?.id).toBe(input.logId);
+    });
+
+    it("filters existing empty sessions before paging so they cannot hide older actual training", async () => {
+      const input = { ...args(), note: "" };
+      await run("training.saveSet", input);
+      const oldDay = shiftCalendarDate(today, -40);
+      await client.db
+        .update(trainingSessions)
+        .set({ completedOn: oldDay })
+        .where(eq(trainingSessions.id, input.logId));
+      await client.db
+        .update(trainingSessionExercises)
+        .set({ performedOn: oldDay })
+        .where(eq(trainingSessionExercises.id, input.sessionExerciseId));
+      await client.db.insert(trainingSessions).values(
+        Array.from({ length: 25 }, (_, index) => ({
+          id: randomUUID(),
+          householdId,
+          userId,
+          workoutId: null,
+          name: "Empty session",
+          note: "",
+          completedOn: shiftCalendarDate(today, -index),
+          completedAt: new Date(),
+        })),
+      );
+      expect((await query()).map((row) => row.id)).toEqual([input.logId]);
+      expect(await query(otherUser)).toEqual([]);
+    });
+
+    it("keeps a note-only daily entry and uses row tombstones to reject stale resurrection", async () => {
       const input = args();
       await run("training.saveSet", input);
       await run("training.removeSet", {
