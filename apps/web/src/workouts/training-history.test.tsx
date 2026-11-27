@@ -6,6 +6,7 @@ import type { TrainingSessionRow } from "./training-log-projection";
 
 vi.mock("@rocicorp/zero/react", () => ({
   useZero: () => ({ mutate: vi.fn() }),
+  useQuery: () => [undefined, { type: "complete" }],
 }));
 vi.mock("../zero/use-zero-mutation-enabled", () => ({
   useZeroMutationEnabled: () => true,

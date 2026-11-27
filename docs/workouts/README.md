@@ -127,8 +127,12 @@ there is no global age lock. Destructive actions stay in that logger. Retained
 note drafts guard navigation, paging, unload and PWA updates, including midnight.
 
 Free-form exercises and whole sessions can be removed explicitly, with
-confirmation for recorded data. Removing the last set/exercise keeps an empty
-entry with its name/notes until deletion; it does not count as completed training.
+confirmation for recorded data. Removing the last set/exercise hides the session
+from workout and global history when its note is also empty. Existing empty
+sessions are filtered before paging; notes-only entries remain visible. Internal
+session/prescription state stays resumable without counting as completed training.
+An editing note keeps an independent author-private header subscription and a
+bounded draft pin, so disappearing history rows cannot discard failed/unsaved text.
 Saved free-form sets support **any workout** habits, never selected-template
 habits. Removing them preserves completion supported by another log; archived
 habit completion stays frozen. Deletion clears the session's text/occurrences/sets,

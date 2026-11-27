@@ -33,6 +33,44 @@ it("uses one canonical, bounded private history for both sources", () => {
   );
 });
 
+it("requires actual sets or a saved note in history, but leaves the daily logger resumable", () => {
+  const history = ast(
+    queries.training.history.fn({ args: { householdId }, ctx }),
+  );
+  const filter = JSON.stringify(history.where);
+  expect(filter).toContain('"note"');
+  expect(filter).toContain("trainingSessionExercises");
+  expect(filter).toContain("trainingSessionSets");
+  const daily = ast(
+    queries.training.session.fn({
+      args: { householdId, completedOn: "2026-11-26" },
+      ctx,
+    }),
+  );
+  expect(JSON.stringify(daily.where)).not.toContain("trainingSessionSets");
+});
+
+it("keeps editing note metadata independent of history eligibility and author-private", () => {
+  const logId = crypto.randomUUID();
+  const query = ast(
+    queries.training.note.fn({ args: { householdId, logId }, ctx }),
+  );
+  const filter = JSON.stringify(query.where);
+  for (const value of [
+    userId,
+    householdId,
+    logId,
+    "householdMembers",
+    "householdModuleSettings",
+    "deletedAt",
+  ]) {
+    expect(filter).toContain(value);
+  }
+  expect(filter).not.toContain("trainingSessionSets");
+  expect(query.limit).toBe(1);
+  expect(query.related).toBeUndefined();
+});
+
 it("bounds exercise history and filters both parent eligibility and returned children", () => {
   const exerciseId = crypto.randomUUID();
   const query = ast(
