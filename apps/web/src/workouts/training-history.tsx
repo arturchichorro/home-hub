@@ -18,6 +18,7 @@ import { useZeroMutationEnabled } from "../zero/use-zero-mutation-enabled";
 import { ExerciseDetailLink } from "./exercise-detail-link";
 import { SourceLogLink } from "./source-log-link";
 import type { TrainingSessionRow } from "./training-log-projection";
+import { useRetainedHistory } from "./use-retained-history";
 import { WorkoutLogNoteInput } from "./workout-log-note-input";
 import { summarizeExercisePerformance } from "./workout-log-summary";
 
@@ -57,6 +58,10 @@ export function TrainingHistoryPage({
       cursor: cursors.at(-1),
     }),
   );
+  const visibleSessions = useRetainedHistory(
+    sessions.slice(0, trainingHistoryPageSize),
+    dirty,
+  );
   const ready = result.type === "complete";
   const blocked = !ready || dirty.size > 0;
   const dirtyChanged = useCallback((id: string, changed: boolean) => {
@@ -82,7 +87,7 @@ export function TrainingHistoryPage({
         </InlineAlert>
       )}
       <ul className="divide-y divide-border">
-        {sessions.slice(0, trainingHistoryPageSize).map((log) => (
+        {visibleSessions.map((log) => (
           <TrainingHistoryEntry
             key={log.id}
             log={log}
@@ -96,7 +101,7 @@ export function TrainingHistoryPage({
       {!ready && result.type !== "error" && (
         <p role="status">Loading history…</p>
       )}
-      {ready && !sessions.length && (
+      {ready && !visibleSessions.length && (
         <p className="text-sm text-muted">No training logged yet.</p>
       )}
       <div className="flex gap-2">

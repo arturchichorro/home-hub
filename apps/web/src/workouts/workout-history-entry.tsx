@@ -21,14 +21,18 @@ export function WorkoutHistoryEntry({
   onSelect: () => void;
   onDraftChange?: (id: string, dirty: boolean) => void;
 }) {
+  const [noteDirty, setNoteDirty] = useState(false);
   const dirtyChanged = useCallback(
-    (dirty: boolean) => onDraftChange?.(entry.id, dirty),
+    (dirty: boolean) => {
+      setNoteDirty(dirty);
+      onDraftChange?.(entry.id, dirty);
+    },
     [entry.id, onDraftChange],
   );
   const [editingNote, setEditingNote] = useState(false);
   const summaryId = useId();
   const hasNote = !!entry.note?.trim();
-  const hasNoteEditor = hasNote || editingNote;
+  const hasNoteEditor = hasNote || editingNote || noteDirty;
   const summary = summarizeWorkoutLog(entry);
 
   return (

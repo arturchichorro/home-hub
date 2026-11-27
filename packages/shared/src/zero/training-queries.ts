@@ -4,17 +4,13 @@ import { calendarDateSchema } from "../habits";
 import {
   trainingHistoryArgsSchema,
   trainingHistoryPageSize,
+  trainingScopeSchema,
 } from "../training";
 import type { ZeroAuthContext } from "./context";
 import { type Schema, zql } from "./schema.gen";
 
 const define = defineQueryWithType<Schema, ZeroAuthContext>();
-const sessions = (
-  householdId: string,
-  userId: string,
-  includeExercises = true,
-  exerciseId?: string,
-) =>
+const sessionHeaders = (householdId: string, userId: string) =>
   zql.trainingSessions
     .where("householdId", householdId)
     .where("userId", userId)
@@ -26,7 +22,15 @@ const sessions = (
         .whereExists("moduleSettings", (s) =>
           s.where("moduleKey", "workouts").where("enabled", true),
         ),
-    )
+    );
+
+const sessions = (
+  householdId: string,
+  userId: string,
+  includeExercises = true,
+  exerciseId?: string,
+) =>
+  sessionHeaders(householdId, userId)
     .related("exercises", (rows) =>
       (exerciseId
         ? rows.where("exerciseId", exerciseId).whereExists("sets")
@@ -46,6 +50,11 @@ const sessions = (
     .orderBy("id", "desc");
 
 export const trainingQueries = {
+  // Keep an editing note's canonical header in Zero even if removing the final
+  // set makes its parent disappear from the filtered history subscription.
+  note: define(trainingScopeSchema, ({ args, ctx }) =>
+    sessionHeaders(args.householdId, ctx.userId).where("id", args.logId).one(),
+  ),
   exercise: define(
     z.object({ householdId: z.uuid(), exerciseId: z.uuid() }).strict(),
     ({ args, ctx }) =>
@@ -128,9 +137,23 @@ export const trainingQueries = {
       args.includeExercises ?? false,
       exerciseId,
     );
+    // An emptied logger is still resumable, but is not a history entry.
+    // Preserve intentional note-only entries without counting them as training.
+    const recorded = source.where(({ or, cmp, exists }) =>
+      or(
+        cmp("note", "!=", ""),
+        exists("exercises", (e) =>
+          e
+            .where("householdId", args.householdId)
+            .where("userId", ctx.userId)
+            .where("deletedAt", "IS", null)
+            .whereExists("sets"),
+        ),
+      ),
+    );
     const byWorkout = args.workoutId
-      ? source.where("workoutId", args.workoutId)
-      : source;
+      ? recorded.where("workoutId", args.workoutId)
+      : recorded;
     const query = exerciseId
       ? byWorkout.whereExists("exercises", (e) =>
           e

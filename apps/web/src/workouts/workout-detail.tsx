@@ -37,6 +37,7 @@ import {
   type ExercisePerformance,
   projectTrainingSession,
 } from "./training-log-projection";
+import { useRetainedHistory } from "./use-retained-history";
 import { WorkoutExercises, WorkoutText } from "./workout-fields";
 import { WorkoutHistoryEntry } from "./workout-history-entry";
 import { type WorkoutLog, WorkoutLogActions } from "./workout-log";
@@ -163,12 +164,17 @@ function WorkoutDetailPage({
       ].map(projectTrainingSession),
     [logRows, dailyRows, selectedRows],
   );
-  const visibleLogs = logRows
-    .slice(0, workoutHistoryPageSize)
-    .map(projectTrainingSession);
+  const visibleLogs = useRetainedHistory(
+    logRows.slice(0, workoutHistoryPageSize).map(projectTrainingSession),
+    dirtyNotes,
+  );
   const selected = logs.find((log) => log.id === activeLogId);
 
-  if (selected && !visibleLogs.some((log) => log.id === selected.id)) {
+  if (
+    selected &&
+    (selected.sets.length > 0 || selected.note?.trim()) &&
+    !visibleLogs.some((log) => log.id === selected.id)
+  ) {
     visibleLogs.unshift(selected);
   }
 
